@@ -13,9 +13,29 @@ Our first experience recreates Vincent van Gogh's *The Bedroom* as an explorable
 
 ## Getting started
 
-- **Unity:** 6000.3.23f1. Please use this exact version.
-- **Target device:** Meta Quest 3
-- **First-time setup:** follow [CONTRIBUTING.md](CONTRIBUTING.md). You'll install Git LFS and run a setup script, once per computer.
+You only need to do these steps once per computer.
+
+1. **Install the tools**
+   - [Unity Hub](https://unity.com/download), then Unity **6000.3.23f1**. Please use this exact version. When installing it, also tick **Android Build Support**, which you need for building to the Quest.
+   - Git and Git LFS:
+     - Mac: `brew install git git-lfs`
+     - Windows: install [Git for Windows](https://git-scm.com/download/win). It includes Git LFS; keep that box ticked.
+
+2. **Download the project.** Put it in a folder that isn't synced by iCloud or OneDrive. On Windows, run these commands in Git Bash.
+
+```bash
+   git clone https://github.com/Vanderbilt-VR-2026/InnerFrame.git
+   cd InnerFrame
+   bash scripts/setup.sh
+```
+
+   `setup.sh` turns on Git LFS for this project and downloads the big files, such as models and textures. From then on, `git pull` downloads new ones automatically.
+
+3. **Open it in Unity.** In Unity Hub, click **Add → Add project from disk** and choose the `InnerFrame` folder. The first time you open it, Unity takes a few minutes to import everything.
+
+**Target device:** Meta Quest 3
+
+For day-to-day work (branches, pushing, and what the automatic check does), see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Team
 

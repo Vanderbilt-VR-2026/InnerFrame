@@ -17,7 +17,9 @@
    bash scripts/setup.sh
    ```
 
-That's all. Running the setup script again is harmless.
+Then install Unity and open the project, as described under
+[Getting started](README.md#getting-started) in the README.
+Running the setup script again is harmless.
 
 ## Daily loop
 

@@ -1,0 +1,85 @@
+# How git treats each kind of file. Later lines override earlier ones,
+# so the order of the sections below matters.
+
+# 1. Default: let git detect text files and store them with LF line endings.
+* text=auto
+
+# 2. Unity YAML files (scenes, prefabs, materials, .meta...): merge them with
+#    Unity's merge tool (set up by scripts/setup.sh) and keep LF line endings.
+#    "unity-yaml" is a shortcut defined on the next line.
+#    Source: Unity.gitattributes from github.com/alexkaratarakis/gitattributes
+#    at commit 2c20a14833a5ab196c7fc3effcc72ef4e895f4d4 (fetched 2026-09-24).
+[attr]unity-yaml        merge=unityyamlmerge eol=lf linguist-language=yaml
+*.anim                  unity-yaml
+*.asset                 unity-yaml
+*.brush                 unity-yaml
+*.controller            unity-yaml
+*.flare                 unity-yaml
+*.fontsettings          unity-yaml
+*.giparams              unity-yaml
+*.guiskin               unity-yaml
+*.lighting              unity-yaml
+*.mask                  unity-yaml
+*.mat                   unity-yaml
+*.meta                  unity-yaml
+*.mixer                 unity-yaml
+*.overrideController    unity-yaml
+*.playable              unity-yaml
+*.prefab                unity-yaml
+*.preset                unity-yaml
+*.renderTexture         unity-yaml
+*.scenetemplate         unity-yaml
+*.shadervariants        unity-yaml
+*.signal                unity-yaml
+*.spriteatlas           unity-yaml
+*.spriteatlasv2         unity-yaml
+*.terrainlayer          unity-yaml
+*.unity                 unity-yaml
+*.physicMaterial        unity-yaml
+*.physicsMaterial2D     unity-yaml
+
+# 3. Shell scripts and git hooks must keep LF endings, even on Windows,
+#    or they fail with errors about "\r".
+*.sh                    text eol=lf
+.githooks/*             text eol=lf
+
+# 4. PowerShell scripts use Windows (CRLF) line endings.
+*.ps1                   text eol=crlf
+
+# 5. Big binary files go to Git LFS (added with `git lfs track`).
+#    TODO(team): review this list once real assets arrive.
+# 3D models
+*.fbx filter=lfs diff=lfs merge=lfs -text
+*.obj filter=lfs diff=lfs merge=lfs -text
+*.blend filter=lfs diff=lfs merge=lfs -text
+*.glb filter=lfs diff=lfs merge=lfs -text
+
+# Images
+*.tif filter=lfs diff=lfs merge=lfs -text
+*.exr filter=lfs diff=lfs merge=lfs -text
+*.hdr filter=lfs diff=lfs merge=lfs -text
+*.jpg filter=lfs diff=lfs merge=lfs -text
+*.tiff filter=lfs diff=lfs merge=lfs -text
+*.psd filter=lfs diff=lfs merge=lfs -text
+*.png filter=lfs diff=lfs merge=lfs -text
+*.jpeg filter=lfs diff=lfs merge=lfs -text
+*.tga filter=lfs diff=lfs merge=lfs -text
+
+# Audio
+*.wav filter=lfs diff=lfs merge=lfs -text
+*.mp3 filter=lfs diff=lfs merge=lfs -text
+*.ogg filter=lfs diff=lfs merge=lfs -text
+*.aif filter=lfs diff=lfs merge=lfs -text
+
+# Video
+*.mp4 filter=lfs diff=lfs merge=lfs -text
+*.mov filter=lfs diff=lfs merge=lfs -text
+*.webm filter=lfs diff=lfs merge=lfs -text
+
+# Fonts
+*.otf filter=lfs diff=lfs merge=lfs -text
+*.ttf filter=lfs diff=lfs merge=lfs -text
+
+# Unity binaries (LightingData.asset must stay below *.asset so LFS wins)
+*.unitypackage filter=lfs diff=lfs merge=lfs -text
+**/LightingData.asset filter=lfs diff=lfs merge=lfs -text

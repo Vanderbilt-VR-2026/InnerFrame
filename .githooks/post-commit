@@ -1,0 +1,15 @@
+#!/bin/sh
+#
+# post-commit: a thin wrapper that lets Git LFS do its post-commit work
+# (Git LFS uses it to keep "locked" files read-only).
+# It lives here instead of .git/hooks/ because this repo sets
+# core.hooksPath=.githooks; see the comment at the top of pre-push.
+
+# The same guard as the hooks Git LFS generates: is git-lfs installed?
+if ! command -v git-lfs > /dev/null 2>&1; then
+  echo >&2 "This repo uses Git LFS, but git-lfs was not found on your PATH."
+  echo >&2 "Install it (see CONTRIBUTING.md), then run: bash scripts/setup.sh"
+  exit 2
+fi
+
+git lfs post-commit "$@"

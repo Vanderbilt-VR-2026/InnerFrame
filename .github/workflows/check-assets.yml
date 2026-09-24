@@ -1,0 +1,29 @@
+# Runs the asset checks (scripts/check-assets.sh) on every pull request and
+# on every push to main. No Unity license or build: the checks only read git.
+name: check-assets
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  # Keep this job name: branch protection can require a check called "check-assets".
+  check-assets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # The checks only need LFS pointer files. Downloading the real LFS
+          # files here would use up the repo's LFS bandwidth for nothing.
+          lfs: false
+          fetch-depth: 1
+
+      - name: Test the checker itself
+        run: bash scripts/tests/test-check-assets.sh
+
+      - name: Check committed assets
+        run: bash scripts/check-assets.sh HEAD

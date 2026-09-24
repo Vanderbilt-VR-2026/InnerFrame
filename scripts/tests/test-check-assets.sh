@@ -146,6 +146,18 @@ setup_T9() {
   commit_all "raw image, then pointer"
 }
 
+# T10: an uppercase .PNG committed as a real image, checked against THIS
+# repo's real .gitattributes. core.ignorecase=false makes git compare names
+# case-sensitively, as on Linux (GitHub CI), even on macOS and Windows.
+repo_gitattributes="$tests_dir/../../.gitattributes"
+setup_T10() {
+  git config core.ignorecase false
+  cp "$repo_gitattributes" .gitattributes
+  put_binary Assets/Photo.PNG
+  put_file Assets/Photo.PNG.meta
+  commit_all "uppercase raw png"
+}
+
 # ---- Runner ----
 
 failures=0
@@ -191,6 +203,7 @@ run_case T6b setup_T6 0 "no problems found" 20
 run_case T7  setup_T7 1 "[C1 missing-meta] Assets/My Folder/My Frame.fbx ->"
 run_case T8  setup_T8 0 "no problems found"
 run_case T9  setup_T9 1 "C3 lfs-not-pointer: 1 found"
+run_case T10 setup_T10 1 "[C3 lfs-not-pointer] Assets/Photo.PNG ->"
 
 echo
 if [ "$failures" -eq 0 ]; then

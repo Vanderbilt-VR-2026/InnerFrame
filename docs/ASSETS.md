@@ -15,6 +15,7 @@ Every top-level folder under `Assets/`, and every package folder under
 
 | Folder | What it is | Source | License |
 |---|---|---|---|
+| `Assets/Art` | The gallery shell (`Gallery/Gallery.fbx`) and its URP materials | Made by the team: built in Blender by `Art/Source/Gallery/build_gallery.py` (source scene `Art/Source/Gallery/gallery.blend`) | Team work |
 | `Assets/Scenes` | The project's scenes | Made by the team (`SampleScene` came with Unity's Universal 3D template) | Team work |
 | `Assets/Settings` | URP render pipeline assets, renderers and volume profiles | Created with the project from Unity's Universal 3D template | Unity template content, no separate license file |
 | `Assets/TutorialInfo` | The template's Readme panel and its editor script | Unity's Universal 3D template | Unity template content, no separate license file |

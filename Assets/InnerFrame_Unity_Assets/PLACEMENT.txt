@@ -1,0 +1,9 @@
+Set all scales to (1,1,1), Unity Y up. Starting world positions and Euler rotations Y:
+Painted_Chair_Foreground (-1.67,0,-1.00), Y 62 degrees
+Painted_Chair_Back (-0.46,0,1.08), Y -12 degrees
+Painted_Mirror (-1.78,2.10,2.095), Y 0 degrees
+Painted_Clothes_Rail_Hangers (0.78,1.73,2.045), Y 0 degrees
+Painted_Hanging_Towel (-2.05,1.70,0.68), Y -90 degrees
+Painted_Window (-0.90,1.27,2.12), Y 0 degrees
+Painted_Washstand (-1.28,0,1.56), Y -6 degrees
+These match centers of original prefabs in Bedroom_StyleExperiment. Mirror/window face local -Z; if viewed from opposite side, rotate Y 180. Towel and clothes rail are stylized approximations. Keep original components/colliders/interactions until visual placement is verified.

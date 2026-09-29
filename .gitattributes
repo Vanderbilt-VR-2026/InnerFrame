@@ -1,0 +1,88 @@
+# How git treats each kind of file. Later lines override earlier ones,
+# so the order of the sections below matters.
+
+# 1. Default: let git detect text files and store them with LF line endings.
+* text=auto
+
+# 2. Unity YAML files (scenes, prefabs, materials, .meta...): merge them with
+#    Unity's merge tool (set up by scripts/setup.sh) and keep LF line endings.
+#    "unity-yaml" is a shortcut defined on the next line.
+#    Source: Unity.gitattributes from github.com/alexkaratarakis/gitattributes
+#    at commit 2c20a14833a5ab196c7fc3effcc72ef4e895f4d4 (fetched 2026-09-24).
+[attr]unity-yaml        merge=unityyamlmerge eol=lf linguist-language=yaml
+*.anim                  unity-yaml
+*.asset                 unity-yaml
+*.brush                 unity-yaml
+*.controller            unity-yaml
+*.flare                 unity-yaml
+*.fontsettings          unity-yaml
+*.giparams              unity-yaml
+*.guiskin               unity-yaml
+*.lighting              unity-yaml
+*.mask                  unity-yaml
+*.mat                   unity-yaml
+*.meta                  unity-yaml
+*.mixer                 unity-yaml
+*.overrideController    unity-yaml
+*.playable              unity-yaml
+*.prefab                unity-yaml
+*.preset                unity-yaml
+*.renderTexture         unity-yaml
+*.scenetemplate         unity-yaml
+*.shadervariants        unity-yaml
+*.signal                unity-yaml
+*.spriteatlas           unity-yaml
+*.spriteatlasv2         unity-yaml
+*.terrainlayer          unity-yaml
+*.unity                 unity-yaml
+*.physicMaterial        unity-yaml
+*.physicsMaterial2D     unity-yaml
+
+# 3. Shell scripts and git hooks must keep LF endings, even on Windows,
+#    or they fail with errors about "\r".
+*.sh                    text eol=lf
+.githooks/*             text eol=lf
+
+# 4. PowerShell scripts use Windows (CRLF) line endings.
+*.ps1                   text eol=crlf
+
+# 5. Big binary files go to Git LFS (same syntax `git lfs track` writes).
+#    Each letter is written as [xX], so the patterns also match UPPERCASE
+#    extensions (.FBX, .PNG) on Linux, where git compares file names
+#    case-sensitively (for example in GitHub CI).
+#    TODO(team): review this list once real assets arrive.
+# 3D models
+*.[fF][bB][xX] filter=lfs diff=lfs merge=lfs -text
+*.[oO][bB][jJ] filter=lfs diff=lfs merge=lfs -text
+*.[bB][lL][eE][nN][dD] filter=lfs diff=lfs merge=lfs -text
+*.[gG][lL][bB] filter=lfs diff=lfs merge=lfs -text
+
+# Images
+*.[tT][iI][fF] filter=lfs diff=lfs merge=lfs -text
+*.[eE][xX][rR] filter=lfs diff=lfs merge=lfs -text
+*.[hH][dD][rR] filter=lfs diff=lfs merge=lfs -text
+*.[jJ][pP][gG] filter=lfs diff=lfs merge=lfs -text
+*.[tT][iI][fF][fF] filter=lfs diff=lfs merge=lfs -text
+*.[pP][sS][dD] filter=lfs diff=lfs merge=lfs -text
+*.[pP][nN][gG] filter=lfs diff=lfs merge=lfs -text
+*.[jJ][pP][eE][gG] filter=lfs diff=lfs merge=lfs -text
+*.[tT][gG][aA] filter=lfs diff=lfs merge=lfs -text
+
+# Audio
+*.[wW][aA][vV] filter=lfs diff=lfs merge=lfs -text
+*.[mM][pP]3 filter=lfs diff=lfs merge=lfs -text
+*.[oO][gG][gG] filter=lfs diff=lfs merge=lfs -text
+*.[aA][iI][fF] filter=lfs diff=lfs merge=lfs -text
+
+# Video
+*.[mM][pP]4 filter=lfs diff=lfs merge=lfs -text
+*.[mM][oO][vV] filter=lfs diff=lfs merge=lfs -text
+*.[wW][eE][bB][mM] filter=lfs diff=lfs merge=lfs -text
+
+# Fonts
+*.[oO][tT][fF] filter=lfs diff=lfs merge=lfs -text
+*.[tT][tT][fF] filter=lfs diff=lfs merge=lfs -text
+
+# Unity binaries (LightingData.asset must stay below *.asset so LFS wins)
+*.[uU][nN][iI][tT][yY][pP][aA][cC][kK][aA][gG][eE] filter=lfs diff=lfs merge=lfs -text
+**/LightingData.asset filter=lfs diff=lfs merge=lfs -text

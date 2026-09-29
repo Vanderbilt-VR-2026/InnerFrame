@@ -1,0 +1,30 @@
+#!/bin/sh
+#
+# pre-push: runs automatically when you `git push`, before anything is sent.
+#   1. Checks the committed files with scripts/check-assets.sh.
+#      If it finds problems, the push is stopped.
+#   2. Hands over to Git LFS, which uploads the big files (images, models...).
+#
+# Step 2 is essential. scripts/setup.sh sets core.hooksPath=.githooks, which
+# makes git ignore .git/hooks/, where Git LFS normally puts its own pre-push
+# hook. Without step 2, pushes would look fine but upload no LFS files, and
+# everyone who clones would get "missing LFS object" errors.
+
+# The same guard as the hooks Git LFS generates: is git-lfs installed?
+if ! command -v git-lfs > /dev/null 2>&1; then
+  echo >&2 "This repo uses Git LFS, but git-lfs was not found on your PATH."
+  echo >&2 "Install it (see CONTRIBUTING.md), then run: bash scripts/setup.sh"
+  exit 2
+fi
+
+repo_root=$(git rev-parse --show-toplevel) || exit 1
+
+# "< /dev/null" keeps the check away from our stdin: git writes the list of
+# refs being pushed there, and git-lfs (below) needs to read it.
+if ! bash "$repo_root/scripts/check-assets.sh" HEAD < /dev/null; then
+  echo >&2 ""
+  echo >&2 "pre-push: push stopped. Fix the problems above, commit, and push again."
+  exit 1
+fi
+
+exec git lfs pre-push "$@"

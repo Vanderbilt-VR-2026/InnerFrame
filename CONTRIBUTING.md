@@ -35,7 +35,10 @@ teammate approves.
    git add -A
    git commit -m "Short description of what you did"
    ```
-4. **Push:** `git push`. Before anything is uploaded, a quick check runs on
+4. **Check, then push:** run `bash scripts/ci-local.sh` and wait for `PASS`
+   (what the other results mean is under
+   [Start here](AGENTS.md#start-here-everyone-not-just-engineers) in AGENTS.md).
+   Then `git push`. Before anything is uploaded, a quick check runs on
    your commits (missing `.meta` files, big files not in LFS, and so on). If
    it stops the push, it says what to fix. Fix it, commit, and push again.
 5. **Open a pull request** on GitHub from your branch into `main`, and ask a

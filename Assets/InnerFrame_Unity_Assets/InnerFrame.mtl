@@ -1,0 +1,90 @@
+newmtl Ochre_Wood
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Kd Ochre_Wood.png
+
+newmtl Dark_Contours
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Kd Dark_Contours.png
+
+newmtl Red_Blanket
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Kd Red_Blanket.png
+
+newmtl Cream_Linen
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Kd Cream_Linen.png
+
+newmtl Straw_Mattress
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Kd Straw_Mattress.png
+
+newmtl Blue_Ceramic
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Kd Blue_Ceramic.png
+
+newmtl Cobalt_Rim
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Kd Cobalt_Rim.png
+
+newmtl Yellow_Rush
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Kd Yellow_Rush.png
+
+newmtl Pale_Blue_Wall
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Kd Pale_Blue_Wall.png
+
+newmtl Blue_Green_Cloth
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Kd Blue_Green_Cloth.png
+
+newmtl Cream_Towel
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Kd Cream_Towel.png
+
+newmtl Mirror_Glass
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Kd Mirror_Glass.png
+
+newmtl Yellow_Window_Glass
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Kd Yellow_Window_Glass.png
+
+newmtl Dark_Green_Frame
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Kd Dark_Green_Frame.png
+
+newmtl Brown_Table
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Kd Brown_Table.png
+

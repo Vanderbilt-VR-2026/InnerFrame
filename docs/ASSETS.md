@@ -24,8 +24,13 @@ Every top-level folder under `Assets/`, and every package folder under
 ## Package samples (third-party)
 
 Imported with Package Manager (select the package, then the **Samples** tab).
-They are unmodified, except that Unity upgraded their materials to URP on
-import. Their models, textures and audio are stored in Git LFS. To update a
+They are byte-identical to the package originals except for changes made on
+import: 23 materials were re-saved in Unity 6's material format, and 13 of them
+also switched to URP shaders (11 from Standard; 2 from the sample's built-in
+Fresnel shader, apparently by the sample's own MaterialPipelineHandler); and
+8 sprite `.png.meta` files under `Starter Assets/DemoSceneAssets/Sprites/` were
+bumped to the current texture-importer version with no setting values changed.
+Their models, textures and audio are stored in Git LFS. To update a
 sample, re-import it from Package Manager instead of editing it here.
 
 | Folder | Contents | Source | Version | License |

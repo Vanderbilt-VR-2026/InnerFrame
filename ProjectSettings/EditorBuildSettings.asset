@@ -11,6 +11,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Gallery.unity
     guid: 6965f3a96ee4244d8ba9f97ba2b3dc88
+  - enabled: 1
+    path: Assets/Scenes/Bedroom_StyleExperiment.unity
+    guid: aa645715bd794448599a19029986abbf
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
     com.unity.xr.management.loader_settings: {fileID: 11400000, guid: 92cc784bb05aa4dbc94a81266d583884, type: 2}

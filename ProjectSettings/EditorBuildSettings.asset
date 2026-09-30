@@ -5,14 +5,14 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
-  - enabled: 1
-    path: Assets/Scenes/Bedroom.unity
-    guid: 2fa260a7abe9c4df6a90307e302b3df3
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/SampleScene.unity
     guid: 99c9720ab356a0642a771bea13969a05
+  - enabled: 1
+    path: Assets/Scenes/Gallery.unity
+    guid: 6965f3a96ee4244d8ba9f97ba2b3dc88
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
-    com.unity.xr.management.loader_settings: {fileID: 11400000, guid: deb6e5d6a5c3048fba06f4496375c0a3, type: 2}
-    com.unity.xr.openxr.settings4: {fileID: 11400000, guid: ec145b55a644348d0a571efa8ae3e823, type: 2}
+    com.unity.xr.management.loader_settings: {fileID: 11400000, guid: 92cc784bb05aa4dbc94a81266d583884, type: 2}
+    com.unity.xr.openxr.settings4: {fileID: 11400000, guid: 664473cae6b434ed2b6de005f23a20b5, type: 2}
   m_UseUCBPForAssetBundles: 0

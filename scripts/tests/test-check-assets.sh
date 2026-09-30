@@ -115,8 +115,10 @@ setup_T5() {
 }
 
 # T6: an 11 MB file that is not in LFS (run with two different limits).
+# It is filled with the letter "a", not zero bytes: a file of zeros counts as
+# binary and would also trip C5, and this case is only about C4.
 setup_T6() {
-  dd if=/dev/zero of=big.bin bs=1048576 count=11 2>/dev/null
+  head -c 11534336 /dev/zero | tr '\000' a > big.bin
   commit_all "big file"
 }
 
@@ -156,6 +158,76 @@ setup_T10() {
   put_binary Assets/Photo.PNG
   put_file Assets/Photo.PNG.meta
   commit_all "uppercase raw png"
+}
+
+# T11 (C5): a binary file whose type .gitattributes doesn't send to LFS.
+setup_T11() {
+  put_file .gitattributes "$LFS_PNG_RULE"
+  put_file Assets/Plugins.meta
+  put_binary Assets/Plugins/libnative.so
+  put_file Assets/Plugins/libnative.so.meta
+  commit_all "raw binary plugin"
+}
+
+# T12 (C6): Unity's generated folders committed by mistake, in two spellings.
+setup_T12() {
+  put_file Library/ArtifactDB
+  put_file userSettings/Layouts/default.dwlt
+  commit_all "generated folders"
+}
+
+# T13 (C7): the project was saved by a different Unity version.
+setup_T13() {
+  put_file ProjectSettings/ProjectVersion.txt "m_EditorVersion: 6000.3.22f1"
+  commit_all "other unity version"
+}
+
+# T14 (C8 problem): Unity AI tools, Sentis and the Meta XR Simulator.
+setup_T14() {
+  put_file Packages/manifest.json '{
+  "dependencies": {
+    "com.meta.xr.simulator": "77.0.0",
+    "com.unity.ai.assistant": "1.0.0",
+    "com.unity.ai.inference": "2.2.0",
+    "com.unity.sentis": "2.1.0"
+  }
+}'
+  commit_all "blocked packages"
+}
+
+# T15 (C7 + C8 pass): the right Unity version; AI Navigation is allowed.
+setup_T15() {
+  put_file ProjectSettings/ProjectVersion.txt "m_EditorVersion: 6000.3.23f1"
+  put_file Packages/manifest.json '{
+  "dependencies": {
+    "com.unity.ai.navigation": "2.0.14",
+    "com.unity.xr.openxr": "1.16.1"
+  }
+}'
+  commit_all "allowed packages"
+}
+
+# T16 (C8 warning): another Meta XR package. A warning, but still exit 0.
+setup_T16() {
+  put_file Packages/manifest.json '{ "dependencies": { "com.meta.xr.sdk.core": "207.0.0" } }'
+  commit_all "meta package"
+}
+
+# T17 (C9 warning): a sample folder that docs/ASSETS.md doesn't list.
+setup_T17() {
+  put_file Assets/Samples.meta
+  put_file "Assets/Samples/XR Hands.meta"
+  put_file "Assets/Samples/XR Hands/Hand.prefab"
+  put_file "Assets/Samples/XR Hands/Hand.prefab.meta"
+  commit_all "sample without docs"
+}
+
+# T18 (C9 pass): the same folders, listed in docs/ASSETS.md.
+setup_T18() {
+  setup_T17
+  put_file docs/ASSETS.md '| `Assets/Samples` | samples |
+| `Assets/Samples/XR Hands` | HandVisualizer |'
+  commit_all "sample with docs"
 }
 
 # ---- Runner ----
@@ -204,6 +276,14 @@ run_case T7  setup_T7 1 "[C1 missing-meta] Assets/My Folder/My Frame.fbx ->"
 run_case T8  setup_T8 0 "no problems found"
 run_case T9  setup_T9 1 "C3 lfs-not-pointer: 1 found"
 run_case T10 setup_T10 1 "[C3 lfs-not-pointer] Assets/Photo.PNG ->"
+run_case T11 setup_T11 1 "[C5 binary-not-in-lfs] Assets/Plugins/libnative.so ->"
+run_case T12 setup_T12 1 "C6 generated-folder: 2 found"
+run_case T13 setup_T13 1 "[C7 unity-version] ProjectSettings/ProjectVersion.txt says 6000.3.22f1"
+run_case T14 setup_T14 1 "C8 blocked-package: 4 found"
+run_case T15 setup_T15 0 "C8 blocked-package: 0 found"
+run_case T16 setup_T16 0 "[C8 needs-team-decision] WARNING com.meta.xr.sdk.core ->"
+run_case T17 setup_T17 0 "[C9 not-in-assets-doc] WARNING Assets/Samples/XR Hands ->"
+run_case T18 setup_T18 0 "C9 not-in-assets-doc: 0 warning(s)"
 
 echo
 if [ "$failures" -eq 0 ]; then

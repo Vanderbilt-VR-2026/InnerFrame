@@ -44,3 +44,16 @@ Sonya Vu · Charlyne Dong · Rowling Lin · Serena Deng · Cici Luo
 ## Course
 
 Built for *Projects in Virtual Reality Design* (CS 4249/5249 / CSET-CMA 3257) at Vanderbilt University, Fall 2026.
+
+## Sprint 1 — Meta Quest Build
+
+[Download InnerFrame-Sprint1.apk](https://drive.google.com/file/d/17uiKnb5k6u_mXPp79ScKJSJxzH3hdjVu/view?usp=sharing)
+
+### Install
+1. Download the APK to your computer.
+2. Connect your Meta Quest to your computer with a USB cable.
+3. Enable Developer Mode and accept the headset’s USB debugging prompt.
+4. Install the APK using Meta Quest Developer Hub.
+5. Launch InnerFrame on the headset.
+
+Built on October 1, 2026.

@@ -71,7 +71,7 @@ Built for *CS 4249 / CSET-CMA 3257: Virtual Reality Design* at Vanderbilt Univer
 |---|---|
 | Demo videos | [InnerFrame Sprint 1 demo (Google Drive)](https://drive.google.com/drive/folders/1R5MCu-oDcUeqRx6421TgvTctF0386qeQ?usp=sharing) |
 | Quest build | [InnerFrame-Sprint1.apk](https://drive.google.com/file/d/17uiKnb5k6u_mXPp79ScKJSJxzH3hdjVu/view?usp=sharing) (install steps below) |
-| Backlog | [Issues](https://github.com/Vanderbilt-VR-2026/InnerFrame/issues?q=is%3Aissue) |
+| Backlog | [InnerFrame Dashboard](https://github.com/orgs/Vanderbilt-VR-2026/projects/12) (project board, 6 epics) · [Issues](https://github.com/Vanderbilt-VR-2026/InnerFrame/issues?q=is%3Aissue) |
 | Headset test | [#12](https://github.com/Vanderbilt-VR-2026/InnerFrame/issues/12): the full path on a real Quest 3, built from `main` |
 
 **Sprint goal:** a rough but playable path from the Gallery into the painting, and a decision on how to turn the painting into a 3D world. Visual polish was not the goal.

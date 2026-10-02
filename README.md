@@ -4,6 +4,8 @@ InnerFrame is a multi-user VR experience that lets people step inside a famous p
 
 Our first experience recreates Vincent van Gogh's *The Bedroom* as an explorable 3D room that keeps the painting's distinctive visual style.
 
+**Sprint 1:** [demo videos](https://drive.google.com/drive/folders/1R5MCu-oDcUeqRx6421TgvTctF0386qeQ?usp=sharing) · [Quest APK](https://drive.google.com/file/d/17uiKnb5k6u_mXPp79ScKJSJxzH3hdjVu/view?usp=sharing) · [what's in the build](#sprint-1-sep-17--oct-1) · [team and roles](#team-and-roles)
+
 ## The experience
 
 1. A group of people meets in a shared virtual gallery.
@@ -61,30 +63,49 @@ Roles are flexible, and design and QA are everyone's job.
 
 ## Course
 
-Built for *Projects in Virtual Reality Design* (CS 4249/5249 / CSET-CMA 3257) at Vanderbilt University, Fall 2026.
+Built for *CS 4249 / CSET-CMA 3257: Virtual Reality Design* at Vanderbilt University, Fall 2026.
 
-## Sprint 1 — Meta Quest Build
+## Sprint 1 (Sep 17 – Oct 1)
 
-**Demo videos:** [InnerFrame Sprint 1 demo (Google Drive)](https://drive.google.com/drive/folders/1R5MCu-oDcUeqRx6421TgvTctF0386qeQ?usp=sharing)
+| | |
+|---|---|
+| Demo videos | [InnerFrame Sprint 1 demo (Google Drive)](https://drive.google.com/drive/folders/1R5MCu-oDcUeqRx6421TgvTctF0386qeQ?usp=sharing) |
+| Quest build | [InnerFrame-Sprint1.apk](https://drive.google.com/file/d/17uiKnb5k6u_mXPp79ScKJSJxzH3hdjVu/view?usp=sharing) (install steps below) |
+| Backlog | [Issues](https://github.com/Vanderbilt-VR-2026/InnerFrame/issues?q=is%3Aissue) |
+| Headset test | [#12](https://github.com/Vanderbilt-VR-2026/InnerFrame/issues/12): the full path on a real Quest 3, built from `main` |
 
-[Download InnerFrame-Sprint1.apk](https://drive.google.com/file/d/17uiKnb5k6u_mXPp79ScKJSJxzH3hdjVu/view?usp=sharing)
+**Sprint goal:** a rough but playable path from the Gallery into the painting, and a decision on how to turn the painting into a 3D world. Visual polish was not the goal.
 
-### What's in this build
-- Start in the **Gallery** and move around.
-- Press the button on the pedestal by *The Bedroom* to fade into the Bedroom.
-- The Bedroom in this build is the painterly version (`Bedroom_StyleExperiment`): Serena's stylized furniture on Rowling's graybox layout. Move around, pick up the tumbler and brush, open the hinged doors.
-- Press the pedestal button in the Bedroom to fade back to the Gallery.
-- Rowling's original graybox is still in `Assets/Scenes/Bedroom.unity` but isn't in the build.
+### What works in the build
+1. Launch on Quest 3. You start in the **Gallery**, in immersive VR.
+2. Teleport across the gallery floor to *The Bedroom*.
+3. Press the button on its pedestal. The view fades out and you land in the **Bedroom**.
+4. In the Bedroom: walk around, grab the tumbler and the brush (Grip), and open the hinged doors.
+5. Press the pedestal button in the Bedroom to fade back to the Gallery.
 
-### What we explored alongside it
-We tested three ways to turn the painting into a 3D world:
-- **World Labs/Marble** keeps the painting's overall look, but the room comes out as one piece with no separate objects to grab.
-- **Meshy** makes separate objects that keep the painterly style (the bed kept its yellow wood and red blanket), but they are too heavy for Quest without cleanup (one bed was about 790k faces).
-- A hand-built **Blender/Unity** room is easy to make interactive but looks much less like the painting.
+The Bedroom in the build is the painterly version (`Bedroom_StyleExperiment`): Serena's stylized furniture on Rowling's layout. Rowling's original graybox, with more grabbable objects, is in `Assets/Scenes/Bedroom.unity` (see [docs/bedroom/README.md](docs/bedroom/README.md)) but isn't in the build.
 
-Sprint 2 plan: combine them. Marble for the room, Meshy for the few objects you pick up (chair, pitcher).
+All of this was checked on a Quest 3 in [#12](https://github.com/Vanderbilt-VR-2026/InnerFrame/issues/12) (immersive launch, tracking, teleport, the round trip, grabbing, no visible lag).
 
-### Install
+### Known issues
+- The controller ray reaches too far, so objects can be used from across the room ([#18](https://github.com/Vanderbilt-VR-2026/InnerFrame/issues/18)).
+- The Bedroom's return button needs a better spot ([#17](https://github.com/Vanderbilt-VR-2026/InnerFrame/issues/17)).
+- The transition fades to plain black instead of an image ([#16](https://github.com/Vanderbilt-VR-2026/InnerFrame/issues/16)).
+- Single player only. Multiplayer, voice and the 3D Van Gogh come in later sprints.
+
+### Painting-to-world experiments
+We tested three ways to turn the painting into a 3D world ([#15](https://github.com/Vanderbilt-VR-2026/InnerFrame/issues/15)):
+
+| Approach | Good at | Problem |
+|---|---|---|
+| World Labs / Marble | The whole room keeps the painting's look | One baked scene: no separate objects to grab |
+| Meshy | Separate objects that keep the painterly style (the bed kept its yellow wood and red blanket) | Very heavy: one bed was about 790k faces, too much for Quest without cleanup |
+| Blender + Unity (in the build now) | Clean objects that are easy to make interactive | Looks less like the painting |
+
+### Next: Sprint 2 (Oct 1 – 15)
+Combine the three: Marble builds the room, Meshy builds only the objects you interact with (chair and pitcher first), Blender cleans them up when needed, and Unity adds physics and VR interaction. The first problem to solve: the Marble room already has a chair baked in, so the real, grabbable chair needs a way to replace it. Basic multiplayer also starts in Sprint 2.
+
+### Install the APK
 1. Download the APK to your computer.
 2. Connect your Meta Quest to your computer with a USB cable.
 3. Enable Developer Mode and accept the headset’s USB debugging prompt.

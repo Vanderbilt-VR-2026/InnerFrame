@@ -65,7 +65,7 @@ Built for *Projects in Virtual Reality Design* (CS 4249/5249 / CSET-CMA 3257) at
 
 ## Sprint 1 — Meta Quest Build
 
-**Demo video:** [InnerFrame Sprint 1 demo](VIDEO_LINK_HERE)
+**Demo videos:** [InnerFrame Sprint 1 demo (Google Drive)](https://drive.google.com/drive/folders/1R5MCu-oDcUeqRx6421TgvTctF0386qeQ?usp=sharing)
 
 [Download InnerFrame-Sprint1.apk](https://drive.google.com/file/d/17uiKnb5k6u_mXPp79ScKJSJxzH3hdjVu/view?usp=sharing)
 

@@ -37,9 +37,17 @@ You only need to do these steps once per computer.
 
 For day-to-day work (branches, pushing, and what the automatic check does), see [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Team
+## Team and roles
 
-Sonya Vu · Charlyne Dong · Rowling Lin · Serena Deng · Cici Luo
+Roles are flexible, and design and QA are everyone's job. This is who leads what.
+
+| Member | Background | Relevant skills | Responsibilities |
+|---|---|---|---|
+| Cici Luo | CS | Unity, XR Interaction Toolkit, Git | XR rig and Unity integration; owns the **Gallery** scene; repo and CI upkeep |
+| Rowling Lin | CS | Unity, environment building | Owns the **Bedroom** scene; layout, scale, physics layers |
+| Sonya Vu | CS PhD | Generative 3D, scripting | Painting-to-3D pipeline experiments (World Labs/Marble, Meshy); scene transition |
+| Charlyne Dong | CS | Product, technical integration | Product direction and backlog; interaction design (near/far); sprint docs and demo video |
+| Serena Deng | CS | Generative assets, Blender | Painting-style assets (Meshy, Blender cleanup); Quest APK builds |
 
 ## Course
 
@@ -47,7 +55,22 @@ Built for *Projects in Virtual Reality Design* (CS 4249/5249 / CSET-CMA 3257) at
 
 ## Sprint 1 — Meta Quest Build
 
+**Demo video:** [InnerFrame Sprint 1 demo](VIDEO_LINK_HERE)
+
 [Download InnerFrame-Sprint1.apk](https://drive.google.com/file/d/17uiKnb5k6u_mXPp79ScKJSJxzH3hdjVu/view?usp=sharing)
+
+### What's in this build
+- Start in the **Gallery** and move around.
+- Press the button on the pedestal by *The Bedroom* to fade into the **Bedroom** scene.
+- The Bedroom is a graybox with basic object interaction.
+
+### What we explored alongside it
+We tested three ways to turn the painting into a 3D world:
+- **World Labs/Marble** keeps the painting's overall look, but the room comes out as one piece with no separate objects to grab.
+- **Meshy** makes separate objects that keep the painterly style (the bed kept its yellow wood and red blanket), but they are too heavy for Quest without cleanup (one bed was about 790k faces).
+- A hand-built **Blender/Unity** room is easy to make interactive but looks much less like the painting.
+
+Sprint 2 plan: combine them. Marble for the room, Meshy for the few objects you pick up (chair, pitcher).
 
 ### Install
 1. Download the APK to your computer.

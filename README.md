@@ -39,15 +39,25 @@ For day-to-day work (branches, pushing, and what the automatic check does), see 
 
 ## Team and roles
 
-Roles are flexible, and design and QA are everyone's job. This is who leads what.
+Roles are flexible, and design and QA are everyone's job.
 
-| Member | Background | Relevant skills | Responsibilities |
+| Member | Major | Relevant skills | Responsibilities |
 |---|---|---|---|
-| Cici Luo | CS | Unity, XR Interaction Toolkit, Git | XR rig and Unity integration; owns the **Gallery** scene; repo and CI upkeep |
-| Rowling Lin | CS | Unity, environment building | Owns the **Bedroom** scene; layout, scale, physics layers |
-| Sonya Vu | CS PhD | Generative 3D, scripting | Painting-to-3D pipeline experiments (World Labs/Marble, Meshy); scene transition |
-| Charlyne Dong | CS | Product, technical integration | Product direction and backlog; interaction design (near/far); sprint docs and demo video |
-| Serena Deng | CS | Generative assets, Blender | Painting-style assets (Meshy, Blender cleanup); Quest APK builds |
+| Sonya Vu | CS | Programming, HCI | AI dialogue, programming interaction |
+| Charlyne Dong | CS | Product ideation and development, agents/AI, prototyping | Project management, concept, player experience |
+| Rowling Lin | Counseling | Graphic design, UX/UI design, Figma, interaction design | Storyboarding, prototyping, interaction design, visual design |
+| Serena Deng | CS | Product ideation and development, programming, concept development | Prototyping, player experience, programming interaction |
+| Cici Luo | CS | Software engineering, networking, backend systems, Git, system integration | Multiplayer, player synchronization, shared interactions, Unity systems integration |
+
+### Who did what in Sprint 1
+
+| Member | Sprint 1 focus |
+|---|---|
+| Cici Luo | **Gallery and entry experience**: the VR gallery and the walk up to *The Bedroom*. Also the engineering foundation: Unity/XR setup (OpenXR + XR Interaction Toolkit for Quest 3), Git LFS and repo structure, asset checks that run locally and in CI, and review/merge onto `main`. |
+| Rowling Lin | **Playable Bedroom**: graybox layout at the right scale, controller movement, grabbable objects, hinged doors, collision surfaces. |
+| Sonya Vu | **Gallery ↔ Bedroom transition** (`SceneChangeButton`, `SceneFader`): press the pedestal button to fade out, load the other scene, and fade back in. Also painting-to-world prototyping. |
+| Serena Deng | **Painterly visual direction**: stylized furniture and props in Blender with brushstroke textures, brought into Unity in `Bedroom_StyleExperiment` on top of Rowling's layout. Built the Sprint 1 APK. |
+| Charlyne Dong | **Painting-to-world prototyping and project management**: World Labs/Marble and Meshy experiments, sprint specs, backlog, and the demo video. |
 
 ## Course
 
@@ -61,8 +71,10 @@ Built for *Projects in Virtual Reality Design* (CS 4249/5249 / CSET-CMA 3257) at
 
 ### What's in this build
 - Start in the **Gallery** and move around.
-- Press the button on the pedestal by *The Bedroom* to fade into the **Bedroom** scene.
-- The Bedroom is a graybox with basic object interaction.
+- Press the button on the pedestal by *The Bedroom* to fade into the Bedroom.
+- The Bedroom in this build is the painterly version (`Bedroom_StyleExperiment`): Serena's stylized furniture on Rowling's graybox layout. Move around, pick up the tumbler and brush, open the hinged doors.
+- Press the pedestal button in the Bedroom to fade back to the Gallery.
+- Rowling's original graybox is still in `Assets/Scenes/Bedroom.unity` but isn't in the build.
 
 ### What we explored alongside it
 We tested three ways to turn the painting into a 3D world:

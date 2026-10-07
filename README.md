@@ -112,4 +112,21 @@ Combine the three: Marble builds the room, Meshy builds only the objects you int
 4. Install the APK using Meta Quest Developer Hub.
 5. Launch InnerFrame on the headset.
 
-Built on October 1, 2026.
+### AI Usage
+
+**Claude (Anthropic)** was used in this project. It served as a personal assistant rather than a team member: design decisions and requirements were set by the team, and Claude supported our implementation.
+
+**Tasks supported by AI**
+- Writing C# scripts for the interactions
+- Generating environment assets in Blender
+- Providing step-by-step instructions for applying interactions to objects in Unity
+- Guiding the transfer of assets from Blender to Unity
+- **Blender:** Connected to Claude through MCP (Model Context Protocol).
+
+**Example prompts**
+- "Create a low-poly wooden table and two chairs in Blender and arrange them as a small dining area."
+- "Write a Unity script so the player can pick up this object and drop it with E."
+- "Give me step-by-step instructions to attach this script to my object."
+- "How do I export this from Blender to Unity without the scale being off?"
+- 
+Updated on October 7, 2026.

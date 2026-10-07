@@ -112,4 +112,26 @@ Combine the three: Marble builds the room, Meshy builds only the objects you int
 4. Install the APK using Meta Quest Developer Hub.
 5. Launch InnerFrame on the headset.
 
+### AI Usage
+
+I used **Claude (Anthropic)** as my only AI tool, as a personal assistant rather than a team member. I made the design decisions, and Claude helped me carry them out.
+
+**What I used it for**
+- Writing the C# scripts for the interactions
+- Generating environment assets in Blender
+- Walking me through applying the interactions to objects in Unity
+- Getting assets from Blender into Unity
+
+**Who started what**
+In Blender, I described what I wanted and Claude built it directly in the scene through MCP, then I tweaked the results by hand. In Unity, I went the other way: I set up the scene and decided what each object should do, then Claude wrote the scripts and told me how to apply them. Claude never touched Unity directly.
+
+**How it was connected**
+Blender was linked to Claude through MCP. Unity wasn't connected at all. I copied the scripts from the chat into `.cs` files and dragged them onto objects. For assets, I exported from Blender as FBX and imported them into Unity.
+
+**Example prompts**
+- "Can you recreate the bedroom in van gogh's painting in blender and retain the bushstroke style?."
+- "How do I transfer this environment into unity?"
+- "How do make an interaction that transition from scene 1 (gallery) to scene 2 (the bedroom)?"
+
+
 Built on October 1, 2026.

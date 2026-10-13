@@ -117,3 +117,5 @@ Icon?
 *.7z
 .fake
 __MACOSX/
+# Render Fixed Views output (Painted Bedroom before/after screenshots, #44)
+/FixedViews/

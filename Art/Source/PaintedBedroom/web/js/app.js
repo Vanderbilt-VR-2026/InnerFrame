@@ -227,21 +227,34 @@ btn.compare.onclick = toggleCompare;
 
 // ---------------------------------------------------------------------------
 // Build and run.
-// ?only=chairs (or a comma list of room, bed, washstand, chairs, wall) builds just those groups,
-// to look at one object on its own; tools/snapshot.mjs renders it. Without ?only everything is built.
+// ?only=chairs (or a comma list of room, window, doors, bed, washstand, washstand_items, chairs, pictures, hangings)
+// builds just those groups, to look at one object on its own; tools/snapshot.mjs renders it.
+// Without ?only everything is built.
 const ONLY = new URLSearchParams(location.search).get('only');
 const want = group => !ONLY || ONLY.split(',').includes(group);
 buildMaterials();
 if (want('room')) buildRoom();
+if (want('window')) { buildOutside(); buildWindow(); }               // the window and the world beyond it
+if (want('doors')) buildDoors();
 if (want('bed')) buildBed();
-if (want('washstand')) buildTable();
+if (want('washstand') || want('washstand_items')) buildTable();     // the items stand on its top
 if (want('chairs')) {
   OBJ.chairB = buildChair(-0.36, 3.45, 2.25, 1.12, 2);     // by the washstand, turned toward the bed
   OBJ.chairA = buildChair(-1.55, 2.15, 1.95, 1.0, 1);   // in the foreground; angle solved by projecting its back posts and seat front onto the canvas
 }
 applyDistortion();
 for (const k of ['chairA', 'chairB']) { const g = OBJ[k]; if (g) chairsXZ.push([g.position.x, g.position.z, 0.28 * DISTORT[k].s]); }
-if (want('wall')) buildWallThings();
+if (want('pictures')) buildPictures();
+if (want('hangings')) buildHangings();
+// asked for only one of a pair: hide the other, once every file has loaded (exportName() is in export.js)
+if (ONLY) addEventListener('DOMContentLoaded', () => {
+  const ITEMS = ['Carafe', 'Basin', 'Pitcher', 'Tumbler', 'SoapDish', 'ClothesBrush', 'Bottle_Tall', 'Bottle_Short', 'BrushBox'];
+  world.traverse(o => {
+    if (!o.isMesh) return;
+    const n = exportName(o);
+    if ((n === 'Washstand' && !want('washstand')) || (ITEMS.includes(n) && !want('washstand_items'))) o.visible = false;
+  });
+});
 addEventListener('resize', resize); resize();
 applyView();
 hint.textContent = coarse ? 'Drag to look · hold the lower left to walk' : 'Drag to look · W A S D or arrow keys to walk';

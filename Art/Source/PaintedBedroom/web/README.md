@@ -91,9 +91,9 @@ node snapshot.mjs /tmp/chairs.png chairs
 ```
 
 renders the painter's view of just that group, next to the painting
-(`/tmp/chairs.png`, and `/tmp/chairs_render.png` alone). Groups: `room`, `bed`,
-`washstand`, `chairs`, `wall`, or a comma list; none for the whole room. In the
-browser, the same works with `index.html?only=chairs`.
+(`/tmp/chairs.png`, and `/tmp/chairs_render.png` alone). Groups: `room`, `window`,
+`doors`, `bed`, `washstand`, `washstand_items`, `chairs`, `pictures`, `hangings`, or
+a comma list; none for the whole room. In the browser, the same works with `index.html?only=chairs`.
 
 ## Where things are
 
@@ -102,12 +102,16 @@ The files are plain scripts that share one scope, loaded in this order:
 
 | File | What's in it | Unity objects |
 |---|---|---|
-| `js/core.js` | Shared by all: layout (`ROOM`), seeded randomness, brushstroke textures (`strokeCanvas()`, `paintMat()`), colour grading code, geometry helpers, the scene; the empty `M`, `GRADE` and `DISTORT` tables the object files fill | |
-| `js/room.js` | Walls, floor, ceiling, skirting, window and the view outside, doors | Room_*, Window, Window_View, Door_* |
-| `js/bed.js` | Bed, pillows, blanket | Bed, Pillow_*, Blanket |
+| `js/core.js` | Shared by all: layout (`ROOM`), seeded randomness, brushstroke textures (`strokeCanvas()`, `paintMat()`), colour grading code, geometry helpers, the scene; the `M`, `GRADE` and `DISTORT` tables the object files fill; the two shared materials (`M.peg`: pegs and the door and drawer knobs; `M.string`: picture cords) | |
+| `js/room.js` | Walls (with the openings for the window and doors: `WIN`, `DOOR_L`, `DOOR_R`), floor, ceiling, skirting | Room_Walls, Room_Floor, Room_Ceiling, Room_Skirting |
+| `js/window.js` | Window frame, casements, panes, sill, and the 3D view through it | Window, Window_View |
+| `js/doors.js` | Both doors, their frames and casings, the landing behind each | Door_Left, Door_Right, Door_Frames |
+| `js/bed.js` | The bed: frame, mattress, pillows, blanket | Bed, Pillow_Back, Pillow_Front, Blanket |
 | `js/chairs.js` | The chair builder (both chairs; their placement is in `app.js`) and the rush seat | Chair_Front, Chair_Back |
-| `js/washstand.js` | Washstand and everything on it | Washstand, Carafe, Basin, Pitcher, ... |
-| `js/wall.js` | Pictures and mirror (and their painted canvases), towel, peg rail, clothes, hat | Mirror, Picture_*, Towel, ... |
+| `js/washstand.js` | The washstand itself: top, drawer, legs | Washstand |
+| `js/washstand_items.js` | What stands on it (moves and scales with it) | Carafe, Basin, Pitcher, Tumbler, SoapDish, ClothesBrush, Bottle_*, BrushBox |
+| `js/pictures.js` | The pictures and the mirror, and the painted canvases they show | Mirror, Picture_* |
+| `js/hangings.js` | The peg rail and what hangs on it (smock, clothes, hat), and the towel on its hook | PegRail, Smock, Clothes_Dark, Cloth_Pale, Hat, Towel |
 | `js/app.js` | Renderer, ink outlines, the painter's camera (`PAINT_VIEW`), controls, and the build order | |
 | `js/export.js` | Export to the Unity format: object names, cloth thickness, ink outline shells, glass opacity | |
 
@@ -115,6 +119,25 @@ Each object file has the same three parts at the top: `<object>Materials()` (its
 materials in the palette `M`), its `GRADE` entries (colour grading measured against
 the painting) and its `DISTORT` entry (offset, scale and extra height to fit the
 painting), then its builder.
+
+Every object in the export belongs to exactly one file. To check, after adding
+or renaming an object: `node coverage.mjs` (lists each group's objects; exit code 1
+if one is missing or in two groups).
+
+## What's attached to what
+
+Moving one object can leave another floating. Check this before changing a position:
+
+| Attached | How | So |
+|---|---|---|
+| Bedding on the bed | Children of the bed's group, one file | Move or `DISTORT` the bed: everything on it follows |
+| Things on the washstand | Children of the washstand's group (`washstand_items.js` builds them on its top) | Move or `DISTORT` the washstand: they follow. Change their placement only relative to the top |
+| Smock, clothes, hat on the peg rail | **Separate coordinates**, not children of the rail (`hangings.js`) | Moving the rail alone leaves them hanging in the air: move them together, by the same offset |
+| Towel by the left door | Its own position, "just past the door casing" | After changing the left door (`doors.js`), check the casing doesn't cut through the towel |
+| Pictures, mirror, peg rail, window, doors | Placed against the walls (`ROOM`, `WIN`, `DOOR_L`, `DOOR_R`, the slanted bed wall) | They follow when the walls change; changing `ROOM` moves all of them |
+
+After changing a position, also snapshot the whole room (`node snapshot.mjs /tmp/all.png`),
+not just your group, to see the contacts.
 
 ## Working together
 

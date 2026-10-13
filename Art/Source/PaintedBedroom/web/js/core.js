@@ -152,7 +152,10 @@ function gradeMaterials() {
 const M = {};
 function buildMaterials() {
   // Each object file adds its own materials to M (roomMaterials() in room.js, bedMaterials() in bed.js...).
-  roomMaterials(); bedMaterials(); chairsMaterials(); washstandMaterials(); wallMaterials();
+  roomMaterials(); windowMaterials(); doorsMaterials(); bedMaterials(); chairsMaterials(); washstandMaterials(); washstandItemsMaterials(); picturesMaterials(); hangingsMaterials();
+  // shared by several objects (the cord of the pictures; peg wood, also the door and drawer knobs)
+  M.string = new THREE.MeshBasicMaterial({ color: '#1f2a40' });
+  M.peg = paintMat({ seed: 21, base: '#b4702a', cols: ['#c4823a', '#965a20'], strokes: 400 });
   gradeMaterials();
   for (const [k, m] of Object.entries(M)) m.userData.cat = k;
 }

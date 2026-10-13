@@ -69,6 +69,11 @@ Things to know:
 
 - **Without network access to the CDN**, set `THREE_LOCAL=/path/to/three.js` (a
   checkout of three.js r170 that includes `examples/jsm`).
+- **Stable names:** materials are named after their palette entry (`blanket`,
+  `floor`...), or after their object when they have none (`Towel_paint`); texture
+  files after their material (`tex_blanket.png`). A number is added only when two
+  would share a name (`smock_2`). So adding or removing a material renames nothing
+  else, and a diff of `Data/` shows only what changed.
 - **Reproducible:** the same source exports byte for byte the same files (same
   Playwright version). To see what an export changed:
   `python3 ../../tools/compare_exports.py <old Data> <new Data>` (on the fixed-views

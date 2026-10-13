@@ -88,16 +88,27 @@ function exportUnity() {
   const pushF = arr => { const off = floats.length; for (const v of arr) floats.push(v); return off; };
   const pushI = arr => { const off = ints.length; for (const v of arr) ints.push(v); return off; };
   const images = new Map(), textures = [], materials = [], matIndex = new Map();
-  const texOf = (t) => {
+  // Stable names: a material is named after what it is (its palette entry, e.g. 'blanket'), or after
+  // the object that first uses it when it has no palette entry. A number is added only when two would
+  // otherwise share a name ('blanket', 'blanket_2'). Texture files are named after their material.
+  // So adding or removing a material renames nothing else: diffs of Data/ and Unity's generated .mat
+  // files only change for what actually changed. (Before, every name ended with its position in the
+  // list, so one new material early on renamed every later material and texture.)
+  const used = new Set(['Ink_Outline']);
+  const unique = (base) => { if (!used.has(base)) { used.add(base); return base; } let k = 2; while (used.has(base + '_' + k)) k++; used.add(base + '_' + k); return base + '_' + k; };
+  const texOf = (t, matName) => {
     if (!t || !t.image) return -1;
-    if (!images.has(t.image)) { images.set(t.image, textures.length); textures.push({ name: 'tex_' + String(textures.length).padStart(3, '0'), data: t.image.toDataURL('image/png') }); }
+    if (!images.has(t.image)) { images.set(t.image, textures.length); textures.push({ name: unique('tex_' + matName), data: t.image.toDataURL('image/png') }); }
     return images.get(t.image);
   };
-  const matOf = (m) => {
+  const matOf = (m, objName) => {
     if (matIndex.has(m)) return matIndex.get(m);
-    const tex = texOf(m.map);
+    let base = (m.name || 'Paint').replace(/[^A-Za-z0-9_-]/g, '_');
+    if (/^Paint(_|$)/.test(base)) base = objName + '_paint';   // no palette entry: name it after its object
+    const name = unique(base);
+    const tex = texOf(m.map, name);
     const c = m.color ? m.color.clone().convertLinearToSRGB() : new THREE.Color(1, 1, 1);
-    materials.push({ name: (m.name || 'Paint').replace(/[^A-Za-z0-9_-]/g, '_') + '_' + materials.length, texture: tex,
+    materials.push({ name, texture: tex,
       color: [c.r, c.g, c.b], unlit: !!m.isMeshBasicMaterial, emission: m.emissiveMap ? (m.emissiveIntensity ?? 0.3) : 0, doubleSided: m.side === THREE.DoubleSide, outline: false,
       // window panes and the glassware are see-through in 3D (the painting shows them as flat colour)
       opacity: m.userData.cat === 'glass' ? 0.8 : m.userData.cat === 'glassClear' ? 0.6 : 1 });
@@ -166,7 +177,7 @@ function exportUnity() {
     for (const m of g.children) {
       if (!m.isMesh) continue;
       const solid = CLOTH[g.name] && m.material.side === THREE.DoubleSide ? thicken(m.geometry, CLOTH[g.name]) : m.geometry;
-      o.meshes.push(meshOut(m.name, solid, matOf(m.material)));
+      o.meshes.push(meshOut(m.name, solid, matOf(m.material, g.name)));
       if (OUTLINE_GROUPS.has(g.name)) {
         m.geometry.computeBoundingBox(); const s = new THREE.Vector3(); m.geometry.boundingBox.getSize(s);
         const mid = [s.x, s.y, s.z].sort((a, b) => a - b)[1];

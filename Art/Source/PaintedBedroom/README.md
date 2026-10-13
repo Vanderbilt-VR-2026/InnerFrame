@@ -33,6 +33,11 @@ Blender export that isn't part of this folder.
 Any changes you made by hand in that scene are lost. To experiment in Unity,
 save a copy first (File > Save As), and work in the copy.
 
+After a re-export that renames materials or textures (the first one after the
+stable-names change, for example), delete `Assets/InnerFrameBedroomWeb/Generated/`
+in Unity before Import and Build. Otherwise the old `.mat` files stay behind,
+unused.
+
 | Key | Action |
 | --- | --- |
 | W A S D, mouse | Walk, look (Esc releases the mouse) |

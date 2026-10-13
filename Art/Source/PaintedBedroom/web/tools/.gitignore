@@ -1,5 +1,4 @@
-# created by `npm install playwright` and by preview_unity_data.mjs; never commit
+# created by `npm ci` and by preview_unity_data.mjs; never commit.
+# (package.json and package-lock.json ARE committed: they pin Playwright, whose Chromium paints the textures.)
 node_modules/
-package.json
-package-lock.json
 preview/

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -51,12 +52,15 @@ namespace InnerFrame.PaintedBedroom.EditorTools
             if (!File.Exists(ViewsPath)) { Debug.LogError("[FixedViews] Missing " + ViewsPath); return null; }
             if (!File.Exists(ScenePath)) { Debug.LogError("[FixedViews] Missing " + ScenePath + ": run Import and Build first."); return null; }
             var views = JsonUtility.FromJson<Views>(File.ReadAllText(ViewsPath));
+            string problem = Validate(views);
+            if (problem != null) { Debug.LogError("[FixedViews] " + ViewsPath + ": " + problem); return null; }
             EditorSceneManager.OpenScene(ScenePath);
 
             string dir = Path.Combine(Directory.GetCurrentDirectory(), "FixedViews", label);
             Directory.CreateDirectory(dir);
             var painting = AssetDatabase.LoadAssetAtPath<Texture2D>(PaintingPath);
             var go = new GameObject("FixedViewsCamera") { hideFlags = HideFlags.HideAndDontSave };
+            var made = new List<RenderTexture>();   // released at the end, even if something throws
             try
             {
                 var cam = go.AddComponent<Camera>();
@@ -64,25 +68,43 @@ namespace InnerFrame.PaintedBedroom.EditorTools
                 cam.clearFlags = CameraClearFlags.SolidColor; cam.backgroundColor = new Color(0.08f, 0.14f, 0.28f);
                 go.AddComponent<UniversalAdditionalCameraData>().renderPostProcessing = true;   // show the look (#30)
 
-                var painterRT = RenderView(cam, views.painter, true);
+                // Like key P for the camera; but unlike the in-game camera, which has post-processing off
+                // until #30 turns it on, these renders always include the look (Volumes) so #30 shows.
+                var painterRT = Keep(made, RenderView(cam, views.painter, true));
                 SavePng(painterRT, Path.Combine(dir, "painter_view.png"));
                 foreach (var g in views.groups)
                 {
                     Rect crop = CropRect(cam, views.painter, g.objects);
-                    var centre = RenderView(cam, g.centre, false);
-                    var close = RenderView(cam, g.closeup, false);
+                    var centre = Keep(made, RenderView(cam, g.centre, false));
+                    var close = Keep(made, RenderView(cam, g.closeup, false));
                     SavePng(centre, Path.Combine(dir, g.name + "_centre.png"));
                     SavePng(close, Path.Combine(dir, g.name + "_closeup.png"));
-                    var tiles = new[] { painting != null ? Crop(painting, crop) : null, Crop(painterRT, crop), centre, close };
+                    var tiles = new[] { painting != null ? Keep(made, Crop(painting, crop)) : null, Keep(made, Crop(painterRT, crop)), centre, close };
                     SaveSheet(tiles, Path.Combine(dir, g.name + "_sheet.png"));
-                    foreach (var t in tiles) Release(t);
                 }
-                Release(painterRT);
                 if (painting == null) Debug.LogWarning("[FixedViews] " + PaintingPath + " not found: sheets have no painting crop.");
                 Debug.Log("[FixedViews] wrote " + (views.groups.Length * 3 + 1) + " views and " + views.groups.Length + " sheets to " + dir);
                 return dir;
             }
-            finally { UnityEngine.Object.DestroyImmediate(go); }
+            finally
+            {
+                foreach (var rt in made) Release(rt);
+                UnityEngine.Object.DestroyImmediate(go);
+            }
+        }
+
+        static RenderTexture Keep(List<RenderTexture> made, RenderTexture rt) { made.Add(rt); return rt; }
+
+        static string Validate(Views v)
+        {
+            if (v == null || v.painter == null || v.groups == null || v.groups.Length == 0) return "needs a painter view and at least one group";
+            bool Ok(View x) => x != null && x.position != null && x.position.Length == 3 && x.target != null && x.target.Length == 3
+                               && x.size != null && x.size.Length == 2 && x.size[0] > 0 && x.size[1] > 0 && x.fov > 0;
+            if (!Ok(v.painter)) return "painter view is incomplete";
+            foreach (var g in v.groups)
+                if (g == null || string.IsNullOrEmpty(g.name) || g.objects == null || !Ok(g.centre) || !Ok(g.closeup))
+                    return "group '" + (g?.name ?? "?") + "' is incomplete";
+            return null;
         }
 
         static void Place(Camera cam, View v, bool painter)
@@ -124,7 +146,7 @@ namespace InnerFrame.PaintedBedroom.EditorTools
             float x0 = 1, y0 = 1, x1 = 0, y1 = 0;
             foreach (var n in names)
             {
-                var obj = GameObject.Find(n);
+                var obj = FindObject(n);
                 if (obj == null) { Debug.LogWarning("[FixedViews] Object not found: " + n); continue; }
                 foreach (var r in obj.GetComponentsInChildren<Renderer>())
                 {
@@ -133,7 +155,7 @@ namespace InnerFrame.PaintedBedroom.EditorTools
                     {
                         var p = b.center + Vector3.Scale(b.extents, new Vector3((c & 1) == 0 ? -1 : 1, (c & 2) == 0 ? -1 : 1, (c & 4) == 0 ? -1 : 1));
                         var vp = cam.WorldToViewportPoint(p);
-                        if (vp.z <= 0) continue;
+                        if (vp.z <= 0) return new Rect(0, 0, 1, 1);   // part of it is behind the painter: show the whole frame
                         x0 = Mathf.Min(x0, vp.x); x1 = Mathf.Max(x1, vp.x); y0 = Mathf.Min(y0, vp.y); y1 = Mathf.Max(y1, vp.y);
                     }
                 }
@@ -144,11 +166,25 @@ namespace InnerFrame.PaintedBedroom.EditorTools
             return Rect.MinMaxRect(x0, y0, x1, y1);
         }
 
+        /// <summary>A room object by exact name, or with the ".001"-style suffix an FBX import can add (as the builder's FindDeep).</summary>
+        static Transform FindObject(string name)
+        {
+            Transform suffixed = null;
+            foreach (var t in UnityEngine.Object.FindObjectsByType<Transform>(FindObjectsSortMode.None))
+            {
+                if (t.name == name) return t;
+                if (suffixed == null && t.name.StartsWith(name + ".")) suffixed = t;
+            }
+            return suffixed;
+        }
+
         static RenderTexture Crop(Texture src, Rect r)
         {
             int w = Mathf.Max(1, Mathf.RoundToInt(src.width * r.width)), h = Mathf.Max(1, Mathf.RoundToInt(src.height * r.height));
             var rt = new RenderTexture(w, h, 0, RenderTextureFormat.ARGB32);
+            var prev = RenderTexture.active;   // Blit leaves its target active
             Graphics.Blit(src, rt, new Vector2(r.width, r.height), new Vector2(r.x, r.y));
+            RenderTexture.active = prev;
             return rt;
         }
 

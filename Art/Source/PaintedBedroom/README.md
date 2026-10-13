@@ -64,7 +64,8 @@ trees and houses seen through the window).
 The room was built as a procedural three.js scene and fitted to the painting
 from the painter's viewpoint. Colours were measured, and objects were placed
 and scaled by comparing outlines against the canvas. It was then exported to
-this format. The scene's code is not in this PR.
+this format. The scene's source and the export tools are in `web/`; see
+`web/README.md` to change the room and re-export.
 - Every texture is drawn by code: brushstroke canvases, including the small
   pictures on the walls.
 - No pixels from the painting or from any third-party asset are included.

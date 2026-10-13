@@ -1637,7 +1637,7 @@ function buildExportRoot() {
       out = m.clone(); const t = m.map.clone(); t.repeat.set(1, 1); t.offset.set(0, 0); t.rotation = 0; t.needsUpdate = true;
       out.map = t; if (m.emissiveMap === m.map) out.emissiveMap = t;
     }
-    if (!out.name) out.name = m.userData.cat ? m.userData.cat : (m.isMeshBasicMaterial ? 'Ink_' + m.color.getHexString() : 'Paint_' + m.uuid.slice(0, 6));
+    if (!out.name) out.name = m.userData.cat ? m.userData.cat : (m.isMeshBasicMaterial ? 'Ink_' + m.color.getHexString() : 'Paint_' + (m.color ? m.color.getHexString() : 'ffffff'));
     matCache.set(m, out); return out;
   };
   const root = new THREE.Group(); root.name = 'InnerFrame_Bedroom';

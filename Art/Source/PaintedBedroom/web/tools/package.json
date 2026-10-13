@@ -1,0 +1,9 @@
+{
+  "name": "painted-bedroom-web-tools",
+  "private": true,
+  "description": "Export and snapshot tools for the Painted Bedroom web scene. Playwright is pinned: its Chromium draws the brushstroke textures, so every export must use the same version.",
+  "type": "module",
+  "dependencies": {
+    "playwright": "1.64.0"
+  }
+}

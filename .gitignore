@@ -117,3 +117,5 @@ Icon?
 *.7z
 .fake
 __MACOSX/
+# npm installs for tools (e.g. Art/Source/PaintedBedroom/web/tools)
+node_modules

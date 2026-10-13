@@ -16,12 +16,22 @@ opening it in Unity, never by hand.
 Unity 6000.3.23f1, the InnerFrame project (URP, Input System, XRI 3.3.2).
 
 1. Copy the `InnerFrameBedroomWeb` folder into your project's `Assets/` folder
-   (drag it into the Project window). **Don't commit that copy**: undo it with
-   `git clean`, or delete it in Unity, when you're done.
+   (drag it into the Project window). **Don't commit that copy.** When you're
+   done, delete it in Unity's Project window, which also removes
+   `Assets/InnerFrameBedroomWeb.meta`. Don't use a plain `git clean`: it would
+   also delete any other uncommitted files you have.
 2. Menu: **Tools > InnerFrame > Painted Bedroom > Import and Build (no Blender)**.
    It creates `Assets/InnerFrameBedroomWeb/Generated/` (meshes, materials, a
    prefab) and the scene `Assets/InnerFrameBedroomWeb/Scenes/PaintedBedroom.unity`.
-3. Press Play and click in the Game view.
+3. Press Play and click in the Game view. The first click only captures the
+   mouse.
+
+Ignore the menu item **Build Scene from Blender FBX**: that route needs a
+Blender export that isn't part of this folder.
+
+**Re-running Import and Build rebuilds `PaintedBedroom.unity` from scratch.**
+Any changes you made by hand in that scene are lost. To experiment in Unity,
+save a copy first (File > Save As), and work in the copy.
 
 | Key | Action |
 | --- | --- |
@@ -34,8 +44,9 @@ Unity 6000.3.23f1, the InnerFrame project (URP, Input System, XRI 3.3.2).
 | R | Back to the start |
 
 On a Quest, the scene uses the team's XR Origin (XR Rig) from the XRI Starter
-Assets, the same as the Gallery. Grab with grip, near or with the ray;
-teleport anywhere on the floor.
+Assets, the same as the Gallery. It is set up so you grab with grip (near or
+with the ray) and teleport anywhere on the floor. **This has not been tried on
+a headset yet** (see below).
 
 ## What's inside
 
@@ -47,7 +58,7 @@ teleport anywhere on the floor.
 | `Editor/PaintedBedroomBuilder.cs` | Builds the scene: colliders, movable objects, lighting, desktop and XR rigs |
 | `Runtime/*.cs` | Desktop walker, desktop grab/inspect, the movable marker, rig selector |
 
-**Movable (34):**
+**Movable (31):**
 - **Bed:** Bed, Pillow_Back, Pillow_Front, Blanket
 - **Washstand:** Washstand, Carafe, Basin, Pitcher, Tumbler, SoapDish, Bottle_Tall, Bottle_Short, BrushBox, ClothesBrush
 - **Chairs:** Chair_Front, Chair_Back
@@ -57,7 +68,7 @@ teleport anywhere on the floor.
 
 **Fixed:** Room_Walls, Room_Floor, Room_Ceiling, Room_Skirting, Door_Frames
 (including a landing behind each door), and Window_View (a 3D square of
-trees and houses seen through the window).
+trees and houses seen through the window). That's 6 fixed + 31 movable = 37.
 
 ## How it was made
 
@@ -93,10 +104,15 @@ this format. The scene's source and the export tools are in `web/`; see
 
 ## Verified / inferred
 
-- [V] **The first version** imported and built its scene in Unity 6000.3.23f1
-  (InnerFrame-QuestTest): 22 objects, 69 materials, 49 textures, no Console
-  errors. Desktop walk-around worked in Play mode. Serena, 2026-10-08.
-- [I] **The current version** has not been run in Unity yet. This includes the
-  movable objects, inspect mode, lighting, glass, door landings and teleport
-  floor. Its C# was not compiled before this commit.
+All in Unity 6000.3.23f1, project InnerFrame-QuestTest, by Serena.
+
+- [V] **2026-10-08, the first version:** imported and built its scene (22 objects,
+  69 materials, 49 textures) with no Console errors.
+- [V] **2026-10-09, a later version with movable objects:** entered Play mode
+  with 0 Console errors. The Hierarchy showed the room, DesktopRig, XR Origin
+  (inactive), RigSelector and an auto-created XRInteractionManager.
+- [I] **This exact version has not been run in Unity yet.** It adds inspect mode,
+  the window and fill lights with shadows, glass, door landings and the teleport
+  floor. Walking, carrying and inspecting on desktop have also not been
+  confirmed by hand.
 - [I] **Nothing has been tested on a headset.**

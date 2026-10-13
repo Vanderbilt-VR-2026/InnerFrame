@@ -1,0 +1,156 @@
+using System.Collections;
+using Fusion;
+using Unity.XR.CoreUtils;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+
+/// <summary>
+/// Connects to Photon Fusion (Shared Mode) whenever a scene with an XR Origin loads.
+/// Everyone in the same scene joins the same room ("InnerFrame_Gallery",
+/// "InnerFrame_Bedroom_StyleExperiment", ...) and sees each other's avatar.
+/// Creates itself automatically; nothing needs to be added to a scene.
+/// </summary>
+public class NetworkSession : MonoBehaviour
+{
+    public const string RoomPrefix = "InnerFrame_";
+    public const int MaxPlayers = 8;
+    // Prefab built by InnerFrame > Multiplayer > Rebuild Network Player Prefab
+    const string PlayerPrefabPath = "NetworkPlayer";
+    const float RetrySeconds = 3f;
+
+    [Tooltip("Sideways gap between players who join the same room, so they don't start inside each other. 0 = off")]
+    public float spawnSpacing = 0.7f;
+
+    public static NetworkSession Instance { get; private set; }
+    public NetworkRunner Runner { get; private set; }
+
+    string roomScene; // scene whose room we should be in; null after leaving on purpose
+    bool joining;
+    float nextRetry;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    static void Bootstrap()
+    {
+        if (Instance != null) return;
+        var go = new GameObject("NetworkSession");
+        DontDestroyOnLoad(go);
+        go.AddComponent<NetworkSession>();
+    }
+
+    void Awake()
+    {
+        Instance = this;
+        SceneManager.sceneLoaded += OnSceneLoaded;
+        StartCoroutine(Join(SceneManager.GetActiveScene().name));
+    }
+
+    void OnDestroy()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+        if (Instance == this) Instance = null;
+    }
+
+    void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        if (mode != LoadSceneMode.Single) return;
+        StopAllCoroutines();
+        StartCoroutine(Join(scene.name));
+    }
+
+    // Rejoin when the connection drops, e.g. the Quest slept while the headset was off
+    // (a paused app stops answering Photon and gets dropped from the room).
+    void Update()
+    {
+        if (joining || roomScene == null || Time.unscaledTime < nextRetry) return;
+        if (Runner != null && Runner.IsRunning) return;
+        nextRetry = Time.unscaledTime + RetrySeconds;
+        Debug.Log($"[NetworkSession] Not connected to {RoomPrefix + roomScene}, rejoining");
+        StartCoroutine(Join(roomScene, rejoin: true));
+    }
+
+    IEnumerator Join(string sceneName, bool rejoin = false)
+    {
+        joining = true;
+        yield return Leave();
+
+        var origin = FindAnyObjectByType<XROrigin>();
+        if (origin == null) { joining = false; yield break; } // not a scene people walk around in
+
+        var prefab = Resources.Load<NetworkObject>(PlayerPrefabPath);
+        if (prefab == null)
+        {
+            Debug.LogError("[NetworkSession] Missing Resources/NetworkPlayer prefab. Run InnerFrame > Multiplayer > Rebuild Network Player Prefab.");
+            joining = false;
+            yield break;
+        }
+        roomScene = sceneName; // from here on, Update keeps retrying until we're in
+
+        var go = new GameObject("NetworkRunner");
+        go.transform.SetParent(transform, false);
+        var runner = go.AddComponent<NetworkRunner>();
+        Runner = runner;
+
+        // Hand the already-loaded scene to Fusion so its NetworkObjects (shared grabbables)
+        // are synced. The scene manager takes over the open scene instead of reloading it.
+        var sceneInfo = new NetworkSceneInfo();
+        int buildIndex = SceneManager.GetActiveScene().buildIndex;
+        if (buildIndex >= 0)
+            sceneInfo.AddSceneRef(SceneRef.FromIndex(buildIndex), LoadSceneMode.Single);
+        else
+            Debug.LogWarning($"[NetworkSession] {sceneName} is not in Build Settings, so its shared objects won't sync.");
+
+        var start = runner.StartGame(new StartGameArgs
+        {
+            GameMode = GameMode.Shared,
+            SessionName = RoomPrefix + sceneName,
+            PlayerCount = MaxPlayers,
+            Scene = sceneInfo,
+            SceneManager = go.AddComponent<NetworkSceneManagerDefault>(),
+        });
+        while (!start.IsCompleted) yield return null;
+
+        if (runner == null || !start.Result.Ok)
+        {
+            Debug.LogWarning($"[NetworkSession] Could not join {RoomPrefix + sceneName}: {start.Result.ShutdownReason}");
+            if (Runner == runner) Runner = null;
+            if (runner != null) Destroy(runner.gameObject);
+            joining = false;
+            yield break;
+        }
+
+        Debug.Log($"[NetworkSession] Joined {runner.SessionInfo.Name} as player {runner.LocalPlayer.PlayerId} ({runner.SessionInfo.PlayerCount} in room)");
+        if (!rejoin) ShiftRig(origin, runner.SessionInfo.PlayerCount - 1);
+        // Avatar root stays at the world origin; NetworkPlayer moves its head and hands in world space.
+        runner.Spawn(prefab, Vector3.zero, Quaternion.identity, runner.LocalPlayer);
+        joining = false;
+    }
+
+    /// <summary>Disconnects from the current room. SceneFader waits on this before changing scene.</summary>
+    public IEnumerator Leave()
+    {
+        roomScene = null;
+        var runner = Runner;
+        Runner = null;
+        if (runner == null) yield break;
+
+        var shutdown = runner.Shutdown();
+        while (!shutdown.IsCompleted) yield return null;
+        if (runner != null) Destroy(runner.gameObject);
+    }
+
+    // Slot 0 stays put, then 1 m right, 1 m left, 2 m right... unless a wall or furniture is in the way.
+    void ShiftRig(XROrigin origin, int slot)
+    {
+        if (slot <= 0 || spawnSpacing <= 0f || origin.Camera == null) return;
+
+        float dist = (slot + 1) / 2 * spawnSpacing * (slot % 2 == 1 ? 1f : -1f);
+        var offset = origin.transform.right * dist;
+        var head = origin.Camera.transform.position;
+        if (Physics.Linecast(head, head + offset, ~0, QueryTriggerInteraction.Ignore)) return;
+
+        var cc = origin.GetComponent<CharacterController>();
+        if (cc) cc.enabled = false;
+        origin.transform.position += offset;
+        if (cc) cc.enabled = true;
+    }
+}

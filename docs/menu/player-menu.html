@@ -1,0 +1,290 @@
+<title>InnerFrame Player Menu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a two-column opener (purpose + a live copy of the in-game panel), then one section per button, then setup.
+   Palette: the colours Van Gogh listed for the room in his letter to Theo, used sparingly over a violet-tinted neutral. */
+:root {
+  --bg: #f4f2f7;          /* the walls' pale violet, nearly white */
+  --surface: #ffffff;
+  --ink: #221f2b;
+  --muted: #5f5a6e;
+  --rule: #dcd7e5;
+  --accent: #9a6a00;      /* the bed's butter yellow, deepened to read as text */
+  --accent-fill: #f2c94c;
+  --green: #2f7a4f;       /* the sheets' lemon green, deepened */
+  --scarlet: #b3362b;     /* the blanket */
+  --violet: #6b5a9a;
+  /* the in-game panel: identical in both themes, it is a picture of the headset view */
+  --ui-bg: rgba(20, 20, 26, 0.94);
+  --ui-title: #383d4d;
+  --ui-close: #8c2e2e;
+  --ui-back: #335c99;
+  --ui-talk: #33804f;
+  --ui-reply: rgba(255, 255, 255, 0.06);
+  --ui-text: #ffffff;
+  --ui-dim: rgba(255, 255, 255, 0.62);
+
+  --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --body: "Atkinson Hyperlegible", "Helvetica Neue", Arial, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #16141d; --surface: #1f1c28; --ink: #ece9f3; --muted: #a59fb6; --rule: #332f40;
+    --accent: #f2c94c; --accent-fill: #f2c94c; --green: #7fcf9b; --scarlet: #f07a6c; --violet: #b4a6e3;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #16141d; --surface: #1f1c28; --ink: #ece9f3; --muted: #a59fb6; --rule: #332f40;
+  --accent: #f2c94c; --accent-fill: #f2c94c; --green: #7fcf9b; --scarlet: #f07a6c; --violet: #b4a6e3;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font: 1.0625rem/1.6 var(--body);
+  padding-inline: 20px; padding-block: 40px 64px;
+}
+.wrap { max-width: 1040px; margin-inline: auto; display: grid; gap: 56px; }
+h1, h2, h3 { font-family: var(--display); line-height: 1.12; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(2.2rem, 5vw, 3.4rem); font-weight: 700; letter-spacing: -0.015em; }
+h2 { font-size: clamp(1.5rem, 3vw, 2rem); font-weight: 700; }
+h3 { font-size: 1.1rem; font-weight: 700; }
+p { margin: 0; max-width: 64ch; }
+code, .mono { font-family: var(--mono); font-size: 0.86em; }
+code { background: color-mix(in srgb, var(--violet) 12%, transparent); padding: 0.1em 0.35em; border-radius: 4px; }
+.eyebrow { font-family: var(--mono); font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+a { color: var(--violet); }
+:focus-visible { outline: 3px solid var(--accent-fill); outline-offset: 3px; }
+
+/* ---- opener ---- */
+.opener { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 48px; align-items: center; }
+.opener-text { display: grid; gap: 18px; min-width: 0; }
+.lede { font-size: 1.2rem; color: var(--ink); }
+.lede strong { color: var(--accent); font-weight: 700; }
+.jobs { display: flex; flex-wrap: wrap; gap: 10px; padding: 0; margin: 4px 0 0; list-style: none; }
+.jobs li { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border: 1px solid var(--rule); border-radius: 999px; font-size: 0.92rem; background: var(--surface); }
+.dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.dot.ready { background: var(--green); }
+.dot.partial { background: var(--accent-fill); }
+.dot.todo { background: var(--scarlet); }
+
+/* ---- the panel, drawn to its real proportions: 500 x 400 canvas px = 0.50 x 0.40 m ---- */
+.stage { min-width: 0; display: grid; gap: 10px; justify-items: center; }
+.panel {
+  width: 100%; max-width: 440px; aspect-ratio: 5 / 4;
+  background: var(--ui-bg); color: var(--ui-text); border-radius: 6px;
+  display: grid; grid-template-rows: 14% auto auto 1fr; gap: 3.5%; padding-bottom: 5%;
+  box-shadow: 0 18px 40px -18px rgba(20, 16, 40, 0.55);
+  font-family: var(--body); container-type: inline-size;
+}
+.panel .bar { background: var(--ui-title); display: flex; align-items: center; justify-content: space-between; padding-inline: 4% 1.5%; border-radius: 6px 6px 0 0; font-size: 4.4cqi; color: var(--ui-dim); cursor: grab; }
+.panel .bar b { color: var(--ui-text); font-weight: 700; margin-right: 0.4em; }
+.panel button {
+  font: inherit; color: var(--ui-text); border: 0; border-radius: 3px; cursor: pointer;
+  font-size: 4.8cqi; padding: 3.2% 0; margin-inline: 6%;
+  transition: filter 120ms ease;
+}
+.panel button:hover { filter: brightness(1.18); }
+.panel button:active { filter: brightness(0.8); }
+.panel .close { background: var(--ui-close); margin: 0; aspect-ratio: 1; height: 80%; padding: 0; font-size: 4.4cqi; }
+.panel .back { background: var(--ui-back); }
+.panel .talk { background: var(--ui-talk); }
+.panel .talk[data-state="listening"] { background: var(--ui-close); }
+.panel .talk[data-state="thinking"] { background: #5a5f70; cursor: progress; }
+.panel .reply { background: var(--ui-reply); margin-inline: 6%; padding: 3% 4%; font-size: 4cqi; line-height: 1.45; color: var(--ui-text); overflow: hidden; }
+.panel .reply .hint { color: var(--ui-dim); font-style: italic; }
+.dims { display: flex; gap: 18px; font-family: var(--mono); font-size: 0.78rem; color: var(--muted); }
+.stage-note { font-size: 0.85rem; color: var(--muted); text-align: center; max-width: 40ch; }
+
+/* ---- the two buttons ---- */
+.features { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; }
+.feature { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 28px; display: grid; gap: 16px; align-content: start; min-width: 0; }
+.feature-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.chip { font-family: var(--mono); font-size: 0.74rem; letter-spacing: 0.05em; text-transform: uppercase; padding: 3px 10px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
+.chip.ready { color: var(--green); }
+.chip.partial { color: var(--accent); }
+
+.rules { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--rule); }
+.rules li { display: grid; grid-template-columns: 8.5rem minmax(0, 1fr); gap: 14px; padding: 11px 0; border-bottom: 1px solid var(--rule); font-size: 0.95rem; }
+.rules .when { color: var(--muted); font-size: 0.86rem; }
+
+.pipeline { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; counter-reset: step; }
+.pipeline li { display: grid; grid-template-columns: 2rem minmax(0, 1fr) auto; gap: 12px; align-items: baseline; padding: 10px 0; border-bottom: 1px dashed var(--rule); font-size: 0.95rem; counter-increment: step; }
+.pipeline li::before { content: counter(step); font-family: var(--mono); color: var(--muted); font-size: 0.82rem; }
+.pipeline .where { font-family: var(--mono); font-size: 0.74rem; color: var(--muted); text-align: right; }
+.pipeline li.todo .where { color: var(--scarlet); }
+.contract { font-family: var(--mono); font-size: 0.82rem; background: color-mix(in srgb, var(--violet) 8%, var(--surface)); border: 1px solid var(--rule); border-radius: 8px; padding: 14px 16px; overflow-x: auto; white-space: pre; line-height: 1.55; }
+.keynote { font-size: 0.92rem; color: var(--muted); }
+.keynote strong { color: var(--ink); }
+
+/* ---- setup + next ---- */
+.lower { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); gap: 40px; }
+.lower section { display: grid; gap: 14px; align-content: start; min-width: 0; }
+.table-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.95rem; }
+th, td { text-align: left; padding: 9px 12px 9px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-weight: 400; font-size: 0.74rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+kbd { font-family: var(--mono); font-size: 0.82em; border: 1px solid var(--rule); border-bottom-width: 2px; border-radius: 4px; padding: 0.05em 0.4em; background: var(--surface); }
+.next { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+.next li { display: grid; grid-template-columns: 12px minmax(0, 1fr); gap: 12px; align-items: baseline; font-size: 0.95rem; }
+.next .dot { transform: translateY(-1px); }
+footer { font-size: 0.85rem; color: var(--muted); border-top: 1px solid var(--rule); padding-top: 18px; }
+
+@media (max-width: 820px) {
+  .opener, .features, .lower { grid-template-columns: minmax(0, 1fr); }
+  .opener { gap: 32px; }
+}
+@media (max-width: 460px) {
+  body { padding-inline: 16px; padding-block: 28px 48px; }
+  .feature { padding: 20px; }
+  .rules li { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .pipeline li { grid-template-columns: 1.6rem minmax(0, 1fr); }
+  .pipeline .where { grid-column: 2; text-align: left; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+
+  <header class="opener">
+    <div class="opener-text">
+      <span class="eyebrow">InnerFrame · VR · Assets/Script/Menu</span>
+      <h1>The Player Menu</h1>
+      <p class="lede">A small panel you call up in the headset with the <strong>≡ button</strong>. It does two jobs: take you <strong>back to the scene you came from</strong>, and, soon, let you <strong>talk to the painter</strong>.</p>
+      <p>It opens half a metre in front of you and stays where it is in the room. Grip the title bar to move it. It works in every scene with an XR rig, and nothing has to be added to a scene.</p>
+      <ul class="jobs" aria-label="Status">
+        <li><span class="dot ready"></span>Back: ready</li>
+        <li><span class="dot partial"></span>Talk: Unity side ready</li>
+        <li><span class="dot todo"></span>AI proxy: to build</li>
+      </ul>
+    </div>
+
+    <div class="stage">
+      <div class="panel" role="group" aria-label="Example of the menu panel">
+        <div class="bar"><span><b>Menu</b>· grip here to move</span><button class="close" id="demo-close" type="button" aria-label="Close">X</button></div>
+        <button class="back" id="demo-back" type="button">Back to Gallery</button>
+        <button class="talk" id="demo-talk" type="button" data-state="idle">Talk</button>
+        <div class="reply" id="demo-reply" aria-live="polite"><span class="hint">Press Talk to try the flow. The reply shown is an example.</span></div>
+      </div>
+      <div class="dims"><span>0.50 m wide</span><span>0.40 m tall</span><span>opens 0.55 m away</span></div>
+      <p class="stage-note">Same layout and colours as the panel in the headset. The buttons here walk through what each one does.</p>
+    </div>
+  </header>
+
+  <div class="features">
+    <section class="feature" aria-labelledby="back-h">
+      <div class="feature-head"><h2 id="back-h">Back</h2><span class="chip ready">Ready</span></div>
+      <p>Every scene is a room in the museum. The Back button is the way out, so a player is never stuck in a painting.</p>
+      <ul class="rules">
+        <li><span class="when">Came from a scene</span><span>Goes back to it. The label names it: <em>Back to Gallery</em>.</span></li>
+        <li><span class="when">Started here</span><span>Goes to the <strong>Gallery</strong>, the home scene.</span></li>
+        <li><span class="when">In the Gallery, nowhere to go</span><span>The button is hidden.</span></li>
+      </ul>
+      <p class="keynote">It uses the existing <code>SceneFader</code>: the view fades to black, you <strong>leave the Photon room</strong> cleanly, and the other scene fades in. The target scene must be in Build Settings.</p>
+    </section>
+
+    <section class="feature" aria-labelledby="talk-h">
+      <div class="feature-head"><h2 id="talk-h">Talk</h2><span class="chip partial">Waiting on the proxy</span></div>
+      <p>The start of the AI conversation with Vincent. Press once to speak, press again to send. The answer appears in the panel word by word, as it is written.</p>
+      <ol class="pipeline">
+        <li><span>Record the microphone, up to 20 s</span><span class="where">headset · done</span></li>
+        <li><span>Send it as a WAV file to our proxy</span><span class="where">headset · done</span></li>
+        <li class="todo"><span>Turn speech into text</span><span class="where">proxy · to build</span></li>
+        <li class="todo"><span>Ask Claude, in character as the painter</span><span class="where">proxy · to build</span></li>
+        <li><span>Show the reply as it streams in</span><span class="where">headset · done</span></li>
+      </ol>
+      <div class="contract" role="region" aria-label="Proxy contract" tabindex="0">POST {serverUrl}/npc/{SceneName}/listen
+  form field  audio = 16 kHz mono 16-bit WAV
+  header      X-Access-Code (optional)
+← plain text, streamed as it's written</div>
+      <p class="keynote"><strong>The AI key never goes in the app.</strong> A Quest build can be unpacked, and the repo is public, so the key lives only on the proxy server.</p>
+    </section>
+  </div>
+
+  <div class="lower">
+    <section aria-labelledby="use-h">
+      <h2 id="use-h">Using it</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th scope="col">Do</th><th scope="col">Headset</th><th scope="col">Editor, no headset</th></tr></thead>
+          <tbody>
+            <tr><td>Open / close</td><td>Left <kbd>≡</kbd> Menu button</td><td><kbd>M</kbd> in the Game view</td></tr>
+            <tr><td>Move the panel</td><td>Grip the title bar and move</td><td>Needs a controller or the XR Interaction Simulator</td></tr>
+            <tr><td>Press a button</td><td>Point the ray, pull the trigger</td><td>Click</td></tr>
+            <tr><td>Close</td><td><kbd>X</kbd> or <kbd>≡</kbd></td><td><kbd>X</kbd> or <kbd>M</kbd></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="keynote">In the Painted Bedroom's desktop mode, the menu frees the mouse and pauses mouse-look until you close it.</p>
+    </section>
+
+    <section aria-labelledby="next-h">
+      <h2 id="next-h">Next steps</h2>
+      <ul class="next">
+        <li><span class="dot todo"></span><span>Pick a speech-to-text service and add the <code>/listen</code> endpoint to the proxy.</span></li>
+        <li><span class="dot todo"></span><span>Write Vincent's character prompt from the painting notes: short spoken answers, interpretations marked as such.</span></li>
+        <li><span class="dot partial"></span><span>Set each machine's proxy address in an <code>AIProxySettings</code> asset. On a Quest, use the computer's IP, not <code>localhost</code>.</span></li>
+        <li><span class="dot partial"></span><span>Multiplayer: send the reply to everyone in the room, so both players hear the same answer.</span></li>
+        <li><span class="dot partial"></span><span>Later: read the reply aloud with text-to-speech.</span></li>
+      </ul>
+    </section>
+  </div>
+
+  <footer>Code: <code>Assets/Script/Menu/</code> · Full notes and headset tests: <code>docs/menu/README.md</code> · Appears in every scene with an XR rig, including Gallery (Cici) and Bedroom (Rowling).</footer>
+</div>
+
+<script>
+(function () {
+  var talk = document.getElementById('demo-talk');
+  var reply = document.getElementById('demo-reply');
+  var back = document.getElementById('demo-back');
+  var close = document.getElementById('demo-close');
+  var panel = document.querySelector('.panel');
+  var sample = 'I painted this room to rest my mind. The colour does the work: violet walls, a red floor, a bed as yellow as fresh butter.';
+  var timer = null;
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function setReply(html) { reply.innerHTML = html; }
+  function stop() { if (timer) { clearInterval(timer); clearTimeout(timer); timer = null; } }
+
+  talk.addEventListener('click', function () {
+    var s = talk.getAttribute('data-state');
+    if (s === 'idle') {
+      stop();
+      talk.setAttribute('data-state', 'listening');
+      talk.textContent = 'Listening...  press to send';
+      setReply('<span class="hint">Recording. Say something to Vincent.</span>');
+    } else if (s === 'listening') {
+      talk.setAttribute('data-state', 'thinking');
+      talk.textContent = 'Thinking...';
+      setReply('');
+      timer = setTimeout(function () {
+        if (reduce) { setReply(sample); done(); return; }
+        var words = sample.split(' '), i = 0;
+        timer = setInterval(function () {
+          reply.textContent += (i ? ' ' : '') + words[i++];
+          if (i >= words.length) { stop(); done(); }
+        }, 70);
+      }, 600);
+    }
+  });
+  function done() { talk.setAttribute('data-state', 'idle'); talk.textContent = 'Talk'; }
+
+  back.addEventListener('click', function () {
+    stop(); done();
+    setReply('<span class="hint">Fading to black, leaving the Photon room, loading Gallery.</span>');
+  });
+
+  close.addEventListener('click', function () {
+    stop(); done();
+    panel.style.opacity = '0.25';
+    setReply('<span class="hint">Closed. Press ≡ to open it again in front of you.</span>');
+    setTimeout(function () { panel.style.opacity = ''; }, 1400);
+  });
+})();
+</script>

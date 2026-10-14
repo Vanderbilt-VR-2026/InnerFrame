@@ -27,7 +27,7 @@ namespace InnerFrame.PaintedBedroom.EditorTools
         [Serializable] class RoomData { public int version; public ObjectData[] objects; public MarkerData[] markers; public MaterialData[] materials; public string[] textures; public int floatCount; public int intCount; public float painterFov; public float painterLensShiftY; }
         [Serializable] class ObjectData { public string name; public float[] position; public MeshData[] meshes; }
         [Serializable] class MeshData { public string name; public int material; public int vertexCount; public int positions; public int normals; public int uvs; public int indexCount; public int indices; }
-        [Serializable] class MaterialData { public string name; public int texture; public float[] color; public bool unlit; public float emission; public bool doubleSided; public bool outline; public float opacity; }
+        [Serializable] class MaterialData { public string name; public int texture; public int height = -1; public float[] color; public bool unlit; public float emission; public bool doubleSided; public bool outline; public float opacity; }
         [Serializable] class MarkerData { public string name; public float[] position; }
 
         [MenuItem("Tools/InnerFrame/Painted Bedroom/Import and Build (no Blender)", false, 10)]
@@ -70,7 +70,20 @@ namespace InnerFrame.PaintedBedroom.EditorTools
                 {
                     string p = DataDir + "/Textures/" + data.textures[i] + ".png";
                     var ti = AssetImporter.GetAtPath(p) as TextureImporter;
-                    if (ti != null && (ti.wrapMode != TextureWrapMode.Repeat || ti.maxTextureSize < 4096 || ti.anisoLevel < 4))
+                    bool height = data.textures[i].EndsWith("_height");   // stroke relief, exported as grey: becomes a normal map
+                    if (ti != null && height && (ti.textureType != TextureImporterType.NormalMap || !ti.convertToNormalmap))
+                    {
+                        ti.textureType = TextureImporterType.NormalMap;
+                        ti.convertToNormalmap = true;
+                        ti.heightmapScale = 0.025f;
+                        ti.normalmapFilter = TextureImporterNormalFilter.Standard;
+                        ti.wrapMode = TextureWrapMode.Repeat;
+                        ti.maxTextureSize = 2048;
+                        ti.anisoLevel = 4;
+                        ti.mipmapEnabled = true;
+                        ti.SaveAndReimport();
+                    }
+                    else if (ti != null && !height && (ti.wrapMode != TextureWrapMode.Repeat || ti.maxTextureSize < 4096 || ti.anisoLevel < 4))
                     {
                         ti.textureType = TextureImporterType.Default;
                         ti.sRGBTexture = true;
@@ -170,6 +183,10 @@ namespace InnerFrame.PaintedBedroom.EditorTools
             return mesh;
         }
 
+        /// <summary>Use the exported stroke height maps as normal maps (paint relief). Off for now: it made
+        /// the surfaces read as grainier than the painting (#50); the maps are still exported and imported.</summary>
+        const bool Relief = false;
+
         static Material MakeMaterial(MaterialData d, Texture2D[] textures, Shader lit, Shader unlit)
         {
             string path = GenMaterials + "/" + d.name + ".mat";
@@ -200,6 +217,11 @@ namespace InnerFrame.PaintedBedroom.EditorTools
                 m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
                 m.SetTexture("_EmissionMap", tex);
                 m.SetColor("_EmissionColor", (tex != null ? Color.white : col) * e);
+                // the paint's relief: the exported stroke height map, imported as a normal map (#50)
+                Texture2D bump = Relief && d.height >= 0 && d.height < textures.Length ? textures[d.height] : null;
+                m.SetTexture("_BumpMap", bump);
+                m.SetFloat("_BumpScale", 0.7f);
+                if (bump != null) m.EnableKeyword("_NORMALMAP"); else m.DisableKeyword("_NORMALMAP");
             }
             EditorUtility.SetDirty(m);
             return m;

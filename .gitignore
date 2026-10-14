@@ -117,6 +117,11 @@ Icon?
 *.7z
 .fake
 __MACOSX/
+# Render Fixed Views output (Painted Bedroom before/after screenshots, #44)
+/FixedViews/
+# Playwright install for the Painted Bedroom web tools, and local notes
+node_modules/
+/notes/
 
 # Photon Fusion: the App ID is a per-project key and this repo is public,
 # so each machine enters it locally (see docs/multiplayer/README.md).

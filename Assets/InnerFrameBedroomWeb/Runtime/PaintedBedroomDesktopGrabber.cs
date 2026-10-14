@@ -114,6 +114,7 @@ namespace InnerFrame.PaintedBedroom
                 best = h.distance;
                 found = h.collider.GetComponentInParent<PaintedBedroomMovable>();   // a wall in front blocks the pick
             }
+            if (found != null && !found.liftable) found = null;   // set in the physics table
             if (found != null) distance = best;
             return found;
         }
@@ -135,6 +136,7 @@ namespace InnerFrame.PaintedBedroom
             if (controller != null) foreach (var c in heldColliders) Physics.IgnoreCollision(controller, c, true);
             // objects with physics are pulled toward the dot (heavier = slower) instead of placed there,
             // so they still collide and shove lighter things according to their mass
+            m.Wake();   // resting until grabbed: physics from now on
             heldBody = m.GetComponent<Rigidbody>();
             if (heldBody != null && heldBody.isKinematic) heldBody = null;
             if (heldBody != null) { heldBodyGravity = heldBody.useGravity; heldBody.useGravity = false; }

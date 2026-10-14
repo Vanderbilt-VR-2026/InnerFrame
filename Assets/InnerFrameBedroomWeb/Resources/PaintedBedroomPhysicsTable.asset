@@ -1,0 +1,170 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 842f67368317b4990a9d85ed79076252, type: 3}
+  m_Name: PaintedBedroomPhysicsTable
+  m_EditorClassIdentifier: Assembly-CSharp::InnerFrame.PaintedBedroom.PaintedBedroomPhysicsTable
+  rows:
+  - objectName: Clothes_Dark
+    liftable: 1
+    hasPhysics: 0
+    useGravity: 0
+    mass: 1
+  - objectName: SoapDish
+    liftable: 1
+    hasPhysics: 1
+    useGravity: 1
+    mass: 1
+  - objectName: Window
+    liftable: 1
+    hasPhysics: 0
+    useGravity: 0
+    mass: 1
+  - objectName: Pillow_Back
+    liftable: 1
+    hasPhysics: 1
+    useGravity: 1
+    mass: 1
+  - objectName: Hat
+    liftable: 1
+    hasPhysics: 0
+    useGravity: 0
+    mass: 1
+  - objectName: Bottle_Tall
+    liftable: 1
+    hasPhysics: 1
+    useGravity: 1
+    mass: 1
+  - objectName: Mirror
+    liftable: 1
+    hasPhysics: 0
+    useGravity: 0
+    mass: 1
+  - objectName: Bottle_Short
+    liftable: 1
+    hasPhysics: 1
+    useGravity: 1
+    mass: 1
+  - objectName: Blanket
+    liftable: 1
+    hasPhysics: 1
+    useGravity: 1
+    mass: 1
+  - objectName: Smock
+    liftable: 1
+    hasPhysics: 0
+    useGravity: 0
+    mass: 1
+  - objectName: Picture_PortraitMan
+    liftable: 1
+    hasPhysics: 0
+    useGravity: 0
+    mass: 1
+  - objectName: PegRail
+    liftable: 1
+    hasPhysics: 0
+    useGravity: 0
+    mass: 1
+  - objectName: Door_Left
+    liftable: 1
+    hasPhysics: 0
+    useGravity: 0
+    mass: 1
+  - objectName: Tumbler
+    liftable: 1
+    hasPhysics: 1
+    useGravity: 1
+    mass: 1
+  - objectName: Door_Right
+    liftable: 1
+    hasPhysics: 0
+    useGravity: 0
+    mass: 1
+  - objectName: Picture_Landscape
+    liftable: 1
+    hasPhysics: 0
+    useGravity: 0
+    mass: 1
+  - objectName: Picture_DrawingRight
+    liftable: 1
+    hasPhysics: 0
+    useGravity: 0
+    mass: 1
+  - objectName: Basin
+    liftable: 1
+    hasPhysics: 1
+    useGravity: 1
+    mass: 1
+  - objectName: Pitcher
+    liftable: 1
+    hasPhysics: 1
+    useGravity: 1
+    mass: 1
+  - objectName: Washstand
+    liftable: 1
+    hasPhysics: 0
+    useGravity: 0
+    mass: 1
+  - objectName: Chair_Front
+    liftable: 1
+    hasPhysics: 0
+    useGravity: 0
+    mass: 1
+  - objectName: Bed
+    liftable: 1
+    hasPhysics: 0
+    useGravity: 0
+    mass: 1
+  - objectName: Pillow_Front
+    liftable: 1
+    hasPhysics: 1
+    useGravity: 1
+    mass: 1
+  - objectName: BrushBox
+    liftable: 1
+    hasPhysics: 1
+    useGravity: 1
+    mass: 1
+  - objectName: ClothesBrush
+    liftable: 1
+    hasPhysics: 1
+    useGravity: 1
+    mass: 1
+  - objectName: Picture_DrawingLeft
+    liftable: 1
+    hasPhysics: 0
+    useGravity: 0
+    mass: 1
+  - objectName: Chair_Back
+    liftable: 1
+    hasPhysics: 0
+    useGravity: 0
+    mass: 1
+  - objectName: Cloth_Pale
+    liftable: 1
+    hasPhysics: 0
+    useGravity: 0
+    mass: 1
+  - objectName: Carafe
+    liftable: 1
+    hasPhysics: 1
+    useGravity: 1
+    mass: 1
+  - objectName: Towel
+    liftable: 1
+    hasPhysics: 0
+    useGravity: 0
+    mass: 1
+  - objectName: Picture_PortraitWoman
+    liftable: 1
+    hasPhysics: 0
+    useGravity: 0
+    mass: 1

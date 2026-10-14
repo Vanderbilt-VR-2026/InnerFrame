@@ -22,6 +22,12 @@ namespace InnerFrame.PaintedBedroom
                  "heavier ones lag behind in proportion (twice the mass, half the speed).")]
         public float lightMass = 1f;
 
+        [Tooltip("Can be picked up. Set by PaintedBedroomPhysicsApplier when a physics table is used.")]
+        public bool liftable = true;
+
+        /// <summary>Kinematic, as painted, until first picked up; physics from then on. Set by PaintedBedroomPhysicsApplier.</summary>
+        [System.NonSerialized] public bool restUntilGrabbed;
+
         Vector3 homePosition;
         Quaternion homeRotation;
 
@@ -31,6 +37,17 @@ namespace InnerFrame.PaintedBedroom
             homeRotation = transform.rotation;
             if (string.IsNullOrEmpty(displayName)) displayName = gameObject.name.Replace('_', ' ');
             ApplyWeightToGrab();
+            // the grab puts the Rigidbody back as it found it (kinematic) on release, so wake it after that
+            var grab = GetComponent<XRGrabInteractable>();
+            if (grab != null) grab.selectExited.AddListener(_ => Wake());
+        }
+
+        /// <summary>Picked up: an object resting until grabbed gets its physics.</summary>
+        public void Wake()
+        {
+            if (!restUntilGrabbed) return;
+            var rb = GetComponent<Rigidbody>();
+            if (rb != null && rb.isKinematic) { rb.isKinematic = false; rb.WakeUp(); }
         }
 
         /// <summary>
@@ -39,11 +56,18 @@ namespace InnerFrame.PaintedBedroom
         /// Velocity Tracking instead: physics pulls them toward the hand, slower the heavier they are,
         /// so they collide by mass, and throws are scaled down the same way.
         /// </summary>
-        void ApplyWeightToGrab()
+        public void ApplyWeightToGrab()
         {
             var rb = GetComponent<Rigidbody>();
             var grab = GetComponent<XRGrabInteractable>();
-            if (rb == null || rb.isKinematic || grab == null) return;
+            if (rb == null || grab == null) return;
+            if (rb.isKinematic && !restUntilGrabbed)
+            {
+                // the builder's setup, back again if physics is switched off in Play mode
+                grab.movementType = XRBaseInteractable.MovementType.Kinematic;
+                grab.throwOnDetach = false;
+                return;
+            }
 
             float lightness = Mathf.Clamp(lightMass / Mathf.Max(rb.mass, 0.01f), 0.02f, 1f);
             grab.movementType = XRBaseInteractable.MovementType.VelocityTracking;
@@ -65,6 +89,7 @@ namespace InnerFrame.PaintedBedroom
             var rb = GetComponent<Rigidbody>();
             if (rb != null && !rb.isKinematic) { rb.linearVelocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
             transform.SetPositionAndRotation(homePosition, homeRotation);
+            if (rb != null && restUntilGrabbed) rb.isKinematic = true;   // resting as painted again
         }
 
         public static void ResetAll()

@@ -101,5 +101,7 @@ the triangle winding.
 - **Made by:** the team (Serena Deng with Claude).
 - **three.js:** MIT license. Loaded from the CDN, not copied into the repo.
 - **The painting:** *The Bedroom* (1889, Art Institute of Chicago, public domain).
-  It is only shown for reference and comparison, from the repo's existing copy;
-  none of its pixels are baked into the exported textures.
+  Here it is only shown for reference and comparison, from the repo's existing
+  copy; the generator bakes none of its pixels into the exported textures. After
+  the freeze, six textures in `Data/Textures/` (the mirror and the five wall
+  pictures) were replaced by crops of the painting; see `docs/ASSETS.md`.

@@ -169,7 +169,8 @@ const TEX_SCALE = 2;
 // Brushwork, tuned against close crops of the painting (#50): its strokes are long, confident and
 // fairly parallel, with calm patches between busier ones, not an even carpet of short dabs. So every
 // stroke is drawn longer (LEN_SCALE) and a little narrower (WID_SCALE), fewer are drawn (COUNT_SCALE),
-// they gather into clusters (CLUSTER: 0 = even, 1 = strongly patchy), each wanders more in colour
+// they gather into clusters (CLUSTER: 0 = even, 1 = strongly patchy; only on tiling canvases, so the
+// floor and the placed art, drawn with tile: false, keep full coverage), each wanders more in colour
 // (VARY_BOOST). BRISTLES draws a faint streak along each stroke; off, it made the surfaces fussier than the painting.
 const LEN_SCALE = 1.3, WID_SCALE = 0.9, COUNT_SCALE = 0.6, CLUSTER = 0.6;
 // Measured on the painting (#50): neighbouring strokes share a colour, so the paint reads as patches

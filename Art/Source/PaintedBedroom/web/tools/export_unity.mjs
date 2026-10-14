@@ -3,7 +3,8 @@
 //   npm install playwright && npx playwright install chromium
 //   node export_unity.mjs ../../InnerFrameBedroomWeb/Data
 //
-// Writes room.json, room.bytes and Textures/tex_###.png into the given folder.
+// Writes room.json, room.bytes and Textures/tex_<material>.png (plus tex_<material>_height.png
+// stroke relief maps) into the given folder.
 // Optional: THREE_LOCAL=/path/to/three.js-r170 serves three.js from a local
 // checkout instead of the jsdelivr CDN (for offline or restricted networks).
 import { chromium } from 'playwright';

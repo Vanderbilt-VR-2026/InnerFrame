@@ -109,7 +109,12 @@ All in Unity 6000.3.23f1, project InnerFrame-QuestTest, by Serena.
 - [V] **2026-10-09, a later version with movable objects:** entered Play mode
   with 0 Console errors. The Hierarchy showed the room, DesktopRig, XR Origin
   (inactive), RigSelector and an auto-created XRInteractionManager.
-- [I] **This exact version has not been run in Unity yet.** It adds inspect mode,
+- [V] **2026-10-14, the #50 baseline (PR #52), by Charlyne, batch mode:** a check
+  worktree of `main` with this package copied into `Assets/InnerFrameBedroomWeb`,
+  *Import and Build* then *Render Fixed Views* via `unity run` (a throwaway
+  driver script): 37 objects, 76 materials, 93 textures, 16 views, no Console
+  errors or exceptions. Not run from the Unity menu by hand.
+- [I] **The desktop walk-through of this exact version has not been run.** It adds inspect mode,
   the window and fill lights with shadows, glass, door landings and the teleport
   floor. Walking, carrying and inspecting on desktop have also not been
   confirmed by hand.

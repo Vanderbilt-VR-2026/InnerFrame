@@ -119,3 +119,6 @@ Icon?
 __MACOSX/
 # Render Fixed Views output (Painted Bedroom before/after screenshots, #44)
 /FixedViews/
+# Playwright install for the Painted Bedroom web tools, and local notes
+node_modules/
+/notes/

@@ -162,26 +162,84 @@ function jitter(hex, r, amt) {
 // Brushstroke textures: a base tint covered in short, thick, directional
 // strokes, with a matching height canvas for impasto relief. Strokes crossing
 // an edge are repeated on the far side so each texture tiles.
+// TEX_SCALE draws the same strokes on a canvas that many times larger (512 px
+// textures become 1024 px), so they stay sharp up close in VR; all sizes below
+// stay in the original 512 px units. Very large canvases (the floor) are left as they are.
+const TEX_SCALE = 2;
+// Brushwork, tuned against close crops of the painting (#50): its strokes are long, confident and
+// fairly parallel, with calm patches between busier ones, not an even carpet of short dabs. So every
+// stroke is drawn longer (LEN_SCALE) and a little narrower (WID_SCALE), fewer are drawn (COUNT_SCALE),
+// they gather into clusters (CLUSTER: 0 = even, 1 = strongly patchy), each wanders more in colour
+// (VARY_BOOST). BRISTLES draws a faint streak along each stroke; off, it made the surfaces fussier than the painting.
+const LEN_SCALE = 1.3, WID_SCALE = 0.9, COUNT_SCALE = 0.6, CLUSTER = 0.6;
+// Measured on the painting (#50): neighbouring strokes share a colour, so the paint reads as patches
+// of one colour a few strokes wide, and inside a patch the colour wanders in hue much more than in
+// lightness. So each stroke's palette colour is chosen by a smooth noise field (PATCH cells across
+// the canvas; fewer cells = bigger patches), with a hue wander (HUE_VAR, degrees) and a small
+// lightness wander (LIGHT_VAR) per stroke. STROKES holds per-material multipliers for all of this,
+// fitted automatically against the painting's stroke statistics (tools: stroke_fit).
+const PATCH = 7, HUE_VAR = 12, LIGHT_VAR = 0.06;
+// PATCHES turns the patch-coherent colour choice on. Off (Charlyne, 10/13 night): with it on, the walls
+// and floor went blotchy and read as dirtier than the even strokes; each stroke picks its own colour.
+const PATCHES = false;
+const STROKES = {
+  // per-material multipliers { len, wid, spread, patch, hue, light, count }: none in use (PATCHES is off)
+};
+function hslJitter(hex, r, hueDeg, light) {
+  let [R, G, B] = hexToRgb(hex).map(v => v / 255);
+  const mx = Math.max(R, G, B), mn = Math.min(R, G, B), l = (mx + mn) / 2; let h = 0, sat = 0;
+  if (mx !== mn) { const d = mx - mn; sat = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn);
+    h = mx === R ? (G - B) / d + (G < B ? 6 : 0) : mx === G ? (B - R) / d + 2 : (R - G) / d + 4; h /= 6; }
+  h = (h + (r() - 0.5) * hueDeg / 180 + 1) % 1; const l2 = Math.max(0, Math.min(1, l * (1 + (r() - 0.5) * light * 2)));
+  const q = l2 < 0.5 ? l2 * (1 + sat) : l2 + sat - l2 * sat, pp = 2 * l2 - q;
+  const f = t => { t = (t + 1) % 1; return t < 1 / 6 ? pp + (q - pp) * 6 * t : t < 0.5 ? q : t < 2 / 3 ? pp + (q - pp) * (2 / 3 - t) * 6 : pp; };
+  return `rgb(${Math.round(f(h + 1 / 3) * 255)},${Math.round(f(h) * 255)},${Math.round(f(h - 1 / 3) * 255)})`;
+}
+const VARY_BOOST = 1.0, SPREAD_BOOST = 2.0, BEND = 0.3, BRISTLES = false;
+// smooth value noise in 0..1 over the unit square, for the stroke clusters
+function clusterNoise(seed, N = 6) {
+  const q = rng(seed * 31 + 7), g = Array.from({ length: (N + 1) * (N + 1) }, () => q());
+  return (u, v) => {
+    const x = u * N, y = v * N, i = Math.min(N - 1, x | 0), j = Math.min(N - 1, y | 0), fx = x - i, fy = y - j;
+    const sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy), at = (a, b) => g[b * (N + 1) + a];
+    return (at(i, j) * (1 - sx) + at(i + 1, j) * sx) * (1 - sy) + (at(i, j + 1) * (1 - sx) + at(i + 1, j + 1) * sx) * sy;
+  };
+}
 function strokeCanvas(o) {
-  const S = o.size || 512, r = rng(o.seed || 1);
-  const col = document.createElement('canvas'); col.width = col.height = S;
-  const hgt = document.createElement('canvas'); hgt.width = hgt.height = S;
+  const S = o.size || 512, r = rng(o.seed || 1), k = S >= 2048 ? 1 : TEX_SCALE;
+  const col = document.createElement('canvas'); col.width = col.height = S * k;
+  const hgt = document.createElement('canvas'); hgt.width = hgt.height = S * k;
   const c = col.getContext('2d'), h = hgt.getContext('2d');
+  c.scale(k, k); h.scale(k, k);
   c.fillStyle = o.base; c.fillRect(0, 0, S, S);
   h.fillStyle = '#808080'; h.fillRect(0, 0, S, S);
   c.lineCap = h.lineCap = 'round';
-  const n = o.strokes ?? 1600;
-  const [l0, l1] = o.len || [14, 46], [w0, w1] = o.wid || [4, 10];
+  const T = { len: 1, wid: 1, spread: 1, patch: 1, hue: 1, light: 1, count: 1, ...(STROKES[o.key] || {}) };
+  const n = Math.round((o.strokes ?? 1600) * COUNT_SCALE * T.count);
+  const [l0, l1] = (o.len || [14, 46]).map(v => v * LEN_SCALE * T.len), [w0, w1] = (o.wid || [4, 10]).map(v => v * WID_SCALE * T.wid);
+  const rb = rng((o.seed || 1) * 7919 + 13);   // bristles have their own random numbers
+  const dens = clusterNoise(o.seed || 1);
+  const patch = clusterNoise((o.seed || 1) * 3 + 1, Math.max(2, Math.round(PATCH / T.patch)));   // which palette colour a patch gets
+  const patch2 = clusterNoise((o.seed || 1) * 5 + 2, Math.max(2, Math.round(PATCH * 1.7 / T.patch)));
   for (let i = 0; i < n; i++) {
     const x = r() * S, y = r() * S;
-    let a = (o.angle || 0) + (r() - 0.5) * (o.spread ?? 0.4);
+    if (o.tile !== false && r() < CLUSTER * (1 - dens(x / S, y / S))) continue;   // calmer patches between busier ones
+    let a = (o.angle || 0) + (r() - 0.5) * (o.spread ?? 0.4) * SPREAD_BOOST * T.spread;
     if (o.circular) a = Math.atan2(y - S / 2, x - S / 2) + Math.PI / 2 + (r() - 0.5) * 0.3;
     if (o.wave) a += Math.sin(y / S * Math.PI * 2 * o.wave + x / S * 3) * 0.35;
     const L = l0 + r() * (l1 - l0), W = w0 + r() * (w1 - w0);
-    const dx = Math.cos(a) * L / 2, dy = Math.sin(a) * L / 2, bend = (r() - 0.5) * L * 0.25;
-    const pick = o.pick ? o.pick(x / S, y / S, r) : o.cols[(r() * o.cols.length) | 0];
-    const colr = jitter(pick, r, o.vary ?? 0.14);
+    const dx = Math.cos(a) * L / 2, dy = Math.sin(a) * L / 2, bend = (r() - 0.5) * L * BEND;
+    // palette colour by patch (neighbouring strokes agree), with a few strokes breaking the patch
+    const pv = (patch(x / S, y / S) * 0.7 + patch2(x / S, y / S) * 0.3 + (r() - 0.5) * 0.25);
+    const pick = o.pick ? o.pick(x / S, y / S, r) : PATCHES ? o.cols[Math.max(0, Math.min(o.cols.length - 1, Math.floor(pv * o.cols.length)))] : o.cols[(r() * o.cols.length) | 0];
+    const colr = PATCHES ? hslJitter(pick, r, HUE_VAR * T.hue, LIGHT_VAR * T.light * (o.vary ?? 0.14) / 0.14) : jitter(pick, r, (o.vary ?? 0.14) * VARY_BOOST);
     const g = 90 + r() * 120 | 0;
+    const hairs = [];
+    for (let j = 0, nb = BRISTLES && W > 4 ? 1 : 0; j < nb; j++) {
+      const light = rb() < 0.6;
+      hairs.push({ off: (rb() - 0.5) * W * 0.7, len: 0.6 + rb() * 0.35, w: Math.max(0.6 / k, W * (0.10 + rb() * 0.08)),
+        col: light ? `rgba(255,252,240,${0.08 + rb() * 0.08})` : `rgba(24,22,40,${0.05 + rb() * 0.07})`, hg: light ? g + 18 : g - 18 });
+    }
     for (const ox of (o.tile === false ? [0] : [-S, 0, S])) for (const oy of (o.tile === false ? [0] : [-S, 0, S])) {
       if (ox && (x + ox < -L || x + ox > S + L)) continue;
       if (oy && (y + oy < -L || y + oy > S + L)) continue;
@@ -192,8 +250,15 @@ function strokeCanvas(o) {
         ctx.quadraticCurveTo(px + bend * Math.sin(a), py + bend * Math.cos(a), px + dx, py + dy);
         ctx.stroke();
       }
-      c.strokeStyle = 'rgba(255,255,240,0.10)'; c.lineWidth = Math.max(1, W * 0.25);
-      c.beginPath(); c.moveTo(px - dx, py - dy - W * 0.2); c.lineTo(px + dx, py + dy - W * 0.2); c.stroke();
+      for (const hr of hairs) {
+        const nx = -Math.sin(a) * hr.off, ny = Math.cos(a) * hr.off, ex = dx * hr.len, ey = dy * hr.len;
+        for (const [ctx, style] of [[c, hr.col], [h, `rgb(${hr.hg},${hr.hg},${hr.hg})`]]) {
+          ctx.strokeStyle = style; ctx.lineWidth = hr.w; ctx.beginPath();
+          ctx.moveTo(px - ex + nx, py - ey + ny);
+          ctx.quadraticCurveTo(px + bend * Math.sin(a) + nx, py + bend * Math.cos(a) + ny, px + ex + nx, py + ey + ny);
+          ctx.stroke();
+        }
+      }
     }
   }
   if (o.after) o.after(c, h, S, r);
@@ -207,6 +272,7 @@ function toTextures({ col, hgt }, repeat = true) {
 }
 function paintMat(o, extra = {}) {
   const t = toTextures(strokeCanvas(o), o.tile !== false);
+  t.map.userData.opts = o;   // kept so the brushwork fitter (tools) can redraw this canvas with other STROKES
   return new THREE.MeshStandardMaterial({ map: t.map, bumpMap: t.bump, bumpScale: o.bumpScale ?? 2.2, roughness: o.rough ?? 0.82, metalness: 0, emissive: new THREE.Color('#ffffff'), emissiveMap: t.map, emissiveIntensity: o.flat ?? 0.28, ...extra });
 }
 
@@ -347,26 +413,27 @@ const PICTURES = {
 // so the pale worn patch in front of the bed sits where Van Gogh put it.
 const FLOOR = { x0: -2.45, z0: -0.75, size: 4.9 };
 function floorCanvas() {
-  // Short, mostly lengthwise dabs of teal, mint and cream, with a worn pale patch
-  // in front of the bed, khaki and brown toward the painter, and the broken dark
-  // joints that make the boards read almost like tiles.
+  // Long, thin, lengthwise streaks (as the painting's floor is brushed): a faded pinkish brown over most of the floor,
+  // broken by streaks of mint green, with darker brown toward the painter and the
+  // broken dark joints that make the boards read almost like tiles. The palette is
+  // sampled from the painting's floor (front, middle and back of the room).
   // 3072 px over 4.9 m keeps the strokes crisp right in front of the viewer;
   // at 2048 the near floor was magnified into a soft blur.
   const S = 3072, toPx = S / FLOOR.size, k = S / 2048;
   // the floor's colour grade is applied to its palette (cheap) instead of to every pixel
   const G = c => gradeHex(c, GRADE.floor);
-  const teal = ['#62a890', '#74b49e', '#58987e', '#8fc4a8', '#6aac96', '#80b8a2', '#548e7c', '#a0ceb2', '#9ab894'].map(G);
-  const cream = ['#e6dfbf', '#d8cfa5', '#efe8cc', '#cdc7a0', '#e0d6b0', '#bfd0a8'].map(G);
-  const khaki = ['#a99f74', '#8f8a62', '#b8ab7c', '#7f8a5e', '#c4b48a'].map(G);
+  const mint = ['#7fa28a', '#80a78b', '#7a997c', '#81aa8c', '#749072', '#8cc8a4', '#a0d6b6'].map(G);
+  const pink = ['#958176', '#9a8c82', '#a5958c', '#99847b', '#9f9087', '#a89991', '#b1a69b'].map(G);
+  const brown = ['#8d7669', '#7e6757', '#8f8172', '#7b6d5b', '#89917c'].map(G);
   const pale = (x, z) => {
     // placed by projecting the painting's pale floor patches back onto the floor
     const a = Math.exp(-(((x + 0.5) / 0.75) ** 2 + ((z - 2.0) / 0.45) ** 2));
     const b = Math.exp(-(((x - 0.6) / 0.35) ** 2 + ((z - 1.72) / 0.25) ** 2)) * 0.7;
     return Math.min(1, a * 1.25 + b);
   };
-  const front = z => Math.max(0, Math.min(1, (1.75 - z) / 0.4));   // the khaki-brown strip along the bottom of the canvas
+  const front = z => Math.max(0, Math.min(1, (1.75 - z) / 0.4));   // the browner strip along the bottom of the canvas
   const o = strokeCanvas({
-    size: S, seed: 3, base: G('#6aac94'), strokes: Math.round(52000 * k * k), angle: Math.PI / 2, spread: 0.14, len: [18 * k, 56 * k], wid: [7 * k, 14 * k], vary: 0.08, bumpScale: 2.4, tile: false,
+    key: 'floor', size: S, seed: 3, base: G('#9a8c82'), strokes: Math.round(60000 * k * k), angle: Math.PI / 2, spread: 0.08, len: [40 * k, 130 * k], wid: [3 * k, 7 * k], vary: 0.06, bumpScale: 2.4, tile: false,
     pick: (u, v, r) => {
       // colour is chosen per patch of board, not per stroke, so each plank segment
       // reads as one uneven slab of colour the way Van Gogh laid the floor in
@@ -375,9 +442,10 @@ function floorCanvas() {
       const h = Math.abs(Math.sin(board * 12.9898 + seg * 78.233) * 43758.5453) % 1;
       const pick = arr => arr[(Math.abs(Math.sin(board * 3.1 + seg * 7.7) * 9173.1) | 0) % arr.length];
       const q = r() < 0.75 ? h : r();               // most strokes follow their patch, some break it up
-      if (q < front(z) * 0.55) return r() < 0.7 ? pick(khaki) : khaki[(r() * khaki.length) | 0];
-      if (q < front(z) * 0.85 || q < pale(x, z)) return r() < 0.7 ? pick(cream) : cream[(r() * cream.length) | 0];
-      return r() < 0.7 ? pick(teal) : teal[(r() * teal.length) | 0];
+      const green = 0.36 - 0.08 * front(z) - 0.12 * pale(x, z);   // share of mint, as measured on the painting
+      if (q < green) return r() < 0.7 ? pick(mint) : mint[(r() * mint.length) | 0];
+      if (q < green + 0.18 + 0.12 * front(z)) return r() < 0.7 ? pick(brown) : brown[(r() * brown.length) | 0];
+      return r() < 0.7 ? pick(pink) : pink[(r() * pink.length) | 0];
     },
     after: (c, h, S, r) => {
       const bw = 0.12 * toPx;
@@ -385,7 +453,7 @@ function floorCanvas() {
         // broken seams between boards
         for (let y = 0; y < S;) {
           const L = (30 + r() * 120) * k; if (r() < 0.55) {
-            c.strokeStyle = 'rgba(32,62,58,0.7)'; c.lineWidth = 2.2 * k;
+            c.strokeStyle = 'rgba(78,62,58,0.55)'; c.lineWidth = 2.2 * k;
             c.beginPath(); c.moveTo(x + (r() - 0.5) * 3, y); c.lineTo(x + (r() - 0.5) * 3, y + L); c.stroke();
             h.strokeStyle = '#505050'; h.lineWidth = 3 * k; h.beginPath(); h.moveTo(x, y); h.lineTo(x, y + L); h.stroke();
           }
@@ -394,7 +462,7 @@ function floorCanvas() {
         // butt joints every few tens of centimetres, staggered board to board
         let y = r() * 0.4 * toPx;
         while (y < S) {
-          c.strokeStyle = 'rgba(28,52,50,0.85)'; c.lineWidth = 3 * k;
+          c.strokeStyle = 'rgba(70,56,52,0.7)'; c.lineWidth = 3 * k;
           c.beginPath(); c.moveTo(x + 1, y); c.lineTo(x + bw - 1, y + (r() - 0.5) * 5); c.stroke();
           y += (0.25 + r() * 0.4) * toPx;
         }
@@ -499,36 +567,37 @@ function rushMat(seed) {
 }
 
 // Colour grading measured against the painting: for each material, a lightness
-// shift (dL), a chroma scale (kC) and a hue rotation (dh, degrees) in CIELAB,
-// applied to its painted canvas. Values come from comparing average colours of
-// each region in the painter's view with the same region of the painting.
+// shift (dL), a chroma scale (kC), a hue rotation (dh, degrees) and optionally a
+// stroke contrast (kL: scales each pixel's lightness away from the canvas's mean)
+// in CIELAB, applied to its painted canvas. Values come from comparing average
+// colours of each region in the painter's view with the same region of the painting.
 const GRADE = {
-  wallBack: { dL: -3.05, kC: 0.535, dh: -44.8 },
-  wallLeft: { dL: -3.05, kC: 0.535, dh: -44.8 },
-  wallRight: { dL: -3.05, kC: 0.535, dh: -44.8 },
-  floor: { dL: 1.0, kC: 1.466, dh: -17.3 },
-  bedWood: { dL: 1.12, kC: 0.933, dh: 2.0 },
-  bedPanel: { dL: 1.12, kC: 0.933, dh: 2.0 },
-  blanket: { dL: 1.25, kC: 0.795, dh: 3.6 },
-  sheet: { dL: -13, kC: 1.98, dh: -14 },
-  pillow: { dL: -13, kC: 1.98, dh: -14 },
-  table: { dL: -4, kC: 0.552, dh: 20 },
-  tableTop: { dL: -4, kC: 0.552, dh: 20 },
-  door: { dL: -0.47, kC: 0.63, dh: -28.1 },
-  doorTrim: { dL: -0.47, kC: 0.63, dh: -28.1 },
-  casing: { dL: -0.47, kC: 0.63, dh: -28.1 },
-  casingPale: { dL: -0.47, kC: 0.63, dh: -28.1 },
-  windowFrame: { dL: -14, kC: 1.2, dh: -8 },
+  wallBack: { dL: -10.1, kC: 0.457, dh: -5.7, kL: 0.47 },
+  wallLeft: { dL: -12.0, kC: 0.436, dh: -20.8, kL: 1.20 },
+  wallRight: { dL: -13.6, kC: 0.580, dh: -2.3, kL: 0.91 },
+  floor: { dL: 2.6, kC: 0.931, dh: -18.5, kL: 0.71 },
+  bedWood: { dL: -10.7, kC: 0.747, dh: 4.9, kL: 0.61 },
+  bedPanel: { dL: -7.1, kC: 0.901, dh: 5.0, kL: 0.30 },
+  blanket: { dL: -7.4, kC: 0.601, dh: -1.3, kL: 0.64 },
+  sheet: { dL: -31.9, kC: 1.701, dh: -8.7, kL: 1.20 },
+  pillow: { dL: -19.8, kC: 1.592, dh: 0.2, kL: 0.97 },
+  table: { dL: 1.9, kC: 0.640, dh: 15.7, kL: 1.20 },
+  tableTop: { dL: -4.2, kC: 0.367, dh: 22.6, kL: 1.20 },
+  door: { dL: -12.0, kC: 0.451, dh: -2.8, kL: 0.46 },
+  doorTrim: { dL: -12.0, kC: 0.451, dh: -2.8, kL: 0.46 },
+  casing: { dL: -12.0, kC: 0.451, dh: -2.8, kL: 0.46 },
+  casingPale: { dL: -12.0, kC: 0.451, dh: -2.8, kL: 0.46 },
+  windowFrame: { dL: 13.9, kC: 0.692, dh: 34.2, kL: 1.20 },
   sill: { dL: 15, kC: 1.1, dh: -15 },
-  glass: { dL: -24, kC: 0.85, dh: 2 },
+  glass: { dL: -26.0, kC: 0.638, dh: 5.4, kL: 1.12 },
   carafe: { dL: -4.07, kC: 0.492, dh: -37.9 },
   blueware: { dL: -4.07, kC: 0.492, dh: -37.9 },
-  smock: { dL: 6.93, kC: 0.702, dh: -28.2 },
-  clothDark: { dL: 6.93, kC: 0.702, dh: -28.2 },
+  smock: { dL: -16.2, kC: 0.595, dh: -43.3, kL: 0.71 },
+  clothDark: { dL: -16.2, kC: 0.595, dh: -43.3, kL: 0.71 },
   towel: { dL: 0, kC: 1.0, dh: 0 },
-  rush: { dL: 0, kC: 0.92, dh: -2 },
-  chairWood: { dL: -3, kC: 0.95, dh: -2 },
-  chairWoodH: { dL: -3, kC: 0.95, dh: -2 },
+  rush: { dL: -7.9, kC: 0.716, dh: -1.4, kL: 1.03 },
+  chairWood: { dL: -19.2, kC: 0.595, dh: 6.9, kL: 0.91 },
+  chairWoodH: { dL: -19.2, kC: 0.595, dh: 6.9, kL: 0.91 },
 };
 function srgbToLinear(c) { c /= 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }
 function linearToSrgb(c) { c = c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1 / 2.4) - 0.055; return Math.max(0, Math.min(255, Math.round(c * 255))); }
@@ -537,11 +606,16 @@ function gradeCanvas(cv, g) {
   const ctx = cv.getContext('2d'), im = ctx.getImageData(0, 0, cv.width, cv.height), d = im.data;
   const ch = Math.cos(g.dh * Math.PI / 180), sh = Math.sin(g.dh * Math.PI / 180);
   const fz = t => t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116, fi = t => { const t3 = t * t * t; return t3 > 0.008856 ? t3 : (t - 16 / 116) / 7.787; };
+  const lightness = i => 116 * fz(0.2126 * srgbToLinear(d[i]) + 0.7152 * srgbToLinear(d[i + 1]) + 0.0722 * srgbToLinear(d[i + 2])) - 16;
+  const kL = g.kL ?? 1;
+  let meanL = 0;
+  if (kL !== 1) { for (let i = 0; i < d.length; i += 4) meanL += lightness(i); meanL /= d.length / 4; }
   for (let i = 0; i < d.length; i += 4) {
     const r = srgbToLinear(d[i]), gg = srgbToLinear(d[i + 1]), b = srgbToLinear(d[i + 2]);
     const X = (0.4124 * r + 0.3576 * gg + 0.1805 * b) / 0.95047, Y = 0.2126 * r + 0.7152 * gg + 0.0722 * b, Z = (0.0193 * r + 0.1192 * gg + 0.9505 * b) / 1.08883;
     const fx = fz(X), fy = fz(Y), fzz = fz(Z);
     let L = 116 * fy - 16, A = 500 * (fx - fy), B = 200 * (fy - fzz);
+    if (kL !== 1) L = meanL + (L - meanL) * kL;
     L = Math.max(0, Math.min(100, L + g.dL));
     const A2 = (A * ch - B * sh) * g.kC, B2 = (A * sh + B * ch) * g.kC;
     const ny = (L + 16) / 116, nx = ny + A2 / 500, nz = ny - B2 / 200;
@@ -569,53 +643,54 @@ function gradeMaterials() {
 // Palette, sampled from the painting.
 const M = {};
 function buildMaterials() {
-  // walls: clear light blue with fine vertical strokes, lighter toward the window
-  M.wallBack = paintMat({ seed: 1, base: '#86b0e4', cols: ['#94bce8', '#6f9ddc', '#aacaee', '#7ea8e0', '#e4eef6', '#5f8fd4', '#d2e2f2'], strokes: 3400, angle: Math.PI / 2, spread: 0.22, len: [18, 50], wid: [3, 7], vary: 0.06, bumpScale: 1.4 });
-  M.wallLeft = paintMat({ seed: 22, base: '#76a2dc', cols: ['#86aee2', '#5f90d6', '#9cc0ea', '#6e9ad8', '#dce8f4', '#4f82cc'], strokes: 3400, angle: Math.PI / 2, spread: 0.2, len: [18, 50], wid: [3, 7], vary: 0.06, bumpScale: 1.4 });
-  M.wallRight = paintMat({ seed: 23, base: '#93bbe8', cols: ['#a4c6ec', '#86b0e4', '#cfe0f4', '#e8f0f8', '#b2cff0', '#7ea8e0', '#f2f6fa'], strokes: 3600, angle: Math.PI / 2, spread: 0.1, len: [26, 80], wid: [3, 6], vary: 0.05, bumpScale: 1.4 });
-  M.ceiling = paintMat({ seed: 2, base: '#a8cac4', cols: ['#b9d6cc', '#98c0bc', '#c9e0d4', '#a4c8c0'], strokes: 1400, angle: 0.3, spread: 0.9 });
+  // walls: clear light blue with fine vertical strokes, lighter toward the window (no near-white
+  // flecks: the painting's lighter strokes are a pale lavender)
+  M.wallBack = paintMat({ key: 'wallBack', seed: 1, base: '#86b0e4', cols: ['#94bce8', '#6f9ddc', '#aacaee', '#7ea8e0', '#b4ccee', '#5f8fd4', '#a6c2ea'], strokes: 3400, angle: Math.PI / 2, spread: 0.22, len: [18, 50], wid: [3, 7], vary: 0.06, bumpScale: 1.4 });
+  M.wallLeft = paintMat({ key: 'wallLeft', seed: 22, base: '#76a2dc', cols: ['#86aee2', '#5f90d6', '#9cc0ea', '#6e9ad8', '#a8c4ea', '#4f82cc'], strokes: 3400, angle: Math.PI / 2, spread: 0.2, len: [18, 50], wid: [3, 7], vary: 0.06, bumpScale: 1.4 });
+  M.wallRight = paintMat({ key: 'wallRight', seed: 23, base: '#93bbe8', cols: ['#a4c6ec', '#86b0e4', '#bcd4f0', '#a8c6ec', '#b2cff0', '#7ea8e0', '#c4d8f2'], strokes: 3600, angle: Math.PI / 2, spread: 0.1, len: [26, 80], wid: [3, 6], vary: 0.05, bumpScale: 1.4 });
+  M.ceiling = paintMat({ key: 'ceiling', seed: 2, base: '#a8cac4', cols: ['#b9d6cc', '#98c0bc', '#c9e0d4', '#a4c8c0'], strokes: 1400, angle: 0.3, spread: 0.9 });
   M.floor = floorCanvas();
   M.base = new THREE.MeshStandardMaterial({ color: '#244a48', roughness: 0.9 });
   // the bed: ochre wood with fine dark grain, not blotchy
-  M.bedWood = paintMat({ seed: 4, base: '#d68e28', cols: ['#e0a03a', '#c97e20', '#e8b24c', '#b86e1c'], strokes: 2600, angle: Math.PI / 2, spread: 0.08, len: [30, 90], wid: [3, 6], vary: 0.06,
-    after: (c, h, S, r) => { for (let i = 0; i < 70; i++) { const x = r() * S, y = r() * S; c.strokeStyle = 'rgba(120,64,14,0.55)'; c.lineWidth = 1.5 + r() * 1.5; c.beginPath(); c.moveTo(x, y); c.lineTo(x + (r() - 0.5) * 4, y + 30 + r() * 90); c.stroke(); } } });
-  M.bedPanel = paintMat({ seed: 24, base: '#d48a26', cols: ['#e2a43c', '#c27420', '#eebc58', '#b0661a', '#d89430'], strokes: 3000, angle: Math.PI / 2, spread: 0.06, len: [40, 120], wid: [3, 6], vary: 0.06,
+  M.bedWood = paintMat({ key: 'bedWood', seed: 4, base: '#d68e28', cols: ['#e0a03a', '#c97e20', '#e8b24c', '#b86e1c'], strokes: 2600, angle: Math.PI / 2, spread: 0.08, len: [30, 90], wid: [3, 6], vary: 0.06,
+    after: (c, h, S, r) => { for (let i = 0; i < 70; i++) { const x = r() * S, y = r() * S; c.strokeStyle = 'rgba(120,64,14,0.15)'; c.lineWidth = 1.5 + r() * 1.5; c.beginPath(); c.moveTo(x, y); c.lineTo(x + (r() - 0.5) * 4, y + 30 + r() * 90); c.stroke(); } } });
+  M.bedPanel = paintMat({ key: 'bedPanel', seed: 24, base: '#d48a26', cols: ['#e2a43c', '#c27420', '#eebc58', '#b0661a', '#d89430'], strokes: 3000, angle: Math.PI / 2, spread: 0.06, len: [40, 120], wid: [3, 6], vary: 0.06,
     after: (c, h, S, r) => {
       for (let i = 0; i < 170; i++) { const x = r() * S, y = r() * S; c.strokeStyle = 'rgba(110,56,10,0.6)'; c.lineWidth = 1.2 + r() * 1.8; c.beginPath(); c.moveTo(x, y); c.lineTo(x + (r() - 0.5) * 4, y + 40 + r() * 120); c.stroke(); }
       for (const f of [0.34, 0.68]) { const x = f * S; c.strokeStyle = 'rgba(110,56,10,0.8)'; c.lineWidth = 3; c.beginPath(); c.moveTo(x, 0); c.lineTo(x + 4, S); c.stroke(); h.strokeStyle = '#303030'; h.lineWidth = 4; h.beginPath(); h.moveTo(x, 0); h.lineTo(x + 4, S); h.stroke(); }
     } });
-  M.blanket = paintMat({ seed: 5, base: '#d8341c', cols: ['#dc3a1e', '#c92a14', '#e2462a', '#c0260f', '#d63018'], strokes: 1400, angle: 0.6, spread: 1.4, wid: [7, 14], vary: 0.05, bumpScale: 1.2 });
-  M.sheet = paintMat({ flat: 0.5, seed: 6, base: '#f4f1d4', cols: ['#faf7e2', '#ebe7b4', '#f6f4e4', '#e2dea0', '#fcf9ea'], strokes: 1500, angle: 0.4, spread: 1.4, wid: [6, 12], vary: 0.05 });
-  M.pillow = paintMat({ flat: 0.5, seed: 25, base: '#f4f0d4', cols: ['#f8f6e2', '#ece6b4', '#dcd690', '#fbfaee', '#f0eac6'], strokes: 1300, angle: 0.6, spread: 2.4, len: [20, 50], wid: [10, 18], vary: 0.04, bumpScale: 1.4 });
+  M.blanket = paintMat({ key: 'blanket', seed: 5, base: '#d8341c', cols: ['#dc3a1e', '#c92a14', '#e2462a', '#c0260f', '#d63018'], strokes: 1400, angle: 0.6, spread: 1.4, wid: [7, 14], vary: 0.05, bumpScale: 1.2 });
+  M.sheet = paintMat({ key: 'sheet', flat: 0.5, seed: 6, base: '#f4f1d4', cols: ['#faf7e2', '#ebe7b4', '#f6f4e4', '#e2dea0', '#fcf9ea'], strokes: 1500, angle: 0.4, spread: 1.4, wid: [6, 12], vary: 0.05 });
+  M.pillow = paintMat({ key: 'pillow', flat: 0.5, seed: 25, base: '#f4f0d4', cols: ['#f8f6e2', '#ece6b4', '#dcd690', '#fbfaee', '#f0eac6'], strokes: 1300, angle: 0.6, spread: 2.4, len: [20, 50], wid: [10, 18], vary: 0.04, bumpScale: 1.4 });
   // chairs: lemon yellow with orange-ochre shading
   M.chairWood = chairWoodMat(7);
   M.chairWoodH = chairWoodMat(71);
   M.rush = rushMat(8);
-  M.table = paintMat({ seed: 9, base: '#a8582a', cols: ['#b66630', '#8e4622', '#c27438', '#9c5026'], strokes: 1800, angle: Math.PI / 2, spread: 0.08, len: [30, 80], wid: [3, 7], vary: 0.07 });
-  M.tableTop = paintMat({ seed: 29, base: '#bb6c34', cols: ['#c97c3e', '#a85a2a', '#d88e4c', '#b26432', '#e2a060'], strokes: 1800, angle: 0, spread: 0.1, len: [30, 80], wid: [4, 8], vary: 0.07 });
+  M.table = paintMat({ key: 'table', seed: 9, base: '#a8582a', cols: ['#b66630', '#8e4622', '#c27438', '#9c5026'], strokes: 1800, angle: Math.PI / 2, spread: 0.08, len: [30, 80], wid: [3, 7], vary: 0.07 });
+  M.tableTop = paintMat({ key: 'tableTop', seed: 29, base: '#bb6c34', cols: ['#c97c3e', '#a85a2a', '#d88e4c', '#b26432', '#e2a060'], strokes: 1800, angle: 0, spread: 0.1, len: [30, 80], wid: [4, 8], vary: 0.07 });
   // doors: light blue with paler, greenish mottling
-  M.door = paintMat({ seed: 10, base: '#62a2e2', cols: ['#72aee6', '#4f90d8', '#8cc0ec', '#a9cfee', '#9cc4cc', '#5a9ade'], strokes: 2200, angle: Math.PI / 2, spread: 0.3, len: [12, 40], wid: [5, 11], vary: 0.06 });
-  M.doorTrim = paintMat({ seed: 11, base: '#3f78c0', cols: ['#4a84c8', '#336cb4', '#5890d0'], strokes: 900, angle: Math.PI / 2, spread: 0.2 });
-  M.casing = paintMat({ seed: 26, base: '#244e36', cols: ['#2f5e42', '#1c402c', '#3a6a4c'], strokes: 900, angle: Math.PI / 2, spread: 0.2 });
-  M.casingPale = paintMat({ seed: 30, base: '#cfe0ee', cols: ['#e2ecf4', '#bcd2e6', '#f0f4f6'], strokes: 900, angle: Math.PI / 2, spread: 0.1 });
-  M.windowFrame = paintMat({ seed: 12, base: '#1f4a2a', cols: ['#2a5c34', '#173c22', '#357040', '#204e2c'], strokes: 1100, angle: Math.PI / 2, spread: 0.12 });
-  M.sill = paintMat({ seed: 31, base: '#4f8f96', cols: ['#5c9ca2', '#43808a', '#6aa8aa'], strokes: 600, angle: 0, spread: 0.2 });
+  M.door = paintMat({ key: 'door', seed: 10, base: '#62a2e2', cols: ['#72aee6', '#4f90d8', '#8cc0ec', '#a9cfee', '#9cc4cc', '#5a9ade'], strokes: 2200, angle: Math.PI / 2, spread: 0.3, len: [12, 40], wid: [5, 11], vary: 0.06 });
+  M.doorTrim = paintMat({ key: 'doorTrim', seed: 11, base: '#3f78c0', cols: ['#4a84c8', '#336cb4', '#5890d0'], strokes: 900, angle: Math.PI / 2, spread: 0.2 });
+  M.casing = paintMat({ key: 'casing', seed: 26, base: '#244e36', cols: ['#2f5e42', '#1c402c', '#3a6a4c'], strokes: 900, angle: Math.PI / 2, spread: 0.2 });
+  M.casingPale = paintMat({ key: 'casingPale', seed: 30, base: '#cfe0ee', cols: ['#e2ecf4', '#bcd2e6', '#f0f4f6'], strokes: 900, angle: Math.PI / 2, spread: 0.1 });
+  M.windowFrame = paintMat({ key: 'windowFrame', seed: 12, base: '#1f4a2a', cols: ['#2a5c34', '#173c22', '#357040', '#204e2c'], strokes: 1100, angle: Math.PI / 2, spread: 0.12 });
+  M.sill = paintMat({ key: 'sill', seed: 31, base: '#4f8f96', cols: ['#5c9ca2', '#43808a', '#6aa8aa'], strokes: 600, angle: 0, spread: 0.2 });
   // window panes: yellow-green with vertical streaks of white and deeper green
-  M.glass = paintMat({ seed: 13, base: '#cddc62', cols: ['#e4ec8a', '#bfd252', '#f2f2b6', '#a8c444', '#d8e470', '#8fae3c'], strokes: 1600, angle: Math.PI / 2, spread: 0.08, len: [30, 90], wid: [5, 10], vary: 0.06 }, { emissive: new THREE.Color('#a8c442'), emissiveIntensity: 0.3 });
-  M.carafe = paintMat({ seed: 14, base: '#a6d2c6', cols: ['#bfe2d8', '#8cc2b6', '#d8f0e8', '#9ccac0'], strokes: 1200, angle: Math.PI / 2, spread: 0.5, wid: [4, 8] });
-  M.blueware = paintMat({ seed: 15, base: '#4f90d4', cols: ['#68a6e0', '#3f7cc4', '#8cbeea', '#4a88d0'], strokes: 1200, angle: Math.PI / 2, spread: 0.6, wid: [4, 8] });
+  M.glass = paintMat({ key: 'glass', seed: 13, base: '#cddc62', cols: ['#e4ec8a', '#bfd252', '#f2f2b6', '#a8c444', '#d8e470', '#8fae3c'], strokes: 1600, angle: Math.PI / 2, spread: 0.08, len: [30, 90], wid: [5, 10], vary: 0.06 }, { emissive: new THREE.Color('#a8c442'), emissiveIntensity: 0.3 });
+  M.carafe = paintMat({ key: 'carafe', seed: 14, base: '#a6d2c6', cols: ['#bfe2d8', '#8cc2b6', '#d8f0e8', '#9ccac0'], strokes: 1200, angle: Math.PI / 2, spread: 0.5, wid: [4, 8] });
+  M.blueware = paintMat({ key: 'blueware', seed: 15, base: '#4f90d4', cols: ['#68a6e0', '#3f7cc4', '#8cbeea', '#4a88d0'], strokes: 1200, angle: Math.PI / 2, spread: 0.6, wid: [4, 8] });
   M.glassClear = new THREE.MeshStandardMaterial({ color: '#d2e8e4', roughness: 0.3, emissive: new THREE.Color('#9fc0c0'), emissiveIntensity: 0.25 });
   M.soap = new THREE.MeshStandardMaterial({ color: '#ecc85a', roughness: 0.7 });
   M.cork = new THREE.MeshStandardMaterial({ color: '#4a3a2a', roughness: 0.9 });
   M.bristle = new THREE.MeshStandardMaterial({ color: '#4a3418', roughness: 0.95 });
-  M.box = paintMat({ seed: 27, base: '#ece2a8', cols: ['#f4eabc', '#dccf8e', '#f8f0d0'], strokes: 500 });
-  M.frame = paintMat({ seed: 16, base: '#d08a2e', cols: ['#dc9a3a', '#b87424', '#e6aa4c'], strokes: 800, angle: 0, spread: 0.2 });
-  M.frameDark = paintMat({ seed: 32, base: '#a2703a', cols: ['#b08040', '#8a5a2a', '#bc8c4a'], strokes: 800, angle: 0, spread: 0.2 });
+  M.box = paintMat({ key: 'box', seed: 27, base: '#ece2a8', cols: ['#f4eabc', '#dccf8e', '#f8f0d0'], strokes: 500 });
+  M.frame = paintMat({ key: 'frame', seed: 16, base: '#d08a2e', cols: ['#dc9a3a', '#b87424', '#e6aa4c'], strokes: 800, angle: 0, spread: 0.2 });
+  M.frameDark = paintMat({ key: 'frameDark', seed: 32, base: '#a2703a', cols: ['#b08040', '#8a5a2a', '#bc8c4a'], strokes: 800, angle: 0, spread: 0.2 });
   M.blackFrame = new THREE.MeshStandardMaterial({ color: '#141c1c', roughness: 0.7 });
   M.string = new THREE.MeshBasicMaterial({ color: '#1f2a40' });
   // the towel: pale yellow-green linen with darker green shadow strokes in the folds,
   // a dark green border along both edges and a couple of orange-red woven stripes
-  M.towel = paintMat({ flat: 0.45, seed: 18, base: '#c9d99a', cols: ['#d6e2aa', '#b8cc86', '#e2eab8', '#a8c07a', '#cfdc9e'], strokes: 1100, angle: Math.PI / 2, spread: 0.2, wid: [5, 9], vary: 0.05, tile: false,
+  M.towel = paintMat({ key: 'towel', flat: 0.45, seed: 18, base: '#c9d99a', cols: ['#d6e2aa', '#b8cc86', '#e2eab8', '#a8c07a', '#cfdc9e'], strokes: 1100, angle: Math.PI / 2, spread: 0.2, wid: [5, 9], vary: 0.05, tile: false,
     after: (c, h, S, r) => {
       c.lineCap = 'round';
       for (let i = 0; i < 70; i++) { const x = r() * S, y = r() * S; c.strokeStyle = `rgba(${70 + r() * 30 | 0},${130 + r() * 30 | 0},${70 + r() * 20 | 0},${0.35 + r() * 0.3})`; c.lineWidth = 6 + r() * 8; c.beginPath(); c.moveTo(x, y); c.lineTo(x + (r() - 0.5) * 10, y + 40 + r() * 80); c.stroke(); }
@@ -625,24 +700,24 @@ function buildMaterials() {
       for (const y0 of [0.58, 0.8]) { c.beginPath(); c.moveTo(S * 0.06, S * y0); c.quadraticCurveTo(S * 0.5, S * (y0 + 0.05), S * 0.94, S * (y0 - 0.03)); c.stroke(); }
       c.strokeStyle = 'rgba(206,92,48,0.85)'; c.lineWidth = S * 0.016; c.beginPath(); c.moveTo(S * 0.3, S * 0.12); c.lineTo(S * 0.42, S * 0.38); c.stroke();
     } });
-  M.smock = paintMat({ flat: 0.38, seed: 19, base: '#9cc6d6', cols: ['#b4d6e2', '#7aaccc', '#cce4ec', '#4f84b8', '#a6cede', '#3f74aa'], strokes: 1400, angle: Math.PI / 2, spread: 0.35, wid: [5, 10], vary: 0.06 });
-  M.clothDark = paintMat({ seed: 28, base: '#2f62ac', cols: ['#3c72bc', '#24509a', '#5a8ccc', '#1f4488'], strokes: 1000, angle: Math.PI / 2, spread: 0.4 });
-  M.straw = paintMat({ seed: 20, base: '#dcb04a', cols: ['#e8c460', '#c4962e', '#f0d888', '#b88a2a'], strokes: 1100, circular: true, wid: [3, 7] });
+  M.smock = paintMat({ key: 'smock', flat: 0.38, seed: 19, base: '#9cc6d6', cols: ['#b4d6e2', '#7aaccc', '#cce4ec', '#4f84b8', '#a6cede', '#3f74aa'], strokes: 1400, angle: Math.PI / 2, spread: 0.35, wid: [5, 10], vary: 0.06 });
+  M.clothDark = paintMat({ key: 'clothDark', seed: 28, base: '#2f62ac', cols: ['#3c72bc', '#24509a', '#5a8ccc', '#1f4488'], strokes: 1000, angle: Math.PI / 2, spread: 0.4 });
+  M.straw = paintMat({ key: 'straw', seed: 20, base: '#dcb04a', cols: ['#e8c460', '#c4962e', '#f0d888', '#b88a2a'], strokes: 1100, circular: true, wid: [3, 7] });
   M.paperEdge = new THREE.MeshStandardMaterial({ color: '#d8cf80', roughness: 0.9 });
   M.hatBand = new THREE.MeshStandardMaterial({ color: '#1f3050', roughness: 0.8 });
-  M.peg = paintMat({ seed: 21, base: '#b4702a', cols: ['#c4823a', '#965a20'], strokes: 400 });
+  M.peg = paintMat({ key: 'peg', seed: 21, base: '#b4702a', cols: ['#c4823a', '#965a20'], strokes: 400 });
   M.outside = outsideMat();
   // backs of the pictures: raw linen on a stretcher, so a picture turned around is still a real object
-  M.canvasBack = paintMat({ seed: 41, base: '#b49b6c', cols: ['#c2aa7c', '#a08658', '#cdb88e', '#957a4e'], strokes: 500, angle: 0, spread: 0.2, wid: [3, 6] });
+  M.canvasBack = paintMat({ key: 'canvasBack', seed: 41, base: '#b49b6c', cols: ['#c2aa7c', '#a08658', '#cdb88e', '#957a4e'], strokes: 500, angle: 0, spread: 0.2, wid: [3, 6] });
   // the landing behind each door: a dim, cool hallway
-  M.recess = paintMat({ seed: 42, base: '#3c5a74', cols: ['#4a6a86', '#2f4a62', '#56789a', '#34506a'], strokes: 900, angle: Math.PI / 2, spread: 0.3 });
+  M.recess = paintMat({ key: 'recess', seed: 42, base: '#3c5a74', cols: ['#4a6a86', '#2f4a62', '#56789a', '#34506a'], strokes: 900, angle: Math.PI / 2, spread: 0.3 });
   // outside: grass of the square far below, tree trunks, painted foliage and a sky
-  M.grass = paintMat({ seed: 43, base: '#7fa63c', cols: ['#94b84a', '#6a9432', '#a9c75c', '#5c8a2c', '#b8d070'], strokes: 1600, angle: 0.3, spread: 1.4, wid: [5, 11] });
-  M.trunk = paintMat({ seed: 44, base: '#6b4a2a', cols: ['#7d5a34', '#58391f', '#8a6a40'], strokes: 500, angle: Math.PI / 2, spread: 0.2 });
-  M.foliage = paintMat({ seed: 45, base: '#5f8f2e', cols: ['#77a83a', '#4c7a24', '#9cc44e', '#3e6a1e', '#b4d464'], strokes: 1500, circular: true, wid: [5, 11] });
+  M.grass = paintMat({ key: 'grass', seed: 43, base: '#7fa63c', cols: ['#94b84a', '#6a9432', '#a9c75c', '#5c8a2c', '#b8d070'], strokes: 1600, angle: 0.3, spread: 1.4, wid: [5, 11] });
+  M.trunk = paintMat({ key: 'trunk', seed: 44, base: '#6b4a2a', cols: ['#7d5a34', '#58391f', '#8a6a40'], strokes: 500, angle: Math.PI / 2, spread: 0.2 });
+  M.foliage = paintMat({ key: 'foliage', seed: 45, base: '#5f8f2e', cols: ['#77a83a', '#4c7a24', '#9cc44e', '#3e6a1e', '#b4d464'], strokes: 1500, circular: true, wid: [5, 11] });
   M.sky = new THREE.MeshBasicMaterial({ map: toTextures(strokeCanvas({ seed: 46, base: '#bcd8d8', cols: ['#cfe4e0', '#a6c8cc', '#e2eee4', '#98bcc4'], strokes: 1400, angle: 0.1, spread: 0.6, len: [30, 80], wid: [6, 14] })).map, side: THREE.DoubleSide });
-  M.houseWall = paintMat({ seed: 47, base: '#e0c070', cols: ['#ecd088', '#d0aa58', '#f2dc9c'], strokes: 700 });
-  M.roof = paintMat({ seed: 48, base: '#c0603a', cols: ['#d0704a', '#a84e2c', '#dc8458'], strokes: 600, angle: 0 });
+  M.houseWall = paintMat({ key: 'houseWall', seed: 47, base: '#e0c070', cols: ['#ecd088', '#d0aa58', '#f2dc9c'], strokes: 700 });
+  M.roof = paintMat({ key: 'roof', seed: 48, base: '#c0603a', cols: ['#d0704a', '#a84e2c', '#dc8458'], strokes: 600, angle: 0 });
   gradeMaterials();
   for (const [k, m] of Object.entries(M)) m.userData.cat = k; // used by the comparison tool's object-ID pass
 }
@@ -1684,28 +1759,53 @@ async function exportGLB() {
 // importer copies numbers straight into Mesh objects. Furniture gets an
 // inside-out "ink" shell (inverted hull) for painted outlines that work in VR.
 const OUTLINE_GROUPS = new Set(['Bed', 'Pillow_Back', 'Pillow_Front', 'Blanket', 'Washstand', 'Carafe', 'Basin', 'Pitcher', 'Tumbler', 'SoapDish', 'Bottle_Tall', 'Bottle_Short', 'BrushBox', 'ClothesBrush', 'Chair_Front', 'Chair_Back', 'Hat', 'PegRail', 'Window', 'Mirror', 'Picture_Landscape', 'Picture_PortraitMan', 'Picture_PortraitWoman']);
+// Unity's lighting dulls colour: measured in the painter's view, its surfaces come out at about 0.7
+// of the painting's colourfulness while this page matches the painting. So the textures handed to
+// Unity are made that much more colourful (CIELAB chroma, same lightness and hue); this page is unchanged.
+const UNITY_CHROMA = 1.35;
+function forUnity(img) {
+  const cv = document.createElement('canvas'); cv.width = img.width; cv.height = img.height;
+  cv.getContext('2d').drawImage(img, 0, 0);
+  gradeCanvas(cv, { dL: 0, kC: UNITY_CHROMA, dh: 0 });
+  return cv.toDataURL('image/png');
+}
 function exportUnity() {
   const { root } = buildExportRoot();
   const floats = [], ints = [];
   const pushF = arr => { const off = floats.length; for (const v of arr) floats.push(v); return off; };
   const pushI = arr => { const off = ints.length; for (const v of arr) ints.push(v); return off; };
   const images = new Map(), textures = [], materials = [], matIndex = new Map();
-  const texOf = (t) => {
+  // Stable names: a material is named after what it is (its palette entry, e.g. 'blanket'), or after
+  // the object that first uses it when it has no palette entry. A number is added only when two would
+  // otherwise share a name ('blanket', 'blanket_2'). Texture files are named after their material.
+  // So adding or removing a material renames nothing else: diffs of Data/ and Unity's generated .mat
+  // files only change for what actually changed. (Before, every name ended with its position in the
+  // list, so one new material early on renamed every later material and texture.)
+  const used = new Set(['Ink_Outline']);
+  const unique = (base) => { if (!used.has(base)) { used.add(base); return base; } let k = 2; while (used.has(base + '_' + k)) k++; used.add(base + '_' + k); return base + '_' + k; };
+  const texOf = (t, matName, raw = false) => {
     if (!t || !t.image) return -1;
-    if (!images.has(t.image)) { images.set(t.image, textures.length); textures.push({ name: 'tex_' + String(textures.length).padStart(3, '0'), data: t.image.toDataURL('image/png') }); }
+    if (!images.has(t.image)) { images.set(t.image, textures.length); textures.push({ name: unique('tex_' + matName), data: raw ? t.image.toDataURL('image/png') : forUnity(t.image) }); }
     return images.get(t.image);
   };
-  const matOf = (m) => {
+  const matOf = (m, objName) => {
     if (matIndex.has(m)) return matIndex.get(m);
-    const tex = texOf(m.map);
+    let base = (m.name || 'Paint').replace(/[^A-Za-z0-9_-]/g, '_');
+    if (/^Paint(_|$)/.test(base)) base = objName + '_paint';   // no palette entry: name it after its object
+    const name = unique(base);
+    const tex = texOf(m.map, name);
+    // the strokes' relief (the generator's bump canvas), so the paint has thickness in Unity: the
+    // importer turns this grey height map into a normal map (#50)
+    const height = texOf(m.bumpMap, name + '_height', true);
     const c = m.color ? m.color.clone().convertLinearToSRGB() : new THREE.Color(1, 1, 1);
-    materials.push({ name: (m.name || 'Paint').replace(/[^A-Za-z0-9_-]/g, '_') + '_' + materials.length, texture: tex,
+    materials.push({ name, texture: tex, height,
       color: [c.r, c.g, c.b], unlit: !!m.isMeshBasicMaterial, emission: m.emissiveMap ? (m.emissiveIntensity ?? 0.3) : 0, doubleSided: m.side === THREE.DoubleSide, outline: false,
       // window panes and the glassware are see-through in 3D (the painting shows them as flat colour)
       opacity: m.userData.cat === 'glass' ? 0.8 : m.userData.cat === 'glassClear' ? 0.6 : 1 });
     matIndex.set(m, materials.length - 1); return materials.length - 1;
   };
-  const ink = { name: 'Ink_Outline', texture: -1, color: [0.06, 0.07, 0.06], unlit: true, emission: 0, doubleSided: false, outline: true, opacity: 1 };
+  // the painting's contours are a dark slate blue, not black (sampled from the window, table and chair outlines)
+  const ink = { name: 'Ink_Outline', texture: -1, color: [0.13, 0.16, 0.23], unlit: true, emission: 0, doubleSided: false, outline: true, opacity: 1 };
   materials.push(ink); const inkIndex = materials.length - 1;
   const meshOut = (name, geo, material) => {
     const g = geo.index ? geo : (() => { const n = geo.attributes.position.count; const ix = new Uint32Array(n); for (let i = 0; i < n; i++) ix[i] = i; const c = geo.clone(); c.setIndex(new THREE.BufferAttribute(ix, 1)); return c; })();
@@ -1768,11 +1868,11 @@ function exportUnity() {
     for (const m of g.children) {
       if (!m.isMesh) continue;
       const solid = CLOTH[g.name] && m.material.side === THREE.DoubleSide ? thicken(m.geometry, CLOTH[g.name]) : m.geometry;
-      o.meshes.push(meshOut(m.name, solid, matOf(m.material)));
+      o.meshes.push(meshOut(m.name, solid, matOf(m.material, g.name)));
       if (OUTLINE_GROUPS.has(g.name)) {
         m.geometry.computeBoundingBox(); const s = new THREE.Vector3(); m.geometry.boundingBox.getSize(s);
         const mid = [s.x, s.y, s.z].sort((a, b) => a - b)[1];
-        const t = Math.max(0.002, Math.min(0.007, 0.06 * (mid || 0.06)));
+        const t = Math.max(0.003, Math.min(0.009, 0.07 * (mid || 0.06)));   // a little heavier than before: the painting's contours are thick
         o.meshes.push(meshOut(m.name + '_ink', hullOf(m.geometry, t), inkIndex));
       }
     }
@@ -1784,6 +1884,6 @@ function exportUnity() {
   new Float32Array(bin, 0, floats.length).set(floats); new Uint32Array(bin, floats.length * 4, ints.length).set(ints);
   return { json: JSON.stringify(header), bin: new Uint8Array(bin), textures };
 }
-window.__innerframe = { setMode, view, camera, PAINT_VIEW, idPass, project, BED, OBJ, exportGLB, exportUnity };
+window.__innerframe = { setMode, view, camera, PAINT_VIEW, idPass, project, BED, OBJ, exportGLB, exportUnity, strokeCanvas, gradeCanvas, STROKES, GRADE, M };
 </script>
 </html>

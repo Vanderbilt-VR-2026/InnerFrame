@@ -45,7 +45,7 @@ npx playwright install chromium
 node export_unity.mjs ../../InnerFrameBedroomWeb/Data
 ```
 
-This writes `room.json`, `room.bytes` and `Textures/tex_###.png` into the repo's
+This writes `room.json`, `room.bytes` and `Textures/tex_<material>.png` into the repo's
 copy of the package. It runs headless and takes a few minutes, because the
 textures are painted on load. Then:
 

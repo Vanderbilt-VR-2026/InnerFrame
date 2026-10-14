@@ -317,18 +317,19 @@ namespace InnerFrame.PaintedBedroom.EditorTools
         {
             // Real light, so every object reads as a solid: sky light from above, a darker bounce from the
             // floor, and the sun through the window casting soft shadows across the floor and furniture.
-            // Mostly ambient, like the painting's even light (#50): with less ambient, the walls and the
-            // furniture came out 15-25 lightness units darker than the painting while the floor matched.
+            // Flat, like the painting (#50, Charlyne): one even ambient colour and no sun. A directional light
+            // modelled the furniture like a 3D game (the bed foot read as a solid block); the painting's forms
+            // come from its strokes and contours, so Unity adds no shading of its own.
             RenderSettings.skybox = null;
             RenderSettings.ambientMode = AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = new Color(0.95f, 0.99f, 1.0f);
-            RenderSettings.ambientEquatorColor = new Color(0.95f, 0.95f, 0.92f);
-            RenderSettings.ambientGroundColor = new Color(0.65f, 0.62f, 0.55f);
+            RenderSettings.ambientSkyColor = new Color(1.0f, 1.0f, 1.0f);
+            RenderSettings.ambientEquatorColor = new Color(1.0f, 1.0f, 1.0f);
+            RenderSettings.ambientGroundColor = new Color(1.0f, 1.0f, 1.0f);
             RenderSettings.fog = false;
             var sun = new GameObject("Window Light").AddComponent<Light>();
             sun.type = LightType.Directional;
             sun.color = new Color(1f, 0.95f, 0.86f);
-            sun.intensity = 0.7f;
+            sun.intensity = 0f;   // kept in the scene (off) so #30 can bring a faint sun back if Rowling's test asks for depth cues
             sun.shadows = LightShadows.Soft;
             sun.shadowStrength = 0.65f;
             sun.shadowBias = 0.03f;
@@ -337,7 +338,7 @@ namespace InnerFrame.PaintedBedroom.EditorTools
             var fill = new GameObject("Fill Light").AddComponent<Light>();  // soft light from the painter's side, no shadows
             fill.type = LightType.Directional;
             fill.color = new Color(0.86f, 0.9f, 1f);
-            fill.intensity = 0.6f;
+            fill.intensity = 0f;
             fill.shadows = LightShadows.None;
             fill.transform.rotation = Quaternion.Euler(25f, 20f, 0f);
         }

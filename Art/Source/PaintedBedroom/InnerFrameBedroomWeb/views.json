@@ -1,0 +1,256 @@
+{
+  "note": "Fixed cameras for every before/after (#44). Unity coordinates: metres, y up, z forward. fov is vertical, in degrees. painter = key P (physical camera, vertical gate fit, lens shift in frame heights). Rendered by Tools > InnerFrame > Painted Bedroom > Render Fixed Views. Keep these cameras fixed: changing them breaks every comparison.",
+  "painter": {
+    "position": [
+      0.0,
+      1.6,
+      0.0
+    ],
+    "target": [
+      0.1379,
+      1.6,
+      1.9952
+    ],
+    "fov": 76.122,
+    "lensShiftY": -0.2554,
+    "size": [
+      1686,
+      1320
+    ],
+    "name": "painter"
+  },
+  "groups": [
+    {
+      "name": "bed",
+      "objects": [
+        "Bed",
+        "Pillow_Back",
+        "Pillow_Front",
+        "Blanket"
+      ],
+      "centre": {
+        "position": [
+          0.0,
+          1.6,
+          1.7
+        ],
+        "target": [
+          1.067,
+          0.8168,
+          2.6352
+        ],
+        "fov": 60,
+        "size": [
+          1200,
+          900
+        ],
+        "lensShiftY": 0
+      },
+      "closeup": {
+        "position": [
+          -0.1638,
+          1.715,
+          -0.4045
+        ],
+        "target": [
+          1.067,
+          0.8168,
+          2.6352
+        ],
+        "fov": 45,
+        "size": [
+          1200,
+          900
+        ],
+        "lensShiftY": 0
+      }
+    },
+    {
+      "name": "chairs",
+      "objects": [
+        "Chair_Front",
+        "Chair_Back"
+      ],
+      "centre": {
+        "position": [
+          0.0,
+          1.6,
+          1.7
+        ],
+        "target": [
+          -0.8985,
+          0.576,
+          2.85
+        ],
+        "fov": 60,
+        "size": [
+          1200,
+          900
+        ],
+        "lensShiftY": 0
+      },
+      "closeup": {
+        "position": [
+          -0.4094,
+          1.0825,
+          0.5604
+        ],
+        "target": [
+          -1.5469,
+          0.548,
+          2.1174
+        ],
+        "fov": 45,
+        "size": [
+          1200,
+          900
+        ],
+        "lensShiftY": 0
+      }
+    },
+    {
+      "name": "washstand",
+      "objects": [
+        "Washstand",
+        "Carafe",
+        "Basin",
+        "Pitcher",
+        "Tumbler",
+        "SoapDish",
+        "ClothesBrush",
+        "Bottle_Tall",
+        "Bottle_Short",
+        "BrushBox"
+      ],
+      "centre": {
+        "position": [
+          0.0,
+          1.6,
+          1.7
+        ],
+        "target": [
+          -1.299,
+          0.753,
+          3.384
+        ],
+        "fov": 60,
+        "size": [
+          1200,
+          900
+        ],
+        "lensShiftY": 0
+      },
+      "closeup": {
+        "position": [
+          -0.4488,
+          1.3742,
+          1.1692
+        ],
+        "target": [
+          -1.299,
+          0.7201,
+          3.384
+        ],
+        "fov": 45,
+        "size": [
+          1200,
+          900
+        ],
+        "lensShiftY": 0
+      }
+    },
+    {
+      "name": "pictures",
+      "objects": [
+        "Mirror",
+        "Picture_Landscape",
+        "Picture_PortraitMan",
+        "Picture_PortraitWoman",
+        "Picture_DrawingLeft",
+        "Picture_DrawingRight"
+      ],
+      "centre": {
+        "position": [
+          0.0,
+          1.6,
+          1.7
+        ],
+        "target": [
+          -0.2136,
+          2.2556,
+          3.0416
+        ],
+        "fov": 60,
+        "size": [
+          1200,
+          900
+        ],
+        "lensShiftY": 0
+      },
+      "closeup": {
+        "position": [
+          0.0097,
+          2.2,
+          -0.0441
+        ],
+        "target": [
+          -0.8765,
+          2.3536,
+          3.9693
+        ],
+        "fov": 45,
+        "size": [
+          1200,
+          900
+        ],
+        "lensShiftY": 0
+      }
+    },
+    {
+      "name": "room",
+      "objects": [
+        "Room_Walls",
+        "Room_Floor",
+        "Window",
+        "Door_Left",
+        "Door_Right"
+      ],
+      "centre": {
+        "position": [
+          0.0,
+          1.6,
+          1.7
+        ],
+        "target": [
+          -0.04,
+          1.65,
+          1.655
+        ],
+        "fov": 60,
+        "size": [
+          1200,
+          900
+        ],
+        "lensShiftY": 0
+      },
+      "closeup": {
+        "position": [
+          -0.2687,
+          2.2,
+          0.898
+        ],
+        "target": [
+          -1.16,
+          2.2663,
+          3.8773
+        ],
+        "fov": 45,
+        "size": [
+          1200,
+          900
+        ],
+        "lensShiftY": 0
+      }
+    }
+  ]
+}

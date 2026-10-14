@@ -117,5 +117,8 @@ Icon?
 *.7z
 .fake
 __MACOSX/
+# Render Fixed Views output (Painted Bedroom before/after screenshots, #44)
+/FixedViews/
+
 # npm installs for tools (e.g. Art/Source/PaintedBedroom/web/tools)
 node_modules

@@ -14,7 +14,7 @@ itself on startup.
 | Go back | **Back to …**: the scene you came from (or the Gallery if you started here). Hidden when there's nowhere to go back to |
 | Talk | **Talk** is a placeholder for speaking to the painter. It does nothing yet |
 
-The panel opens 0.55 m in front of you, inside the controllers' 1 m ray.
+The panel opens 0.55 m in front of you, inside the controllers' 2 m ray.
 
 **Without a headset** (Editor Play mode): click the Game view, press **M**, and
 click the buttons with the mouse. In the Painted Bedroom's desktop mode the

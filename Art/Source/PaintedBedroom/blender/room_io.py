@@ -43,7 +43,8 @@ import numpy as np
 from mathutils import Matrix, Vector
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-DEFAULT_DATA = os.path.normpath(os.path.join(HERE, "..", "InnerFrameBedroomWeb", "Data"))
+# The room data lives once, in the copy Unity plays (Assets/), so an export is in the game after Import and Build
+DEFAULT_DATA = os.path.normpath(os.path.join(HERE, "..", "..", "..", "..", "Assets", "InnerFrameBedroomWeb", "Data"))
 DEFAULT_BLEND = os.path.join(HERE, "painted_bedroom.blend")
 ROOT_COLLECTION = "PaintedBedroom"
 INK_COLLECTION = "Ink"

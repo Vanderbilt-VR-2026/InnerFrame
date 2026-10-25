@@ -2,21 +2,55 @@
 """Which objects did a generator export change? (#44)
 
     python3 compare_exports.py OLD_DATA_DIR NEW_DATA_DIR
+    python3 compare_exports.py --git REF [NEW_DATA_DIR]
+
+The second form takes the "before" from git: the room data as committed at REF (a branch, tag or
+commit, e.g. `origin/main`), against NEW_DATA_DIR (default: the game's copy in this checkout,
+Assets/InnerFrameBedroomWeb/Data). Needs git and git-lfs; the LFS objects must be fetched.
 
 Both folders hold an export: room.json, room.bytes and Textures/. Lists the objects, materials and
 textures that differ, so a PR can say exactly what changed and nobody's objects change by accident.
 Plain Python 3, no packages needed. Exit code 0 when identical, 1 when different.
 
-Typical use, before exporting from the generator:
-    cp -R ../InnerFrameBedroomWeb/Data /tmp/data_before
-    (export)
-    python3 compare_exports.py /tmp/data_before ../InnerFrameBedroomWeb/Data
+Typical use, after exporting from Blender (blender/room_io.py), before committing:
+    python3 compare_exports.py --git origin/main
 """
 import array
 import hashlib
 import json
 import os
+import subprocess
 import sys
+import tempfile
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+REPO = os.path.normpath(os.path.join(HERE, "..", "..", "..", ".."))
+GAME_DATA = os.path.join(REPO, "Assets", "InnerFrameBedroomWeb", "Data")
+GAME_DATA_GIT = "Assets/InnerFrameBedroomWeb/Data"
+
+
+def from_git(ref):
+    """Write the room data committed at `ref` to a temp folder (LFS pointers resolved) and return it."""
+    out = tempfile.mkdtemp(prefix="room_" + ref.replace("/", "_") + "_")
+    # before the data moved into Assets/ (up to #108) it lived in the source package
+    for base in (GAME_DATA_GIT, "Art/Source/PaintedBedroom/InnerFrameBedroomWeb/Data"):
+        names = subprocess.run(["git", "-C", REPO, "ls-tree", "-r", "--name-only", ref, base],
+                               check=True, capture_output=True, text=True).stdout.split()
+        if any(n.endswith("room.json") for n in names):
+            break
+    else:
+        sys.exit(f"no room data at {ref}")
+    for path in names:
+        if path.endswith(".meta"):
+            continue
+        blob = subprocess.run(["git", "-C", REPO, "show", f"{ref}:{path}"], check=True, capture_output=True).stdout
+        if blob.startswith(b"version https://git-lfs"):
+            blob = subprocess.run(["git", "-C", REPO, "lfs", "smudge"], input=blob, check=True, capture_output=True).stdout
+        dest = os.path.join(out, os.path.relpath(path, base))
+        os.makedirs(os.path.dirname(dest), exist_ok=True)
+        with open(dest, "wb") as f:
+            f.write(blob)
+    return out
 
 
 def load(d):
@@ -62,9 +96,13 @@ def file_digest(path):
 
 
 def main():
-    if len(sys.argv) != 3:
+    if len(sys.argv) >= 3 and sys.argv[1] == "--git":
+        old_dir = from_git(sys.argv[2])
+        new_dir = sys.argv[3] if len(sys.argv) > 3 else GAME_DATA
+    elif len(sys.argv) == 3:
+        old_dir, new_dir = sys.argv[1], sys.argv[2]
+    else:
         sys.exit(__doc__)
-    old_dir, new_dir = sys.argv[1], sys.argv[2]
     a, Fa, Ia = load(old_dir)
     b, Fb, Ib = load(new_dir)
     oa, ob = objects(a, Fa, Ia), objects(b, Fb, Ib)

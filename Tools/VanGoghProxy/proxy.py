@@ -21,21 +21,32 @@ from pathlib import Path
 from fastapi import FastAPI, File, Request, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
-from faster_whisper import WhisperModel
 from starlette.exceptions import HTTPException
+
+HERE = Path(__file__).parent
+# huggingface_hub reads HF_HOME once, when faster_whisper imports it, so it must be set before that import.
+# Otherwise its cache and logs go to ~/.cache/huggingface instead of this folder.
+os.environ.setdefault("HF_HOME", str(HERE / ".hf"))
+from faster_whisper import WhisperModel
 
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434")
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen2.5:7b")
 WHISPER_MODEL = os.environ.get("WHISPER_MODEL", "base.en")
-WHISPER_DIR = os.environ.get("WHISPER_DIR")  # unset: Hugging Face's default cache
+WHISPER_DIR = os.environ.get("WHISPER_DIR", str(HERE / "models"))
 VOICE = os.environ.get("VOICE", "Daniel")
 ACCESS_CODE = os.environ.get("ACCESS_CODE", "")
 
-HERE = Path(__file__).parent
 OUT = HERE / "out"
 PERSONA = (HERE / "persona_v0.txt").read_text(encoding="utf-8").strip()
 DIDNT_CATCH = "Sorry, I didn't quite catch that. Could you say it again?"
+NOT_SURE = "I'm not sure I understand you, my friend. Ask me about this room, or about my painting."
 KEEP_AUDIO_FILES = 20
+
+# A guard for D16's rule (nothing after October 1888) until Rowling's persona (#75) exists. The list is v0.
+AFTER_1888 = re.compile(
+    r"\b(ears?|razor|asylum|hospital|saint-r[ée]my|auvers|gachet|revolver|gun|shot|suicide|self-harm|brothel|1889|1890)\b",
+    re.IGNORECASE,
+)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
 log = logging.getLogger("vangogh")
@@ -62,7 +73,7 @@ def reply(text):
         "messages": [{"role": "system", "content": PERSONA}, {"role": "user", "content": text}],
         "stream": False,
         "keep_alive": -1,
-        "options": {"temperature": 0.7, "num_predict": 120},
+        "options": {"temperature": 0.7, "num_predict": 80},
     }
     if state["can_think"]:
         body["think"] = False  # only for thinking models: Ollama rejects "think" on models without it
@@ -70,7 +81,12 @@ def reply(text):
     # The persona asks for 1-3 sentences but the model doesn't always listen. Keeping whole sentences
     # also drops a last sentence that num_predict cut off halfway.
     sentences = re.findall(r"[^.!?]*[.!?]+[\"')\]]*", answer) or [answer]
-    return " ".join(sentence.strip() for sentence in sentences[:3])
+    answer = " ".join(sentence.strip() for sentence in sentences[:3])
+    hit = AFTER_1888.search(answer)
+    if hit:
+        log.info("guard: %r is after October 1888; replied with the fallback line", hit.group(0))
+        return NOT_SURE
+    return answer
 
 
 def speak(text):
@@ -111,7 +127,8 @@ async def lifespan(app):
     state["whisper"] = WhisperModel(WHISPER_MODEL, device="cpu", compute_type="int8", download_root=WHISPER_DIR)
     state["can_think"] = "thinking" in ollama("/api/show", {"model": OLLAMA_MODEL}).get("capabilities", [])
     reply("Hello.")  # loads the model now (keep_alive -1 keeps it loaded) instead of on the first visitor
-    speak("Hello.")  # the first `say` of a session is slow
+    hello = speak("Hello.")  # the first `say` of a session is slow
+    transcribe((OUT / f"{hello}.wav").read_bytes())  # and so is Whisper's first transcription
     log.info("ready: whisper=%s ollama=%s voice=%s", WHISPER_MODEL, OLLAMA_MODEL, VOICE)
     yield
 

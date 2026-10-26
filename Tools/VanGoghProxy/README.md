@@ -5,7 +5,23 @@ turns it into text (faster-whisper), asks a local model to answer as Vincent
 (Ollama), and turns the answer into speech (macOS `say`). Everything runs on
 the computer next to the headset: no cloud service and no API key.
 
-`persona_v0.txt` is a placeholder until Rowling's persona (#75).
+`persona_v0.txt` is still a placeholder until Rowling's persona (#75).
+
+## What Vincent knows
+
+The persona is set in Arles in October 1888, just after he painted *The Bedroom*.
+Its room colours come from Vincent's own description in his letter to Theo of
+16 October 1888 (letter 705):
+https://vangoghletters.org/vg/letters/let705/letter.html
+("The walls are of a pale violet. The floor — is of red tiles. The bedstead and
+the chairs are fresh butter yellow…").
+
+The model doesn't always keep to the persona's rule of "nothing after October
+1888", so `proxy.py` also checks each reply for words from his later life (ear,
+razor, asylum, Saint-Rémy, Auvers, Gachet, 1889, 1890 and a few more, as whole
+words). If one appears, Vincent says instead: "I'm not sure I understand you, my
+friend. Ask me about this room, or about my painting." The server log names the
+word. The list is a first version, kept until the real persona exists.
 
 ## Run it (macOS)
 
@@ -20,8 +36,10 @@ python3 -m venv .venv               # once
 .venv/bin/python proxy.py           # starts uvicorn on 127.0.0.1:8000
 ```
 
-The first start downloads the Whisper model (about 150 MB). Startup also loads
-the Ollama model and keeps it in memory (`keep_alive: -1`) until Ollama stops.
+The first start downloads the Whisper model (about 150 MB) into `models/` in
+this folder (not committed). Startup also loads the Ollama model and keeps it in
+memory (`keep_alive: -1`) until Ollama stops, and warms up `say` and Whisper so
+the first visitor doesn't wait for them.
 
 Settings (environment variables):
 
@@ -30,7 +48,8 @@ Settings (environment variables):
 | `OLLAMA_MODEL` | `qwen2.5:7b` | The model that answers as Vincent |
 | `OLLAMA_URL` | `http://127.0.0.1:11434` | Where Ollama runs |
 | `WHISPER_MODEL` | `base.en` | faster-whisper model name |
-| `WHISPER_DIR` | Hugging Face's cache | Where the Whisper model is downloaded |
+| `WHISPER_DIR` | `models/` in this folder | Where the Whisper model is downloaded |
+| `HF_HOME` | `.hf/` in this folder | Hugging Face's own cache and logs (instead of `~/.cache/huggingface`) |
 | `VOICE` | `Daniel` | A `say` voice (`say -v '?'` lists them) |
 | `HOST` / `PORT` | `127.0.0.1` / `8000` | Where the proxy listens. A headset on Wi-Fi needs `HOST=0.0.0.0` and the computer's IP |
 | `ACCESS_CODE` | empty | If set, every request needs a matching `X-Access-Code` header, or gets a 401 |

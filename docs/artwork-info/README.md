@@ -88,9 +88,10 @@ OneMinusSrcAlpha` blending, `_SURFACE_TYPE_TRANSPARENT` keyword, `ZWrite=0`,
 back-face culling, no alpha clipping, render queue **3000**. The closed shell
 renders only its outward-facing surfaces so front and rear faces do not stack
 as two translucent full-panel layers. Background world UI shares that queue so distance sorting can put it behind
-and tint it through glass. This panel's Canvas has overrideSorting enabled
-and sortingOrder 1, above its shell (order 0); its UI plane is also physically
-in front. This ordering avoids forcing all background UI to draw after glass. ShadowCaster, depth-only,
+and tint it through glass. This panel has a **root World Space Canvas** with the same sorting layer as
+the shell and a higher sortingOrder (normally 1 versus 0); its UI plane is
+also physically in front. `overrideSorting` is a nested-Canvas inheritance
+switch, not a requirement for this root Canvas. It is deliberately left false. This ordering avoids forcing all background UI to draw after glass. ShadowCaster, depth-only,
 depth-normal and motion-vector passes are disabled on the glass material;
 its renderer casts/receives no shadows. No collider intercepts controller rays.
 Saved materials reference the shader/texture and prefabs reference the meshes;
@@ -150,7 +151,9 @@ scene. No project bindings or global XR settings are changed.
    it is open does not reposition it. Use Home if you lose the display.
 6. Run **2. Check Behavior in Play Mode**. It invokes the actual Button events
    and checks distance/orientation/scale, instance reuse, immediate camera
-   independence, reopen/Close and text overflow. It does **not** prove that a
+   independence, reopen/Close and text overflow. More and Close additionally
+   go through EventSystem.RaycastAll at their screen centers, asserting that
+   each is the first Button hit, then dispatch a synthetic pointer click. It does **not** prove that a
    physical mouse or controller event reaches the Button, or prove stability
    over multiple frames. Those are steps 2–5 above.
 7. Exit Play Mode and inspect the geometry in Scene/Prefab view from front,
@@ -247,3 +250,66 @@ the execution host. All runtime outcomes remain pending local validation.
 The new generator does not patch old generated prefabs: use menu step 1, open
 its newly generated scene, and judge that output. Keep the old models for
 comparison. No generated assets are committed or Gallery integration approved.
+
+## Fix for root Canvas sorting validation (after 03694a9)
+
+The old `CheckGlassStructure` required `canvas.overrideSorting == true` on
+`Front Canvas`, even though its parent is a GameObject with no Canvas. Unity
+[documents overrideSorting](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Canvas-overrideSorting.html)
+as allowing **nested** canvases to override their parent's sorting order.
+Requiring that flag on a root World Space Canvas was an invalid assumption.
+The old combined assertion also hid which value failed. The reported stack
+trace does not provide the native flag/order readbacks; this host cannot
+reproduce those values without Unity.
+
+The generator now sets the root Canvas's sorting layer to the glass renderer's
+layer and its order one higher, without requiring a nested override. Validation
+checks the actual layer/order relationship, root World Space mode, transparent
+glass state, every UI quad physically in front of the glass, UI material queues,
+both raycasters, a raycastable Close button and input shield sibling ordering.
+Failures include actual mode/root/override/layer/order values. This retains
+rendering and input checks rather than deleting the failing assertion.
+
+Generation reloads the saved detail prefab through Unity's Prefab APIs and
+validates it again. It also checks that a root Canvas with overrideSorting=false
+passes, and deliberately gives it the glass's sortingOrder to ensure the
+validator rejects that regression. These temporary checks are never saved to
+the prefab. Menu step 2 now exercises screen-point UI raycasts and Button
+pointer handlers in addition to existing behavior/overflow checks. Neither
+structural validation nor a synthetic pointer click proves rendered pixels,
+physical mouse events, or Quest Trigger delivery: inspect the actual view and
+click the buttons after generation. All added Unity checks are unrun here.
+
+### Recover and regenerate on the Mac
+
+1. Exit Play Mode. Save any unrelated work. In GitHub Desktop select
+   `feature/14-artwork-info-display`, Fetch origin, then Pull origin.
+2. In a Terminal at the repository root run:
+   `bash scripts/artwork-info/install-source.sh --update-source`.
+   If it reports locally edited source, preserve/compare that file; do not
+   delete or overwrite it to bypass protection.
+3. Return to Unity 6000.3.23f1 and wait for compilation. Open a **saved** scene
+   you can return to, preferably a previous working standalone test scene.
+   Do not use objects left in the failed untitled scene.
+4. Run Tools > InnerFrame > Artwork Info > **1. Generate Standalone Museum
+   Assets**. Wait for the success log. Open/use the newly generated scene;
+   confirm its folder's `GENERATION_STATUS.txt` begins **COMPLETE**.
+5. Enter Play Mode, focus Game view, release RMB, click More, then ×. Check
+   that the dark text and × stay visible above the glass as you move sideways;
+   repeat opening/closing. Run menu step **2. Check Behavior in Play Mode**.
+   A passing check still needs visual and actual mouse confirmation.
+
+Older `MuseumGenerated 4` / `MuseumGenerated 5` folders are **not repaired or
+removed**. Keep them for diagnosis or delete only those known failed folders
+through Unity's Project window after confirming they contain no work to keep.
+Do not drag their partial prefabs into the new scene.
+
+Every new run writes INCOMPLETE before generating and COMPLETE only after
+prefabs are validated and the test scene is successfully saved. On failure,
+the generator restores the previously saved scene setup (or a clean default
+scene if the prior scene was untitled), marks only the new output folder
+`FAILED Museum Generation…`, and writes a FAILED status with the exception.
+Existing folders are never renamed. If recovery itself fails, the original
+error and output path are still reported and partial scene roots are disabled.
+A COMPLETE marker means successful generation/structure checks, not successful
+visual, mouse or device acceptance. No Gallery/Bedroom integration is added.

@@ -43,20 +43,47 @@ namespace InnerFrame.EditorTools
             if (!AssetDatabase.IsValidFolder(Root)) AssetDatabase.CreateFolder("Assets", "ArtworkInfo");
             folder = AssetDatabase.GenerateUniqueAssetPath(Root + "/MuseumGenerated");
             AssetDatabase.CreateFolder(Root, System.IO.Path.GetFileName(folder));
-            ivory = Material("Ivory Matte", new Color(0.96f,0.935f,0.87f), 0, 0.18f);
-            brass = Material("Champagne Brass", new Color(0.65f,0.51f,0.29f), 0.65f, 0.35f);
-            back = Material("Finished Back", new Color(0.24f,0.22f,0.19f), 0.2f, 0.2f);
-            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
-            RenderSettings.ambientLight = new Color(0.55f,0.52f,0.46f);
+            var previousScenes=EditorSceneManager.GetSceneManagerSetup();
+            Scene scene=default;
             GameObject detail = null, placard = null;
             try
             {
+                WriteGenerationStatus("INCOMPLETE — generation is running. Do not use these assets yet.");
+                ivory = Material("Ivory Matte", new Color(0.96f,0.935f,0.87f), 0, 0.18f);
+                brass = Material("Champagne Brass", new Color(0.65f,0.51f,0.29f), 0.65f, 0.35f);
+                back = Material("Finished Back", new Color(0.24f,0.22f,0.19f), 0.2f, 0.2f);
+                scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+                RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
+                RenderSettings.ambientLight = new Color(0.55f,0.52f,0.46f);
                 detail = Panel();
                 CheckGlassStructure(detail);
                 var detailAsset = PrefabUtility.SaveAsPrefabAsset(detail, folder + "/ArtworkDetailPanel.prefab");
                 Require(detailAsset != null, "Detail prefab save failed.");
                 Object.DestroyImmediate(detail);
+                // Validate persisted values, not just the newly constructed hierarchy.
+                var savedDetail=PrefabUtility.LoadPrefabContents(folder+"/ArtworkDetailPanel.prefab");
+                try
+                {
+                    CheckGlassStructure(savedDetail);
+                    var savedCanvas=savedDetail.GetComponentInChildren<Canvas>(true);
+                    savedCanvas.overrideSorting=false;
+                    CheckGlassStructure(savedDetail); // Root Canvas must work without a nested override.
+                    int correctOrder=savedCanvas.sortingOrder;
+                    try
+                    {
+                        savedCanvas.sortingOrder=savedDetail.GetComponentInChildren<MeshRenderer>().sortingOrder;
+                        bool rejected=false;
+                        try { CheckGlassStructure(savedDetail); }
+                        catch(InvalidOperationException error)
+                        {
+                            if(!error.Message.StartsWith("Panel controls must sort above its glass shell:",StringComparison.Ordinal)) throw;
+                            rejected=true;
+                        }
+                        Require(rejected,"Sorting regression: validator accepted UI at the glass order.");
+                    }
+                    finally { savedCanvas.sortingOrder=correctOrder; }
+                }
+                finally { PrefabUtility.UnloadPrefabContents(savedDetail); }
                 placard = Placard(detailAsset.GetComponent<ArtworkDetailPanel>());
                 var wallAsset = PrefabUtility.SaveAsPrefabAsset(placard, folder + "/ArtworkWallPlacard.prefab");
                 Require(wallAsset != null, "Placard prefab save failed.");
@@ -88,13 +115,38 @@ namespace InnerFrame.EditorTools
                 var light = new GameObject("Soft key", typeof(Light)).GetComponent<Light>();
                 light.type = LightType.Directional; light.intensity = 1.1f; light.shadows = LightShadows.Soft;
                 light.transform.rotation = Quaternion.Euler(35,-25,0);
-                EditorSceneManager.SaveScene(scene, folder + "/ArtworkInfoTestScene.unity");
-                AssetDatabase.SaveAssets(); Selection.activeGameObject = placard;
+                Require(EditorSceneManager.SaveScene(scene, folder + "/ArtworkInfoTestScene.unity"),"Test scene save failed.");
+                AssetDatabase.SaveAssets();
+                WriteGenerationStatus("COMPLETE — prefabs and test scene saved; structure checks passed. Visual, mouse and Quest acceptance still required.");
+                Selection.activeGameObject = placard;
                 Debug.Log("[ArtworkInfo] Generated " + folder + ". Mouse: release RMB, left-click More/Close. Hold RMB + WASD/QE to inspect; Home resets. No Gallery changes. Inspect and test before committing generated assets.");
             }
-            catch
+            catch (Exception error)
             {
-                Debug.LogError("[ArtworkInfo] Generation incomplete. Partial output is isolated in " + folder + "; inspect or delete that folder before retrying.");
+                // Recover only this run's scene; never save partial objects over the previous scene.
+                try
+                {
+                    if(scene.IsValid() && scene.isLoaded)
+                    {
+                        if(previousScenes.Length>0 && previousScenes.All(x=>!string.IsNullOrEmpty(x.path)))
+                            EditorSceneManager.RestoreSceneManagerSetup(previousScenes);
+                        else EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects,NewSceneMode.Single);
+                    }
+                    var failedPath=AssetDatabase.GenerateUniqueAssetPath(Root+"/FAILED Museum Generation");
+                    var moveError=AssetDatabase.MoveAsset(folder,failedPath);
+                    if(string.IsNullOrEmpty(moveError)) folder=failedPath;
+                    else Debug.LogWarning("[ArtworkInfo] Could not label failed folder: "+moveError);
+                    WriteGenerationStatus("FAILED — do not use these assets or test this partial scene.\n"+error);
+                }
+                catch(Exception cleanupError)
+                {
+                    // Keep the original generation exception; separately identify recovery trouble.
+                    if(scene.IsValid() && scene.isLoaded)
+                        foreach(var root in scene.GetRootGameObjects()) root.SetActive(false);
+                    Debug.LogError("[ArtworkInfo] Failure recovery also failed: "+cleanupError.Message);
+                }
+                Debug.LogError("[ArtworkInfo] Generation FAILED. Partial assets: " + folder +
+                    ". Only a folder with GENERATION_STATUS.txt marked COMPLETE is ready for testing. Original error: "+error.Message);
                 throw;
             }
         }
@@ -121,9 +173,13 @@ namespace InnerFrame.EditorTools
             // No placard Body(), rear slab, frame, mounts, or opaque canvas background here.
             var canvas = ArtworkInfoLayout.Canvas(go.transform,"Front Canvas",new Vector2(1240,940));
             canvas.localPosition=new Vector3(0,0,-ArtworkGlassBuilder.Depth/2-0.0015f);
-            // Keep this panel's controls above its shell; other world UI remains depth-sorted with glass.
-            canvas.GetComponent<Canvas>().overrideSorting=true;
-            canvas.GetComponent<Canvas>().sortingOrder=1;
+            // This is a root World Space Canvas. overrideSorting only applies to nested canvases.
+            // Set the actual sorting layer/order, independently of the override flag's native readback.
+            var uiCanvas=canvas.GetComponent<Canvas>();
+            var shell=go.GetComponentInChildren<MeshRenderer>();
+            uiCanvas.overrideSorting=false;
+            uiCanvas.sortingLayerID=shell.sortingLayerID;
+            uiCanvas.sortingOrder=shell.sortingOrder+1;
             ArtworkInfoLayout.RoundedRaycastBlocker(canvas,ArtworkGlassBuilder.Radius/ArtworkInfoLayout.MetresPerPixel);
             var title=ArtworkInfoLayout.Text(canvas,font,"THE BEDROOM",new Vector2(-50,365),new Vector2(1000,68),42,FontStyles.Bold);
             title.name="Title";
@@ -205,10 +261,56 @@ namespace InnerFrame.EditorTools
             var texture=material.GetTexture("_BaseMap") as Texture2D;
             Require(texture!=null,"Glass tint map missing.");
             Require(texture.GetPixels().All(c=>c.a>0 && c.a<0.9f),"Glass tint must remain translucent.");
-            var canvas=panel.GetComponentInChildren<Canvas>(true);
-            Require(canvas!=null && canvas.overrideSorting && canvas.sortingOrder==1,"Panel controls must sort above its glass shell.");
+            Canvas.ForceUpdateCanvases();
+            var canvases=panel.GetComponentsInChildren<Canvas>(true);
+            Require(canvases.Length==1,"Detail requires exactly one root World Space Canvas.");
+            var canvas=canvases[0];
+            string state=$"mode={canvas.renderMode}, root={canvas.isRootCanvas}, override={canvas.overrideSorting}, UI layer/order={canvas.sortingLayerID}/{canvas.sortingOrder}, glass layer/order={meshes[0].sortingLayerID}/{meshes[0].sortingOrder}";
+            Require(canvas.renderMode==RenderMode.WorldSpace && canvas.isRootCanvas,"Unexpected Canvas hierarchy: "+state);
+            Require(canvas.sortingLayerID==meshes[0].sortingLayerID && canvas.sortingOrder>meshes[0].sortingOrder,
+                "Panel controls must sort above its glass shell: "+state);
+            var filter=meshes[0].GetComponent<MeshFilter>();
+            Require(filter!=null && filter.sharedMesh!=null,"Glass mesh missing.");
+            float front=panel.transform.InverseTransformPoint(meshes[0].transform.TransformPoint(filter.sharedMesh.bounds.min)).z;
+            var corners=new Vector3[4];
+            foreach(var graphic in canvas.GetComponentsInChildren<Graphic>(true))
+            {
+                graphic.rectTransform.GetWorldCorners(corners);
+                Require(corners.All(c=>panel.transform.InverseTransformPoint(c).z<front-0.0001f),"UI must be physically ahead of glass: "+graphic.name);
+                Require(graphic.materialForRendering!=null && graphic.materialForRendering.renderQueue>=material.renderQueue,
+                    "UI material renders before transparent glass: "+graphic.name);
+            }
+            Require(canvas.GetComponent<GraphicRaycaster>()!=null && canvas.GetComponent<TrackedDeviceGraphicRaycaster>()!=null,"Mouse and XR graphic raycasters required.");
+            var close=panel.GetComponent<ArtworkDetailPanel>().CloseButton;
+            Require(close!=null && close.enabled && close.interactable && close.targetGraphic!=null && close.targetGraphic.raycastTarget,"Close must remain an enabled raycastable Button.");
+            var shield=canvas.GetComponentInChildren<ArtworkRoundedRaycast>(true);
+            Require(shield!=null && shield.transform.parent==canvas.transform && shield.transform.GetSiblingIndex()<close.transform.GetSiblingIndex(),"Input shield must precede Close in the Canvas hierarchy.");
             Require(panel.GetComponentsInChildren<Collider>(true).Length==0,"No collider should intercept UI rays.");
             Require(panel.GetComponentsInChildren<ArtworkRoundedRaycast>(true).Length==1,"Rounded UI blocker required.");
+        }
+
+        static void WriteGenerationStatus(string message)
+        {
+            var path=folder+"/GENERATION_STATUS.txt";
+            System.IO.File.WriteAllText(path,message+"\n");
+            AssetDatabase.ImportAsset(path);
+        }
+
+        // Exercises screen-point hit sorting + the Button pointer handler, not physical device input.
+        static void ClickThroughUIRaycast(Button expected,Camera camera)
+        {
+            Canvas.ForceUpdateCanvases();
+            var events=EventSystem.current;
+            Require(events!=null,"EventSystem missing.");
+            var rect=(RectTransform)expected.transform;
+            Vector3 screen=camera.WorldToScreenPoint(rect.TransformPoint(rect.rect.center));
+            Require(screen.z>0,"Button is behind the test camera.");
+            var pointer=new PointerEventData(events) { position=new Vector2(screen.x,screen.y), button=PointerEventData.InputButton.Left };
+            var hits=new System.Collections.Generic.List<RaycastResult>();
+            events.RaycastAll(pointer,hits);
+            Require(hits.Count>0 && hits[0].gameObject.GetComponentInParent<Button>()==expected,
+                "UI raycast did not reach "+expected.name+"; first hit: "+(hits.Count>0?hits[0].gameObject.name:"none"));
+            ExecuteEvents.Execute(expected.gameObject,pointer,ExecuteEvents.pointerClickHandler);
         }
 
         [MenuItem("Tools/InnerFrame/Artwork Info/2. Check Behavior in Play Mode")]
@@ -218,7 +320,7 @@ namespace InnerFrame.EditorTools
             var display=Object.FindAnyObjectByType<ArtworkInfoDisplay>();
             Require(display!=null && display.ViewingCamera!=null,"Display and camera required.");
             var camera=display.ViewingCamera;
-            display.Close(); display.MoreButton.onClick.Invoke();
+            display.Close(); ClickThroughUIRaycast(display.MoreButton,camera);
             Require(display.IsOpen,"More failed.");
             var panel=display.PanelTransform; var position=panel.position; var rotation=panel.rotation;
             Require(panel.parent==null && panel.localScale==Vector3.one,"Panel must be independent and world scale one.");
@@ -235,10 +337,10 @@ namespace InnerFrame.EditorTools
                 { text.ForceMeshUpdate(); Require(!text.isTextOverflowing,"TMP overflow: "+text.name); }
             }
             finally { camera.transform.SetPositionAndRotation(oldPosition,oldRotation); }
-            panel.GetComponent<ArtworkDetailPanel>().CloseButton.onClick.Invoke(); Require(!display.IsOpen,"Close failed.");
+            ClickThroughUIRaycast(panel.GetComponent<ArtworkDetailPanel>().CloseButton,camera); Require(!display.IsOpen,"Close failed.");
             display.MoreButton.onClick.Invoke(); Require(display.IsOpen && display.PanelTransform==panel,"Reopen failed.");
             display.Close();
-            Debug.Log("[ArtworkInfo] Button-event logic/overflow checks passed. Actual mouse clicks, multi-frame world lock, visual quality and Quest input still require manual testing.");
+            Debug.Log("[ArtworkInfo] Screen-point raycast, Button handler, sorting structure and overflow checks passed. Actual rendering, mouse clicks, multi-frame world lock, visual quality and Quest input still require manual testing.");
         }
 
         [MenuItem("Tools/InnerFrame/Artwork Info/3. Create XR Test Copy From Open Standalone Scene")]

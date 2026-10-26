@@ -1,113 +1,168 @@
-# Artwork information display — Issue #14
+# Museum placard and detail panel — Issue #14 / Draft PR #112
 
-**Status: source-only draft, not integrated into Unity.** No prefab, test scene,
-Gallery change, Unity compilation result, or Quest test is included yet. The
-execution host has neither Unity nor adb. AGENTS.md prohibits hand-editing
-`.meta`, `.prefab`, and `.unity`, so source is staged outside `Assets/` until
-Unity can import it and generate these files. Do not merge this draft as a
-completed implementation of #14.
+Source generation implementation, awaiting Unity 6000.3.23f1 compilation,
+asset generation, visual review and Play Mode/device tests. **The C# source
+is not itself a completed prefab.** Gallery (Cici), Painted Bedroom (Rowling),
+transition controls, shared settings, and Issue #57 remain untouched.
 
-## Decisions implemented in source
+## Update the prototype already installed on your Mac
 
-- Reusable `ArtworkInfoDisplay`; ivory placard beside the painting, dark TMP
-  type, title, artist, 1889 date, collection location and short introduction.
-- More opens an upright World Space Canvas 1.35 world meters ahead of the
-  camera. It is placed once; no tracking or per-frame positioning code.
-- The panel is an independent scene object, so neither rig scale (0.8 in the
-  current Gallery) nor placard movement changes its scale or position.
-- Close dismisses it; repeated More reuses it. Disabling/destroying the display
-  closes/destroys its panel. No grab, collider, scene transition, portrait,
-  voice, new input bindings, or #57 implementation is added.
-- Uses XRI's `TrackedDeviceGraphicRaycaster` and `XRUIInputModule`. The current
-  Starter Assets use Trigger for UI Press; no controller remapping is made.
-  Existing non-XR EventSystems produce an error instead of silently replacing
-  another feature's input module. A missing EventSystem is created once.
-- Generated placard: 0.64 × 0.54 m. Panel: 1.04 × 0.86 m. Fonts are 28–48 px
-  at 0.001 m/px; actual glyph size and legibility require headset measurement.
+1. Exit Play Mode. Save your work. Pull `feature/14-artwork-info-display`.
+2. At the repository root run:
+   ```bash
+   bash scripts/artwork-info/install-source.sh --update-source
+   ```
+   This updates C# only, accepts the exact initial PR #112 source or the last
+   installed hashes, and refuses locally edited files before copying anything.
+   Preserve and compare reported local edits yourself; do not delete them to
+   bypass this safeguard. Existing `.meta`, scenes, prefabs and materials are
+   preserved. First-time installs omit `--update-source`. Requires Python 3.
+3. Let Unity finish importing/compiling. Fix any Console errors before going
+   on. TMP Essentials must already be imported, as in your current setup.
+4. Optional: select an existing, licensed **TMP font asset** in Project before
+   generation for a museum serif typeface. Otherwise the project default TMP
+   font is used; no new font is downloaded. A default sans font will not match
+   the reference's serif title exactly. Import a licensed serif yourself and
+   select its TMP asset to generate a matching hierarchy. Record its license
+   in `docs/ASSETS.md` before committing a new font.
+5. Choose **Tools > InnerFrame > Artwork Info > 1. Generate Standalone Museum
+   Assets**. Save prompts protect the currently open scene. Every run creates
+   a unique `Assets/ArtworkInfo/MuseumGenerated…` folder. Its assets are
+   generated through Unity APIs; it does not overwrite your old prototype.
+6. The new `ArtworkInfoTestScene` opens automatically. The Console prints its
+   folder. Review the two prefabs in Prefab Mode and the new test scene.
+   Re-run generation to try another font; earlier generated work stays intact.
+   Partial failures also remain isolated in the printed folder for inspection.
 
-## Import and isolated test (Unity 6000.3.23f1)
+## Generated assets and hierarchy
 
-1. Use this feature branch in a clean checkout. Run from its root:
-   `bash scripts/artwork-info/install-source.sh`. It refuses to overwrite an
-   existing `Assets/ArtworkInfo` folder. Source is copied; no YAML is written.
-2. Open Unity, let it generate metadata and compile. Import TMP Essential
-   Resources via Window > TextMeshPro if a default TMP font is absent.
-   Review all imported files and record their font licenses in `docs/ASSETS.md`.
-3. Choose Tools > InnerFrame > Artwork Info > **1. Build Isolated Test Scene**.
-   This closes other scenes after the save prompt, then creates `Assets/ArtworkInfo/ArtworkInfoDisplay.prefab` and
-   `Assets/ArtworkInfo/ArtworkInfoTest.unity` via Unity APIs, using the current
-   Gallery XR rig including its scene overrides. It does not save Gallery.
-   Existing generated assets are deliberately not overwritten.
-4. In that scene, enter Play Mode; choose **2. Check Behavior in Play Mode**.
-   This invokes the actual More/Close Button events and checks distance,
-   independence from the rig, no immediate head-motion coupling, no duplicate
-   panel, reopening, and TMP text overflow. It does **not** simulate Trigger or
-   prove persistence across frames. These checks have not been executed here.
-5. Verify actual rays and Trigger with both controllers. Turn/move your head
-   over multiple frames; the panel must stay at its opening location. Repeat
-   while looking up/down and after moving around. Close then reopen: it must
-   appear in front of the new viewpoint. Inspect line wrapping and clipping.
-6. Read the placard at 0.5–0.7 m; inspect panel text at 1.35 m. Confirm roughly
-   1.5 cm or larger letter height and comfortable controller targets. Confirm
-   the cream surface is opaque, the contrast clear, and every paragraph fits.
+Dimensions are in world meters; root scales are one. The front faces **local
+-Z** (Unity World Space UI convention). Place the rear toward the wall.
+Each slab is a closed chamfered mesh with 32 vertices / 60 triangles. Each
+prefab has three slabs (180 triangles); the placard adds two cube mount rails
+(24 triangles). Meshes and URP Lit materials are saved assets referenced by
+prefabs, so build stripping does not depend on runtime Shader.Find.
 
-## Gallery integration (scene owner: Cici)
+```text
+ArtworkWallPlacard (ArtworkInfoDisplay) — 0.64 × 0.60 × 0.022 m
+  Brass beveled edging (MeshFilter/MeshRenderer)
+  Ivory inset face (MeshFilter/MeshRenderer)
+  Finished rear (MeshFilter/MeshRenderer)
+  Rear mount upper / Rear mount lower
+  Front Canvas (World Space, 0.001 m/pixel)
+    Ivory (transparent raycast blocker; physical mesh provides the surface)
+    Title / Artist and Year / Divider / Collection / Introduction (TMP)
+    More (Image, Button, TMP label)
 
-Gallery is `Assets/Scenes/Gallery.unity`, owned by Cici. The requested change
-is prepared for owner review through the PR; do not overwrite their scene.
+ArtworkDetailPanel (ArtworkDetailPanel) — 1.12 × 0.86 × 0.026 m
+  Brass beveled edging / Ivory inset face / Finished rear
+  Front Canvas (World Space, 0.001 m/pixel)
+    Ivory / Title / Artist and Year / Divider
+    Medium and Collection / Introduction (about 100 words)
+    Image Placeholder / Artwork Image (optional RawImage)
+    Close (Image, Button, TMP label, upper right)
+```
 
-After isolated testing, pull the latest main and open its Gallery. Select
-`Painting_TheBedroom`, then choose **3. Add Prefab Beside Selected Painting**.
-The command adds one root prefab instance with Undo, estimates placement from
-painting bounds at 1.35 m above floor, and leaves the scene dirty for visual
-inspection. It refuses duplicates. Confirm its face points into the room,
-clearance from the wall, no occlusion of the painting/entry button, and player
-sightlines. Adjust only the new instance, then save with Unity. Recheck the
-scene diff: existing transition events, rig, colliders and controls must be
-unchanged. This command has not been executed or visually validated here.
+Ivory is matte, edging is champagne brass, rear is dark and finished. No
+physics colliders or grab interactables are added to the display. More and
+Close have explicit default, hover, selected and pressed color transitions;
+the buttons have 72 mm high targets. Text uses fixed 26–48 px sizes with dark
+ink and generous margins. Headset legibility and wrapping remain unverified;
+the Play Mode check detects TMP overflow. Refine based on actual viewing.
 
-Commit generated `.meta` files, runtime/editor sources, prefab, test scene,
-and the reviewed Gallery diff together using explicit filenames. Source under
-`scripts/artwork-info` remains the delivery staging copy; after import, make
-future feature edits in `Assets/ArtworkInfo` and keep the staging copy in sync
-until the team chooses one canonical location. Edit the artwork content fields,
-then use the component context menu **Refresh Artwork Text** to update the
-Editor preview; Awake and Open also refresh text in a player. No shared settings are changed
-by this draft. Do not include incidental package/settings upgrades.
+The placard serializes a separate detail **prefab reference**. In the test
+scene it also references a separate, initially inactive detail **instance**.
+Outside that scene it instantiates one on first use. More reuses the same
+panel while open. Close hides it. Reopening places it again at the new
+viewpoint. The panel is detached, scale one, 1.35 world meters ahead using
+horizontal camera forward; it stays upright at eye height even when looking
+up/down. Its -Z front faces the viewer. No Update/late head tracking moves it.
+Disabling a placard closes its panel; destroying it destroys only a panel it
+created, preserving a separately assigned scene instance.
 
-## Facts, text and licenses
+## Desktop mouse acceptance test (required on your Mac)
 
-The displayed introduction is new, concise prose drafted for this change.
-The earlier issue mentions a draft but does not contain it; this text needs
-team editorial review. Factual sources checked on 2026-10-26:
+The generated desktop scene has **InputSystemUIInputModule**, its default
+mouse actions (reassigned on every scene load by ArtworkDesktopInput), one EventSystem, a regular camera and GraphicRaycaster on
+both canvases. It deliberately has no XR Origin and no second UI module.
+TrackedDeviceGraphicRaycaster is also present for use in the separate XR
+scene. No project bindings or global XR settings are changed.
 
-- [Art Institute collection record](https://www.artic.edu/artworks/28560/the-bedroom):
-  Vincent van Gogh, *The Bedroom*, 1889, Art Institute of Chicago.
-- [Art Institute exhibition timeline](https://archive.artic.edu/van-gogh-bedrooms/timeline):
-  the depicted bedroom is in Arles; the Chicago version was painted in
-  Saint-Rémy in September 1889, following the 1888 original. Do not describe
-  the Chicago canvas as painted in Arles.
-- [Art Institute discussion of the three versions](https://archive.artic.edu/van-gogh-bedrooms/about-paintings).
+1. Open the generated `ArtworkInfoTestScene`, enter Play Mode, and click the
+   Game view to focus it. With RMB released the cursor must be visible.
+2. **Left-click More**. The larger physical panel must appear in front of the
+   current camera. Check title, metadata, ~100-word introduction, placeholder,
+   brass border, front/side depth, and upper-right Close. Inspect Console.
+3. **Left-click Close**. Repeat at least ten More/Close cycles; confirm one
+   detail instance, no duplicate panels, no Console errors.
+4. Hold **right mouse button** to look around; while held use **WASD** to move,
+   **Q/E** down/up, **Shift** faster. Release RMB before clicking UI. **Home**
+   restores the camera. The wall and models intentionally have no collision
+   in this inspection scene: move behind the wall to inspect the finished back.
+5. Open the panel, move sideways and rotate over several frames. It must stay
+   at its opening world position/rotation. Close/reopen from a different
+   viewpoint: the panel must appear at the new viewpoint. Looking away while
+   it is open does not reposition it. Use Home if you lose the display.
+6. Run **2. Check Behavior in Play Mode**. It invokes the actual Button events
+   and checks distance/orientation/scale, instance reuse, immediate camera
+   independence, reopen/Close and text overflow. It does **not** prove that a
+   physical mouse or controller event reaches the Button, or prove stability
+   over multiple frames. Those are steps 2–5 above.
+7. Exit Play Mode and inspect the geometry in Scene/Prefab view from front,
+   side and rear. Judge materials under the simple neutral wall/key light.
+   No replacement Gallery is built. Do not commit generated assets until
+   generation, references, Console, text wrapping and visuals have passed.
 
-No external image, portrait, font file, texture, material, or model is added by
-this draft. The existing painting's CC0 image provenance is already recorded
-in `docs/ASSETS.md`. A self-portrait is omitted; #57 remains separate. The
-Unity TMP default font must be imported with its supplied license before
-building; no new font license is asserted by this draft.
+## Image and facts
 
-## Build and Quest verification still required
+The reference design board is a visual guide, not an asset or texture. No
+external images/fonts/models are added by this change. The panel reserves a
+420 × 360 px image space. To use a verified image, open the detail prefab in
+Prefab Mode, assign its texture to **Artwork Image (optional)** RawImage,
+set its color alpha to 1, preserve image aspect ratio by resizing that Rect,
+and disable **Image Placeholder**. Apply to the prefab and recheck both test
+scenes. A verified Art Institute public-domain/CC0 reproduction can be used;
+record the exact image URL, rights statement, and asset path in
+`docs/ASSETS.md` before adding it. No pagination dots imply nonexistent slides.
 
-Use the project's Android build profile, OpenXR Meta Quest Support, minimum
-API 32, GameActivity. Do not change these for this feature. Add the isolated
-scene only to a temporary local test build configuration; preserve the team
-build's Gallery → PaintedBedroom ordering. Build from a clean worktree.
+New editorial prose relies on these museum sources (checked for the original
+PR on 2026-10-26; re-verification may be blocked by the museum web server):
 
-Record tester/date/commit/APK source for all hardware results. Test launch in
-immersive VR, both controllers' Trigger on More/Close, holding/releasing
-Trigger (no accidental repeated activation), panel readability and world lock,
-scene exit with panel open, reopen after returning, and unchanged entry control
-and player menu. Have someone other than the builder run the acceptance test.
-Neither APK deployment nor any Quest check was performed here.
+- https://www.artic.edu/artworks/28560/the-bedroom — Vincent van Gogh, 1889,
+  oil on canvas, Art Institute of Chicago.
+- https://archive.artic.edu/van-gogh-bedrooms/timeline — depicted room in
+  Arles; Chicago version made in Saint-Rémy in 1889 after the 1888 original.
+- https://archive.artic.edu/van-gogh-bedrooms/about-paintings — three versions.
 
-Run `bash scripts/ci-local.sh` on the committed branch before pushing. A PASS
-is an asset/history check, not Unity compilation or headset validation.
+## Later Quest 3 validation
+
+After reviewing the standalone desktop design, exit Play Mode and choose
+**3. Create XR Test Copy From Open Standalone Scene**. This creates a separate
+`ArtworkInfoXRTestScene`, reads/copies the current Gallery rig, removes the
+desktop camera/module, installs XRUIInputModule, and preserves the copied
+rig's Trigger UI Press bindings. Gallery is opened read-only for copying and
+never saved. Existing XR test files are not overwritten. Inspect exactly one
+XR Origin, one EventSystem/module, canvas event cameras, UI interaction
+settings and controller UI Press references in that isolated scene.
+
+Use a temporary local Android build profile containing only the XR test.
+Preserve shared build settings: Unity 6000.3.23f1, OpenXR Meta Quest Support,
+minimum API 32, GameActivity. Build from a clean worktree. Test immersive
+launch, each controller's ray/Trigger on More and Close, hover/pressed states,
+release/held Trigger, repeated cycles, head turns and walking over several
+frames, eye-height placement, readable text at 1.35 m and placard at 0.5–1 m,
+and no input errors. Record tester/date/commit and results. A stationary FPS
+or source review is not evidence of working controller interaction.
+
+Do not integrate these assets into Gallery or modify Bedroom until the
+standalone design has been reviewed and approved. The former Gallery
+integration menu has been removed from these tools to prevent accidental use.
+PR #112 stays draft; no new PR and no merge.
+
+## Validation boundaries
+
+Run `bash scripts/ci-local.sh` before push. This checks repository assets and
+history, not C# compilation, generated mesh appearance, mouse clicks or XR.
+Unity compilation, generation, Play Mode, screenshot inspection of actual
+Unity geometry, mouse input and Quest tests have **not** been performed on
+the execution host. All runtime outcomes remain pending local validation.

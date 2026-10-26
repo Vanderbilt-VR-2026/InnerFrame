@@ -27,13 +27,13 @@ namespace InnerFrame.ArtworkInfo
         {
             var rect = Rect(parent, "Ivory", Vector2.zero, parent.sizeDelta);
             var image = rect.gameObject.AddComponent<Image>();
-            image.color = Ivory;
+            image.color = new Color(Ivory.r, Ivory.g, Ivory.b, 0);
             image.raycastTarget = true; // Prevent pointing through the panel to other UI.
         }
 
         public static void Rule(RectTransform parent, float y, float width)
         {
-            var image = Rect(parent, "Divider", new Vector2(0, y), new Vector2(width, 1)).gameObject.AddComponent<Image>();
+            var image = Rect(parent, "Divider", new Vector2(0, y), new Vector2(width, 1.5f)).gameObject.AddComponent<Image>();
             image.color = new Color(0.60f, 0.55f, 0.43f);
             image.raycastTarget = false;
         }
@@ -47,20 +47,23 @@ namespace InnerFrame.ArtworkInfo
             text.fontSize = fontSize;
             text.fontStyle = style;
             text.color = Ink;
-            text.alignment = TextAlignmentOptions.MidlineLeft;
+            text.alignment = TextAlignmentOptions.TopLeft;
+            text.margin = new Vector4(0, 2, 0, 2);
             text.raycastTarget = false;
             text.richText = false;
             return text;
         }
 
-        public static void Button(RectTransform parent, TMP_FontAsset font, string label, Vector2 position, Vector2 size)
+        public static Button Button(RectTransform parent, TMP_FontAsset font, string label, Vector2 position, Vector2 size)
         {
             var rect = Rect(parent, label, position, size);
             var image = rect.gameObject.AddComponent<Image>();
-            image.color = new Color(0.85f, 0.81f, 0.71f);
+            image.color = Color.white;
             var button = rect.gameObject.AddComponent<Button>();
             button.targetGraphic = image;
             var colors = button.colors;
+            colors.normalColor = new Color(0.80f, 0.71f, 0.52f);
+            colors.fadeDuration = 0.10f;
             colors.highlightedColor = new Color(1, 0.94f, 0.76f);
             colors.selectedColor = colors.highlightedColor;
             colors.pressedColor = new Color(0.65f, 0.60f, 0.48f);
@@ -68,6 +71,7 @@ namespace InnerFrame.ArtworkInfo
             button.navigation = new Navigation { mode = Navigation.Mode.None };
             Text(rect, font, label, Vector2.zero, size - new Vector2(20, 8), 34, FontStyles.Bold)
                 .alignment = TextAlignmentOptions.Center;
+            return button;
         }
 
         static RectTransform Rect(Transform parent, string name, Vector2 position, Vector2 size)

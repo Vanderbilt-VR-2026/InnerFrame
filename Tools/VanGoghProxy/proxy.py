@@ -24,9 +24,10 @@ from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from starlette.exceptions import HTTPException
 
 HERE = Path(__file__).parent
-# huggingface_hub reads HF_HOME once, when faster_whisper imports it, so it must be set before that import.
-# Otherwise its cache and logs go to ~/.cache/huggingface instead of this folder.
+# huggingface_hub reads these once, when faster_whisper imports it, so they must be set before that import.
+# Otherwise its cache and logs go to ~/.cache/huggingface instead of this folder, and it calls home at startup.
 os.environ.setdefault("HF_HOME", str(HERE / ".hf"))
+os.environ.setdefault("HF_HUB_DISABLE_TELEMETRY", "1")
 from faster_whisper import WhisperModel
 
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434")
@@ -42,7 +43,14 @@ DIDNT_CATCH = "Sorry, I didn't quite catch that. Could you say it again?"
 NOT_SURE = "I'm not sure I understand you, my friend. Ask me about this room, or about my painting."
 KEEP_AUDIO_FILES = 20
 
-# A guard for D16's rule (nothing after October 1888) until Rowling's persona (#75) exists. The list is v0.
+# Guards for D16's rule (nothing after October 1888). The question list catches what visitors are likely to
+# ask about his later life; the reply list catches what the model volunteers. Both are v0 until Rowling's
+# persona (#75) exists.
+ASKED_AFTER_1888 = re.compile(
+    r"\b(ears?|razor|asylum|hospital|saint-r[ée]my|auvers|gachet|revolver|gun|shot|shoot|suicide"
+    r"|kill|killed|die|died|dies|dying|death|dead|grave|buried|1889|1890)\b",
+    re.IGNORECASE,
+)
 AFTER_1888 = re.compile(
     r"\b(ears?|razor|asylum|hospital|saint-r[ée]my|auvers|gachet|revolver|gun|shot|suicide|self-harm|brothel|1889|1890)\b",
     re.IGNORECASE,
@@ -112,7 +120,14 @@ def answer_recording(npc, audio, with_voice):
     t0 = time.perf_counter()
     transcript = transcribe(wav)
     t1 = time.perf_counter()
-    text = reply(transcript) if transcript else DIDNT_CATCH  # nothing heard: don't ask the model
+    asked = ASKED_AFTER_1888.search(transcript)
+    if not transcript:
+        text = DIDNT_CATCH  # nothing heard: don't ask the model
+    elif asked:
+        log.info("guard(question): %s", asked.group(0))
+        text = NOT_SURE
+    else:
+        text = reply(transcript)
     t2 = time.perf_counter()
     audio_id = speak(text) if with_voice else None
     t3 = time.perf_counter()
@@ -124,7 +139,11 @@ def answer_recording(npc, audio, with_voice):
 @asynccontextmanager
 async def lifespan(app):
     OUT.mkdir(exist_ok=True)
-    state["whisper"] = WhisperModel(WHISPER_MODEL, device="cpu", compute_type="int8", download_root=WHISPER_DIR)
+    options = {"device": "cpu", "compute_type": "int8", "download_root": WHISPER_DIR}
+    try:  # already downloaded: load it without asking Hugging Face, so startup works without internet
+        state["whisper"] = WhisperModel(WHISPER_MODEL, local_files_only=True, **options)
+    except FileNotFoundError:  # first start: download it
+        state["whisper"] = WhisperModel(WHISPER_MODEL, **options)
     state["can_think"] = "thinking" in ollama("/api/show", {"model": OLLAMA_MODEL}).get("capabilities", [])
     reply("Hello.")  # loads the model now (keep_alive -1 keeps it loaded) instead of on the first visitor
     hello = speak("Hello.")  # the first `say` of a session is slow

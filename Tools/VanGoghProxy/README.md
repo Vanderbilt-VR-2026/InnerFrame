@@ -17,11 +17,17 @@ https://vangoghletters.org/vg/letters/let705/letter.html
 the chairs are fresh butter yellow…").
 
 The model doesn't always keep to the persona's rule of "nothing after October
-1888", so `proxy.py` also checks each reply for words from his later life (ear,
-razor, asylum, Saint-Rémy, Auvers, Gachet, 1889, 1890 and a few more, as whole
-words). If one appears, Vincent says instead: "I'm not sure I understand you, my
-friend. Ask me about this room, or about my painting." The server log names the
-word. The list is a first version, kept until the real persona exists.
+1888", so `proxy.py` has two guards. Both match whole words in any case, and
+both lists are first versions, kept until the real persona exists:
+
+- The question guard checks what the visitor said. A question about his later
+  life or his death (ear, asylum, Saint-Rémy, Auvers, die, death, 1889, 1890 and
+  a few more) never reaches the model.
+- The reply guard checks the model's answer for words from his later life (ear,
+  razor, asylum, Saint-Rémy, Auvers, Gachet, 1889, 1890 and a few more).
+
+Either way Vincent says: "I'm not sure I understand you, my friend. Ask me about
+this room, or about my painting." The server log names the word.
 
 ## Run it (macOS)
 
@@ -37,9 +43,11 @@ python3 -m venv .venv               # once
 ```
 
 The first start downloads the Whisper model (about 150 MB) into `models/` in
-this folder (not committed). Startup also loads the Ollama model and keeps it in
-memory (`keep_alive: -1`) until Ollama stops, and warms up `say` and Whisper so
-the first visitor doesn't wait for them.
+this folder (not committed). After that, startup needs no network: the model
+loads from `models/` and Hugging Face telemetry is off, so the proxy starts even
+when the computer has no internet. Startup also loads the Ollama model and keeps
+it in memory (`keep_alive: -1`) until Ollama stops, and warms up `say` and
+Whisper so the first visitor doesn't wait for them.
 
 Settings (environment variables):
 

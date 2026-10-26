@@ -12,7 +12,7 @@ using UnityEngine.XR.Interaction.Toolkit.UI;
 /// </summary>
 public class PlayerMenuPanel : MonoBehaviour
 {
-    const float SpawnDistance = 0.55f;   // metres in front of the eyes: inside the controllers' 1 m ray
+    const float SpawnDistance = 0.55f;   // metres in front of the eyes: inside the controllers' 2 m ray
     const float SpawnDrop = 0.12f;       // a little below eye level, like a lectern
     const float DesktopDistance = 0.7f;  // on a monitor: far enough back to fit the screen, at eye level
     const float MetresPerPixel = 0.001f; // the canvas is laid out in pixels; 500 px = 0.5 m wide

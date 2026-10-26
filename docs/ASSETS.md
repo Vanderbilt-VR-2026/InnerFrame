@@ -32,7 +32,7 @@ Every top-level folder under `Assets/`, and every package folder under
 
 | Folder | What it is | Source | License |
 |---|---|---|---|
-| `Art/Source/PaintedBedroom` | Painted Bedroom experiment: a drop-in Unity folder (room data, code-drawn textures, importer and scene-builder scripts) and `web/`, the three.js scene it is exported from, with its export tools. See its README. | Made by the team: Serena Deng with Claude. Procedural three.js scene fitted to the painting, exported to this format; textures drawn by code, no painting pixels or third-party assets. `web/` loads three.js r170 (MIT) from the jsdelivr CDN; it is not copied into the repo | Team work |
+| `Art/Source/PaintedBedroom` | Painted Bedroom experiment: a drop-in Unity folder (room data, code-drawn textures, importer and scene-builder scripts) and `web/`, the three.js scene it is exported from, with its export tools. See its README. | Made by the team: Serena Deng with Claude. Procedural three.js scene fitted to the painting, exported to this format; textures drawn by code, no third-party assets. Six textures are crops of the painting itself (public domain, CC0 image from the Art Institute of Chicago): the mirror, the landscape, the two portraits and the two drawings on the walls (`tex_Mirror_paint.png`, `tex_Picture_*_paint.png`), cut from `Assets/Art/Painting/The_Bedroom_Van_Gogh.jpg` and perspective-corrected onto each canvas. Since the freeze (#51) the room is edited in `blender/painted_bedroom.blend` and written back to the same format. `web/` loads three.js r170 (MIT) from the jsdelivr CDN; it is not copied into the repo | Team work |
 
 ### Notes on the bedroom style assets (Serena Deng)
 

@@ -52,6 +52,20 @@ Assets, the same as the Gallery. It is set up so you grab with grip (near or
 with the ray) and teleport anywhere on the floor. **This has not been tried on
 a headset yet** (see below).
 
+| Quest controller | Action |
+| --- | --- |
+| Right thumbstick forward, aim the arc, let go | Teleport (the floor is on the **Teleport** interaction layer) |
+| Left thumbstick | Walk |
+| Grip, near or with the 2 m ray | Grab what the physics table makes liftable |
+
+**After Import and Build, run Tools > InnerFrame > Apply XR Rig Settings
+(2 m ray, 0.8 scale, teleport floor).** The rebuild puts the teleport floor
+back on the Default interaction layer, where the thumbstick arc can't land.
+The tool (`Assets/Script/Editor/XRRigSettings.cs`) moves every Teleportation
+Area and Anchor in the Gallery and this scene to the Teleport layer, and saves
+the ray length and rig scale on each scene's XR Origin. Pointing at the floor
+and pressing grip no longer teleports.
+
 ## What's inside
 
 | Path | What it is |
@@ -133,6 +147,27 @@ in the editor and in a build. Nothing needs adding to the scene.
 
 Objects with no row keep the builder's setup: liftable, no physics.
 
+### What the committed table says (2026-10-15)
+
+- **Rig:** Rig Scale 0.8, Ray Distance 2 m, Desktop Scale 0.8, Desktop Reach
+  2 m. The tool above saves the same 0.8 and 2 m on the XR Origin: change both
+  together, or the Gallery and the bedroom won't match.
+- **Liftable, with physics:** Pitcher, Carafe, Tumbler, Bottle_Tall,
+  Bottle_Short, SoapDish, BrushBox, ClothesBrush, Pillow_Front, Pillow_Back,
+  Hat (1 kg, rest until grabbed), Chair_Front (60 kg), Chair_Back (100 kg).
+- **Fixed** (not liftable, no physics): Bed, Washstand, Basin, both doors, the
+  window, the mirror, the pictures, the peg rail, the blanket, the towel and
+  the hanging clothes.
+- **Why the Washstand and Basin are fixed:** the Pitcher stands inside the
+  Basin's box collider. Grabbing the Basin gave it physics while the resting
+  Pitcher stayed frozen inside it, so Unity pushed the Basin down through the
+  washstand's thin top. A movable washstand also left everything on it hanging
+  in the air.
+- **Keep Rest Until Grabbed on for the Pitcher.** Without it, physics starts
+  with the Pitcher overlapping the Basin's box, and it gets pushed out of the
+  bowl. Put back after a grab, it rests on top of the Basin's box, a few cm
+  higher than painted.
+
 ### How to tune
 
 1. Select the table in the Project window and press Play.
@@ -189,9 +224,9 @@ Known limits:
 - If the basin is picked up while the pitcher still rests in it, the two
   boxes overlap, so the basin is slowly pushed away. Better-fitting colliders
   in the builder would fix this.
-- `Script/Network/NetworkGrabbable.cs` isn't on any bedroom object yet. It
-  records whether an object starts frozen and keeps it that way, so adding
-  it would leave resting objects frozen for good.
+- A networked grab script that records whether an object starts frozen, and
+  keeps it that way, would leave resting objects frozen for good. Keep this in
+  mind when multiplayer comes to the bedroom.
 
 ## How it was made
 
@@ -253,3 +288,8 @@ All in Unity 6000.3.23f1, project InnerFrame-QuestTest, by Serena.
 - [I] **The VR rig scale and ray length from the table** have not been checked
   on a headset.
 - [I] **Nothing has been tested on a headset.**
+- [I] **2026-10-15, teleport on the Teleport layer, 2 m rays, 0.8 scale, fixed
+  Washstand and Basin:** not yet checked on a headset. The cause of the old
+  teleport failure was found by reading the scene and prefab files: the floor
+  was on the Default interaction layer and the thumbstick teleport only looks
+  at the Teleport layer.

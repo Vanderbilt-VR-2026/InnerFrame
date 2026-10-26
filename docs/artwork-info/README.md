@@ -1,4 +1,4 @@
-# Museum placard and detail panel — Issue #14 / Draft PR #112
+# Museum placard and light frosted-glass panel — Issue #14 / Draft PR #112
 
 Source generation implementation, awaiting Unity 6000.3.23f1 compilation,
 asset generation, visual review and Play Mode/device tests. **The C# source
@@ -38,37 +38,78 @@ transition controls, shared settings, and Issue #57 remain untouched.
 
 Dimensions are in world meters; root scales are one. The front faces **local
 -Z** (Unity World Space UI convention). Place the rear toward the wall.
-Each slab is a closed chamfered mesh with 32 vertices / 60 triangles. Each
-prefab has three slabs (180 triangles); the placard adds two cube mount rails
-(24 triangles). Meshes and URP Lit materials are saved assets referenced by
-prefabs, so build stripping does not depend on runtime Shader.Find.
+The wall placard keeps its original three 60-triangle chamfered slabs and two
+mount rails (204 triangles total). The detail has **one** rounded closed shell:
+1.24 × 0.94 × 0.008 m, 45 mm corner radius, 1 mm edge bevel, 144 vertices and
+284 triangles (8 arc segments per corner, four rings). No opaque rear, mounts,
+brass edging, shadow plane, or solid front slab is added to the detail.
 
 ```text
-ArtworkWallPlacard (ArtworkInfoDisplay) — 0.64 × 0.60 × 0.022 m
-  Brass beveled edging (MeshFilter/MeshRenderer)
-  Ivory inset face (MeshFilter/MeshRenderer)
-  Finished rear (MeshFilter/MeshRenderer)
+ArtworkWallPlacard (ArtworkInfoDisplay) — unchanged physical construction
+  Brass beveled edging / Ivory inset face / Finished rear
   Rear mount upper / Rear mount lower
   Front Canvas (World Space, 0.001 m/pixel)
-    Ivory (transparent raycast blocker; physical mesh provides the surface)
+    Ivory (invisible raycast blocker)
     Title / Artist and Year / Divider / Collection / Introduction (TMP)
-    More (Image, Button, TMP label)
+    More (original Image, Button, TMP label and brass palette)
 
-ArtworkDetailPanel (ArtworkDetailPanel) — 1.12 × 0.86 × 0.026 m
-  Brass beveled edging / Ivory inset face / Finished rear
+ArtworkDetailPanel (ArtworkDetailPanel) — 1.24 × 0.94 × 0.008 m
+  Milky Glass Body (one MeshFilter/MeshRenderer)
   Front Canvas (World Space, 0.001 m/pixel)
-    Ivory / Title / Artist and Year / Divider
+    Rounded Input Shield (clear Image, ArtworkRoundedRaycast)
+    Title / Artist and Year / Divider (neutral gray)
+    Artwork Image (optional RawImage) / Image Placeholder / Image Caption
     Medium and Collection / Introduction (about 100 words)
-    Image Placeholder / Artwork Image (optional RawImage)
-    Close (Image, Button, TMP label, upper right)
+    Close (76 × 76 mm target, minimal × glyph, hover/press tint)
 ```
 
-Ivory is matte, edging is champagne brass, rear is dark and finished. No
-physics colliders or grab interactables are added to the display. More and
-Close have explicit default, hover, selected and pressed color transitions;
-the buttons have 72 mm high targets. Text uses fixed 26–48 px sizes with dark
-ink and generous margins. Headset legibility and wrapping remain unverified;
-the Play Mode check detects TMP overflow. Refine based on actual viewing.
+The floating panel uses neutral charcoal text, uppercase title, generous
+margins, image on the left and editorial text on the right. Metadata remains
+oil on canvas / Art Institute of Chicago. The placard's warm ivory/brass,
+typography, More palette and rear mounts are unchanged. No runtime placement,
+lifecycle, mouse actions, camera controls or controller bindings are changed.
+
+### Lightweight glass approximation (no optical blur)
+
+The glass uses **URP Unlit**, one material, and one generated 256 × 192 RGBA32
+bilinear/clamped tint texture without mipmaps (196,608 bytes of base texels,
+plus Unity overhead; CPU-readable for validation). The tint is cool neutral
+milky-white. Interior alpha varies approximately 0.60–0.72, with softly
+localized milkiness behind the right reading column and a narrow edge
+highlight reaching 0.84. This leaves background detail visible without a
+second full-panel translucent overlay. It is an approximation: the scene
+behind remains sharp. No GrabPass, scene color/depth sampling, refraction,
+full-screen blur, added renderer feature, post-processing or global URP
+change is used. Unlit tint stays light even in shadow; edge highlights are
+procedural, not physically computed reflections.
+
+Material configuration: Transparent surface, straight `SrcAlpha /
+OneMinusSrcAlpha` blending, `_SURFACE_TYPE_TRANSPARENT` keyword, `ZWrite=0`,
+back-face culling, no alpha clipping, render queue **3000**. The closed shell
+renders only its outward-facing surfaces so front and rear faces do not stack
+as two translucent full-panel layers. Background world UI shares that queue so distance sorting can put it behind
+and tint it through glass. This panel's Canvas has overrideSorting enabled
+and sortingOrder 1, above its shell (order 0); its UI plane is also physically
+in front. This ordering avoids forcing all background UI to draw after glass. ShadowCaster, depth-only,
+depth-normal and motion-vector passes are disabled on the glass material;
+its renderer casts/receives no shadows. No collider intercepts controller rays.
+Saved materials reference the shader/texture and prefabs reference the meshes;
+no player-time Shader.Find is needed. Actual stereo rendering/sorting remains
+pending Unity and Quest inspection, especially near other transparent objects.
+
+The invisible input shield uses a rounded raycast filter to match the panel
+silhouette; it creates no visible background. Transparent mesh culling is
+explicitly disabled for this clear UI graphic so it can participate in UI
+raycasts. More and Close are ordinary Buttons; the shield is first in the
+Canvas hierarchy, behind the controls in graphic order. Meshes do not intercept
+UI events. Corner cutouts are excluded by the filter. Both standard and
+tracked graphic raycasters remain, with one input module per test scene.
+
+The generator runs structure checks before saving the detail prefab and the
+Play Mode check repeats them: exactly one glass mesh, expected transparent
+blend/queue/keyword/depth state, tint alpha below 0.9, no colliders, and one
+rounded input shield. These checks are **provided but not executed here**
+because they require Unity. They do not prove the rendered appearance.
 
 The placard serializes a separate detail **prefab reference**. In the test
 scene it also references a separate, initially inactive detail **instance**.
@@ -91,9 +132,13 @@ scene. No project bindings or global XR settings are changed.
 1. Open the generated `ArtworkInfoTestScene`, enter Play Mode, and click the
    Game view to focus it. With RMB released the cursor must be visible.
 2. **Left-click More**. The larger physical panel must appear in front of the
-   current camera. Check title, metadata, ~100-word introduction, placeholder,
-   brass border, front/side depth, and upper-right Close. Inspect Console.
-3. **Left-click Close**. Repeat at least ten More/Close cycles; confirm one
+   current camera. Check the milky-white **translucent** shell, neutral edge
+   highlight, rounded corners, charcoal title/description, image and upper-right
+   ×. Inspect Console. The two-tone background and narrow vertical markers are
+   environment objects, not panel children: see them through the glass on both
+   sides. The small warm-white placard mount is also a separate environment
+   object. There must be no black rectangle moving with the panel.
+3. **Left-click ×**. Repeat at least ten More/Close cycles; confirm one
    detail instance, no duplicate panels, no Console errors.
 4. Hold **right mouse button** to look around; while held use **WASD** to move,
    **Q/E** down/up, **Shift** faster. Release RMB before clicking UI. **Home**
@@ -110,20 +155,35 @@ scene. No project bindings or global XR settings are changed.
    over multiple frames. Those are steps 2–5 above.
 7. Exit Play Mode and inspect the geometry in Scene/Prefab view from front,
    side and rear. Judge materials under the simple neutral wall/key light.
+   The separate bright-left/dark-right backgrounds are at z=2.48 m; narrow
+   contrast markers are at z=2.40 m. Camera starts at z=0, glass opens at
+   z=1.35, placard is at z=1.60 and its mount at z=1.68. Move sideways to
+   judge text over both backgrounds and verify the markers stay in the room
+   while the panel remains world-locked. Inspect front, oblique and rear views;
+   check for doubled opacity, sorting artifacts and missing × glyph. Bright
+   backgrounds must not wash out text; dark backgrounds must remain visible.
    No replacement Gallery is built. Do not commit generated assets until
    generation, references, Console, text wrapping and visuals have passed.
 
 ## Image and facts
 
-The reference design board is a visual guide, not an asset or texture. No
-external images/fonts/models are added by this change. The panel reserves a
-420 × 360 px image space. To use a verified image, open the detail prefab in
-Prefab Mode, assign its texture to **Artwork Image (optional)** RawImage,
-set its color alpha to 1, preserve image aspect ratio by resizing that Rect,
-and disable **Image Placeholder**. Apply to the prefab and recheck both test
-scenes. A verified Art Institute public-domain/CC0 reproduction can be used;
-record the exact image URL, rights statement, and asset path in
-`docs/ASSETS.md` before adding it. No pagination dots imply nonexistent slides.
+The user's floating artwork interface screenshot guides composition and rounded,
+translucent styling; its dark tint is intentionally replaced with light white.
+The screenshot is not copied into Unity. No external assets are downloaded.
+The generator reuses `Assets/Art/Painting/The_Bedroom_Van_Gogh.jpg` when Unity
+can load it. Its exact provenance is already recorded in `docs/ASSETS.md`:
+Art Institute of Chicago, public domain painting, CC0 reproduction. It is not
+modified or duplicated. The 480 px wide RawImage preserves source aspect ratio;
+the caption states the source and CC0. No new image license is inferred.
+
+If that texture is absent/unavailable, the intentional **Image Placeholder**
+reads “THE BEDROOM / 1889” and the caption reads “Artwork image”. To replace it,
+open the new detail prefab in Prefab Mode, assign a verified image to **Artwork
+Image (optional)** RawImage, set its color alpha to 1, resize that Rect to retain
+the texture aspect ratio, disable **Image Placeholder**, and update the caption.
+Record any replacement asset's exact source/license/path in `docs/ASSETS.md`.
+Check the project painting file is fetched through Git LFS if it cannot import.
+No pagination, share or favourite controls from the reference are implemented.
 
 New editorial prose relies on these museum sources (checked for the original
 PR on 2026-10-26; re-verification may be blocked by the museum web server):
@@ -151,7 +211,10 @@ minimum API 32, GameActivity. Build from a clean worktree. Test immersive
 launch, each controller's ray/Trigger on More and Close, hover/pressed states,
 release/held Trigger, repeated cycles, head turns and walking over several
 frames, eye-height placement, readable text at 1.35 m and placard at 0.5–1 m,
-and no input errors. Record tester/date/commit and results. A stationary FPS
+and no input errors. Also test rounded silhouettes in both eyes, alpha blending
+against bright/dark gallery backgrounds, reading-column contrast, oblique/rear
+views, no opaque rear or doubled opacity, × hover/press states, and any artifacts
+where other transparent objects overlap. Record tester/date/commit and results. A stationary FPS
 or source review is not evidence of working controller interaction.
 
 Do not integrate these assets into Gallery or modify Bedroom until the
@@ -166,3 +229,21 @@ history, not C# compilation, generated mesh appearance, mouse clicks or XR.
 Unity compilation, generation, Play Mode, screenshot inspection of actual
 Unity geometry, mouse input and Quest tests have **not** been performed on
 the execution host. All runtime outcomes remain pending local validation.
+
+## Validation report for the glass revision
+
+- Code/generator: added rounded glass shell, procedural tint and edge highlight,
+  neutral × button/charcoal typography, rounded input shield, existing CC0 image
+  reuse, contrast-test backgrounds and Unity structure assertions.
+- Repository checks and guarded installer checks: results are recorded in PR #112
+  after running against the source commit. They are not Unity rendering checks.
+- Actual Unity compilation: not run (Editor unavailable on execution host).
+- Revised prefab generation: not run; must generate locally in the new folder.
+- Actual rendered visual inspection: not run; screenshot reference inspection
+  does not count as inspection of generated Unity output.
+- Mouse input/Play Mode: not run; button-event tests also require local execution.
+- Quest 3 build/controller/performance/stereo validation: not run.
+
+The new generator does not patch old generated prefabs: use menu step 1, open
+its newly generated scene, and judge that output. Keep the old models for
+comparison. No generated assets are committed or Gallery integration approved.

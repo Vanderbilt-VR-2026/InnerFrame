@@ -38,6 +38,7 @@ namespace InnerFrame.EditorTools
             if (font == null) font = TMP_Settings.defaultFontAsset;
             Require(font != null, "Import TMP Essentials or select a licensed TMP font asset in Project.");
             Require(Shader.Find("Universal Render Pipeline/Lit") != null, "URP Lit shader required.");
+            Require(Shader.Find("Universal Render Pipeline/Unlit") != null, "URP Unlit shader required.");
             // Every run gets its own directory: no old prototype, source, prefab or scene is overwritten.
             if (!AssetDatabase.IsValidFolder(Root)) AssetDatabase.CreateFolder("Assets", "ArtworkInfo");
             folder = AssetDatabase.GenerateUniqueAssetPath(Root + "/MuseumGenerated");
@@ -52,6 +53,7 @@ namespace InnerFrame.EditorTools
             try
             {
                 detail = Panel();
+                CheckGlassStructure(detail);
                 var detailAsset = PrefabUtility.SaveAsPrefabAsset(detail, folder + "/ArtworkDetailPanel.prefab");
                 Require(detailAsset != null, "Detail prefab save failed.");
                 Object.DestroyImmediate(detail);
@@ -74,7 +76,14 @@ namespace InnerFrame.EditorTools
                 var events = new GameObject("Desktop EventSystem", typeof(EventSystem));
                 events.AddComponent<InputSystemUIInputModule>();
                 events.AddComponent<ArtworkDesktopInput>();
-                Cube("Neutral mounting wall", new Vector3(0,1.5f,1.68f), new Vector3(2.4f,2.5f,0.10f), back);
+                var bright = Material("Test Warm White",new Color(0.9f,0.9f,0.88f),0,0.1f);
+                var dark = Material("Test Slate",new Color(0.10f,0.14f,0.18f),0,0.1f);
+                Cube("Bright background left",new Vector3(-1.2f,1.5f,2.48f),new Vector3(2.4f,2.5f,0.10f),bright);
+                Cube("Dark background right",new Vector3(1.2f,1.5f,2.48f),new Vector3(2.4f,2.5f,0.10f),dark);
+                // These are environment objects, never children/backing of the floating panel.
+                for (int i=0;i<6;i++)
+                    Cube("Contrast marker "+i,new Vector3(-0.9f+i*0.36f,1.5f,2.40f),new Vector3(0.028f,1.8f,0.015f),i<3?dark:bright);
+                Cube("Placard mounting surface",new Vector3(0,1.5f,1.68f),new Vector3(0.72f,0.68f,0.10f),bright);
                 Cube("Floor", new Vector3(0,-0.04f,1), new Vector3(6,0.08f,6), ivory);
                 var light = new GameObject("Soft key", typeof(Light)).GetComponent<Light>();
                 light.type = LightType.Directional; light.intensity = 1.1f; light.shadows = LightShadows.Soft;
@@ -108,22 +117,40 @@ namespace InnerFrame.EditorTools
         }
         static GameObject Panel()
         {
-            var go = Body("ArtworkDetailPanel",1.12f,0.86f,0.026f);
-            var canvas = Surface(go.transform,new Vector2(1120,860),0.026f);
-            var title = ArtworkInfoLayout.Text(canvas,font,"The Bedroom",new Vector2(-110,345),new Vector2(790,70),48,FontStyles.Bold);
-            title.name = "Title";
-            ArtworkInfoLayout.Text(canvas,font,"Vincent van Gogh  |  1889",new Vector2(-50,275),new Vector2(920,50),30).name = "Artist and Year";
-            ArtworkInfoLayout.Rule(canvas,225,1020);
-            ArtworkInfoLayout.Text(canvas,font,"Oil on canvas\nArt Institute of Chicago",new Vector2(-260,158),new Vector2(500,100),27).name = "Medium and Collection";
-            ArtworkInfoLayout.Text(canvas,font,Details,new Vector2(-260,-145),new Vector2(500,490),26).name = "Introduction";
-            var placeholder = ArtworkInfoLayout.Text(canvas,font,"THE BEDROOM\n\nImage space\n\nAssign a verified CC0 image\nto the RawImage component.",new Vector2(280,-30),new Vector2(390,390),28);
-            placeholder.name = "Image Placeholder"; placeholder.alignment = TextAlignmentOptions.Center;
-            var imageRect = new GameObject("Artwork Image (optional)",typeof(RectTransform),typeof(RawImage));
+            var go = ArtworkGlassBuilder.Create(folder);
+            // No placard Body(), rear slab, frame, mounts, or opaque canvas background here.
+            var canvas = ArtworkInfoLayout.Canvas(go.transform,"Front Canvas",new Vector2(1240,940));
+            canvas.localPosition=new Vector3(0,0,-ArtworkGlassBuilder.Depth/2-0.0015f);
+            // Keep this panel's controls above its shell; other world UI remains depth-sorted with glass.
+            canvas.GetComponent<Canvas>().overrideSorting=true;
+            canvas.GetComponent<Canvas>().sortingOrder=1;
+            ArtworkInfoLayout.RoundedRaycastBlocker(canvas,ArtworkGlassBuilder.Radius/ArtworkInfoLayout.MetresPerPixel);
+            var title=ArtworkInfoLayout.Text(canvas,font,"THE BEDROOM",new Vector2(-50,365),new Vector2(1000,68),42,FontStyles.Bold);
+            title.name="Title";
+            ArtworkInfoLayout.Text(canvas,font,"Vincent van Gogh  |  1889",new Vector2(-20,300),new Vector2(1060,48),30).name="Artist and Year";
+            ArtworkInfoLayout.Rule(canvas,248,1100);
+            canvas.Find("Divider").GetComponent<Image>().color=new Color(0.3f,0.34f,0.37f,0.25f);
+            ArtworkInfoLayout.Text(canvas,font,"Oil on canvas\nArt Institute of Chicago",new Vector2(270,165),new Vector2(540,92),27).name="Medium and Collection";
+            ArtworkInfoLayout.Text(canvas,font,Details,new Vector2(270,-143),new Vector2(540,500),26).name="Introduction";
+            var placeholder=ArtworkInfoLayout.Text(canvas,font,"THE BEDROOM\n\n1889",new Vector2(-310,-60),new Vector2(460,340),32);
+            placeholder.name="Image Placeholder"; placeholder.alignment=TextAlignmentOptions.Center;
+            var imageRect=new GameObject("Artwork Image (optional)",typeof(RectTransform),typeof(RawImage));
             imageRect.transform.SetParent(canvas,false);
-            var rect = (RectTransform)imageRect.transform; rect.anchoredPosition = new Vector2(280,-30); rect.sizeDelta = new Vector2(420,360);
-            var image = imageRect.GetComponent<RawImage>(); image.color = new Color(1,1,1,0); image.raycastTarget = false;
-            imageRect.layer = LayerMask.NameToLayer("UI");
-            var close = ArtworkInfoLayout.Button(canvas,font,"Close",new Vector2(435,350),new Vector2(150,72));
+            var rect=(RectTransform)imageRect.transform; rect.anchoredPosition=new Vector2(-310,-60);
+            var image=imageRect.GetComponent<RawImage>(); image.raycastTarget=false;
+            // Reuse the exact public-domain / Art Institute CC0 asset already inventoried in docs/ASSETS.md.
+            var painting=AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Art/Painting/The_Bedroom_Van_Gogh.jpg");
+            if(painting!=null)
+            {
+                rect.sizeDelta=new Vector2(480,480f*painting.height/painting.width);
+                image.texture=painting; image.color=Color.white; placeholder.gameObject.SetActive(false);
+            }
+            else { rect.sizeDelta=new Vector2(480,376); image.color=new Color(1,1,1,0); }
+            imageRect.layer=LayerMask.NameToLayer("UI");
+            var caption=ArtworkInfoLayout.Text(canvas,font,painting!=null?"Art Institute of Chicago · CC0":"Artwork image",new Vector2(-310,-330),new Vector2(480,60),22);
+            caption.name="Image Caption"; caption.alignment=TextAlignmentOptions.Center;
+            var close=ArtworkInfoLayout.GlassClose(canvas,font,new Vector2(530,365));
+            foreach(var text in canvas.GetComponentsInChildren<TMP_Text>(true)) text.color=new Color(0.16f,0.19f,0.22f);
             go.AddComponent<ArtworkDetailPanel>().Configure(close);
             return go;
         }
@@ -166,6 +193,24 @@ namespace InnerFrame.EditorTools
             Object.DestroyImmediate(go.GetComponent<Collider>());
         }
 
+        static void CheckGlassStructure(GameObject panel)
+        {
+            var meshes=panel.GetComponentsInChildren<MeshRenderer>(true);
+            Require(meshes.Length==1 && meshes[0].name=="Milky Glass Body","Detail must have one glass shell and no rear slab.");
+            var material=meshes[0].sharedMaterial;
+            Require(material!=null && material.GetFloat("_ZWrite")==0 && material.renderQueue==3000,"Glass must share transparent queue without depth writes.");
+            Require(material.GetFloat("_Surface")==1 && material.IsKeywordEnabled("_SURFACE_TYPE_TRANSPARENT"),"Glass transparency keyword required.");
+            Require(material.GetFloat("_SrcBlend")== (float)UnityEngine.Rendering.BlendMode.SrcAlpha &&
+                material.GetFloat("_DstBlend")== (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha,"Expected alpha blending.");
+            var texture=material.GetTexture("_BaseMap") as Texture2D;
+            Require(texture!=null,"Glass tint map missing.");
+            Require(texture.GetPixels().All(c=>c.a>0 && c.a<0.9f),"Glass tint must remain translucent.");
+            var canvas=panel.GetComponentInChildren<Canvas>(true);
+            Require(canvas!=null && canvas.overrideSorting && canvas.sortingOrder==1,"Panel controls must sort above its glass shell.");
+            Require(panel.GetComponentsInChildren<Collider>(true).Length==0,"No collider should intercept UI rays.");
+            Require(panel.GetComponentsInChildren<ArtworkRoundedRaycast>(true).Length==1,"Rounded UI blocker required.");
+        }
+
         [MenuItem("Tools/InnerFrame/Artwork Info/2. Check Behavior in Play Mode")]
         public static void CheckBehavior()
         {
@@ -177,6 +222,7 @@ namespace InnerFrame.EditorTools
             Require(display.IsOpen,"More failed.");
             var panel=display.PanelTransform; var position=panel.position; var rotation=panel.rotation;
             Require(panel.parent==null && panel.localScale==Vector3.one,"Panel must be independent and world scale one.");
+            CheckGlassStructure(panel.gameObject);
             Require(Mathf.Abs(Vector3.Distance(position,camera.transform.position)-1.35f)<0.001f,"Expected 1.35m.");
             Require(Vector3.Dot(panel.forward,(position-camera.transform.position).normalized)>0.99f,"Front (-Z) must face viewer.");
             display.MoreButton.onClick.Invoke(); Require(display.PanelTransform==panel,"Repeated More duplicated panel.");

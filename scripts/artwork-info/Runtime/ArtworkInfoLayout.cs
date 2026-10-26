@@ -74,6 +74,34 @@ namespace InnerFrame.ArtworkInfo
             return button;
         }
 
+        // Detail panel only. Keep the wall placard button/material palette unchanged.
+        public static Button GlassClose(RectTransform parent,TMP_FontAsset font,Vector2 position)
+        {
+            var rect=Rect(parent,"Close",position,new Vector2(76,76));
+            var image=rect.gameObject.AddComponent<Image>(); image.color=Color.white;
+            var button=rect.gameObject.AddComponent<Button>(); button.targetGraphic=image;
+            var colors=button.colors;
+            colors.normalColor=new Color(1,1,1,0.04f);
+            colors.highlightedColor=new Color(1,1,1,0.35f);
+            colors.selectedColor=colors.highlightedColor;
+            colors.pressedColor=new Color(0.6f,0.66f,0.7f,0.35f);
+            colors.fadeDuration=0.10f; button.colors=colors;
+            button.navigation=new Navigation { mode=Navigation.Mode.None };
+            var label=Text(rect,font,"×",Vector2.zero,new Vector2(64,64),40);
+            label.alignment=TextAlignmentOptions.Center;
+            return button;
+        }
+
+        public static void RoundedRaycastBlocker(RectTransform parent,float radius)
+        {
+            var rect=Rect(parent,"Rounded Input Shield",Vector2.zero,parent.sizeDelta);
+            var image=rect.gameObject.AddComponent<Image>(); image.color=Color.clear;
+            image.raycastTarget=true;
+            // Keep the invisible graphic available to both graphic raycasters.
+            image.canvasRenderer.cullTransparentMesh=false;
+            rect.gameObject.AddComponent<ArtworkRoundedRaycast>().Configure(radius);
+        }
+
         static RectTransform Rect(Transform parent, string name, Vector2 position, Vector2 size)
         {
             var go = new GameObject(name, typeof(RectTransform));

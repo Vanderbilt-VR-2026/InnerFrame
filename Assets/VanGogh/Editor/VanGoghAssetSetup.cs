@@ -4,9 +4,10 @@ using UnityEditor;
 using UnityEngine;
 
 /// <summary>
-/// (Re)creates Van Gogh's assets from the files in Assets/VanGogh/Art and Audio: import settings, materials and the
-/// VG_Vincent prefab, with the mirror scene's canvas stages and lines. Safe to run again: it only reimports what
-/// differs. Tools > InnerFrame > Van Gogh > Rebuild assets, or -executeMethod VanGoghAssetSetup.Rebuild.
+/// (Re)creates Van Gogh's assets from the files in Assets/VanGogh/Art and Audio: import settings, materials, the
+/// caption sprites and font with the VG_Caption prefab, and the VG_Vincent prefab, with the mirror scene's canvas
+/// stages and lines. Safe to run again: it only reimports what differs. Tools > InnerFrame > Van Gogh > Rebuild assets,
+/// or -executeMethod VanGoghAssetSetup.Rebuild.
 /// </summary>
 public static class VanGoghAssetSetup
 {
@@ -23,6 +24,10 @@ public static class VanGoghAssetSetup
     static readonly string[] Stages = { "VG_Canvas_1_Sketch", "VG_Canvas_2_Colour", "VG_Canvas_3_Finished" };
     const string MirrorAudio = "Assets/VanGogh/Audio/";  // from Art/Source/VanGogh/make_mirror_lines.sh
     const string MirrorLines = "Art/Source/VanGogh/mirror_lines.txt";   // relative to the project folder
+    const string CaptionUI = Art + "/UI/";              // from Art/Source/VanGogh/make_caption_sprites.py
+    const string CaptionFont = Art + "/Fonts/LibreBaskerville-Regular.ttf";
+    const string CaptionPrefab = ResourcesDir + "/VG_Caption.prefab";
+    const int FrameBorderPixels = 112, PillBorderPixels = 64;   // the 9-slice borders drawn by make_caption_sprites.py
     const float VincentHeight = 1.70f;
 
     // Prefab layout in Vincent's own space: he faces +z, his right hand is at +x, metres at 1.70 m tall.
@@ -37,6 +42,7 @@ public static class VanGoghAssetSetup
     public static void Rebuild()
     {
         SaveMaterial(PortraitMaterial, "Universal Render Pipeline/Unlit", ImportTexture(PortraitTexture, 1024));
+        BuildCaption();
         if (AssetDatabase.LoadAssetAtPath<GameObject>(Vincent) != null)
         {
             ImportModel(Vincent, false);
@@ -65,6 +71,42 @@ public static class VanGoghAssetSetup
             importer.SaveAndReimport();
         }
         return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+    }
+
+    // A sprite with a 9-slice border (pixels on every side), max 1024, mipmaps on, no Android override.
+    static Sprite ImportSprite(string path, int border)
+    {
+        var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+        var borders = Vector4.one * border;
+        if (importer.textureType != TextureImporterType.Sprite || importer.spriteImportMode != SpriteImportMode.Single
+            || importer.spriteBorder != borders || importer.maxTextureSize != 1024 || !importer.mipmapEnabled
+            || !importer.alphaIsTransparency || importer.wrapMode != TextureWrapMode.Clamp
+            || importer.GetPlatformTextureSettings("Android").overridden)
+        {
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.spriteBorder = borders;
+            importer.maxTextureSize = 1024;
+            importer.mipmapEnabled = true;
+            importer.alphaIsTransparency = true;
+            importer.wrapMode = TextureWrapMode.Clamp;
+            importer.ClearPlatformTextureSettings("Android");
+            importer.SaveAndReimport();
+        }
+        return AssetDatabase.LoadAssetAtPath<Sprite>(path);
+    }
+
+    // Resources/VG_Caption: VanGoghCaption with its sprites and font; it builds the panels itself at runtime.
+    static void BuildCaption()
+    {
+        var root = new GameObject("VG_Caption", typeof(RectTransform));
+        var caption = root.AddComponent<VanGoghCaption>();
+        caption.frame = ImportSprite(CaptionUI + "VG_Caption_Frame.png", FrameBorderPixels);
+        caption.pill = ImportSprite(CaptionUI + "VG_Caption_Pill.png", PillBorderPixels);
+        caption.button = ImportSprite(CaptionUI + "VG_Caption_Button.png", 0);
+        caption.font = AssetDatabase.LoadAssetAtPath<Font>(CaptionFont);
+        PrefabUtility.SaveAsPrefabAsset(root, CaptionPrefab);
+        Object.DestroyImmediate(root);
     }
 
     // Mono, Vorbis quality 70, decompressed on load (short lines that should start at once), no Android override.
@@ -166,7 +208,7 @@ public static class VanGoghAssetSetup
         mouth.transform.localPosition = new Vector3(0f, MouthHeight, 0.08f);
         var talker = root.AddComponent<SpeechToProxy>();
         talker.voice = VanGoghSpawner.AddVoice(mouth);
-        talker.labelOffset = new Vector3(0f, VincentHeight + 0.25f, 0f);
+        talker.labelOffset = new Vector3(0f, VincentHeight, 0f);   // the top of his head: the caption stands on it
         var mirrorScene = root.AddComponent<MirrorScene>();
         mirrorScene.stages = stages;
         mirrorScene.lines = lines;

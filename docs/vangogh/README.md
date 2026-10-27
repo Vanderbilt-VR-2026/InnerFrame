@@ -16,8 +16,20 @@ October 1888, text-to-speech), and his answer plays from the portrait.
   `VanGoghSpawner` to match. He was made with Tripo on a paid plan, whose terms give
   paid users the rights to their models (see `docs/ASSETS.md`).
 - Why B and not A: A is already bound to XRI's Jump on the right hand.
-- The caption under the portrait shows the state: *Hold B to ask Vincent*, *Listening…*,
-  *Vincent is thinking…*, nothing while he speaks, or *Vincent can't hear you right now*.
+- **Captions** (storybook style, from Cici's concept): `Scripts/VanGoghCaption.cs`, made by `SpeechToProxy`.
+  - His words, scripted lines and AI answers alike, appear on a parchment panel in a rustic wooden frame. They fade
+    out a second after his voice stops.
+  - Hints appear on a small dark pill: *Hold B to ask Vincent* (*T* in the Editor) with the key in a circle,
+    *Listening…*, *Vincent is thinking…*, or *Vincent can't hear you right now* for 3 s. The pill hides while he
+    speaks.
+  - Over Vincent the pill sits 8 cm above his head and his words above it. Under the portrait his words hang below
+    the frame, with the pill below them. Both turn to face your head and fade in and out over 0.2 s.
+  - Sizes are world metres, named at the top of `VanGoghCaption`: text up to 0.80 m wide with 2.8 cm capitals,
+    shrinking to 2.2 cm before it takes a third line; a 6 cm pill. They are guesses until tried on a Quest.
+  - The text is uGUI Text in Libre Baskerville (`Art/Fonts`, OFL), laid out at a large font size and scaled down so it
+    stays sharp. TextMesh Pro's Essential Resources aren't in the project, and importing them would be a shared change.
+  - The sprites are drawn by `Art/Source/VanGogh/make_caption_sprites.py`. The asset tool sets their 9-slice borders
+    and builds `Resources/VG_Caption`, which holds the sprites and the font.
 - Each question logs one line starting with `[VanGogh]` (times in ms, plus the proxy's
   own timings).
 - After changing the image or its material, run **Tools > InnerFrame > Van Gogh > Rebuild
@@ -36,8 +48,8 @@ cd Tools/VanGoghProxy && .venv/bin/python proxy.py   # another terminal: 127.0.0
 
 1. Start the proxy.
 2. Open `Assets/Scenes/Gallery.unity` and press Play (no headset needed).
-3. Walk to the portrait, hold **T**, speak, let go. The caption should go *Listening…*,
-   then *Vincent is thinking…*, and then he answers. macOS asks once for microphone
+3. Walk to the portrait, hold **T**, speak, let go. The pill should go *Listening…*,
+   then *Vincent is thinking…*, and then he answers, with his words in the wooden frame. macOS asks once for microphone
    access for Unity.
 
 ## Test on the Quest
@@ -133,4 +145,4 @@ On the desktop the mirror counts as held once it has left the wall, not at the c
    - each stage and line;
    - that letting go hangs it back;
    - that B works while he paints;
-   - that his captions show the whole line (up to two lines; longer text shrinks).
+   - that his words show in full, and whether the caption's size and sharpness feel right.

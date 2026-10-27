@@ -5,13 +5,13 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
-using UnityEngine.UI;
 
 /// <summary>
 /// Talk to Vincent: hold the right controller's B button (T in the Editor), speak, let go.
 /// The recording goes to the AI proxy as a WAV file:
 ///   POST {serverUrl}/npc/vincent/talk   (multipart form, field "audio"; "scene" too when SceneContext is set)
-/// The proxy answers with JSON; his voice (audio_url) then plays from this object's AudioSource.
+/// The proxy answers with JSON; his voice (audio_url) then plays from this object's AudioSource, and its text shows
+/// in his caption (VanGoghCaption), as his scripted lines do.
 /// The models and any key stay on the proxy, never in the app. This object's forward faces the visitor.
 /// </summary>
 public class SpeechToProxy : MonoBehaviour
@@ -19,12 +19,12 @@ public class SpeechToProxy : MonoBehaviour
     const int SampleRate = 16000;
     const int TimeoutSeconds = 30;
     const string TalkPath = "/npc/vincent/talk";
-    const float MetresPerPixel = 0.0015f;
+    const float ErrorSeconds = 3f;   // "can't hear you" shows this long, then the idle hint again
 
     [Tooltip("Where his voice plays from.")]
     public AudioSource voice;
 
-    [Tooltip("Where the caption sits, relative to this object.")]
+    [Tooltip("Where the caption attaches, in this object's space: above it, the caption stands on this point; below it, the caption hangs from it.")]
     public Vector3 labelOffset = new Vector3(0f, -0.5f, 0f);
 
     /// <summary>The last answer's text and clip (for tests and logs).</summary>
@@ -40,12 +40,12 @@ public class SpeechToProxy : MonoBehaviour
     enum State { Idle, Recording, Waiting, Playing, Error }
     State state;
     InputAction talk;
-    GameObject caption;
-    Text label;
+    VanGoghCaption caption;
+    float errorUntil;
     AudioClip recording;
     Coroutine autoStop;
 
-    static string IdleText => Application.isEditor ? "Hold T to ask Vincent" : "Hold B to ask Vincent";
+    static string ButtonKey => Application.isEditor ? "T" : "B";
 
     [Serializable] class Timings { public int stt, llm, tts; }
     [Serializable] class TalkReply { public string transcript, reply, audio_url; public Timings timings_ms; }
@@ -63,7 +63,7 @@ public class SpeechToProxy : MonoBehaviour
     void Start()
     {
         if (voice == null) voice = GetComponentInChildren<AudioSource>();
-        BuildCaption();
+        caption = VanGoghCaption.Make(transform, labelOffset);
         SetState(State.Idle);
     }
 
@@ -74,15 +74,16 @@ public class SpeechToProxy : MonoBehaviour
     void Update()
     {
         if (state == State.Playing && !voice.isPlaying) SetState(State.Idle);
+        if (state == State.Error && Time.time >= errorUntil) SetState(State.Idle);
     }
 
-    /// <summary>Plays a clip through his voice and shows a caption. For scripted beats later.</summary>
+    /// <summary>Plays a clip through his voice and shows its words in his caption.</summary>
     public void Say(AudioClip clip, string text)
     {
         voice.clip = clip;
         voice.Play();
-        state = State.Playing;
-        SetLabel(text);
+        SetState(State.Playing);
+        if (caption != null) caption.Words(text);
     }
 
     /// <summary>Stops a recording or a question in progress (the scene is changing).</summary>
@@ -183,7 +184,7 @@ public class SpeechToProxy : MonoBehaviour
             if (clip == null) { Fail(req); yield break; }
         }
         LastReply = answer.reply;
-        Say(clip, "");
+        Say(clip, answer.reply);
         double playing = Time.realtimeSinceStartupAsDouble;
         var t = answer.timings_ms ?? new Timings();
         Debug.Log($"[VanGogh] release->response {Ms(released, responded)} ms, release->audio start {Ms(released, playing)} ms; " +
@@ -207,53 +208,17 @@ public class SpeechToProxy : MonoBehaviour
     void SetState(State next)
     {
         state = next;
+        if (next == State.Error) errorUntil = Time.time + ErrorSeconds;
+        if (caption == null) return;   // not built yet (edit-mode tests)
         switch (next)
         {
-            case State.Idle: SetLabel(IdleText); break;
-            case State.Recording: SetLabel("Listening…"); break;
-            case State.Waiting: SetLabel("Vincent is thinking…"); break;
-            case State.Error: SetLabel("Vincent can't hear you right now"); break;
-            default: SetLabel(""); break;
+            case State.Idle: caption.Hint($"Hold {ButtonKey} to ask Vincent", ButtonKey); break;
+            case State.Recording: caption.Hint("Listening…"); break;
+            case State.Waiting: caption.Hint("Vincent is thinking…"); break;
+            case State.Error: caption.Hint("Vincent can't hear you right now"); break;
+            default: caption.Hint(null); break;   // speaking: his words show instead
         }
-    }
-
-    void SetLabel(string text)
-    {
-        if (label == null) return;   // not built yet (edit-mode tests)
-        label.text = text;
-        caption.SetActive(!string.IsNullOrEmpty(text));
-    }
-
-    // Two lines of world-space text, built like PlayerMenuPanel's canvas. Longer text shrinks to fit, down to size 20.
-    void BuildCaption()
-    {
-        caption = new GameObject("Caption", typeof(RectTransform));
-        caption.transform.SetParent(transform, false);
-        caption.transform.localPosition = labelOffset;
-        caption.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);   // a canvas is read looking along its forward
-        var canvas = caption.AddComponent<Canvas>();
-        canvas.renderMode = RenderMode.WorldSpace;
-        var rect = (RectTransform)caption.transform;
-        rect.sizeDelta = new Vector2(600f, 88f);   // two lines at size 32
-        rect.localScale = Vector3.one * MetresPerPixel;
-
-        var background = new GameObject("Background", typeof(RectTransform)).AddComponent<Image>();
-        background.transform.SetParent(rect, false);
-        ((RectTransform)background.transform).sizeDelta = rect.sizeDelta;
-        background.color = new Color(0.08f, 0.08f, 0.1f, 0.8f);
-        background.raycastTarget = false;
-
-        label = new GameObject("Text", typeof(RectTransform)).AddComponent<Text>();
-        label.transform.SetParent(rect, false);
-        ((RectTransform)label.transform).sizeDelta = rect.sizeDelta;
-        label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        label.fontSize = 32;
-        label.resizeTextForBestFit = true;
-        label.resizeTextMinSize = 20;
-        label.resizeTextMaxSize = label.fontSize;
-        label.alignment = TextAnchor.MiddleCenter;
-        label.color = Color.white;
-        label.raycastTarget = false;
+        if (next != State.Playing) caption.Words(null);   // they fade a second after his voice stops
     }
 
     /// <summary>16-bit PCM WAV, mono.</summary>

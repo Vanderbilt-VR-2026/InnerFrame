@@ -175,11 +175,25 @@ namespace InnerFrame.EditorTools
             var colors=more.colors; colors.highlightedColor=new Color(.94f,.92f,.88f); colors.pressedColor=new Color(.82f,.80f,.76f); more.colors=colors;
             more.navigation=new Navigation{mode=Navigation.Mode.None};
             PlacardText(canvas,serif,"MORE label — 3:57","MORE",182,201,34,15,12,15);
-            PlacardText(canvas,serif,"Arrow — 3:66","→",219,201,8,15,12,15);
+            // Bundled Latin font subsets contain no U+2192. Use a separate UI arrow,
+            // keeping the Figma 8 x 15 slot and avoiding platform font fallback.
+            var arrow=PlacardSlot(canvas,"Arrow — 3:66",219,201,8,15);
+            ArrowStroke(arrow,"Shaft",new Vector2(0,0),new Vector2(22,1.5f),0);
+            ArrowStroke(arrow,"Upper head",new Vector2(7,3),new Vector2(9,1.5f),-45);
+            ArrowStroke(arrow,"Lower head",new Vector2(7,-3),new Vector2(9,1.5f),45);
             go.AddComponent<ArtworkInfoDisplay>().Configure(more,detail);
             Cube("Rear mount upper",new Vector3(0,0.17f,0.010f),new Vector3(0.42f,0.025f,0.006f),back,go.transform);
             Cube("Rear mount lower",new Vector3(0,-0.17f,0.010f),new Vector3(0.42f,0.025f,0.006f),back,go.transform);
             return go;
+        }
+        static void ArrowStroke(RectTransform parent,string name,Vector2 position,Vector2 size,float angle)
+        {
+            var go=new GameObject(name,typeof(RectTransform),typeof(Image));
+            go.layer=parent.gameObject.layer;
+            var rect=(RectTransform)go.transform; rect.SetParent(parent,false);
+            rect.anchoredPosition=position; rect.sizeDelta=size;
+            rect.localRotation=Quaternion.Euler(0,0,angle);
+            var image=go.GetComponent<Image>(); image.color=Color.black; image.raycastTarget=false;
         }
         static RectTransform PlacardSlot(RectTransform canvas,string name,float x,float y,float w,float h)
         {

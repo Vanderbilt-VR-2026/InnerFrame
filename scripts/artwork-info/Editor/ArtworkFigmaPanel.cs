@@ -128,7 +128,11 @@ namespace InnerFrame.EditorTools
             var face=font.faceInfo;
             float emHeight=(face.ascentLine-face.descentLine)*text.fontSize/face.pointSize*face.scale;
             float halfLeading=(lineHeight*Scale-emHeight)/2;
-            text.margin=new Vector4(0,halfLeading,0,halfLeading-0.01f);
+            // Single-line labels fit their Figma width to less than half a design pixel.
+            // Allow only that known SDF advance-rounding delta; the ink-bounds check below
+            // still rejects any visible glyph that escapes the original design rectangle.
+            float rasterEpsilon=value.IndexOf('\n')<0 ? 0.5f*Scale : 0;
+            text.margin=new Vector4(0,halfLeading,-rasterEpsilon,halfLeading-0.01f);
             text.alignment=TextAlignmentOptions.TopLeft;
             text.raycastTarget=false; text.enableAutoSizing=false;
             // Figma AUTO resolves to 15/12/19 px for these runs. Fixed line-height preserves composition.
@@ -215,12 +219,18 @@ namespace InnerFrame.EditorTools
                     bottom<rect.yMin-tolerance || top>rect.yMax+tolerance;
             }
             string report=identity+$"; atlas=[{atlasInfo}]; glyphCount={font.glyphTable.Count}; shader={font.material.shader?.name}; fontSize={text.fontSize}; autoSize={text.enableAutoSizing}; rect={rect}; margins={text.margin}; preferred={preferred}; textBounds={text.textBounds}; overflow={text.isTextOverflowing}; firstOverflow={text.firstOverflowCharacterIndex}; lines={text.textInfo.lineCount}; missing=[{string.Join(",",missing)}]; fallback={fallback}; inkOutside={outside}; markup={text.text}\nGlyphs:"+glyphs;
+            float lineAscender=text.textInfo.lineCount>0 ? text.textInfo.lineInfo.Take(text.textInfo.lineCount).Max(x=>x.ascender) : 0;
+            float lineDescender=text.textInfo.lineCount>0 ? text.textInfo.lineInfo.Take(text.textInfo.lineCount).Min(x=>x.descender) : 0;
+            float widestLine=text.textInfo.lineCount>0 ? text.textInfo.lineInfo.Take(text.textInfo.lineCount).Max(x=>x.maxAdvance) : 0;
+            float contentWidth=rect.width-text.margin.x-text.margin.z;
+            float contentHeight=rect.height-text.margin.y-text.margin.w;
+            string axes=$"overflowAxes={(widestLine>contentWidth+0.01f?"horizontal":"")}{(lineAscender-lineDescender>contentHeight+0.01f?" vertical":"")}; lineAscender={lineAscender:F3}; lineDescender={lineDescender:F3}; lineSpan={lineAscender-lineDescender:F3}; availableWidth={contentWidth:F3}; availableHeight={contentHeight:F3}; widestLineAdvance={widestLine:F3}; epsilonRight={rasterEpsilon:F3};";
             if(missing.Length>0 || fallback)
-                throw new InvalidOperationException("Figma GLYPH MISSING OR SUBSTITUTED: "+report);
+                throw new InvalidOperationException("Figma GLYPH MISSING OR SUBSTITUTED: "+axes+"\n"+report);
             if(text.isTextOverflowing)
-                throw new InvalidOperationException("Figma TEXT OVERFLOW after finalized layout: "+report);
+                throw new InvalidOperationException("Figma TEXT OVERFLOW after finalized layout: "+axes+"\n"+report);
             if(outside)
-                throw new InvalidOperationException("Figma VISIBLE GLYPH OUTSIDE DESIGN BOX: "+report);
+                throw new InvalidOperationException("Figma VISIBLE GLYPH OUTSIDE DESIGN BOX: "+axes+"\n"+report);
             Debug.Log("[ArtworkInfo] Text layout PASS: "+report,text);
         }
     }

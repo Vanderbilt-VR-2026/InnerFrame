@@ -27,7 +27,8 @@ public static class VanGoghAssetSetup
     const string CaptionUI = Art + "/UI/";              // from Art/Source/VanGogh/make_caption_sprites.py
     const string CaptionFont = Art + "/Fonts/LibreBaskerville-Regular.ttf";
     const string CaptionPrefab = ResourcesDir + "/VG_Caption.prefab";
-    const int FrameBorderPixels = 112, PillBorderPixels = 64;   // the 9-slice borders drawn by make_caption_sprites.py
+    // the 9-slice borders drawn by make_caption_sprites.py (SIZE/BORDER, PARCHMENT_BORDER, SHADOW_BORDER, PILL_H / 2)
+    const int FrameBorderPixels = 128, ParchmentBorderPixels = 96, ShadowBorderPixels = 96, PillBorderPixels = 64;
     const float VincentHeight = 1.70f;
 
     // Prefab layout in Vincent's own space: he faces +z, his right hand is at +x, metres at 1.70 m tall.
@@ -102,6 +103,8 @@ public static class VanGoghAssetSetup
         var root = new GameObject("VG_Caption", typeof(RectTransform));
         var caption = root.AddComponent<VanGoghCaption>();
         caption.frame = ImportSprite(CaptionUI + "VG_Caption_Frame.png", FrameBorderPixels);
+        caption.parchment = ImportSprite(CaptionUI + "VG_Caption_Parchment.png", ParchmentBorderPixels);
+        caption.shadow = ImportSprite(CaptionUI + "VG_Caption_Shadow.png", ShadowBorderPixels);
         caption.pill = ImportSprite(CaptionUI + "VG_Caption_Pill.png", PillBorderPixels);
         caption.button = ImportSprite(CaptionUI + "VG_Caption_Button.png", 0);
         caption.font = AssetDatabase.LoadAssetAtPath<Font>(CaptionFont);

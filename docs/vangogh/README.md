@@ -13,8 +13,8 @@ October 1888, text-to-speech), and his answer plays from the portrait.
   His eyes are level with yours, so you look at each other while you talk: the XR rig
   is scaled 0.8 in this room, which makes him 1.40 m tall in the room and about
   1.75 m as you feel it. If the rig scale changes, change `VincentScale` in
-  `VanGoghSpawner` to match. His Tripo licence for a public repo is not verified yet
-  (see `docs/ASSETS.md`).
+  `VanGoghSpawner` to match. He was made with Tripo on a paid plan, whose terms give
+  paid users the rights to their models (see `docs/ASSETS.md`).
 - Why B and not A: A is already bound to XRI's Jump on the right hand.
 - The caption under the portrait shows the state: *Hold B to ask Vincent*, *Listening…*,
   *Vincent is thinking…*, nothing while he speaks, or *Vincent can't hear you right now*.

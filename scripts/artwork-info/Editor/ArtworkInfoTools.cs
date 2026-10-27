@@ -148,19 +148,58 @@ namespace InnerFrame.EditorTools
 
         static GameObject Placard(ArtworkDetailPanel detail)
         {
-            var go = Body("ArtworkWallPlacard", 0.64f,0.60f,0.022f);
-            var canvas = Surface(go.transform, new Vector2(640,600),0.022f);
-            Label(canvas,"Title","The Bedroom",-242,550,66,44,FontStyles.Bold);
-            Label(canvas,"Artist and Year","Vincent van Gogh\n1889",-156,550,92,30);
-            ArtworkInfoLayout.Rule(canvas,75,550);
-            Label(canvas,"Collection","Art Institute of Chicago",25,550,44,27);
-            Label(canvas,"Introduction","A room in Arles, France, imagined as a place of rest through expressive color.",125,550,140,30);
-            var more = ArtworkInfoLayout.Button(canvas,font,"More",new Vector2(185,-240),new Vector2(180,72));
+            // Figma 3:38: crop to the 248 x 236 ivory region; 3 canvas units per design pixel.
+            var go = new GameObject("ArtworkWallPlacard");
+            var paper=Material("Gloss coated ivory paper",new Color32(243,240,230,255),0,0.58f);
+            MeshPart(go.transform,"Ivory paper board",0.744f,0.708f,0.012f,0.001f,paper,0);
+            MeshPart(go.transform,"Finished rear",0.738f,0.702f,0.002f,0.0005f,back,0.006f);
+            var canvas=Surface(go.transform,new Vector2(744,708),0.012f);
+            var serif=AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(folder+"/CormorantGaramond-Medium SDF.asset");
+            Require(serif!=null,"Generated Cormorant Medium SDF required for Figma placard.");
+            PlacardText(canvas,serif,"Title — 3:60","THE BEDROOM",19,25,112,19,16,19);
+            PlacardText(canvas,serif,"Metadata — 3:62","Vincent van Gogh · 1889\nOil on canvas\nArt Institute of Chicago",19,48,115,45,12,15);
+            var buttonRect=PlacardSlot(canvas,"MORE — 3:49",173,195,63,27);
+            var tint=new Texture2D(252,108,TextureFormat.RGBA32,false){name="Figma More pill",wrapMode=TextureWrapMode.Clamp};
+            for(int y=0;y<tint.height;y++) for(int x=0;x<tint.width;x++)
+            {
+                float px=(x+0.5f)/4, py=(y+0.5f)/4;
+                float dx=Mathf.Max(Mathf.Abs(px-31.5f)-18,0);
+                float distance=Mathf.Sqrt(dx*dx+(py-13.5f)*(py-13.5f));
+                float alpha=Mathf.Clamp01((13.5f-distance)*4);
+                var c=Color.Lerp(new Color32(232,217,194,255),new Color32(224,210,188,255),(px+py)/90);
+                c.a=alpha; tint.SetPixel(x,y,c);
+            }
+            tint.Apply(); AssetDatabase.CreateAsset(tint,folder+"/Figma More pill.asset");
+            var graphic=buttonRect.gameObject.AddComponent<RawImage>(); graphic.texture=tint;
+            var more=buttonRect.gameObject.AddComponent<Button>(); more.targetGraphic=graphic;
+            var colors=more.colors; colors.highlightedColor=new Color(.94f,.92f,.88f); colors.pressedColor=new Color(.82f,.80f,.76f); more.colors=colors;
+            more.navigation=new Navigation{mode=Navigation.Mode.None};
+            PlacardText(canvas,serif,"MORE label — 3:57","MORE",182,201,34,15,12,15);
+            PlacardText(canvas,serif,"Arrow — 3:66","→",219,201,8,15,12,15);
             go.AddComponent<ArtworkInfoDisplay>().Configure(more,detail);
-            // Low-profile rear mount rails, clear of the front and UI. Finished back is part of the slab.
-            Cube("Rear mount upper",new Vector3(0,0.17f,0.014f),new Vector3(0.42f,0.025f,0.006f),back,go.transform);
-            Cube("Rear mount lower",new Vector3(0,-0.17f,0.014f),new Vector3(0.42f,0.025f,0.006f),back,go.transform);
+            Cube("Rear mount upper",new Vector3(0,0.17f,0.010f),new Vector3(0.42f,0.025f,0.006f),back,go.transform);
+            Cube("Rear mount lower",new Vector3(0,-0.17f,0.010f),new Vector3(0.42f,0.025f,0.006f),back,go.transform);
             return go;
+        }
+        static RectTransform PlacardSlot(RectTransform canvas,string name,float x,float y,float w,float h)
+        {
+            var go=new GameObject(name,typeof(RectTransform)); go.layer=canvas.gameObject.layer;
+            var rect=(RectTransform)go.transform; rect.SetParent(canvas,false);
+            rect.sizeDelta=new Vector2(w,h)*3;
+            rect.anchoredPosition=new Vector2(x+w/2-124,118-y-h/2)*3;
+            return rect;
+        }
+        static void PlacardText(RectTransform canvas,TMP_FontAsset font,string name,string value,float x,float y,float w,float h,float size,float leading)
+        {
+            var text=PlacardSlot(canvas,name,x,y,w,h).gameObject.AddComponent<TextMeshProUGUI>();
+            text.font=font; text.fontSize=size*3; text.color=Color.black;
+            text.enableAutoSizing=false; text.enableWordWrapping=false; text.raycastTarget=false;
+            text.alignment=TextAlignmentOptions.TopLeft;
+            var face=font.faceInfo;
+            float half=(leading*3-(face.ascentLine-face.descentLine)*text.fontSize/face.pointSize*face.scale)/2;
+            text.margin=new Vector4(0,half,-1.5f,half-0.01f);
+            text.text="<line-height="+(leading*3).ToString(System.Globalization.CultureInfo.InvariantCulture)+">"+value;
+            text.overflowMode=TextOverflowModes.Overflow;
         }
         static GameObject Panel()
         {

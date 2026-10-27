@@ -59,7 +59,7 @@ namespace InnerFrame.EditorTools
             var asset=TMP_FontAsset.CreateFontAsset(source,90,9,GlyphRenderMode.SDFAA,1024,1024,AtlasPopulationMode.Dynamic,false);
             if(asset==null) throw new InvalidOperationException("TMP could not create "+name);
             asset.name=name+" SDF";
-            string characters=new string(Enumerable.Range(32,95).Select(x=>(char)x).ToArray())+"·";
+            string characters=new string(Enumerable.Range(32,95).Select(x=>(char)x).ToArray())+"·→";
             if(!asset.TryAddCharacters(characters,out string missing))
                 throw new InvalidOperationException("Missing SDF glyphs for "+name+": "+missing);
             // Bake the required glyphs now: no runtime atlas population or OS-font dependency.

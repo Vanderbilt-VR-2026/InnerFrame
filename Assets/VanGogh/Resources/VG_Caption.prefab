@@ -48,9 +48,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 39fd16267abde4f4c8d8a0136a487128, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::VanGoghCaption
-  frame: {fileID: 21300000, guid: 6c3429ace868f4d9b92258d41bd2ed93, type: 3}
+  signUnlit: {fileID: 21300000, guid: 99c6bf83d60ac4598a69f380497fc82c, type: 3}
+  signLit: {fileID: 21300000, guid: 57b52aba2e72f4b208c9f52f0fd06595, type: 3}
   parchment: {fileID: 21300000, guid: b6175039348a5489c971f45ef21225cc, type: 3}
-  shadow: {fileID: 21300000, guid: 840d8537d66d94d7090ff76eb2b066df, type: 3}
   pill: {fileID: 21300000, guid: b4adb1336bf25438badbc1d5928a6446, type: 3}
   button: {fileID: 21300000, guid: fa5999ee9d473407d8c783ece4e17a55, type: 3}
+  lit: 1
   font: {fileID: 12800000, guid: bcd4f48eb014349918dac147f6f5974e, type: 3}

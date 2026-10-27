@@ -32,19 +32,26 @@ October 1888, text-to-speech), and his answer plays from the portrait.
     is not yet confirmed (see `docs/ASSETS.md`).
 - Why B and not A: A is already bound to XRI's Jump on the right hand.
 - **Captions** (storybook style, from Cici's concept): `Scripts/VanGoghCaption.cs`, made by `SpeechToProxy`.
-  - His words, scripted lines and AI answers alike, appear on a parchment panel in a rustic wooden frame. They fade
-    out a second after his voice stops.
+  - His words, scripted lines and AI answers alike, appear on the wooden sign Cici made with Tripo, baked flat into a
+    picture (`Art/Source/VanGogh/Caption/bake_sign.py` renders its front twice: `VG_Sign_A.png` unlit, `VG_Sign_B.png`
+    softly lit, the default; `sign_rect.json` says where its parchment panel is). The sign is a fixed 1.00 m wide, so his
+    words show one sentence per page, each page's share of his voice clip being its share of the characters (without a
+    clip, 0.06 s a character and at least 2 s a page), with a 0.15 s cross-fade between pages. A sentence shrinks from
+    2.8 cm to 2.2 cm capitals to stay on two lines, then takes a third line at the size that fits the panel, then splits
+    at the comma nearest its middle. The v1.3 parchment lies over the panel, because the ink's contrast on the bake alone
+    falls to 4.4:1 in its darkest strokes. They fade out a second after his voice stops.
   - Hints appear on a small dark pill: *Hold B to ask Vincent* (*T* in the Editor) with the key in a circle,
     *Listening…*, *Vincent is thinking…*, or *Vincent can't hear you right now* for 3 s. The pill hides while he
     speaks.
   - Over Vincent the pill sits 8 cm above his head and his words above it. Under the portrait his words hang below
     the frame, with the pill below them. Both turn to face your head and fade in and out over 0.2 s.
-  - Sizes are world metres, named at the top of `VanGoghCaption`: text up to 0.80 m wide with 2.8 cm capitals,
-    shrinking to 2.2 cm before it takes a third line; a 6 cm pill. They are guesses until tried on a Quest.
+  - Sizes are world metres, named at the top of `VanGoghCaption`: the sign 1.00 m wide (its panel gives a 0.76 × 0.10 m
+    text area), 2.8 cm capitals shrinking to 2.2 cm; a 6 cm pill. They are guesses until tried on a Quest.
   - The text is uGUI Text in Libre Baskerville (`Art/Fonts`, OFL), laid out at a large font size and scaled down so it
     stays sharp. TextMesh Pro's Essential Resources aren't in the project, and importing them would be a shared change.
-  - The sprites are drawn by `Art/Source/VanGogh/make_caption_sprites.py`. The asset tool sets their 9-slice borders
-    and builds `Resources/VG_Caption`, which holds the sprites and the font.
+  - The parchment, pill and button sprites are drawn by `Art/Source/VanGogh/make_caption_sprites.py`. The asset tool
+    imports the baked sign and sets the sprites' 9-slice borders, and builds `Resources/VG_Caption`, which holds them
+    and the font.
 - Each question logs one line starting with `[VanGogh]` (times in ms, plus the proxy's
   own timings).
 - After changing the image or its material, run **Tools > InnerFrame > Van Gogh > Rebuild

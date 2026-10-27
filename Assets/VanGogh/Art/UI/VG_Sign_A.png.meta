@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 6c3429ace868f4d9b92258d41bd2ed93
+guid: 99c6bf83d60ac4598a69f380497fc82c
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 8240766973212346772
-    second: VG_Caption_Frame_0
+      213: -4859442461318008245
+    second: VG_Sign_A_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -52,7 +52,7 @@ TextureImporter:
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
   spritePixelsToUnits: 100
-  spriteBorder: {x: 128, y: 128, z: 128, w: 128}
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
   spriteGenerateFallbackPhysicsShape: 1
   alphaUsage: 1
   alphaIsTransparency: 1
@@ -72,7 +72,7 @@ TextureImporter:
   platformSettings:
   - serializedVersion: 4
     buildTarget: DefaultTexturePlatform
-    maxTextureSize: 1024
+    maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
     textureCompression: 1
@@ -96,17 +96,30 @@ TextureImporter:
     ignorePlatformSupport: 0
     androidETC2FallbackOverride: 0
     forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
   spriteSheet:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: VG_Caption_Frame_0
+      name: VG_Sign_A_0
       rect:
         serializedVersion: 2
         x: 0
         y: 0
-        width: 384
-        height: 384
+        width: 2048
+        height: 656
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -115,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 499c71396e51d5270800000000000000
-      internalID: 8240766973212346772
+      spriteID: b42b0bee3dacf8cb0800000000000000
+      internalID: -4859442461318008245
       vertices: []
       indices: 
       edges: []

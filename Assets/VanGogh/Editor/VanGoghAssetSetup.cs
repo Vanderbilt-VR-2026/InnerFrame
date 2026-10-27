@@ -5,7 +5,7 @@ using UnityEngine;
 
 /// <summary>
 /// (Re)creates Van Gogh's assets from the files in Assets/VanGogh/Art and Audio: import settings, materials, the
-/// caption sprites and font with the VG_Caption prefab, and the VG_Vincent prefab, with the mirror scene's canvas
+/// baked sign, the caption sprites and font with the VG_Caption prefab, and the VG_Vincent prefab, with the mirror scene's canvas
 /// stages and lines. Safe to run again: it only reimports what differs. Tools > InnerFrame > Van Gogh > Rebuild assets,
 /// or -executeMethod VanGoghAssetSetup.Rebuild.
 /// </summary>
@@ -30,8 +30,9 @@ public static class VanGoghAssetSetup
     const string CaptionUI = Art + "/UI/";              // from Art/Source/VanGogh/make_caption_sprites.py
     const string CaptionFont = Art + "/Fonts/LibreBaskerville-Regular.ttf";
     const string CaptionPrefab = ResourcesDir + "/VG_Caption.prefab";
-    // the 9-slice borders drawn by make_caption_sprites.py (SIZE/BORDER, PARCHMENT_BORDER, SHADOW_BORDER, PILL_H / 2)
-    const int FrameBorderPixels = 128, ParchmentBorderPixels = 96, ShadowBorderPixels = 96, PillBorderPixels = 64;
+    const string SignUnlit = CaptionUI + "VG_Sign_A.png", SignLit = CaptionUI + "VG_Sign_B.png";   // from Art/Source/VanGogh/Caption/bake_sign.py
+    // the 9-slice borders drawn by make_caption_sprites.py (PARCHMENT_BORDER, PILL_H / 2)
+    const int ParchmentBorderPixels = 96, PillBorderPixels = 64;
     const float VincentHeight = 1.70f;
 
     // Prefab layout in Vincent's own space: he faces +z, his right hand is at +x, metres at 1.70 m tall.
@@ -79,20 +80,20 @@ public static class VanGoghAssetSetup
         return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
     }
 
-    // A sprite with a 9-slice border (pixels on every side), max 1024, mipmaps on, no Android override.
-    static Sprite ImportSprite(string path, int border)
+    // A sprite with a 9-slice border (pixels on every side), mipmaps on, clamped, no Android override.
+    static Sprite ImportSprite(string path, int border, int maxSize = 1024)
     {
         var importer = (TextureImporter)AssetImporter.GetAtPath(path);
         var borders = Vector4.one * border;
         if (importer.textureType != TextureImporterType.Sprite || importer.spriteImportMode != SpriteImportMode.Single
-            || importer.spriteBorder != borders || importer.maxTextureSize != 1024 || !importer.mipmapEnabled
+            || importer.spriteBorder != borders || importer.maxTextureSize != maxSize || !importer.mipmapEnabled
             || !importer.alphaIsTransparency || importer.wrapMode != TextureWrapMode.Clamp
             || importer.GetPlatformTextureSettings("Android").overridden)
         {
             importer.textureType = TextureImporterType.Sprite;
             importer.spriteImportMode = SpriteImportMode.Single;
             importer.spriteBorder = borders;
-            importer.maxTextureSize = 1024;
+            importer.maxTextureSize = maxSize;
             importer.mipmapEnabled = true;
             importer.alphaIsTransparency = true;
             importer.wrapMode = TextureWrapMode.Clamp;
@@ -107,9 +108,10 @@ public static class VanGoghAssetSetup
     {
         var root = new GameObject("VG_Caption", typeof(RectTransform));
         var caption = root.AddComponent<VanGoghCaption>();
-        caption.frame = ImportSprite(CaptionUI + "VG_Caption_Frame.png", FrameBorderPixels);
+        caption.signUnlit = ImportSprite(SignUnlit, 0, 2048);
+        caption.signLit = ImportSprite(SignLit, 0, 2048);
+        caption.lit = true;
         caption.parchment = ImportSprite(CaptionUI + "VG_Caption_Parchment.png", ParchmentBorderPixels);
-        caption.shadow = ImportSprite(CaptionUI + "VG_Caption_Shadow.png", ShadowBorderPixels);
         caption.pill = ImportSprite(CaptionUI + "VG_Caption_Pill.png", PillBorderPixels);
         caption.button = ImportSprite(CaptionUI + "VG_Caption_Button.png", 0);
         caption.font = AssetDatabase.LoadAssetAtPath<Font>(CaptionFont);

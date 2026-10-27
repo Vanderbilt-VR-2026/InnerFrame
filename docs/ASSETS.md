@@ -72,3 +72,16 @@ sample, re-import it from Package Manager instead of editing it here.
 | `Assets/Samples` | The folder Package Manager creates for imported samples | Unity | n/a | See the rows below |
 | `Assets/Samples/XR Interaction Toolkit` | Starter Assets; Hands Interaction Demo | `com.unity.xr.interaction.toolkit` | 3.3.2 | [Unity Companion License](http://www.unity3d.com/legal/licenses/Unity_Companion_License). The package's *Third Party Notices.md* lists Apache-2.0 components (gesture code from Google's ARCore Unity SDK). |
 | `Assets/Samples/XR Hands` | HandVisualizer | `com.unity.xr.hands` | 1.9.0 | [Unity Package Distribution License](https://unity3d.com/legal/licenses/Unity_Package_Distribution_License). The package's *Third Party Notices.md* lists Apache-2.0 components (Khronos OpenXR-SDK-Source). |
+
+## Artwork Info Figma detail inputs (local bundle)
+
+The public PR contains generator code and a SHA-256 input manifest, not the Figma-derived binaries. Install the accompanying `InnerFrameFigmaAssets.zip` locally using the guarded Artwork Info installer. Do not commit these local inputs or generated assets until their publication and Unity validation are approved.
+
+| Local destination | Source | License / provenance |
+|---|---|---|
+| `Assets/ArtworkInfo/Design/Portrait.png` | User's InnerFrame Figma `dRg2LX8SNV5wouBX1Zr76N`, node `2:2`, exact individual 4× export | User-supplied reproduction of public-domain Van Gogh portrait; original upload provenance is not recorded in Figma. Not asserted to be Art Institute CC0. Provided locally for requested implementation; public publication pending permission. |
+| `Assets/ArtworkInfo/Design/CloseBackground.png`, `Divider.png`, `EnterBackground.png` | Same user-provided Figma file, nodes `2:34`, `2:9`, `2:30` | User's design layers, exported individually for local implementation. No claim of a third-party open-source license; public publication pending permission. |
+| `Assets/ArtworkInfo/Design/CormorantGaramond-Medium.ttf` | [Google Fonts Cormorant Garamond](https://github.com/google/fonts/tree/main/ofl/cormorantgaramond), static weight 500 from fonts.gstatic.com | SIL OFL 1.1; unmodified font; `CormorantGaramond-OFL.txt` included in bundle. |
+| `Assets/ArtworkInfo/Design/Inter-Regular.ttf` | [Google Fonts Inter](https://github.com/google/fonts/tree/main/ofl/inter), static weight 400 from fonts.gstatic.com | SIL OFL 1.1; unmodified font; `Inter-OFL.txt` included in bundle. |
+
+Exact source URLs, export dimensions and notices are included in the bundle's `Design/NOTICE.txt`. The panel's text remains editable TMP; no full-board screenshot is used as an implementation texture. The existing Bedroom CC0 image is unchanged but no longer used in the Figma detail panel.

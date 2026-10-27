@@ -19,12 +19,6 @@ namespace InnerFrame.EditorTools
     {
         const string Root = "Assets/ArtworkInfo";
         const string GalleryPath = "Assets/Scenes/Gallery.unity";
-        const string Details = "Vincent van Gogh pictured his bedroom in the Yellow House in Arles, France. " +
-            "Simple furniture and bold areas of color turn an everyday interior into a personal vision of rest.\n\n" +
-            "He first painted the room in 1888. This 1889 version, now in the Art Institute of Chicago, " +
-            "was made in Saint-Rémy-de-Provence. It is one of three painted versions of the same room.\n\n" +
-            "Look at the bed, chairs, and pictures on the walls. Notice how their outlines and the " +
-            "tilting floor make the space feel expressive rather than strictly realistic.";
         static string folder;
         static TMP_FontAsset font;
         static Material ivory, brass, back;
@@ -39,6 +33,7 @@ namespace InnerFrame.EditorTools
             Require(font != null, "Import TMP Essentials or select a licensed TMP font asset in Project.");
             Require(Shader.Find("Universal Render Pipeline/Lit") != null, "URP Lit shader required.");
             Require(Shader.Find("Universal Render Pipeline/Unlit") != null, "URP Unlit shader required.");
+            ArtworkFigmaPanel.Preflight();
             // Every run gets its own directory: no old prototype, source, prefab or scene is overwritten.
             if (!AssetDatabase.IsValidFolder(Root)) AssetDatabase.CreateFolder("Assets", "ArtworkInfo");
             folder = AssetDatabase.GenerateUniqueAssetPath(Root + "/MuseumGenerated");
@@ -171,7 +166,7 @@ namespace InnerFrame.EditorTools
         {
             var go = ArtworkGlassBuilder.Create(folder);
             // No placard Body(), rear slab, frame, mounts, or opaque canvas background here.
-            var canvas = ArtworkInfoLayout.Canvas(go.transform,"Front Canvas",new Vector2(1240,940));
+            var canvas = ArtworkInfoLayout.Canvas(go.transform,"Front Canvas",ArtworkFigmaPanel.CanvasSize);
             canvas.localPosition=new Vector3(0,0,-ArtworkGlassBuilder.Depth/2-0.0015f);
             // This is a root World Space Canvas. overrideSorting only applies to nested canvases.
             // Set the actual sorting layer/order, independently of the override flag's native readback.
@@ -181,33 +176,7 @@ namespace InnerFrame.EditorTools
             uiCanvas.sortingLayerID=shell.sortingLayerID;
             uiCanvas.sortingOrder=shell.sortingOrder+1;
             ArtworkInfoLayout.RoundedRaycastBlocker(canvas,ArtworkGlassBuilder.Radius/ArtworkInfoLayout.MetresPerPixel);
-            var title=ArtworkInfoLayout.Text(canvas,font,"THE BEDROOM",new Vector2(-50,365),new Vector2(1000,68),42,FontStyles.Bold);
-            title.name="Title";
-            ArtworkInfoLayout.Text(canvas,font,"Vincent van Gogh  |  1889",new Vector2(-20,300),new Vector2(1060,48),30).name="Artist and Year";
-            ArtworkInfoLayout.Rule(canvas,248,1100);
-            canvas.Find("Divider").GetComponent<Image>().color=new Color(0.3f,0.34f,0.37f,0.25f);
-            ArtworkInfoLayout.Text(canvas,font,"Oil on canvas\nArt Institute of Chicago",new Vector2(270,165),new Vector2(540,92),27).name="Medium and Collection";
-            ArtworkInfoLayout.Text(canvas,font,Details,new Vector2(270,-143),new Vector2(540,500),26).name="Introduction";
-            var placeholder=ArtworkInfoLayout.Text(canvas,font,"THE BEDROOM\n\n1889",new Vector2(-310,-60),new Vector2(460,340),32);
-            placeholder.name="Image Placeholder"; placeholder.alignment=TextAlignmentOptions.Center;
-            var imageRect=new GameObject("Artwork Image (optional)",typeof(RectTransform),typeof(RawImage));
-            imageRect.transform.SetParent(canvas,false);
-            var rect=(RectTransform)imageRect.transform; rect.anchoredPosition=new Vector2(-310,-60);
-            var image=imageRect.GetComponent<RawImage>(); image.raycastTarget=false;
-            // Reuse the exact public-domain / Art Institute CC0 asset already inventoried in docs/ASSETS.md.
-            var painting=AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Art/Painting/The_Bedroom_Van_Gogh.jpg");
-            if(painting!=null)
-            {
-                rect.sizeDelta=new Vector2(480,480f*painting.height/painting.width);
-                image.texture=painting; image.color=Color.white; placeholder.gameObject.SetActive(false);
-            }
-            else { rect.sizeDelta=new Vector2(480,376); image.color=new Color(1,1,1,0); }
-            imageRect.layer=LayerMask.NameToLayer("UI");
-            var caption=ArtworkInfoLayout.Text(canvas,font,painting!=null?"Art Institute of Chicago · CC0":"Artwork image",new Vector2(-310,-330),new Vector2(480,60),22);
-            caption.name="Image Caption"; caption.alignment=TextAlignmentOptions.Center;
-            var close=ArtworkInfoLayout.GlassClose(canvas,font,new Vector2(530,365));
-            foreach(var text in canvas.GetComponentsInChildren<TMP_Text>(true)) text.color=new Color(0.16f,0.19f,0.22f);
-            go.AddComponent<ArtworkDetailPanel>().Configure(close);
+            ArtworkFigmaPanel.Build(canvas,folder,go.AddComponent<ArtworkDetailPanel>());
             return go;
         }
         static void Label(RectTransform canvas,string name,string value,float down,float width,float height,float size,FontStyles style=FontStyles.Normal)
@@ -280,6 +249,7 @@ namespace InnerFrame.EditorTools
                 Require(graphic.materialForRendering!=null && graphic.materialForRendering.renderQueue>=material.renderQueue,
                     "UI material renders before transparent glass: "+graphic.name);
             }
+            ArtworkFigmaPanel.Check((RectTransform)canvas.transform);
             Require(canvas.GetComponent<GraphicRaycaster>()!=null && canvas.GetComponent<TrackedDeviceGraphicRaycaster>()!=null,"Mouse and XR graphic raycasters required.");
             var close=panel.GetComponent<ArtworkDetailPanel>().CloseButton;
             Require(close!=null && close.enabled && close.interactable && close.targetGraphic!=null && close.targetGraphic.raycastTarget,"Close must remain an enabled raycastable Button.");
@@ -328,6 +298,18 @@ namespace InnerFrame.EditorTools
             Require(Mathf.Abs(Vector3.Distance(position,camera.transform.position)-1.35f)<0.001f,"Expected 1.35m.");
             Require(Vector3.Dot(panel.forward,(position-camera.transform.position).normalized)>0.99f,"Front (-Z) must face viewer.");
             display.MoreButton.onClick.Invoke(); Require(display.PanelTransform==panel,"Repeated More duplicated panel.");
+            var enter=panel.GetComponentInChildren<ArtworkEnterAction>();
+            Require(enter!=null,"Figma ENTER control missing.");
+            int entered=0;
+            UnityEngine.Events.UnityAction observe=()=>entered++;
+            enter.EnterRequested.AddListener(observe);
+            try
+            {
+                ClickThroughUIRaycast(enter.GetComponent<Button>(),camera);
+                Require(entered==1 && display.IsOpen && panel.position==position,"ENTER dispatch or standalone state changed.");
+            }
+            finally { enter.EnterRequested.RemoveListener(observe); }
+
             var oldPosition=camera.transform.position; var oldRotation=camera.transform.rotation;
             try
             {

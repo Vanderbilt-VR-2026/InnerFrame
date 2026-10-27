@@ -7,7 +7,7 @@ namespace InnerFrame.EditorTools
     /// <summary>One transparent shell, one tiny procedural tint map. No scene sampling or blur.</summary>
     public static class ArtworkGlassBuilder
     {
-        public const float Width = 1.24f, Height = 0.94f, Depth = 0.008f, Radius = 0.045f;
+        public const float Width = 1.428f, Height = 1.248f, Depth = 0.008f, Radius = 0.060f;
         public static GameObject Create(string folder)
         {
             var shader = Shader.Find("Universal Render Pipeline/Unlit");
@@ -62,10 +62,19 @@ namespace InnerFrame.EditorTools
                 float distance=new Vector2(Mathf.Max(q.x,0),Mathf.Max(q.y,0)).magnitude+
                     Mathf.Min(Mathf.Max(q.x,q.y),0)-Radius;
                 float rim=1-Mathf.SmoothStep(0,0.008f,-distance);
-                // Localized extra milkiness in right reading column, with no second transparent layer.
-                float reading=Mathf.SmoothStep(-0.07f,0.08f,point.x)*0.08f;
-                float alpha=Mathf.Lerp(0.60f+0.04f*v+reading,0.84f,rim);
-                pixels[y*width+x]=new Color(0.95f+0.025f*v,0.965f+0.02f*v,0.985f,alpha);
+                // Composite the Figma board's four fills into ONE transparent shell.
+                // Gray gradient .2, two #F1E6D6 fills .2, then warm-white glass .39.
+                // Net alpha .68768; retain the environment rather than flattening onto white.
+                float t=Mathf.Clamp01(0.5472419f*u+0.486024f*(1-v)-0.0181774f);
+                var gray=Color.Lerp(new Color(.8910945f,.8910945f,.8910945f),
+                    new Color(.4910945f,.4910945f,.4910945f),t);
+                var warm=new Color(241/255f,230/255f,214/255f);
+                const float alpha=1-(.8f*.8f*.8f*.61f);
+                var tint=(gray*.2f*.8f*.8f*.61f+warm*.2f*.8f*.61f+
+                    warm*.2f*.61f+new Color(1,.992f,.973f)*.39f)/alpha;
+                tint=Color.Lerp(tint,Color.white,rim*.25f);
+                tint.a=Mathf.Lerp(alpha,.84f,rim);
+                pixels[y*width+x]=tint;
             }
             texture.SetPixels(pixels); texture.Apply(false,false);
             return texture;

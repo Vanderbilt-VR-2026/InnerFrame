@@ -122,3 +122,13 @@ __MACOSX/
 # Playwright install for the Painted Bedroom web tools, and local notes
 node_modules/
 /notes/
+
+# Photon Fusion: the App ID is a per-project key and this repo is public,
+# so each machine enters it locally (see docs/multiplayer/README.md).
+/Assets/Photon/Fusion/Resources/PhotonAppSettings.asset
+/Assets/Photon/Fusion/Resources/PhotonAppSettings.asset.meta
+# Photon's optional intro sample package, not used by the project
+/Assets/Photon/FusionDemos/
+/Assets/Photon/FusionDemos.meta
+/Assets/Photon/FusionMenu/
+/Assets/Photon/FusionMenu.meta

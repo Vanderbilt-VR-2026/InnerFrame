@@ -8,6 +8,14 @@ October 1888, text-to-speech), and his answer plays from the portrait.
 - Code and assets: `Assets/VanGogh/`. Nothing is added to a scene: `VanGoghSpawner`
   places the portrait when the scene named `Gallery` loads (the same pattern as
   `PlayerMenu`).
+- **The gallery portrait** is enlarged as much as *The Bedroom*. *The Bedroom* hangs 3.0 m wide for its real 92.3 cm,
+  which is ×3.25, so the 41 × 32.5 cm portrait shows at 1.06 × 1.33 m.
+  - It is framed like *The Bedroom*: four boxes, 18 cm wide and 12 cm deep, with *The Bedroom* frame's own material,
+    found at runtime and shared, not copied.
+  - It hangs on the same wall at the same centre height, on the side away from the placard, with 1.2 m between the
+    two frames. Its frame ends 0.70 m from the corner; nothing else hangs on that wall.
+  - Its caption hangs below the frame, 25 cm out from the wall.
+  - The numbers come from `Art/Source/Gallery/build_gallery.py`; see the constants at the top of `VanGoghSpawner`.
 - In the Painted Bedroom, a 3D Vincent (Tripo model) stands by the left wall with
   an easel, palette and brush, facing where you arrive, and answers the same way.
   His eyes are level with yours, so you look at each other while you talk: the XR rig

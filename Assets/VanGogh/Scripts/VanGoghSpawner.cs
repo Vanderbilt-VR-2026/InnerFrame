@@ -8,11 +8,18 @@ using UnityEngine.SceneManagement;
 /// </summary>
 public static class VanGoghSpawner
 {
-    // Portrait centre in Slot_Bedroom's space (x right, y up, z into the room), from build_gallery.py:
-    // the frame's half-width (1.5 + 0.18 m), a 0.4 m gap, then half the portrait; 1 cm off the wall.
-    // +x is the side away from Placard_Bedroom (Rowling's plaque, #14), which sits at x = -2.03.
-    static readonly Vector3 PortraitOffset = new Vector3(2.38f, 0f, 0.01f);
-    static readonly Vector2 PortraitSize = new Vector2(0.6f, 0.764f);   // the image's 843 x 1074 px
+    // The portrait at The Bedroom's scale: The Bedroom hangs 3.0 m wide (build_gallery.py PAINTING_W; its quad measures
+    // 3.000 m) and is 92.3 cm wide (AIC 1926.417); the 1887 self-portrait is 32.5 x 41 cm (AIC 1954.326).
+    const float Enlargement = 3.0f / 0.923f;   // 3.25
+    static readonly Vector2 PortraitSize = new Vector2(0.325f, 0.41f) * Enlargement;   // 1.06 x 1.33 m
+    // Framed like The Bedroom (FRAME_W, FRAME_D): the frame stands on the wall, 2 cm proud of the picture.
+    const float FrameBorder = 0.18f, FrameDepth = 0.12f, WallFace = -0.10f;   // WallFace: the wall, in Slot_Bedroom's z
+    const float BedroomFrameEdge = 1.5f + FrameBorder, FrameGap = 1.2f;       // The Bedroom frame's outer edge; the gap
+    // Centre in Slot_Bedroom's space (x right, y up, z into the room): on +x, the side away from Placard_Bedroom
+    // (Rowling's plaque, #14, at x = -2.03), at The Bedroom's centre height, its face where The Bedroom's is. The
+    // frame's far edge is then at x = 4.30, 0.70 m from the corner (x = 5.0); nothing else hangs on that wall.
+    static readonly Vector3 PortraitOffset = new Vector3(BedroomFrameEdge + FrameGap + FrameBorder + PortraitSize.x / 2f, 0f, 0f);
+    const float CaptionOut = 0.25f;   // its caption hangs this far out from the wall's frame, so turning keeps it off the wall
 
     // Vincent in PaintedBedroom: on the floor by the left wall, between the front corner and Chair_Front,
     // facing the arrival point (0.04, 0, 0.60). Chosen from a dump of the scene; see the A2 report.
@@ -64,11 +71,33 @@ public static class VanGoghSpawner
         renderer.sharedMaterial = Resources.Load<Material>("VG_SelfPortrait");
         renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
 
+        var bedroomFrame = GameObject.Find("Frame_Bedroom");
+        if (bedroomFrame != null && bedroomFrame.TryGetComponent<Renderer>(out var frameRenderer)) AddFrame(root.transform, frameRenderer.sharedMaterial);
+        else Debug.LogWarning("[VanGogh] Gallery has no Frame_Bedroom, so the portrait has no frame.");
+
         var talker = root.AddComponent<SpeechToProxy>();
         talker.voice = AddVoice(root);
-        talker.labelOffset = new Vector3(0f, -(PortraitSize.y / 2f + 0.1f), 0f);
+        talker.labelOffset = new Vector3(0f, -(PortraitSize.y / 2f + FrameBorder), CaptionOut);   // under the frame
         Debug.Log($"[VanGogh] Portrait at {root.transform.position:F3}, facing {root.transform.forward:F2}");
         return root;
+    }
+
+    // Four boxes around the picture, with The Bedroom frame's material (shared, not copied).
+    static void AddFrame(Transform portrait, Material material)
+    {
+        float x = (PortraitSize.x + FrameBorder) / 2f, y = (PortraitSize.y + FrameBorder) / 2f, z = WallFace + FrameDepth / 2f;
+        var across = new Vector3(PortraitSize.x + 2f * FrameBorder, FrameBorder, FrameDepth);
+        var upright = new Vector3(FrameBorder, PortraitSize.y, FrameDepth);
+        foreach (var (at, size) in new[] { (new Vector3(0f, y, z), across), (new Vector3(0f, -y, z), across),
+                                           (new Vector3(-x, 0f, z), upright), (new Vector3(x, 0f, z), upright) })
+        {
+            var side = new GameObject("Frame", typeof(MeshFilter), typeof(MeshRenderer));
+            side.transform.SetParent(portrait, false);
+            side.transform.SetLocalPositionAndRotation(at, Quaternion.identity);
+            side.transform.localScale = size;
+            side.GetComponent<MeshFilter>().sharedMesh = Resources.GetBuiltinResource<Mesh>("Cube.fbx");
+            side.GetComponent<MeshRenderer>().sharedMaterial = material;
+        }
     }
 
     // Same settings for every Vincent voice: fully 3D, heard clearly within a room.

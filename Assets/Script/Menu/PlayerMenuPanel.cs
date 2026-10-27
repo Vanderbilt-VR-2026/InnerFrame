@@ -8,7 +8,7 @@ using UnityEngine.XR.Interaction.Toolkit.UI;
 /// <summary>
 /// The menu panel, built in code (see <see cref="PlayerMenu"/>). It stays where it is in the world.
 /// Grab the title bar (grip) to drag it; it turns to face you while you move it.
-/// Buttons: X (close), Back to the previous scene, Talk (record and ask the AI, see <see cref="SpeechToProxy"/>).
+/// Buttons: X (close) and Back to the previous scene. (Talking to Vincent is hold-B, see Assets/VanGogh/.)
 /// </summary>
 public class PlayerMenuPanel : MonoBehaviour
 {
@@ -16,13 +16,12 @@ public class PlayerMenuPanel : MonoBehaviour
     const float SpawnDrop = 0.12f;       // a little below eye level, like a lectern
     const float DesktopDistance = 0.7f;  // on a monitor: far enough back to fit the screen, at eye level
     const float MetresPerPixel = 0.001f; // the canvas is laid out in pixels; 500 px = 0.5 m wide
-    const float W = 500f, H = 400f, TitleH = 56f;
+    const float W = 500f, H = 200f, TitleH = 56f;
 
     Transform cam;
     XRGrabInteractable grab;
     Button backButton;
-    Text backLabel, talkLabel, replyText;
-    SpeechToProxy speech;
+    Text backLabel;
     string backScene;
 
     public static PlayerMenuPanel Create(Camera camera)
@@ -51,7 +50,6 @@ public class PlayerMenuPanel : MonoBehaviour
 
     public void Hide()
     {
-        speech.Cancel();
         gameObject.SetActive(false);
     }
 
@@ -90,20 +88,8 @@ public class PlayerMenuPanel : MonoBehaviour
         close.onClick.AddListener(Hide);
 
         // ---- buttons ----
-        backButton = AddButton(rect, "Back", new Vector2(0, 85), new Vector2(W - 60, 64), new Color(0.2f, 0.36f, 0.6f, 1f), out backLabel);
+        backButton = AddButton(rect, "Back", new Vector2(0, -TitleH / 2), new Vector2(W - 60, 64), new Color(0.2f, 0.36f, 0.6f, 1f), out backLabel);
         backButton.onClick.AddListener(() => { if (!string.IsNullOrEmpty(backScene)) SceneFader.Instance.FadeToScene(backScene); });
-
-        var talk = AddButton(rect, "Talk", new Vector2(0, 10), new Vector2(W - 60, 64), new Color(0.2f, 0.5f, 0.32f, 1f), out talkLabel);
-
-        // ---- the AI's reply ----
-        AddImage(rect, "Reply Background", new Vector2(0, -115), new Vector2(W - 60, 160), new Color(1f, 1f, 1f, 0.06f));
-        replyText = AddText(rect, "", new Vector2(0, -115), new Vector2(W - 80, 150), 20, TextAnchor.UpperLeft);
-        replyText.horizontalOverflow = HorizontalWrapMode.Wrap;
-        replyText.verticalOverflow = VerticalWrapMode.Truncate;
-
-        speech = gameObject.AddComponent<SpeechToProxy>();
-        speech.Bind(talkLabel, replyText);
-        talk.onClick.AddListener(speech.TalkPressed);
 
         // ---- drag: added last, so it picks up the title bar's collider ----
         var body = gameObject.AddComponent<Rigidbody>();

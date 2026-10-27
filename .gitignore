@@ -132,3 +132,8 @@ node_modules/
 /Assets/Photon/FusionDemos.meta
 /Assets/Photon/FusionMenu/
 /Assets/Photon/FusionMenu.meta
+# Photon Voice's samples, not used by the project (docs/voice/README.md)
+/Assets/Photon/PhotonVoice/Demos/
+/Assets/Photon/PhotonVoice/Demos.meta
+# Photon Voice's manuals (large, not needed in the repo)
+/Assets/Photon/PhotonVoice-Documentation.*

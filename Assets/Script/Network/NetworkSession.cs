@@ -89,6 +89,7 @@ public class NetworkSession : MonoBehaviour
         go.transform.SetParent(transform, false);
         var runner = go.AddComponent<NetworkRunner>();
         Runner = runner;
+        VoiceSetup.AttachTo(go); // voice chat follows this room (Assets/Script/Voice)
 
         // Hand the already-loaded scene to Fusion so its NetworkObjects (shared grabbables)
         // are synced. The scene manager takes over the open scene instead of reloading it.

@@ -44,7 +44,7 @@ public static class NetworkPlayerPrefabBuilder
     }
 
     // Creates the folder through the AssetDatabase so assets can be saved into it right away.
-    static void EnsureFolder(string path)
+    internal static void EnsureFolder(string path)
     {
         if (AssetDatabase.IsValidFolder(path)) return;
         var parent = System.IO.Path.GetDirectoryName(path).Replace('\\', '/');

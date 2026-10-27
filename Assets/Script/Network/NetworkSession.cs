@@ -3,9 +3,11 @@ using Fusion;
 using Unity.XR.CoreUtils;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.XR;
 
 /// <summary>
-/// Connects to Photon Fusion (Shared Mode) whenever a scene with an XR Origin loads.
+/// Connects to Photon Fusion (Shared Mode) whenever a scene with an XR Origin loads
+/// (in the Editor without a headset: a scene with a desktop camera, see FindPlayerRig).
 /// Everyone in the same scene joins the same room ("InnerFrame_Gallery",
 /// "InnerFrame_Bedroom_StyleExperiment", ...) and sees each other's avatar.
 /// Creates itself automatically; nothing needs to be added to a scene.
@@ -72,11 +74,13 @@ public class NetworkSession : MonoBehaviour
     {
         joining = true;
         yield return Leave();
+        yield return null;   // let the scene pick its rig first (the Editor's desktop rig swaps in on load)
 
-        var origin = FindAnyObjectByType<XROrigin>();
-        if (origin == null) { joining = false; yield break; } // not a scene people walk around in
+        if (!FindPlayerRig(out var rig, out var eyes)) { joining = false; yield break; } // not a scene people walk around in
+        // the rig's own scene: with several scenes open in the Editor, the active one may be an Untitled one
+        if (!string.IsNullOrEmpty(rig.gameObject.scene.name)) sceneName = rig.gameObject.scene.name;
 
-        var prefab = Resources.Load<NetworkObject>(PlayerPrefabPath);
+        var prefab = LoadAvatarPrefab(sceneName);
         if (prefab == null)
         {
             Debug.LogError("[NetworkSession] Missing Resources/NetworkPlayer prefab. Run InnerFrame > Multiplayer > Rebuild Network Player Prefab.");
@@ -93,7 +97,7 @@ public class NetworkSession : MonoBehaviour
         // Hand the already-loaded scene to Fusion so its NetworkObjects (shared grabbables)
         // are synced. The scene manager takes over the open scene instead of reloading it.
         var sceneInfo = new NetworkSceneInfo();
-        int buildIndex = SceneManager.GetActiveScene().buildIndex;
+        int buildIndex = rig.gameObject.scene.buildIndex;
         if (buildIndex >= 0)
             sceneInfo.AddSceneRef(SceneRef.FromIndex(buildIndex), LoadSceneMode.Single);
         else
@@ -119,10 +123,42 @@ public class NetworkSession : MonoBehaviour
         }
 
         Debug.Log($"[NetworkSession] Joined {runner.SessionInfo.Name} as player {runner.LocalPlayer.PlayerId} ({runner.SessionInfo.PlayerCount} in room)");
-        if (!rejoin) ShiftRig(origin, runner.SessionInfo.PlayerCount - 1);
+        if (!rejoin) ShiftRig(rig, eyes, runner.SessionInfo.PlayerCount - 1);
         // Avatar root stays at the world origin; NetworkPlayer moves its head and hands in world space.
         runner.Spawn(prefab, Vector3.zero, Quaternion.identity, runner.LocalPlayer);
         joining = false;
+    }
+
+    /// <summary>
+    /// The local player's rig and eyes: the XR Origin and its camera in a headset. In the Editor
+    /// without one, the desktop camera (the Painted Bedroom's desktop rig, or DesktopTestRig)
+    /// counts as a player too, so networking can be tested with a single headset.
+    /// </summary>
+    public static bool FindPlayerRig(out Transform rig, out Transform eyes)
+    {
+        var origin = FindAnyObjectByType<XROrigin>();   // active rigs only
+        if (origin != null && origin.Camera != null)
+        {
+            rig = origin.transform; eyes = origin.Camera.transform;
+            return true;
+        }
+#if UNITY_EDITOR
+        var cam = Camera.main;
+        if (cam != null && !XRSettings.isDeviceActive)
+        {
+            rig = cam.transform.root; eyes = cam.transform;
+            return true;
+        }
+#endif
+        rig = eyes = null;
+        return false;
+    }
+
+    /// <summary>A scene can have its own avatar: Resources/NetworkPlayer_&lt;SceneName&gt;, else the default one.</summary>
+    public static NetworkObject LoadAvatarPrefab(string sceneName)
+    {
+        var prefab = Resources.Load<NetworkObject>(PlayerPrefabPath + "_" + sceneName);
+        return prefab != null ? prefab : Resources.Load<NetworkObject>(PlayerPrefabPath);
     }
 
     /// <summary>Disconnects from the current room. SceneFader waits on this before changing scene.</summary>
@@ -139,18 +175,18 @@ public class NetworkSession : MonoBehaviour
     }
 
     // Slot 0 stays put, then 1 m right, 1 m left, 2 m right... unless a wall or furniture is in the way.
-    void ShiftRig(XROrigin origin, int slot)
+    void ShiftRig(Transform rig, Transform eyes, int slot)
     {
-        if (slot <= 0 || spawnSpacing <= 0f || origin.Camera == null) return;
+        if (slot <= 0 || spawnSpacing <= 0f) return;
 
         float dist = (slot + 1) / 2 * spawnSpacing * (slot % 2 == 1 ? 1f : -1f);
-        var offset = origin.transform.right * dist;
-        var head = origin.Camera.transform.position;
+        var offset = rig.right * dist;
+        var head = eyes.position;
         if (Physics.Linecast(head, head + offset, ~0, QueryTriggerInteraction.Ignore)) return;
 
-        var cc = origin.GetComponent<CharacterController>();
+        var cc = rig.GetComponent<CharacterController>();
         if (cc) cc.enabled = false;
-        origin.transform.position += offset;
+        rig.position += offset;
         if (cc) cc.enabled = true;
     }
 }

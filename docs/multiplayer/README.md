@@ -1,18 +1,50 @@
 # Multiplayer (Photon Fusion 2, Shared Mode)
 
 Everyone in the same scene joins the same room and sees each other as a
-coloured head with two hands. Shared objects can be picked up by anyone and
+head with two hands (each scene can have its own avatar, see below). Shared objects can be picked up by anyone and
 handed from one player to another.
 
 Code: `Assets/Script/Network/`.
 
 | Script | What it does |
 |---|---|
-| `NetworkSession` | Creates itself on startup. When a scene with an XR Origin loads, joins room `InnerFrame_<SceneName>` (max 8 players) and spawns your avatar. `SceneFader` makes it leave the room before a scene change. |
+| `NetworkSession` | Creates itself on startup. When a scene with an XR Origin loads (in the Editor without a headset: a desktop camera), joins room `InnerFrame_<SceneName>` (max 8 players) and spawns your avatar. `SceneFader` makes it leave the room before a scene change. |
+| `DesktopTestRig` | Editor only. Without a headset, replaces a scene's XR Origin with a W A S D + mouse player, so the Editor can walk around and count as a player (see "Testing with one headset"). |
 | `NetworkPlayer` | The avatar. Copies your headset and controllers onto it; your own copy is hidden. |
 | `NetworkGrabbable` | Makes a grab object shared (see below). |
 | `Editor/NetworkPlayerPrefabBuilder` | Builds `Resources/NetworkPlayer.prefab`. Menu: **InnerFrame → Multiplayer → Rebuild Network Player Prefab**. |
+| `Editor/PaintedAvatarBuilder` | Builds the Painted Bedroom's avatar, `Resources/NetworkPlayer_PaintedBedroom.prefab`, and its textures, materials and meshes in `PaintedAvatar/`. Menu: **InnerFrame → Multiplayer → Rebuild Painted Bedroom Avatar**. |
 | `Editor/NetworkGrabbableMenu` | Makes many objects shared at once (see below). |
+
+## A different avatar per scene
+
+`NetworkSession` first looks for `Resources/NetworkPlayer_<SceneName>`, and
+uses `Resources/NetworkPlayer` if there isn't one. Everyone in a room is in
+the same scene, so everyone sees the same kind of avatar there.
+
+| Scene | Avatar |
+|---|---|
+| `PaintedBedroom` | `NetworkPlayer_PaintedBedroom`: a Van Gogh head and two hands, painted like the room. Brushstroke textures drawn by the room's own recipe (`strokeCanvas()` in `Art/Source/PaintedBedroom/web/index.html`, ported to C#), matte materials with the room's glow, and the room's dark blue ink outlines. Skin, a ginger beard, and the straw hat from the painting. The hat band and the cuffs are in the player's colour |
+| Everything else | `NetworkPlayer`: a coloured head with a visor and two hands |
+
+To change the painted avatar, edit `PaintedAvatarBuilder.cs` (shapes, sizes,
+palettes) and run its menu item again. Everything it makes keeps its GUID, so
+nothing that points at it breaks.
+
+To give another scene its own avatar, make a prefab named
+`NetworkPlayer_<SceneName>` in a `Resources` folder. The easiest way is to
+duplicate an existing avatar prefab and change its pieces. It needs:
+
+- `NetworkObject` and `NetworkPlayer` on the root, with **Head**, **Left
+  Hand** and **Right Hand** set. Head looks along +Z; each hand points along +Z.
+- A `NetworkTransform` on each of those three parts. Put the shapes under
+  them, so you can scale and offset the shapes freely.
+- No colliders, so avatars don't push things.
+- **Tinted** on `NetworkPlayer`: the renderers that take the player's colour.
+  If it's empty, every renderer except one named `Visor` is tinted.
+
+Fusion registers the prefab when it's imported; **Tools → Fusion → Rebuild
+Prefab Table** does it by hand.
 
 ## Making an object interactable by both players
 
@@ -59,6 +91,19 @@ and everyone sees the result.
 
 Run a build on the Quest and press Play in the Editor at the same time; the
 Editor is the second player.
+
+Without a headset the Editor plays as a **desktop player**, and it still
+joins the room: others see your avatar's head where your Game view camera is,
+with its hands hanging at its sides. In scenes that only have an XR Origin
+(the Gallery), `DesktopTestRig` swaps one in for you: **W A S D** to walk,
+click and move the mouse to look (**Esc** frees the mouse, or hold the right
+button), **Shift** to go faster. The dot in the middle of the view is an XR
+ray: when it turns yellow you're aiming at something pressable, such as the
+pedestal's scene button, and **E** (or a click while the mouse is captured)
+presses it the way a controller would. It grabs nothing; grabbable objects
+are skipped. The Painted Bedroom keeps its own desktop rig.
+Both are Editor only; Quest builds don't have them. For grabbing and handing
+things over from the Editor, use the XR Interaction Simulator instead (below).
 
 - **Pin a region first:** Tools → Fusion → Realtime Settings → Fixed Region,
   for example `us`. Otherwise the two devices can land in different regions and

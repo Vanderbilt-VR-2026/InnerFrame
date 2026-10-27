@@ -50,6 +50,7 @@ namespace InnerFrame.EditorTools
             Label(canvas,serif,"Close Label — 2:36","X",449,20,11,19,16,19,new Color32(170,170,170,255));
             panel.Configure(close);
             Check(canvas);
+            CheckTitleRegression(canvas);
         }
 
         static TMP_FontAsset FontAsset(string name,string folder)
@@ -121,26 +122,106 @@ namespace InnerFrame.EditorTools
             var rect=Slot(canvas,name,x,y,w,h);
             var text=rect.gameObject.AddComponent<TextMeshProUGUI>();
             text.font=font; text.fontSize=size*Scale; text.color=color;
-            text.margin=Vector4.zero; text.alignment=TextAlignmentOptions.TopLeft;
+            // Figma's line box includes half-leading above and below the font em metrics.
+            // TMP's <line-height> sets baseline advance, NOT first-line ascender/descender bounds.
+            // Preserve the design rect and font size; express that half-leading as margins.
+            var face=font.faceInfo;
+            float emHeight=(face.ascentLine-face.descentLine)*text.fontSize/face.pointSize*face.scale;
+            float halfLeading=(lineHeight*Scale-emHeight)/2;
+            text.margin=new Vector4(0,halfLeading,0,halfLeading-0.01f);
+            text.alignment=TextAlignmentOptions.TopLeft;
             text.raycastTarget=false; text.enableAutoSizing=false;
             // Figma AUTO resolves to 15/12/19 px for these runs. Fixed line-height preserves composition.
             text.richText=true;
             text.text="<line-height="+(lineHeight*Scale).ToString(System.Globalization.CultureInfo.InvariantCulture)+">"+value;
             text.overflowMode=TextOverflowModes.Overflow;
-            text.ForceMeshUpdate();
         }
         public static void Check(RectTransform canvas)
         {
             if(Vector2.Distance(canvas.sizeDelta,CanvasSize)>.01f)
                 throw new InvalidOperationException("Figma board must preserve 476:416 aspect ratio.");
+            // Rebuild the completed hierarchy, including inactive reloaded prefab contents.
+            canvas.ForceUpdateRectTransforms();
+            LayoutRebuilder.ForceRebuildLayoutImmediate(canvas);
+            Canvas.ForceUpdateCanvases();
             foreach(var text in canvas.GetComponentsInChildren<TMP_Text>(true))
-            {
-                text.ForceMeshUpdate(true);
-                if(text.font==null || text.font.atlasPopulationMode!=AtlasPopulationMode.Static || text.isTextOverflowing)
-                    throw new InvalidOperationException("Figma SDF missing or text overflows: "+text.name);
-            }
+                CheckText(text);
             foreach(var image in canvas.GetComponentsInChildren<RawImage>(true))
                 if(image.texture==null) throw new InvalidOperationException("Missing Figma layer texture: "+image.name);
+        }
+
+        static void CheckTitleRegression(RectTransform canvas)
+        {
+            var title=canvas.Find("Title — 1:7").GetComponent<TMP_Text>();
+            if(title.fontSize!=16*Scale || title.rectTransform.sizeDelta!=new Vector2(112,19)*Scale || title.enableAutoSizing)
+                throw new InvalidOperationException("Title regression: Figma size/box changed.");
+            var margin=title.margin;
+            try
+            {
+                title.margin=Vector4.zero; // Reproduce the old line-box mapping, not a missing font.
+                bool rejected=false;
+                try { CheckText(title); }
+                catch(InvalidOperationException error)
+                {
+                    if(!error.Message.StartsWith("Figma TEXT OVERFLOW",StringComparison.Ordinal)) throw;
+                    rejected=true;
+                }
+                if(!rejected) throw new InvalidOperationException("Title regression: expected the old zero-margin box to overflow with the bundled Cormorant metrics.");
+            }
+            finally { title.margin=margin; title.ComputeMarginSize(); title.ForceMeshUpdate(true,true); }
+            CheckText(title);
+        }
+
+        static void CheckText(TMP_Text text)
+        {
+            if(text.font==null)
+                throw new InvalidOperationException("Figma FONT MISSING: "+text.name+"; rect="+text.rectTransform.rect);
+            var font=text.font;
+            var face=font.faceInfo;
+            string identity=$"{text.name}; font={font.name}; path={AssetDatabase.GetAssetPath(font)}; family={face.familyName}; style={face.styleName}; pointSize={face.pointSize}; scale={face.scale}; ascent={face.ascentLine}; descent={face.descentLine}; faceLineHeight={face.lineHeight}";
+            if(font.atlasPopulationMode!=AtlasPopulationMode.Static || font.material==null ||
+                font.atlasTextures==null || font.atlasTextures.Length==0 || font.atlasTextures.Any(x=>x==null) ||
+                face.pointSize<=0 || face.scale<=0)
+                throw new InvalidOperationException("Figma SDF INVALID: "+identity+"; population="+font.atlasPopulationMode);
+            text.rectTransform.ForceUpdateRectTransforms();
+            text.ComputeMarginSize();
+            text.ForceMeshUpdate(true,true);
+            var plain=text.GetParsedText();
+            var missing=plain.Where(c=>!char.IsControl(c) && !font.HasCharacter(c)).Distinct()
+                .Select(c=>$"U+{(int)c:X4}").ToArray();
+            var preferred=text.GetPreferredValues(text.text,text.rectTransform.rect.width,float.PositiveInfinity);
+            // GetPreferredValues has its own layout pass. Regenerate before inspecting rendered state.
+            text.ForceMeshUpdate(true,true);
+            var rect=text.rectTransform.rect;
+            string atlasInfo=string.Join(",",font.atlasTextures.Select(x=>$"{x.name}:{x.width}x{x.height}"));
+            var glyphs=new System.Text.StringBuilder();
+            bool outside=false, fallback=false;
+            const float tolerance=0.5f*Scale; // Half a Figma pixel for raster/font sampling, not layout growth.
+            for(int i=0;i<text.textInfo.characterCount;i++)
+            {
+                var c=text.textInfo.characterInfo[i];
+                if(char.IsControl(c.character)) continue;
+                fallback |= c.fontAsset!=font;
+                var glyph=c.textElement?.glyph;
+                glyphs.Append($" U+{(int)c.character:X4}:glyph={glyph?.index},font={c.fontAsset?.name},scale={c.scale:F4}");
+                if(!c.isVisible || glyph==null) continue;
+                // Check ink geometry, excluding the transparent SDF padding around its quad.
+                var m=glyph.metrics;
+                float left=c.origin+m.horizontalBearingX*c.scale;
+                float top=c.baseLine+m.horizontalBearingY*c.scale;
+                float right=left+m.width*c.scale, bottom=top-m.height*c.scale;
+                glyphs.Append($",ink=({left:F3},{bottom:F3})..({right:F3},{top:F3})");
+                outside |= left<rect.xMin-tolerance || right>rect.xMax+tolerance ||
+                    bottom<rect.yMin-tolerance || top>rect.yMax+tolerance;
+            }
+            string report=identity+$"; atlas=[{atlasInfo}]; glyphCount={font.glyphTable.Count}; shader={font.material.shader?.name}; fontSize={text.fontSize}; autoSize={text.enableAutoSizing}; rect={rect}; margins={text.margin}; preferred={preferred}; textBounds={text.textBounds}; overflow={text.isTextOverflowing}; firstOverflow={text.firstOverflowCharacterIndex}; lines={text.textInfo.lineCount}; missing=[{string.Join(",",missing)}]; fallback={fallback}; inkOutside={outside}; markup={text.text}\nGlyphs:"+glyphs;
+            if(missing.Length>0 || fallback)
+                throw new InvalidOperationException("Figma GLYPH MISSING OR SUBSTITUTED: "+report);
+            if(text.isTextOverflowing)
+                throw new InvalidOperationException("Figma TEXT OVERFLOW after finalized layout: "+report);
+            if(outside)
+                throw new InvalidOperationException("Figma VISIBLE GLYPH OUTSIDE DESIGN BOX: "+report);
+            Debug.Log("[ArtworkInfo] Text layout PASS: "+report,text);
         }
     }
 }

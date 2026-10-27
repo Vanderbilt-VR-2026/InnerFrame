@@ -51,6 +51,7 @@ public class MirrorScene : MonoBehaviour
     public float Progress => painted / PaintSeconds;
 
     SpeechToProxy talker;
+    VincentAlive alive;
     XRGrabInteractable grab;
     PaintedBedroomMovable movable;
     Transform mirror, brush;
@@ -69,6 +70,7 @@ public class MirrorScene : MonoBehaviour
     void Start()
     {
         talker = GetComponent<SpeechToProxy>();
+        alive = GetComponent<VincentAlive>();
         foreach (var root in gameObject.scene.GetRootGameObjects())
             foreach (var t in root.GetComponentsInChildren<XRGrabInteractable>(true))
                 if (t.name == MirrorName) grab = t;
@@ -93,7 +95,7 @@ public class MirrorScene : MonoBehaviour
         Locate();
         paint = Canvas().material;
         ShowStage(0);
-        brush = transform.Find(BrushName);
+        brush = Array.Find(GetComponentsInChildren<Transform>(true), t => t.name == BrushName);   // in his Figure
         if (brush != null) brushHome = brush.localPosition;
         Debug.Log($"[VanGogh] mirror scene: target {Target:F3}, his head {Head:F3}");
     }
@@ -105,7 +107,10 @@ public class MirrorScene : MonoBehaviour
         KeepGrabOn(Time.deltaTime);
         bool held = grab.isSelected || HeldOnDesktop();
         // the mirror's face is its local -Z, the side away from the wall
-        Apply(Decide(Time.deltaTime, held, mirror.TransformPoint(glassLocal), -mirror.forward, talker.IsBusy, talker.LastReply != null));
+        var centre = mirror.TransformPoint(glassLocal);
+        var step = Decide(Time.deltaTime, held, centre, -mirror.forward, talker.IsBusy, talker.LastReply != null);
+        Apply(step);
+        if (alive != null) alive.PaintingFrom = step.painting ? centre : (Vector3?)null;   // he looks at the mirror while he paints
     }
 
     // The room's physics table has the mirror as not liftable; this scene needs it picked up: same grab, switched on.

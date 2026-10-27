@@ -146,3 +146,20 @@ On the desktop the mirror counts as held once it has left the wall, not at the c
    - that letting go hangs it back;
    - that B works while he paints;
    - that his words show in full, and whether the caption's size and sharpness feel right.
+
+## Vincent feels alive (Painted Bedroom)
+
+Vincent's model has no rig and no blendshapes, so `Scripts/VincentAlive.cs` (on the `VG_Vincent` root) moves him as a
+whole. There is no mouth or blink animation.
+- **Breathing:** his height swells by 0.4 % every 4 s.
+- **Turning:** when your head is within 3.5 m he turns toward you, at most 12° either way, easing there in about
+  0.6 s. While he paints he turns toward the mirror instead (`MirrorScene` tells him), and otherwise he turns back to
+  the front. A slow ±1° sway keeps him from standing dead still.
+- **Leaning in:** while he speaks, the loudness of his voice (256 samples, RMS) leans him forward by up to 2°, about
+  his feet.
+- **The Figure:** the asset tool groups his mesh, palette, brush and voice under a `Figure` whose pivot is between his
+  feet; the easel stays put. Only the Figure moves, so the palette and brush stay in his hands. `MirrorScene` finds the
+  brush inside the Figure, and its mirror target and his head point are still computed from the root, so they don't
+  move.
+- Every amplitude is a named constant at the top of `VincentAlive`. Untick **Alive** on the component to stop all of
+  it.

@@ -212,8 +212,26 @@ public static class VanGoghAssetSetup
         var mirrorScene = root.AddComponent<MirrorScene>();
         mirrorScene.stages = stages;
         mirrorScene.lines = lines;
+
+        // What VincentAlive moves: everything but the easel, about a pivot between his feet
+        var figure = new GameObject("Figure").transform;
+        figure.SetParent(root.transform, false);
+        figure.localPosition = FeetCentre(body);
+        foreach (var part in new[] { body.transform, root.transform.Find("VG_Palette"), root.transform.Find("VG_Brush_01"), mouth.transform })
+            part.SetParent(figure, true);
+        root.AddComponent<VincentAlive>();
         PrefabUtility.SaveAsPrefabAsset(root, VincentPrefab);
         Object.DestroyImmediate(root);
+    }
+
+    // Between his feet: the middle of the mesh's lowest 5 cm, in his own space (the root is at the origin here).
+    static Vector3 FeetCentre(GameObject body)
+    {
+        var points = body.GetComponentsInChildren<MeshFilter>()
+            .SelectMany(f => f.sharedMesh.vertices.Select(v => f.transform.TransformPoint(v))).ToArray();
+        float floor = points.Min(p => p.y);
+        var feet = points.Where(p => p.y < floor + 0.05f).ToArray();
+        return new Vector3(feet.Average(p => p.x), 0f, feet.Average(p => p.z));
     }
 
     // Places a prop so that its GrabPoint (an empty from Blender) sits at the hand.

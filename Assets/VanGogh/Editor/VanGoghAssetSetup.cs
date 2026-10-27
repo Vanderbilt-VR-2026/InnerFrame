@@ -1,11 +1,12 @@
+using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
 /// <summary>
-/// (Re)creates Van Gogh's assets from the files in Assets/VanGogh/Art: import settings, materials and the
-/// VG_Vincent prefab. Safe to run again: it only reimports what differs. Tools > InnerFrame > Van Gogh >
-/// Rebuild assets, or -executeMethod VanGoghAssetSetup.Rebuild.
+/// (Re)creates Van Gogh's assets from the files in Assets/VanGogh/Art and Audio: import settings, materials and the
+/// VG_Vincent prefab, with the mirror scene's canvas stages and lines. Safe to run again: it only reimports what
+/// differs. Tools > InnerFrame > Van Gogh > Rebuild assets, or -executeMethod VanGoghAssetSetup.Rebuild.
 /// </summary>
 public static class VanGoghAssetSetup
 {
@@ -18,6 +19,10 @@ public static class VanGoghAssetSetup
     const string VincentMaterial = Art + "/M_Vincent.mat";
     const string Props = Art + "/Props/";
     const string VincentPrefab = ResourcesDir + "/VG_Vincent.prefab";
+    const string CanvasStages = Art + "/Canvas/";       // from Art/Source/VanGogh/make_canvas_stages.py
+    static readonly string[] Stages = { "VG_Canvas_1_Sketch", "VG_Canvas_2_Colour", "VG_Canvas_3_Finished" };
+    const string MirrorAudio = "Assets/VanGogh/Audio/";  // from Art/Source/VanGogh/make_mirror_lines.sh
+    const string MirrorLines = "Art/Source/VanGogh/mirror_lines.txt";   // relative to the project folder
     const float VincentHeight = 1.70f;
 
     // Prefab layout in Vincent's own space: he faces +z, his right hand is at +x, metres at 1.70 m tall.
@@ -38,7 +43,8 @@ public static class VanGoghAssetSetup
             FitHeight(Vincent, VincentHeight);
             foreach (var prop in new[] { "VG_Easel", "VG_Palette", "VG_Brush_01" }) ImportModel(Props + prop + ".fbx", true);
             var skin = SaveMaterial(VincentMaterial, "Universal Render Pipeline/Lit", ImportTexture(VincentTexture, 2048));
-            BuildVincent(skin);
+            var stages = Stages.Select(s => ImportTexture(CanvasStages + s + ".png", 1024)).ToArray();
+            BuildVincent(skin, stages, ReadMirrorLines());
         }
         AssetDatabase.SaveAssets();
         Debug.Log("[VanGoghAssetSetup] Rebuild done");
@@ -60,6 +66,32 @@ public static class VanGoghAssetSetup
         }
         return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
     }
+
+    // Mono, Vorbis quality 70, decompressed on load (short lines that should start at once), no Android override.
+    static AudioClip ImportClip(string path)
+    {
+        var importer = (AudioImporter)AssetImporter.GetAtPath(path);
+        var s = importer.defaultSampleSettings;
+        if (!importer.forceToMono || s.compressionFormat != AudioCompressionFormat.Vorbis || !Mathf.Approximately(s.quality, 0.7f)
+            || s.loadType != AudioClipLoadType.DecompressOnLoad || importer.ContainsSampleSettingsOverride("Android"))
+        {
+            importer.forceToMono = true;
+            s.compressionFormat = AudioCompressionFormat.Vorbis;
+            s.quality = 0.7f;
+            s.loadType = AudioClipLoadType.DecompressOnLoad;
+            importer.defaultSampleSettings = s;
+            importer.ClearSampleSettingOverride("Android");
+            importer.SaveAndReimport();
+        }
+        return AssetDatabase.LoadAssetAtPath<AudioClip>(path);
+    }
+
+    // mirror_lines.txt: an id, then the text, one line each; # starts a comment. Each id has its clip VG_Mirror_<id>.wav.
+    static MirrorScene.Line[] ReadMirrorLines() =>
+        File.ReadAllLines(MirrorLines).Select(l => l.Trim()).Where(l => l.Length > 0 && !l.StartsWith("#"))
+            .Select(l => l.Split(new[] { ' ' }, 2))
+            .Select(p => new MirrorScene.Line { id = p[0], text = p[1], clip = ImportClip(MirrorAudio + "VG_Mirror_" + p[0] + ".wav") })
+            .ToArray();
 
     static Material SaveMaterial(string path, string shaderName, Texture texture)
     {
@@ -116,7 +148,7 @@ public static class VanGoghAssetSetup
     static GameObject Spawn(string path, Transform parent) =>
         (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(path), parent);
 
-    static void BuildVincent(Material skin)
+    static void BuildVincent(Material skin, Texture2D[] stages, MirrorScene.Line[] lines)
     {
         var root = new GameObject("VG_Vincent");
         var body = Spawn(Vincent, root.transform);
@@ -135,6 +167,9 @@ public static class VanGoghAssetSetup
         var talker = root.AddComponent<SpeechToProxy>();
         talker.voice = VanGoghSpawner.AddVoice(mouth);
         talker.labelOffset = new Vector3(0f, VincentHeight + 0.25f, 0f);
+        var mirrorScene = root.AddComponent<MirrorScene>();
+        mirrorScene.stages = stages;
+        mirrorScene.lines = lines;
         PrefabUtility.SaveAsPrefabAsset(root, VincentPrefab);
         Object.DestroyImmediate(root);
     }

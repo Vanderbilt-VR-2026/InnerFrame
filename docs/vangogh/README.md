@@ -23,6 +23,13 @@ October 1888, text-to-speech), and his answer plays from the portrait.
   1.75 m as you feel it. If the rig scale changes, change `VincentScale` in
   `VanGoghSpawner` to match. He was made with Tripo on a paid plan, whose terms give
   paid users the rights to their models (see `docs/ASSETS.md`).
+  - **His easel and palette** are Tripo models too (Smart Mesh P2.0 from painted reference images, 2026-10-27), cleaned
+    by `Art/Source/VanGogh/Props/clean_easel.py` and `clean_palette.py` (no decimation: 4,727 and 4,884 triangles, one
+    1024² base colour each). Their materials, `Art/Props/M_Easel.mat` and `M_Palette.mat`, are made by the asset tool
+    with the room furniture's URP Lit settings (no metal, no gloss, no highlights or reflections, two-sided). The canvas
+    is still our own plane, `VG_Canvas`, standing on the new ledge at the old canvas's place, so the mirror scene is
+    unchanged. The scripts take the exported GLB as their argument; the licence of these two models for the public repo
+    is not yet confirmed (see `docs/ASSETS.md`).
 - Why B and not A: A is already bound to XRI's Jump on the right hand.
 - **Captions** (storybook style, from Cici's concept): `Scripts/VanGoghCaption.cs`, made by `SpeechToProxy`.
   - His words, scripted lines and AI answers alike, appear on a parchment panel in a rustic wooden frame. They fade

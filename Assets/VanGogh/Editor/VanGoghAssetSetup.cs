@@ -19,6 +19,9 @@ public static class VanGoghAssetSetup
     const string VincentTexture = Art + "/Vincent/VG_Vincent_BaseColor.jpg";
     const string VincentMaterial = Art + "/M_Vincent.mat";
     const string Props = Art + "/Props/";
+    // the Tripo easel and palette, cleaned by Art/Source/VanGogh/Props/clean_easel.py and clean_palette.py
+    const string EaselTexture = Props + "VG_Easel_BaseColor.jpg", EaselMaterial = Props + "M_Easel.mat";
+    const string PaletteTexture = Props + "VG_Palette_BaseColor.jpg", PaletteMaterial = Props + "M_Palette.mat";
     const string VincentPrefab = ResourcesDir + "/VG_Vincent.prefab";
     const string CanvasStages = Art + "/Canvas/";       // from Art/Source/VanGogh/make_canvas_stages.py
     static readonly string[] Stages = { "VG_Canvas_1_Sketch", "VG_Canvas_2_Colour", "VG_Canvas_3_Finished" };
@@ -33,7 +36,7 @@ public static class VanGoghAssetSetup
 
     // Prefab layout in Vincent's own space: he faces +z, his right hand is at +x, metres at 1.70 m tall.
     // Hands were estimated from the mesh (forearms held forward); see the A2 report.
-    static readonly Vector3 EaselAt = new Vector3(0.6f, 0f, 0.1f);
+    static readonly Vector3 EaselAt = new Vector3(0.627f, 0f, 0.073f);   // puts the canvas's centre where the 10/26 placeholder's was (clean_easel.py)
     const float EaselTurn = -45f;   // canvas faces halfway between him and a visitor in front of him
     static readonly Vector3 LeftHand = new Vector3(-0.07f, 1.03f, 0.39f), PaletteTurn = Vector3.zero;     // board out to his left
     static readonly Vector3 RightHand = new Vector3(0.24f, 1.23f, 0.37f), BrushTurn = new Vector3(20f, 0f, 0f);   // tip leans forward
@@ -50,8 +53,10 @@ public static class VanGoghAssetSetup
             FitHeight(Vincent, VincentHeight);
             foreach (var prop in new[] { "VG_Easel", "VG_Palette", "VG_Brush_01" }) ImportModel(Props + prop + ".fbx", true);
             var skin = SaveMaterial(VincentMaterial, "Universal Render Pipeline/Lit", ImportTexture(VincentTexture, 2048));
+            var easel = Furniture(SaveMaterial(EaselMaterial, "Universal Render Pipeline/Lit", ImportTexture(EaselTexture, 1024)));
+            var palette = Furniture(SaveMaterial(PaletteMaterial, "Universal Render Pipeline/Lit", ImportTexture(PaletteTexture, 1024)));
             var stages = Stages.Select(s => ImportTexture(CanvasStages + s + ".png", 1024)).ToArray();
-            BuildVincent(skin, stages, ReadMirrorLines());
+            BuildVincent(skin, easel, palette, stages, ReadMirrorLines());
         }
         AssetDatabase.SaveAssets();
         Debug.Log("[VanGoghAssetSetup] Rebuild done");
@@ -149,9 +154,24 @@ public static class VanGoghAssetSetup
         }
         material.shader = shader;
         material.SetTexture("_BaseMap", texture);
+        material.SetTexture("_MainTex", texture);   // URP copies _BaseMap here when the material is next loaded; set it now so the first run saves the same file
         material.SetColor("_BaseColor", Color.white);
         EditorUtility.SetDirty(material);
         return material;
+    }
+
+    // The room's wooden furniture look (InnerFrameBedroomWeb/Generated/Materials/table.mat): URP Lit with no metal, no
+    // gloss, no specular highlights or reflections, two-sided, receiving shadows. So the props sit in the room's light.
+    static Material Furniture(Material m)
+    {
+        m.SetFloat("_Metallic", 0f);
+        m.SetFloat("_Smoothness", 0f);
+        m.SetFloat("_SpecularHighlights", 0f); m.EnableKeyword("_SPECULARHIGHLIGHTS_OFF");
+        m.SetFloat("_EnvironmentReflections", 0f); m.EnableKeyword("_ENVIRONMENTREFLECTIONS_OFF");
+        m.SetFloat("_Cull", (float)UnityEngine.Rendering.CullMode.Off);
+        m.SetFloat("_ReceiveShadows", 1f);
+        m.doubleSidedGI = true;
+        return m;
     }
 
     // Read/Write off, medium mesh compression, no cameras, lights, animation or colliders.
@@ -193,13 +213,15 @@ public static class VanGoghAssetSetup
     static GameObject Spawn(string path, Transform parent) =>
         (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(path), parent);
 
-    static void BuildVincent(Material skin, Texture2D[] stages, MirrorScene.Line[] lines)
+    static void BuildVincent(Material skin, Material easel, Material palette, Texture2D[] stages, MirrorScene.Line[] lines)
     {
         var root = new GameObject("VG_Vincent");
         var body = Spawn(Vincent, root.transform);
         foreach (var r in body.GetComponentsInChildren<Renderer>()) r.sharedMaterial = skin;
-        Spawn(Props + "VG_Easel.fbx", root.transform).transform.SetLocalPositionAndRotation(EaselAt, Quaternion.Euler(0f, EaselTurn, 0f));
-        Hold(Props + "VG_Palette.fbx", root.transform, LeftHand, PaletteTurn);
+        var stand = Spawn(Props + "VG_Easel.fbx", root.transform);
+        stand.transform.SetLocalPositionAndRotation(EaselAt, Quaternion.Euler(0f, EaselTurn, 0f));
+        stand.GetComponent<Renderer>().sharedMaterial = easel;   // its child VG_Canvas keeps the FBX's M_Canvas: MirrorScene paints the stages on it
+        Hold(Props + "VG_Palette.fbx", root.transform, LeftHand, PaletteTurn).GetComponent<Renderer>().sharedMaterial = palette;
         Hold(Props + "VG_Brush_01.fbx", root.transform, RightHand, BrushTurn);
 
         var capsule = root.AddComponent<CapsuleCollider>();   // Default layer, not Teleport: nobody lands inside him
@@ -238,11 +260,12 @@ public static class VanGoghAssetSetup
     }
 
     // Places a prop so that its GrabPoint (an empty from Blender) sits at the hand.
-    static void Hold(string path, Transform parent, Vector3 hand, Vector3 turn)
+    static GameObject Hold(string path, Transform parent, Vector3 hand, Vector3 turn)
     {
         var prop = Spawn(path, parent);
         prop.transform.localRotation = Quaternion.Euler(turn);
         var grab = prop.GetComponentsInChildren<Transform>().First(t => t.name.StartsWith("GrabPoint"));
         prop.transform.localPosition += hand - parent.InverseTransformPoint(grab.position);
+        return prop;
     }
 }

@@ -10,7 +10,7 @@ using UnityEngine.UI;
 /// <summary>
 /// Talk to Vincent: hold the right controller's B button (T in the Editor), speak, let go.
 /// The recording goes to the AI proxy as a WAV file:
-///   POST {serverUrl}/npc/vincent/talk   (multipart form, field "audio")
+///   POST {serverUrl}/npc/vincent/talk   (multipart form, field "audio"; "scene" too when SceneContext is set)
 /// The proxy answers with JSON; his voice (audio_url) then plays from this object's AudioSource.
 /// The models and any key stay on the proxy, never in the app. This object's forward faces the visitor.
 /// </summary>
@@ -24,11 +24,18 @@ public class SpeechToProxy : MonoBehaviour
     [Tooltip("Where his voice plays from.")]
     public AudioSource voice;
 
-    [Tooltip("Where the one-line caption sits, relative to this object.")]
+    [Tooltip("Where the caption sits, relative to this object.")]
     public Vector3 labelOffset = new Vector3(0f, -0.5f, 0f);
 
     /// <summary>The last answer's text and clip (for tests and logs).</summary>
     public string LastReply { get; private set; }
+
+    /// <summary>Recording, waiting for an answer, or speaking (an answer or a scripted line).</summary>
+    public bool IsBusy => state == State.Recording || state == State.Waiting || state == State.Playing;
+
+    /// <summary>What is happening in the scene, in a sentence to him ("Your mirror is still on the wall..."), sent with
+    /// each question as the form field "scene". Empty: not sent. Set by MirrorScene; the Gallery portrait never sets it.</summary>
+    public string SceneContext { get; set; }
 
     enum State { Idle, Recording, Waiting, Playing, Error }
     State state;
@@ -152,6 +159,7 @@ public class SpeechToProxy : MonoBehaviour
 
         var form = new WWWForm();
         form.AddBinaryData("audio", wav, "speech.wav", "audio/wav");
+        if (!string.IsNullOrEmpty(SceneContext)) form.AddField("scene", SceneContext);
         TalkReply answer = null;
         using (var req = UnityWebRequest.Post(server + TalkPath, form))
         {
@@ -216,7 +224,7 @@ public class SpeechToProxy : MonoBehaviour
         caption.SetActive(!string.IsNullOrEmpty(text));
     }
 
-    // One line of world-space text, built like PlayerMenuPanel's canvas.
+    // Two lines of world-space text, built like PlayerMenuPanel's canvas. Longer text shrinks to fit, down to size 20.
     void BuildCaption()
     {
         caption = new GameObject("Caption", typeof(RectTransform));
@@ -226,7 +234,7 @@ public class SpeechToProxy : MonoBehaviour
         var canvas = caption.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.WorldSpace;
         var rect = (RectTransform)caption.transform;
-        rect.sizeDelta = new Vector2(600f, 56f);
+        rect.sizeDelta = new Vector2(600f, 88f);   // two lines at size 32
         rect.localScale = Vector3.one * MetresPerPixel;
 
         var background = new GameObject("Background", typeof(RectTransform)).AddComponent<Image>();
@@ -240,6 +248,9 @@ public class SpeechToProxy : MonoBehaviour
         ((RectTransform)label.transform).sizeDelta = rect.sizeDelta;
         label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         label.fontSize = 32;
+        label.resizeTextForBestFit = true;
+        label.resizeTextMinSize = 20;
+        label.resizeTextMaxSize = label.fontSize;
         label.alignment = TextAnchor.MiddleCenter;
         label.color = Color.white;
         label.raycastTarget = false;

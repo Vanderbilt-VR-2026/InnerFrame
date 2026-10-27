@@ -38,7 +38,11 @@ VOICE = os.environ.get("VOICE", "Daniel")
 ACCESS_CODE = os.environ.get("ACCESS_CODE", "")
 
 OUT = HERE / "out"
-PERSONA = (HERE / "persona_v0.txt").read_text(encoding="utf-8").strip()
+PERSONA_YEAR = os.environ.get("VANGOGH_PERSONA_YEAR", "1888")
+if PERSONA_YEAR not in ("1888", "1889"):
+    raise ValueError("VANGOGH_PERSONA_YEAR must be 1888 or 1889")
+PERSONA_FILE = "persona_1889.txt" if PERSONA_YEAR == "1889" else "persona_v0.txt"
+PERSONA = (HERE / PERSONA_FILE).read_text(encoding="utf-8").strip()
 DIDNT_CATCH = "Sorry, I didn't quite catch that. Could you say it again?"
 NOT_SURE = "I'm not sure I understand you, my friend. Ask me about this room, or about my painting."
 KEEP_AUDIO_FILES = 20
@@ -76,6 +80,12 @@ def transcribe(wav):
 
 
 def reply(text):
+    if PERSONA_YEAR == "1888":
+        hit = ASKED_AFTER_1888.search(text)
+        if hit:
+            log.info("guard: question mentions post-cutoff topic %r", hit.group(0))
+            return NOT_SURE
+
     body = {
         "model": OLLAMA_MODEL,
         "messages": [{"role": "system", "content": PERSONA}, {"role": "user", "content": text}],
@@ -90,7 +100,7 @@ def reply(text):
     # also drops a last sentence that num_predict cut off halfway.
     sentences = re.findall(r"[^.!?]*[.!?]+[\"')\]]*", answer) or [answer]
     answer = " ".join(sentence.strip() for sentence in sentences[:3])
-    hit = AFTER_1888.search(answer)
+    hit = AFTER_1888.search(answer) if PERSONA_YEAR == "1888" else None
     if hit:
         log.info("guard: %r is after October 1888; replied with the fallback line", hit.group(0))
         return NOT_SURE
@@ -120,7 +130,7 @@ def answer_recording(npc, audio, with_voice):
     t0 = time.perf_counter()
     transcript = transcribe(wav)
     t1 = time.perf_counter()
-    asked = ASKED_AFTER_1888.search(transcript)
+    asked = ASKED_AFTER_1888.search(transcript) if PERSONA_YEAR == "1888" else None
     if not transcript:
         text = DIDNT_CATCH  # nothing heard: don't ask the model
     elif asked:

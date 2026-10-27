@@ -315,8 +315,11 @@ namespace InnerFrame.EditorTools
             {
                 camera.transform.position+=Vector3.right; camera.transform.Rotate(0,30,0);
                 Require(panel.position==position && panel.rotation==rotation,"Panel followed camera.");
-                foreach(var text in display.GetComponentsInChildren<TMP_Text>().Concat(panel.GetComponentsInChildren<TMP_Text>()))
-                { text.ForceMeshUpdate(); Require(!text.isTextOverflowing,"TMP overflow: "+text.name); }
+                var panelCanvas=panel.GetComponentInChildren<Canvas>(true);
+                Require(panelCanvas!=null,"Figma detail Canvas missing during layout validation.");
+                ArtworkFigmaPanel.Check((RectTransform)panelCanvas.transform);
+                foreach(var text in display.GetComponentsInChildren<TMP_Text>(true).Where(t=>!t.transform.IsChildOf(panelCanvas.transform)))
+                { text.ForceMeshUpdate(); Require(!text.isTextOverflowing,"Placard TMP overflow: "+text.name); }
             }
             finally { camera.transform.SetPositionAndRotation(oldPosition,oldRotation); }
             ClickThroughUIRaycast(panel.GetComponent<ArtworkDetailPanel>().CloseButton,camera); Require(!display.IsOpen,"Close failed.");

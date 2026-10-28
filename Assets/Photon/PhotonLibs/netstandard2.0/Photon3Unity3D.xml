@@ -260,6 +260,11 @@
         <member name="F:ExitGames.Client.Photon.EnetPeer.datagramEncryptedConnection">
             <summary>Gets enabled by "request" from server (not by client).</summary>
         </member>
+        <member name="F:ExitGames.Client.Photon.EnetPeer.datagramValidLength">
+            <summary>Number of valid bytes to parse for the datagram currently being read (the decrypted length for
+            datagram-encrypted connections, where the reused decrypt buffer can be longer than the valid data). Set in
+            ReceiveIncomingCommands and read in NCommand.Initialize on the same receive thread, so no lock is needed.</summary>
+        </member>
         <member name="F:ExitGames.Client.Photon.EnetPeer.PeerIdForConnect">
             <summary>Initial PeerId as used in Connect command. If EnableServerTracing is false.</summary>
         </member>

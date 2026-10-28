@@ -91,7 +91,7 @@ namespace InnerFrame.EditorTools
                 var camera = new GameObject("Desktop Test Camera", typeof(Camera), typeof(AudioListener), typeof(ArtworkDesktopCamera));
                 camera.tag = "MainCamera"; camera.transform.position = new Vector3(0,1.5f,0);
                 camera.GetComponent<Camera>().nearClipPlane = 0.03f;
-                camera.GetComponent<Camera>().fieldOfView = 60;
+                camera.GetComponent<Camera>().fieldOfView = 40;
                 placard.GetComponent<ArtworkInfoDisplay>().Configure(placard.GetComponentInChildren<Button>(),
                     detailAsset.GetComponent<ArtworkDetailPanel>(), detail.GetComponent<ArtworkDetailPanel>(), camera.GetComponent<Camera>());
                 foreach (var canvas in placard.GetComponentsInChildren<Canvas>()) canvas.worldCamera = camera.GetComponent<Camera>();
@@ -100,12 +100,8 @@ namespace InnerFrame.EditorTools
                 events.AddComponent<ArtworkDesktopInput>();
                 var bright = Material("Test Warm White",new Color(0.9f,0.9f,0.88f),0,0.1f);
                 var dark = Material("Test Slate",new Color(0.10f,0.14f,0.18f),0,0.1f);
-                Cube("Bright background left",new Vector3(-1.2f,1.5f,2.48f),new Vector3(2.4f,2.5f,0.10f),bright);
-                Cube("Dark background right",new Vector3(1.2f,1.5f,2.48f),new Vector3(2.4f,2.5f,0.10f),dark);
-                // These are environment objects, never children/backing of the floating panel.
-                for (int i=0;i<6;i++)
-                    Cube("Contrast marker "+i,new Vector3(-0.9f+i*0.36f,1.5f,2.40f),new Vector3(0.028f,1.8f,0.015f),i<3?dark:bright);
-                Cube("Placard mounting surface",new Vector3(0,1.5f,1.68f),new Vector3(0.72f,0.68f,0.10f),bright);
+                // Single wall behind the label; no oversized mounting slab or contrast bars.
+                Cube("Neutral museum wall",new Vector3(0,1.5f,1.655f),new Vector3(5,3,0.10f),bright);
                 Cube("Floor", new Vector3(0,-0.04f,1), new Vector3(6,0.08f,6), ivory);
                 var light = new GameObject("Soft key", typeof(Light)).GetComponent<Light>();
                 light.type = LightType.Directional; light.intensity = 1.1f; light.shadows = LightShadows.Soft;
@@ -148,42 +144,40 @@ namespace InnerFrame.EditorTools
 
         static GameObject Placard(ArtworkDetailPanel detail)
         {
-            // Figma 3:38: crop to the 248 x 236 ivory region; 3 canvas units per design pixel.
-            var go = new GameObject("ArtworkWallPlacard");
-            var paper=Material("Gloss coated ivory paper",new Color32(243,240,230,255),0,0.58f);
-            MeshPart(go.transform,"Ivory paper board",0.744f,0.708f,0.012f,0.001f,paper,0);
-            MeshPart(go.transform,"Finished rear",0.738f,0.702f,0.002f,0.0005f,back,0.006f);
-            var canvas=Surface(go.transform,new Vector2(744,708),0.012f);
+            // Museum label: 220 x 306 mm with a visible More control, 3 mm thick.
+            var go=new GameObject("ArtworkWallPlacard");
+            var paper=Material("Museum matte white",Color.white,0,0.12f);
+            MeshPart(go.transform,"White label",0.22f,0.3055556f,0.003f,0.0004f,paper,0);
+            var canvas=Surface(go.transform,new Vector2(540,750),0.003f);
+            canvas.localScale=Vector3.one*(0.22f/540f);
             var serif=AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(folder+"/CormorantGaramond-Medium SDF.asset");
-            Require(serif!=null,"Generated Cormorant Medium SDF required for Figma placard.");
-            PlacardText(canvas,serif,"Title — 3:60","THE BEDROOM",19,25,112,19,16,19);
-            PlacardText(canvas,serif,"Metadata — 3:62","Vincent van Gogh · 1889\nOil on canvas\nArt Institute of Chicago",19,48,115,45,12,15);
-            var buttonRect=PlacardSlot(canvas,"MORE — 3:49",173,195,63,27);
-            var tint=new Texture2D(252,108,TextureFormat.RGBA32,false){name="Figma More pill",wrapMode=TextureWrapMode.Clamp};
-            for(int y=0;y<tint.height;y++) for(int x=0;x<tint.width;x++)
-            {
-                float px=(x+0.5f)/4, py=(y+0.5f)/4;
-                float dx=Mathf.Max(Mathf.Abs(px-31.5f)-18,0);
-                float distance=Mathf.Sqrt(dx*dx+(py-13.5f)*(py-13.5f));
-                float alpha=Mathf.Clamp01((13.5f-distance)*4);
-                var c=Color.Lerp(new Color32(232,217,194,255),new Color32(224,210,188,255),(px+py)/90);
-                c.a=alpha; tint.SetPixel(x,y,c);
-            }
-            tint.Apply(); AssetDatabase.CreateAsset(tint,folder+"/Figma More pill.asset");
-            var graphic=buttonRect.gameObject.AddComponent<RawImage>(); graphic.texture=tint;
-            var more=buttonRect.gameObject.AddComponent<Button>(); more.targetGraphic=graphic;
-            var colors=more.colors; colors.highlightedColor=new Color(.94f,.92f,.88f); colors.pressedColor=new Color(.82f,.80f,.76f); more.colors=colors;
+            Require(serif!=null,"Museum label requires the generated licensed serif font.");
+            PlacardText(canvas,serif,"Title","The Bedroom",15,16,124,16,12,15);
+            canvas.Find("Title").GetComponent<TMP_Text>().fontStyle=FontStyles.Bold;
+            PlacardText(canvas,serif,"Artist","Vincent van Gogh",15,34,145,14,10,13);
+            PlacardText(canvas,serif,"Metadata","1889\nOil on canvas\n72.4 × 90.7 cm\nThe Art Institute of Chicago",15,64,152,56,9.5f,14);
+            var rule=PlacardSlot(canvas,"Divider",15,126,145,0.35f).gameObject.AddComponent<Image>();
+            rule.color=new Color(.70f,.70f,.70f); rule.raycastTarget=false;
+            PlacardText(canvas,serif,"Description","Van Gogh painted his bedroom\nin Arles as a personal refuge.\nThe simple furnishings and\nvivid colors reflect his desire\nfor rest and renewal.",15,136,152,72,9.5f,14);
+            var hit=PlacardSlot(canvas,"More",120,218,45,24).gameObject.AddComponent<Image>();
+            hit.color=Color.white;
+            var outline=hit.gameObject.AddComponent<Outline>(); outline.effectColor=new Color(.65f,.65f,.65f); outline.effectDistance=new Vector2(1,-1);
+            var more=hit.gameObject.AddComponent<Button>(); more.targetGraphic=hit;
+            var colors=more.colors; colors.normalColor=new Color(.94f,.94f,.94f);
+            colors.highlightedColor=new Color(.83f,.83f,.83f);
+            colors.pressedColor=new Color(.70f,.70f,.70f); more.colors=colors;
             more.navigation=new Navigation{mode=Navigation.Mode.None};
-            PlacardText(canvas,serif,"MORE label — 3:57","MORE",182,201,34,15,12,15);
-            // Bundled Latin font subsets contain no U+2192. Use a separate UI arrow,
-            // keeping the Figma 8 x 15 slot and avoiding platform font fallback.
-            var arrow=PlacardSlot(canvas,"Arrow — 3:66",219,201,8,15);
-            ArrowStroke(arrow,"Shaft",new Vector2(0,0),new Vector2(22,1.5f),0);
-            ArrowStroke(arrow,"Upper head",new Vector2(7,3),new Vector2(9,1.5f),-45);
-            ArrowStroke(arrow,"Lower head",new Vector2(7,-3),new Vector2(9,1.5f),45);
+            PlacardText(canvas,serif,"More label","More",130,223,30,15,10,14);
+            var icon=PlacardSlot(canvas,"Headphone icon",148,14,13,15);
+            for(int i=0;i<20;i++)
+            {
+                float angle=(i+.5f)*Mathf.PI/20;
+                ArrowStroke(icon,"Arch "+i,new Vector2(Mathf.Cos(angle)*17,Mathf.Sin(angle)*17-3),new Vector2(3.6f,3.2f),angle*Mathf.Rad2Deg+90);
+            }
+            ArrowStroke(icon,"Left ear",new Vector2(-15,-7),new Vector2(6,15),0);
+            ArrowStroke(icon,"Right ear",new Vector2(15,-7),new Vector2(6,15),0);
+            PlacardText(canvas,serif,"Audio number","12",164,20,10,12,8,11);
             go.AddComponent<ArtworkInfoDisplay>().Configure(more,detail);
-            Cube("Rear mount upper",new Vector3(0,0.17f,0.010f),new Vector3(0.42f,0.025f,0.006f),back,go.transform);
-            Cube("Rear mount lower",new Vector3(0,-0.17f,0.010f),new Vector3(0.42f,0.025f,0.006f),back,go.transform);
             return go;
         }
         static void ArrowStroke(RectTransform parent,string name,Vector2 position,Vector2 size,float angle)
@@ -200,7 +194,7 @@ namespace InnerFrame.EditorTools
             var go=new GameObject(name,typeof(RectTransform)); go.layer=canvas.gameObject.layer;
             var rect=(RectTransform)go.transform; rect.SetParent(canvas,false);
             rect.sizeDelta=new Vector2(w,h)*3;
-            rect.anchoredPosition=new Vector2(x+w/2-124,118-y-h/2)*3;
+            rect.anchoredPosition=new Vector2(x+w/2-90,125-y-h/2)*3;
             return rect;
         }
         static void PlacardText(RectTransform canvas,TMP_FontAsset font,string name,string value,float x,float y,float w,float h,float size,float leading)
@@ -366,15 +360,20 @@ namespace InnerFrame.EditorTools
             var oldPosition=camera.transform.position; var oldRotation=camera.transform.rotation;
             try
             {
-                camera.transform.position+=Vector3.right; camera.transform.Rotate(0,30,0);
-                Require(panel.position==position && panel.rotation==rotation,"Panel followed camera.");
+                camera.transform.position+=Vector3.right;
+                camera.transform.Rotate(20,30,10);
+                Require(panel.position==position && panel.rotation==rotation,
+                    "Panel moved after opening.");
                 var panelCanvas=panel.GetComponentInChildren<Canvas>(true);
                 Require(panelCanvas!=null,"Figma detail Canvas missing during layout validation.");
                 ArtworkFigmaPanel.Check((RectTransform)panelCanvas.transform);
                 foreach(var text in display.GetComponentsInChildren<TMP_Text>(true).Where(t=>!t.transform.IsChildOf(panelCanvas.transform)))
                 { text.ForceMeshUpdate(); Require(!text.isTextOverflowing,"Placard TMP overflow: "+text.name); }
             }
-            finally { camera.transform.SetPositionAndRotation(oldPosition,oldRotation); }
+            finally
+            {
+                camera.transform.SetPositionAndRotation(oldPosition,oldRotation);
+            }
             ClickThroughUIRaycast(panel.GetComponent<ArtworkDetailPanel>().CloseButton,camera); Require(!display.IsOpen,"Close failed.");
             display.MoreButton.onClick.Invoke(); Require(display.IsOpen && display.PanelTransform==panel,"Reopen failed.");
             display.Close();

@@ -5,7 +5,7 @@ using Unity.XR.CoreUtils;
 
 namespace InnerFrame.ArtworkInfo
 {
-    /// <summary>Placard controller. The separate detail panel never inherits rig scale or motion.</summary>
+    /// <summary>Placard controller. Only the detail instance follows the head camera; the placard stays fixed.</summary>
     [DisallowMultipleComponent]
     public sealed class ArtworkInfoDisplay : MonoBehaviour
     {
@@ -23,9 +23,7 @@ namespace InnerFrame.ArtworkInfo
         {
             get
             {
-                if (viewingCamera != null) return viewingCamera;
-                var origin = FindAnyObjectByType<XROrigin>();
-                return origin != null && origin.Camera != null ? origin.Camera : Camera.main;
+                return ArtworkHeadFollow.Resolve(viewingCamera);
             }
         }
         public void Configure(Button more, ArtworkDetailPanel prefab, ArtworkDetailPanel instance = null, Camera camera = null)
@@ -55,13 +53,12 @@ namespace InnerFrame.ArtworkInfo
             }
             panel.transform.SetParent(null, true);
             panel.transform.localScale = Vector3.one;
-            Vector3 forward = Vector3.ProjectOnPlane(eyes.transform.forward, Vector3.up);
-            if (forward.sqrMagnitude < 0.0001f) forward = Vector3.ProjectOnPlane(eyes.transform.up, Vector3.up);
-            forward.Normalize();
-            panel.transform.SetPositionAndRotation(eyes.transform.position + forward * Mathf.Clamp(panelDistance, 1.2f, 1.5f),
-                Quaternion.LookRotation(forward, Vector3.up));
+
             panel.SetCamera(eyes);
             panel.gameObject.SetActive(true);
+            var follow = panel.GetComponent<ArtworkHeadFollow>();
+            if (follow == null) follow = panel.gameObject.AddComponent<ArtworkHeadFollow>();
+            follow.Begin(eyes, panelDistance);
         }
         public void Close()
         {

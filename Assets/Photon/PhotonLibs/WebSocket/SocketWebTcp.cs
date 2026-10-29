@@ -319,10 +319,14 @@ namespace ExitGames.Client.Photon
                     data = trimmedData;
                 }
 
-                if (this.sock != null)
+                if (this.sock == null)
                 {
-                    this.sock.Send(data);
+                    // a Disconnect() may null the socket while a send is in progress: report Skipped instead of
+                    // silently returning Success for a message that was never sent
+                    return PhotonSocketError.Skipped;
                 }
+
+                this.sock.Send(data);
             }
             catch (Exception e)
             {
@@ -352,7 +356,10 @@ namespace ExitGames.Client.Photon
 
             try
             {
-                this.HandleReceivedDatagram(buf, len, false);
+                // willBeReused must be true: the JsLib implementation re-uses its receiveBuffer across messages
+                // (WebSocket.RecvCallbackInstance), so the DEBUG network-sim path has to copy before deferring.
+                // websocket-sharp delivers a fresh array per message but can use the same (safe) flag.
+                this.HandleReceivedDatagram(buf, len, true);
             }
             catch (Exception e)
             {

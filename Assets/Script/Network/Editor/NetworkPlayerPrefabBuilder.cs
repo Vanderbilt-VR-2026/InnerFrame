@@ -39,6 +39,7 @@ public static class NetworkPlayerPrefabBuilder
         visor.GetComponent<Renderer>().sharedMaterial = VisorMaterial();
         player.leftHand = Part(root.transform, "LeftHand", PrimitiveType.Sphere, Vector3.one * 0.08f);
         player.rightHand = Part(root.transform, "RightHand", PrimitiveType.Sphere, Vector3.one * 0.08f);
+        NetworkPlayerVoiceBuilder.AddTo(root, player.head); // voice chat (Assets/Script/Voice)
 
         PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
     }

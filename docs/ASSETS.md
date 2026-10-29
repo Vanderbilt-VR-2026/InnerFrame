@@ -66,11 +66,13 @@ re-import the vendor's newer package instead of editing files here.
 | Folder | What it is | Source | Version | License |
 |---|---|---|---|---|
 | `Assets/Photon` | Photon Fusion 2 networking SDK (Shared Mode multiplayer): `Fusion/` runtime, editor and code-gen assemblies; `PhotonLibs/` Photon Realtime client libraries | Exit Games, Photon Engine (photonengine.com), Fusion 2 SDK download | 2.0.13 Stable, build 2379 (`Fusion/build_info.txt`) | Photon SDK license terms from Exit Games, **to be verified for redistribution in a public repo**. Bundled components: NanoSockets (MIT, `Fusion/Plugins/NanoSockets/libnanosockets_LICENSE.txt`), websocket-sharp (MIT, Exit Games fork, see `PhotonLibs/WebSocket/websocket-sharp.README`), JetBrains Mono font (SIL Open Font License, `OFL.txt` files). |
+| `Assets/Photon/PhotonVoice` | Photon Voice 2: voice chat between players, with its Fusion integration (`FusionVoiceClient`, `VoiceNetworkObject`, `Recorder`, `Speaker`). Used by `Assets/Script/Voice` (see `docs/voice/README.md`). Demos, PUN and Chat folders not imported | Exit Games, Photon Engine (photonengine.com), Photon Voice 2 from the Unity Asset Store | 2.64 (Sep 30, 2026; `PhotonVoice/changes-voice.txt`). Its import updated the shared `Assets/Photon/PhotonLibs` to Photon Realtime v4.1.8.23 and added `Assets/Photon/PhotonRealtime`; Fusion 2.0.13 connects with it (tested in the Editor, 2026-10-27) | Photon SDK license terms from Exit Games, **to be verified for redistribution in a public repo** (same open question as Fusion above). Service: Photon Voice free plan, 20 CCU, 60 GB/month, development only (https://www.photonengine.com/voice/pricing, checked 2026-10-27). Bundled third-party components: list from the package's license files on import. |
 
 Not committed (see `.gitignore`): `Assets/Photon/Fusion/Resources/PhotonAppSettings.asset`,
 which holds the Photon App ID (a per-project key; each machine enters it, see
 `docs/multiplayer/README.md`), and the vendor's optional sample packages
-`Assets/Photon/FusionDemos/` (intro sample) and `Assets/Photon/FusionMenu/` (menu sample).
+`Assets/Photon/FusionDemos/` (intro sample), `Assets/Photon/FusionMenu/` (menu sample)
+and `Assets/Photon/PhotonVoice/Demos/` (Voice samples).
 
 ## Package samples (third-party)
 

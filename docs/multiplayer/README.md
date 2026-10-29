@@ -177,4 +177,4 @@ sample) driving the Editor player.
 - Hinged doors (`BedroomHingedDoor`) and anything that isn't a grab object.
 - Objects created at runtime. Spawn those with `Runner.Spawn` from a
   prefab that has a Network Object.
-- Voice.
+- Voice: see `docs/voice/README.md` (push-to-talk with Photon Voice).

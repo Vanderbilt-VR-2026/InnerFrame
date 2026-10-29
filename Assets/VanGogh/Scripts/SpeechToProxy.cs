@@ -37,6 +37,54 @@ public class SpeechToProxy : MonoBehaviour
     /// each question as the form field "scene". Empty: not sent. Set by MirrorScene; the Gallery portrait never sets it.</summary>
     public string SceneContext { get; set; }
 
+    // ---- Shared Vincent (multiplayer, #65 follow-up): hooks used by Assets/Script/Network/VincentLink.cs ----
+
+    /// <summary>Recording a question or waiting for its answer, on this headset.</summary>
+    public bool IsAsking => state == State.Recording || state == State.Waiting;
+
+    /// <summary>An answer arrived from the proxy and is starting to play here: (transcript, reply, audio_url).</summary>
+    public event Action<string, string, string> Answered;
+
+    /// <summary>Another player is asking him, by name ("Player 2"); `null` when no one is. While set, B does nothing
+    /// here and the hint says who is asking.</summary>
+    public string BlockedBy
+    {
+        get => blockedBy;
+        set { blockedBy = value; if (state == State.Idle) SetState(State.Idle); }   // refresh the hint
+    }
+    string blockedBy;
+
+    /// <summary>Plays an answer another player got: his voice from the same proxy (audio_url), and his words. If this
+    /// headset can't reach that proxy, the words still show, timed as if he spoke them.</summary>
+    public void SayRemote(string asker, string transcript, string reply, string audioUrl)
+    {
+        if (state == State.Recording || state == State.Waiting) return;   // never cut into our own question
+        StartCoroutine(PlayRemote(asker, transcript, reply, audioUrl));
+    }
+
+    IEnumerator PlayRemote(string asker, string transcript, string reply, string audioUrl)
+    {
+        var settings = AIProxySettings.Current;
+        AudioClip clip = null;
+        if (!string.IsNullOrEmpty(audioUrl))
+            using (var req = UnityWebRequestMultimedia.GetAudioClip(settings.serverUrl.TrimEnd('/') + audioUrl, AudioType.WAV))
+            {
+                Prepare(req, settings);
+                yield return req.SendWebRequest();
+                if (req.result == UnityWebRequest.Result.Success) clip = DownloadHandlerAudioClip.GetContent(req);
+                else Debug.LogWarning($"[VanGogh] {asker}'s answer: {req.url}: {req.responseCode} {req.error}; showing his words only");
+            }
+        if (state == State.Recording || state == State.Waiting) yield break;
+        if (clip == null)   // silence as long as his words would take, so the caption pages through them
+            clip = AudioClip.Create("silence", Mathf.CeilToInt(Mathf.Max(2f, 0.06f * reply.Length) * 22050), 1, 22050, false);
+        LastReply = reply;
+        Say(clip, reply);
+        if (caption != null && !string.IsNullOrEmpty(transcript))
+            caption.Hint($"{asker} asked: “{(transcript.Length > 60 ? transcript.Substring(0, 57) + "…" : transcript)}”");
+        Debug.Log($"[VanGogh] {asker} asked \"{transcript}\"; he said \"{reply}\" (shared)");
+    }
+    // ---- end shared Vincent hooks ----
+
     enum State { Idle, Recording, Waiting, Playing, Error }
     State state;
     InputAction talk;
@@ -99,6 +147,7 @@ public class SpeechToProxy : MonoBehaviour
     {
         // Only the talker in the scene the player is in listens, and never while a question is in flight.
         if (gameObject.scene != SceneManager.GetActiveScene() || state == State.Waiting || state == State.Recording) return;
+        if (blockedBy != null) return;   // shared Vincent: another player is asking him
 #if UNITY_ANDROID && !UNITY_EDITOR
         if (!UnityEngine.Android.Permission.HasUserAuthorizedPermission(UnityEngine.Android.Permission.Microphone))
         {
@@ -185,6 +234,7 @@ public class SpeechToProxy : MonoBehaviour
         }
         LastReply = answer.reply;
         Say(clip, answer.reply);
+        Answered?.Invoke(answer.transcript, answer.reply, answer.audio_url);   // shared Vincent: tell the room
         double playing = Time.realtimeSinceStartupAsDouble;
         var t = answer.timings_ms ?? new Timings();
         Debug.Log($"[VanGogh] release->response {Ms(released, responded)} ms, release->audio start {Ms(released, playing)} ms; " +
@@ -212,7 +262,10 @@ public class SpeechToProxy : MonoBehaviour
         if (caption == null) return;   // not built yet (edit-mode tests)
         switch (next)
         {
-            case State.Idle: caption.Hint($"Hold {ButtonKey} to ask Vincent", ButtonKey); break;
+            case State.Idle:
+                if (blockedBy != null) caption.Hint($"{blockedBy} is asking Vincent…");   // shared Vincent
+                else caption.Hint($"Hold {ButtonKey} to ask Vincent", ButtonKey);
+                break;
             case State.Recording: caption.Hint("Listening…"); break;
             case State.Waiting: caption.Hint("Vincent is thinking…"); break;
             case State.Error: caption.Hint("Vincent can't hear you right now"); break;

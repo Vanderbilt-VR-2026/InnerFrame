@@ -88,6 +88,9 @@ public class SceneFader : MonoBehaviour
 
         yield return Fade(0f, 1f, fadeTime);              // fade out
 
+        if (NetworkSession.Instance != null)              // leave this scene's multiplayer room
+            yield return NetworkSession.Instance.Leave();
+
         var op = SceneManager.LoadSceneAsync(sceneName);  // load new scene
         while (!op.isDone) yield return null;
 

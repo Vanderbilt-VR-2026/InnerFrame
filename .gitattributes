@@ -83,6 +83,19 @@
 *.[oO][tT][fF] filter=lfs diff=lfs merge=lfs -text
 *.[tT][tT][fF] filter=lfs diff=lfs merge=lfs -text
 
+# Compiled libraries (plugins and SDKs such as Photon Fusion: managed .dll and
+# its .dll.debug/.dll.release variants, native .so/.a/.dylib)
+*.[dD][lL][lL] filter=lfs diff=lfs merge=lfs -text
+*.[dD][lL][lL].[dD][eE][bB][uU][gG] filter=lfs diff=lfs merge=lfs -text
+*.[dD][lL][lL].[rR][eE][lL][eE][aA][sS][eE] filter=lfs diff=lfs merge=lfs -text
+*.[sS][oO] filter=lfs diff=lfs merge=lfs -text
+*.[aA] filter=lfs diff=lfs merge=lfs -text
+*.[dD][yY][lL][iI][bB] filter=lfs diff=lfs merge=lfs -text
+*.[aA][aA][rR] filter=lfs diff=lfs merge=lfs -text
+*.[bB][uU][nN][dD][lL][eE] filter=lfs diff=lfs merge=lfs -text
+*.[pP][rR][iI] filter=lfs diff=lfs merge=lfs -text
+*.[wW][iI][nN][mM][dD] filter=lfs diff=lfs merge=lfs -text
+
 # Unity binaries (LightingData.asset must stay below *.asset so LFS wins)
 *.[uU][nN][iI][tT][yY][pP][aA][cC][kK][aA][gG][eE] filter=lfs diff=lfs merge=lfs -text
 *.[bB][yY][tT][eE][sS] filter=lfs diff=lfs merge=lfs -text

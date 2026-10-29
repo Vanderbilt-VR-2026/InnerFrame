@@ -122,3 +122,20 @@ __MACOSX/
 # Playwright install for the Painted Bedroom web tools, and local notes
 node_modules/
 /notes/
+
+# Photon Fusion: the App ID is a per-project key and this repo is public,
+# so each machine enters it locally (see docs/multiplayer/README.md).
+/Assets/Photon/Fusion/Resources/PhotonAppSettings.asset
+/Assets/Photon/Fusion/Resources/PhotonAppSettings.asset.meta
+# Photon's optional intro sample package, not used by the project
+/Assets/Photon/FusionDemos/
+/Assets/Photon/FusionDemos.meta
+/Assets/Photon/FusionMenu/
+/Assets/Photon/FusionMenu.meta
+# Photon Voice's samples, not used by the project (docs/voice/README.md)
+/Assets/Photon/PhotonVoice/Demos/
+/Assets/Photon/PhotonVoice/Demos.meta
+# Photon Voice's manuals (large, not needed in the repo)
+/Assets/Photon/PhotonVoice-Documentation.*
+# Photon Voice's Icons folder: the macOS "Icon?" rule above also matches it
+!/Assets/Photon/PhotonVoice/Icons/

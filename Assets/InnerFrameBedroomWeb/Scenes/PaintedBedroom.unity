@@ -7462,15 +7462,6 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 2289128580828663210, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1992953114}
-    - targetCorrespondingSourceObject: {fileID: 2289128580828663210, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1992953128}
-    - targetCorrespondingSourceObject: {fileID: 2289128580828663210, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1992953127}
-    - targetCorrespondingSourceObject: {fileID: 2289128580828663210, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1992953126}
     - targetCorrespondingSourceObject: {fileID: 595243207967813413, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 116398513}
@@ -13143,55 +13134,6 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.32999992, y: 0.52957606, z: 0.021194458}
   m_Center: {x: 0, y: 0.29524386, z: -0.004898548}
---- !u!114 &1992953126
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1158952876}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ff4ccebf05df545c39290dedb543d2c0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::NetworkGrabbable
---- !u!114 &1992953127
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1158952876}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
-  _stateAuthorityChangeErrorCorrectionDelta: 0
-  SyncScale: 0
-  SyncParent: 0
-  _autoAOIOverride: 1
-  DisableSharedModeInterpolation: 0
---- !u!114 &1992953128
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1158952876}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
-  SortKey: 22054418
-  ObjectInterest: 1
-  Flags: 524289
-  NestedObjects: []
-  NetworkedBehaviours:
-  - {fileID: 1992953127}
-  - {fileID: 1992953126}
-  ForceRemoteRenderTimeframe: 0
 --- !u!114 &2001849100
 MonoBehaviour:
   m_ObjectHideFlags: 0

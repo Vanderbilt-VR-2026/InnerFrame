@@ -81,6 +81,10 @@ every movable object (each one with a `PaintedBedroomMovable` and an XR Grab
 Interactable) and skips the ones that already have it, so it's safe to run
 again.
 
+The one exception is Vincent's **Mirror**: it's shared by `MirrorLink` (PR
+#120) instead, so the menu leaves it out and, if an older run made it shared,
+takes `NetworkGrabbable`, `NetworkTransform` and `NetworkObject` off it again.
+
 The bedroom's own scripts work with shared objects:
 
 - Carrying or inspecting an object on desktop asks to own it first, so the

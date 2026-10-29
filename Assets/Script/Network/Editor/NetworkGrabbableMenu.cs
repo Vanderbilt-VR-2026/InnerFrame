@@ -34,7 +34,10 @@ public static class NetworkGrabbableMenu
     [MenuItem(MenuPath, true)]
     static bool CanMakeShared() => Selection.gameObjects.Length > 0;
 
-    // every object the bedroom builder made movable (it has the XR Grab Interactable), in the open scenes
+    // Vincent's mirror (MirrorScene, #77) is shared by its own MirrorLink (PR #120); two syncs on it would fight
+    const string MirrorName = "Mirror";
+
+    // every object the bedroom builder made movable (it has the XR Grab Interactable), in the open scenes, except the mirror
     [MenuItem(BedroomMenuPath)]
     static void MakeBedroomShared()
     {
@@ -42,6 +45,7 @@ public static class NetworkGrabbableMenu
         foreach (var m in Object.FindObjectsByType<PaintedBedroomMovable>(FindObjectsInactive.Include, FindObjectsSortMode.None))
         {
             if (EditorUtility.IsPersistent(m) || !m.GetComponent<XRGrabInteractable>()) continue;
+            if (m.name == MirrorName) { Unshare(m.gameObject); continue; }
             if (m.GetComponent<NetworkGrabbable>()) { already++; continue; }
             Undo.AddComponent<NetworkGrabbable>(m.gameObject);
             EditorSceneManager.MarkSceneDirty(m.gameObject.scene);
@@ -51,6 +55,20 @@ public static class NetworkGrabbableMenu
             Debug.LogWarning("[NetworkGrabbable] No Painted Bedroom objects found: open Assets/InnerFrameBedroomWeb/Scenes/PaintedBedroom.unity first (outside Play mode), then run this again.");
         else
             Debug.Log($"[NetworkGrabbable] Painted Bedroom: made {added} object(s) shared ({already} already were). Save the scene to keep it.");
+    }
+
+    // takes off what MakeBedroomShared added (NetworkGrabbable first: it requires the other two)
+    static void Unshare(GameObject go)
+    {
+        var shared = go.GetComponent<NetworkGrabbable>();
+        if (shared == null) return;
+        Undo.DestroyObjectImmediate(shared);
+        var netTransform = go.GetComponent<Fusion.NetworkTransform>();
+        if (netTransform != null) Undo.DestroyObjectImmediate(netTransform);
+        var netObj = go.GetComponent<Fusion.NetworkObject>();
+        if (netObj != null) Undo.DestroyObjectImmediate(netObj);
+        EditorSceneManager.MarkSceneDirty(go.scene);
+        Debug.Log($"[NetworkGrabbable] {go.name} is no longer a shared grabbable: Vincent's mirror is shared by MirrorLink instead.", go);
     }
 
     [MenuItem(BedroomMenuPath, true)]

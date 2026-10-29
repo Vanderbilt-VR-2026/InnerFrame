@@ -330,7 +330,7 @@ namespace InnerFrame.PaintedBedroom.EditorTools
             sun.type = LightType.Directional;
             sun.color = new Color(1f, 0.95f, 0.86f);
             sun.intensity = 0f;   // kept in the scene (off) so #30 can bring a faint sun back if Rowling's test asks for depth cues
-            sun.shadows = LightShadows.Soft;
+            sun.shadows = LightShadows.None;   // the light is off (flat lighting), so a shadow pass would only cost draw calls (#98: up to 193 extra)
             sun.shadowStrength = 0.65f;
             sun.shadowBias = 0.03f;
             sun.shadowNormalBias = 0.25f;

@@ -73,6 +73,30 @@ Checklist for a new shared object:
    **Allow State Authority Override** on. `NetworkGrabbable` sets these
    automatically.
 
+### The Painted Bedroom
+
+Open `PaintedBedroom.unity`, run **InnerFrame → Multiplayer → Make Painted
+Bedroom Objects Shared**, and save the scene. It adds `NetworkGrabbable` to
+every movable object (each one with a `PaintedBedroomMovable` and an XR Grab
+Interactable) and skips the ones that already have it, so it's safe to run
+again.
+
+The one exception is Vincent's **Mirror**: it's shared by `MirrorLink` (PR
+#120) instead, so the menu leaves it out and, if an older run made it shared,
+takes `NetworkGrabbable`, `NetworkTransform` and `NetworkObject` off it again.
+
+The bedroom's own scripts work with shared objects:
+
+- Carrying or inspecting an object on desktop asks to own it first, so the
+  other players see it move.
+- **Backspace** (put everything back) moves each object once you own it, so
+  everyone sees the room reset.
+- An object with physics that rests until it's first grabbed stays woken
+  when its owner changes.
+
+Inspecting is still only on your screen apart from the move itself: the
+others see the object float in front of you, not why.
+
 Works on objects already in a scene and on prefabs. For a bedroom prefab
 (`Assets/VanGoghBedroom/Prefabs/Tumbler.prefab` and the others), add it to the
 prefab so every scene using it gets it. The bedroom belongs to Rowling, so

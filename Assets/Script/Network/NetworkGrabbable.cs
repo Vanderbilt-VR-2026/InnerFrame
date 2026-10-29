@@ -19,15 +19,33 @@ public class NetworkGrabbable : NetworkBehaviour, IStateAuthorityChanged
 {
     XRGrabInteractable grab;
     Rigidbody body;
-    bool startsKinematic;
+    bool following;       // not the owner: kinematic, following the Network Transform
+    bool ownKinematic;    // what the object had before it started following, given back when it's ours again
+    System.Action whenOwned;
 
     bool Online => Object != null && Object.IsValid;
+
+    /// <summary>
+    /// Call before moving the object by code (not by an XR grab, which does this itself):
+    /// asks to own it, so the move is sent to everyone instead of being overwritten.
+    /// </summary>
+    public void Claim()
+    {
+        if (Online && !HasStateAuthority) Object.RequestStateAuthority();
+    }
+
+    /// <summary>Runs <paramref name="action"/> now if this player owns the object (or is offline), or once they do.</summary>
+    public void WhenOwned(System.Action action)
+    {
+        if (!Online || HasStateAuthority) { action(); return; }
+        whenOwned += action;
+        Claim();
+    }
 
     void Awake()
     {
         grab = GetComponent<XRGrabInteractable>();
         body = GetComponent<Rigidbody>();
-        startsKinematic = body.isKinematic;
         grab.selectEntered.AddListener(OnGrabbed);
         grab.selectExited.AddListener(OnReleased);
     }
@@ -46,21 +64,36 @@ public class NetworkGrabbable : NetworkBehaviour, IStateAuthorityChanged
         if (!HasStateAuthority && grab.isSelected && grab.interactionManager != null)
             grab.interactionManager.CancelInteractableSelection((IXRSelectInteractable)grab);
         ApplyOwnership();
+        if (HasStateAuthority && whenOwned != null)
+        {
+            var run = whenOwned;
+            whenOwned = null;
+            run();
+        }
     }
 
-    void OnGrabbed(SelectEnterEventArgs args)
-    {
-        if (Online && !HasStateAuthority) Object.RequestStateAuthority();
-    }
+    void OnGrabbed(SelectEnterEventArgs args) => Claim();
 
     // XRI puts the Rigidbody back the way it was at grab time; set it from ownership instead.
     void OnReleased(SelectExitEventArgs args) => ApplyOwnership();
 
     // Only the owner simulates physics; everyone else is kinematic and follows the Network Transform.
+    // The owner's own setting (kinematic or physics, which other scripts may change, such as the
+    // Painted Bedroom waking an object on its first grab) is kept aside meanwhile and given back.
     void ApplyOwnership()
     {
         if (!Online || grab.isSelected) return;
-        body.isKinematic = startsKinematic || !HasStateAuthority;
+        if (!HasStateAuthority)
+        {
+            if (!following) { ownKinematic = body.isKinematic; following = true; }
+            body.isKinematic = true;
+        }
+        else if (following)
+        {
+            // only ever back to physics here: a script that woke it on release (Painted Bedroom) stays woken
+            body.isKinematic = ownKinematic && body.isKinematic;
+            following = false;
+        }
     }
 
 #if UNITY_EDITOR

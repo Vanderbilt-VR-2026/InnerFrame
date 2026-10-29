@@ -42,6 +42,13 @@ namespace InnerFrame.PaintedBedroom
             if (grab != null) grab.selectExited.AddListener(_ => Wake());
         }
 
+        /// <summary>About to be moved by code (desktop carry, inspect): when shared, ask to own it so the move is seen by everyone.</summary>
+        public void Claim()
+        {
+            var shared = GetComponent<NetworkGrabbable>();
+            if (shared != null) shared.Claim();
+        }
+
         /// <summary>Picked up: an object resting until grabbed gets its physics.</summary>
         public void Wake()
         {
@@ -85,6 +92,13 @@ namespace InnerFrame.PaintedBedroom
 
         /// <summary>Back to where it is in the painting.</summary>
         public void ResetToPainting()
+        {
+            // shared (multiplayer): put back once it's ours, so everyone sees it go back
+            var shared = GetComponent<NetworkGrabbable>();
+            if (shared != null) shared.WhenOwned(PutBack); else PutBack();
+        }
+
+        void PutBack()
         {
             var rb = GetComponent<Rigidbody>();
             if (rb != null && !rb.isKinematic) { rb.linearVelocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }

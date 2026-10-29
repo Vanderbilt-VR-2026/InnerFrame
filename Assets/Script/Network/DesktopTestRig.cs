@@ -73,6 +73,8 @@ public class DesktopTestRig : MonoBehaviour
 
         var cc = go.AddComponent<CharacterController>();
         cc.height = 1.7f; cc.radius = 0.2f; cc.center = new Vector3(0f, 0.85f, 0f); cc.stepOffset = 0.25f;
+        // the Editor can run at 1000+ fps, so a frame's step is under the default 1 mm minimum and gets dropped
+        cc.minMoveDistance = 0f;
 
         var camGo = new GameObject("Camera");
         camGo.tag = "MainCamera";

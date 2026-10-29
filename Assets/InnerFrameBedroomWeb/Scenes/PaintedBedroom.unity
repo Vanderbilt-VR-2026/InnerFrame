@@ -141,6 +141,55 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 1138614579660804060, guid: 76b1cb2f956994db58fea31c1c8b3f94, type: 2}
+--- !u!114 &81398131
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952891}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff4ccebf05df545c39290dedb543d2c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkGrabbable
+--- !u!114 &81398132
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952891}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &81398133
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952891}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 1514556831
+  ObjectInterest: 1
+  Flags: 524289
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 81398132}
+  - {fileID: 81398131}
+  ForceRemoteRenderTimeframe: 0
 --- !u!114 &116398502
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -820,6 +869,104 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.16036797, y: 0.54166746, z: 0.42976308}
   m_Center: {x: 0.0013133287, y: 0.30094147, z: 0.00020802021}
+--- !u!114 &262828044
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952893}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff4ccebf05df545c39290dedb543d2c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkGrabbable
+--- !u!114 &262828045
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952893}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &262828046
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952893}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 2783527624
+  ObjectInterest: 1
+  Flags: 524289
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 262828045}
+  - {fileID: 262828044}
+  ForceRemoteRenderTimeframe: 0
+--- !u!114 &272072979
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952890}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff4ccebf05df545c39290dedb543d2c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkGrabbable
+--- !u!114 &272072980
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952890}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &272072981
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952890}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 1079629382
+  ObjectInterest: 1
+  Flags: 524289
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 272072980}
+  - {fileID: 272072979}
+  ForceRemoteRenderTimeframe: 0
 --- !u!114 &284073172
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1723,6 +1870,55 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.066358924, y: 0.19847071, z: 0.06635904}
   m_Center: {x: 0, y: 0.099235356, z: 0}
+--- !u!114 &484994477
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952879}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff4ccebf05df545c39290dedb543d2c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkGrabbable
+--- !u!114 &484994478
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952879}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &484994479
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952879}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 1165080147
+  ObjectInterest: 1
+  Flags: 524289
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 484994478}
+  - {fileID: 484994477}
+  ForceRemoteRenderTimeframe: 0
 --- !u!64 &531957610
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -1850,6 +2046,104 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: -2495876637792158741, guid: 76b1cb2f956994db58fea31c1c8b3f94, type: 2}
+--- !u!114 &599345139
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952912}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff4ccebf05df545c39290dedb543d2c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkGrabbable
+--- !u!114 &599345140
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952912}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &599345141
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952912}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 2862597373
+  ObjectInterest: 1
+  Flags: 524289
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 599345140}
+  - {fileID: 599345139}
+  ForceRemoteRenderTimeframe: 0
+--- !u!114 &608851228
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952888}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff4ccebf05df545c39290dedb543d2c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkGrabbable
+--- !u!114 &608851229
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952888}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &608851230
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952888}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 578214098
+  ObjectInterest: 1
+  Flags: 524289
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 608851229}
+  - {fileID: 608851228}
+  ForceRemoteRenderTimeframe: 0
 --- !u!114 &620074613
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3737,6 +4031,55 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: -5767639463510307142, guid: 76b1cb2f956994db58fea31c1c8b3f94, type: 2}
+--- !u!114 &975555461
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952883}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff4ccebf05df545c39290dedb543d2c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkGrabbable
+--- !u!114 &975555462
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952883}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &975555463
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952883}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 3970055770
+  ObjectInterest: 1
+  Flags: 524289
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 975555462}
+  - {fileID: 975555461}
+  ForceRemoteRenderTimeframe: 0
 --- !u!114 &978990977
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3973,6 +4316,55 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: -28199972815221877, guid: 76b1cb2f956994db58fea31c1c8b3f94, type: 2}
+--- !u!114 &1014255781
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952878}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff4ccebf05df545c39290dedb543d2c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkGrabbable
+--- !u!114 &1014255782
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952878}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &1014255783
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952878}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 2196320786
+  ObjectInterest: 1
+  Flags: 524289
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 1014255782}
+  - {fileID: 1014255781}
+  ForceRemoteRenderTimeframe: 0
 --- !u!114 &1019785210
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6086,6 +6478,55 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1.1694047, y: 0.05050373, z: 1.3521981}
   m_Center: {x: 0, y: 1.0072682, z: 0}
+--- !u!114 &1150060032
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952873}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff4ccebf05df545c39290dedb543d2c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkGrabbable
+--- !u!114 &1150060033
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952873}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &1150060034
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952873}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 3037771261
+  ObjectInterest: 1
+  Flags: 524289
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 1150060033}
+  - {fileID: 1150060032}
+  ForceRemoteRenderTimeframe: 0
 --- !u!1001 &1158952861
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -6247,6 +6688,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 8265754660381411535, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1019785210}
+    - targetCorrespondingSourceObject: {fileID: 8265754660381411535, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 599345141}
+    - targetCorrespondingSourceObject: {fileID: 8265754660381411535, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 599345140}
+    - targetCorrespondingSourceObject: {fileID: 8265754660381411535, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 599345139}
     - targetCorrespondingSourceObject: {fileID: 2194616521071082373, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1623170857}
@@ -6298,6 +6748,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 2194616521071082373, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1623170841}
+    - targetCorrespondingSourceObject: {fileID: 2194616521071082373, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1623170860}
+    - targetCorrespondingSourceObject: {fileID: 2194616521071082373, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1623170859}
+    - targetCorrespondingSourceObject: {fileID: 2194616521071082373, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1623170858}
     - targetCorrespondingSourceObject: {fileID: 5001824296563954456, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1680457550}
@@ -6400,6 +6859,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 7185294785279478699, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 620074613}
+    - targetCorrespondingSourceObject: {fileID: 7185294785279478699, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 262828046}
+    - targetCorrespondingSourceObject: {fileID: 7185294785279478699, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 262828045}
+    - targetCorrespondingSourceObject: {fileID: 7185294785279478699, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 262828044}
     - targetCorrespondingSourceObject: {fileID: 5201479682869948762, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1083812508}
@@ -6445,6 +6913,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 5201479682869948762, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1083812494}
+    - targetCorrespondingSourceObject: {fileID: 5201479682869948762, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1917738563}
+    - targetCorrespondingSourceObject: {fileID: 5201479682869948762, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1917738562}
+    - targetCorrespondingSourceObject: {fileID: 5201479682869948762, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1917738561}
     - targetCorrespondingSourceObject: {fileID: 3788443885115758748, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 387829250}
@@ -6457,6 +6934,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 3788443885115758748, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 387829247}
+    - targetCorrespondingSourceObject: {fileID: 3788443885115758748, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 81398133}
+    - targetCorrespondingSourceObject: {fileID: 3788443885115758748, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 81398132}
+    - targetCorrespondingSourceObject: {fileID: 3788443885115758748, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 81398131}
     - targetCorrespondingSourceObject: {fileID: 4819084468507044985, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 450930178}
@@ -6469,6 +6955,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 4819084468507044985, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 450930175}
+    - targetCorrespondingSourceObject: {fileID: 4819084468507044985, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 272072981}
+    - targetCorrespondingSourceObject: {fileID: 4819084468507044985, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 272072980}
+    - targetCorrespondingSourceObject: {fileID: 4819084468507044985, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 272072979}
     - targetCorrespondingSourceObject: {fileID: 403353037994709676, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 284073175}
@@ -6481,6 +6976,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 403353037994709676, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 284073172}
+    - targetCorrespondingSourceObject: {fileID: 403353037994709676, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2073088319}
+    - targetCorrespondingSourceObject: {fileID: 403353037994709676, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2073088318}
+    - targetCorrespondingSourceObject: {fileID: 403353037994709676, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2073088317}
     - targetCorrespondingSourceObject: {fileID: 6637283178696396376, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1130534446}
@@ -6514,6 +7018,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 6637283178696396376, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1130534436}
+    - targetCorrespondingSourceObject: {fileID: 6637283178696396376, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 608851230}
+    - targetCorrespondingSourceObject: {fileID: 6637283178696396376, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 608851229}
+    - targetCorrespondingSourceObject: {fileID: 6637283178696396376, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 608851228}
     - targetCorrespondingSourceObject: {fileID: 2271273652024238060, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2028905419}
@@ -6529,6 +7042,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 2271273652024238060, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2028905415}
+    - targetCorrespondingSourceObject: {fileID: 2271273652024238060, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2028905422}
+    - targetCorrespondingSourceObject: {fileID: 2271273652024238060, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2028905421}
+    - targetCorrespondingSourceObject: {fileID: 2271273652024238060, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2028905420}
     - targetCorrespondingSourceObject: {fileID: 801731446763218044, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1773958924}
@@ -6541,6 +7063,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 801731446763218044, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1773958921}
+    - targetCorrespondingSourceObject: {fileID: 801731446763218044, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1773958927}
+    - targetCorrespondingSourceObject: {fileID: 801731446763218044, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1773958926}
+    - targetCorrespondingSourceObject: {fileID: 801731446763218044, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1773958925}
     - targetCorrespondingSourceObject: {fileID: 2343574678219930109, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2104874310}
@@ -6559,6 +7090,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 2343574678219930109, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2104874305}
+    - targetCorrespondingSourceObject: {fileID: 2343574678219930109, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2104874313}
+    - targetCorrespondingSourceObject: {fileID: 2343574678219930109, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2104874312}
+    - targetCorrespondingSourceObject: {fileID: 2343574678219930109, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2104874311}
     - targetCorrespondingSourceObject: {fileID: 7233653914353584296, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1528567158}
@@ -6571,6 +7111,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 7233653914353584296, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1528567155}
+    - targetCorrespondingSourceObject: {fileID: 7233653914353584296, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1528567161}
+    - targetCorrespondingSourceObject: {fileID: 7233653914353584296, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1528567160}
+    - targetCorrespondingSourceObject: {fileID: 7233653914353584296, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1528567159}
     - targetCorrespondingSourceObject: {fileID: 6659513281790637574, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 894735095}
@@ -6586,6 +7135,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 6659513281790637574, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 894735091}
+    - targetCorrespondingSourceObject: {fileID: 6659513281790637574, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 975555463}
+    - targetCorrespondingSourceObject: {fileID: 6659513281790637574, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 975555462}
+    - targetCorrespondingSourceObject: {fileID: 6659513281790637574, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 975555461}
     - targetCorrespondingSourceObject: {fileID: 2855587765221832061, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1582911631}
@@ -6616,6 +7174,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 2855587765221832061, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1582911622}
+    - targetCorrespondingSourceObject: {fileID: 2855587765221832061, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1582911634}
+    - targetCorrespondingSourceObject: {fileID: 2855587765221832061, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1582911633}
+    - targetCorrespondingSourceObject: {fileID: 2855587765221832061, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1582911632}
     - targetCorrespondingSourceObject: {fileID: 7979517804441636025, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1806286025}
@@ -6631,6 +7198,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 7979517804441636025, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1806286021}
+    - targetCorrespondingSourceObject: {fileID: 7979517804441636025, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1806286028}
+    - targetCorrespondingSourceObject: {fileID: 7979517804441636025, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1806286027}
+    - targetCorrespondingSourceObject: {fileID: 7979517804441636025, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1806286026}
     - targetCorrespondingSourceObject: {fileID: 1704356779819134689, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 484331281}
@@ -6646,6 +7222,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1704356779819134689, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 484331277}
+    - targetCorrespondingSourceObject: {fileID: 1704356779819134689, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1477864273}
+    - targetCorrespondingSourceObject: {fileID: 1704356779819134689, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1477864272}
+    - targetCorrespondingSourceObject: {fileID: 1704356779819134689, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1477864271}
     - targetCorrespondingSourceObject: {fileID: 3515530160318780140, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 978990980}
@@ -6658,6 +7243,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 3515530160318780140, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 978990977}
+    - targetCorrespondingSourceObject: {fileID: 3515530160318780140, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 484994479}
+    - targetCorrespondingSourceObject: {fileID: 3515530160318780140, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 484994478}
+    - targetCorrespondingSourceObject: {fileID: 3515530160318780140, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 484994477}
     - targetCorrespondingSourceObject: {fileID: 3885394897097615355, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1021392043}
@@ -6736,6 +7330,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 3885394897097615355, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1021392018}
+    - targetCorrespondingSourceObject: {fileID: 3885394897097615355, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1014255783}
+    - targetCorrespondingSourceObject: {fileID: 3885394897097615355, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1014255782}
+    - targetCorrespondingSourceObject: {fileID: 3885394897097615355, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1014255781}
     - targetCorrespondingSourceObject: {fileID: 1678254675577456193, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1480976572}
@@ -6814,6 +7417,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1678254675577456193, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1480976547}
+    - targetCorrespondingSourceObject: {fileID: 1678254675577456193, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1480976575}
+    - targetCorrespondingSourceObject: {fileID: 1678254675577456193, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1480976574}
+    - targetCorrespondingSourceObject: {fileID: 1678254675577456193, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1480976573}
     - targetCorrespondingSourceObject: {fileID: 2289128580828663210, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1992953125}
@@ -6850,6 +7462,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 2289128580828663210, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1992953114}
+    - targetCorrespondingSourceObject: {fileID: 2289128580828663210, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1992953128}
+    - targetCorrespondingSourceObject: {fileID: 2289128580828663210, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1992953127}
+    - targetCorrespondingSourceObject: {fileID: 2289128580828663210, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1992953126}
     - targetCorrespondingSourceObject: {fileID: 595243207967813413, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 116398513}
@@ -6886,6 +7507,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 595243207967813413, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 116398502}
+    - targetCorrespondingSourceObject: {fileID: 595243207967813413, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1166338740}
+    - targetCorrespondingSourceObject: {fileID: 595243207967813413, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1166338739}
+    - targetCorrespondingSourceObject: {fileID: 595243207967813413, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1166338738}
     - targetCorrespondingSourceObject: {fileID: 4698323668848005920, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 192800694}
@@ -6913,6 +7543,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 4698323668848005920, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 192800686}
+    - targetCorrespondingSourceObject: {fileID: 4698323668848005920, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1631895490}
+    - targetCorrespondingSourceObject: {fileID: 4698323668848005920, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1631895489}
+    - targetCorrespondingSourceObject: {fileID: 4698323668848005920, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1631895488}
     - targetCorrespondingSourceObject: {fileID: 3245491979770133528, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 779098674}
@@ -6940,6 +7579,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 3245491979770133528, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 779098666}
+    - targetCorrespondingSourceObject: {fileID: 3245491979770133528, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1150060034}
+    - targetCorrespondingSourceObject: {fileID: 3245491979770133528, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1150060033}
+    - targetCorrespondingSourceObject: {fileID: 3245491979770133528, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1150060032}
     - targetCorrespondingSourceObject: {fileID: 1349083324649312678, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 767278656}
@@ -6955,6 +7603,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1349083324649312678, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 767278652}
+    - targetCorrespondingSourceObject: {fileID: 1349083324649312678, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2001849102}
+    - targetCorrespondingSourceObject: {fileID: 1349083324649312678, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2001849101}
+    - targetCorrespondingSourceObject: {fileID: 1349083324649312678, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2001849100}
     - targetCorrespondingSourceObject: {fileID: 1232007224695093816, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1215872796}
@@ -6970,6 +7627,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1232007224695093816, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1215872792}
+    - targetCorrespondingSourceObject: {fileID: 1232007224695093816, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1215872799}
+    - targetCorrespondingSourceObject: {fileID: 1232007224695093816, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1215872798}
+    - targetCorrespondingSourceObject: {fileID: 1232007224695093816, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1215872797}
     - targetCorrespondingSourceObject: {fileID: 2987869372543897510, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1697124376}
@@ -7015,6 +7681,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 2987869372543897510, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1697124362}
+    - targetCorrespondingSourceObject: {fileID: 2987869372543897510, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1697124379}
+    - targetCorrespondingSourceObject: {fileID: 2987869372543897510, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1697124378}
+    - targetCorrespondingSourceObject: {fileID: 2987869372543897510, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1697124377}
     - targetCorrespondingSourceObject: {fileID: 4310803503626345549, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 906410467}
@@ -7051,6 +7726,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 4310803503626345549, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 906410456}
+    - targetCorrespondingSourceObject: {fileID: 4310803503626345549, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1548682601}
+    - targetCorrespondingSourceObject: {fileID: 4310803503626345549, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1548682600}
+    - targetCorrespondingSourceObject: {fileID: 4310803503626345549, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1548682599}
     - targetCorrespondingSourceObject: {fileID: 8229400708848041209, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1964119706}
@@ -7069,6 +7753,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 8229400708848041209, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1964119701}
+    - targetCorrespondingSourceObject: {fileID: 8229400708848041209, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1964119709}
+    - targetCorrespondingSourceObject: {fileID: 8229400708848041209, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1964119708}
+    - targetCorrespondingSourceObject: {fileID: 8229400708848041209, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1964119707}
     - targetCorrespondingSourceObject: {fileID: 1444167469244283416, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1565394556}
@@ -7081,6 +7774,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1444167469244283416, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1565394553}
+    - targetCorrespondingSourceObject: {fileID: 1444167469244283416, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1565394559}
+    - targetCorrespondingSourceObject: {fileID: 1444167469244283416, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1565394558}
+    - targetCorrespondingSourceObject: {fileID: 1444167469244283416, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1565394557}
     - targetCorrespondingSourceObject: {fileID: 1724026366357046328, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 695161411}
@@ -7093,6 +7795,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1724026366357046328, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 695161408}
+    - targetCorrespondingSourceObject: {fileID: 1724026366357046328, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1749660815}
+    - targetCorrespondingSourceObject: {fileID: 1724026366357046328, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1749660814}
+    - targetCorrespondingSourceObject: {fileID: 1724026366357046328, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1749660813}
     - targetCorrespondingSourceObject: {fileID: 1907460894535303313, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1520643725}
@@ -7108,6 +7819,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1907460894535303313, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1520643721}
+    - targetCorrespondingSourceObject: {fileID: 1907460894535303313, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1520643728}
+    - targetCorrespondingSourceObject: {fileID: 1907460894535303313, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1520643727}
+    - targetCorrespondingSourceObject: {fileID: 1907460894535303313, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1520643726}
   m_SourcePrefab: {fileID: 100100000, guid: 8caff76026ab946738115ca1c0b5e4ce, type: 3}
 --- !u!4 &1158952862 stripped
 Transform:
@@ -7492,6 +8212,55 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 4300000, guid: 76b1cb2f956994db58fea31c1c8b3f94, type: 2}
+--- !u!114 &1166338738
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952875}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff4ccebf05df545c39290dedb543d2c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkGrabbable
+--- !u!114 &1166338739
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952875}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &1166338740
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952875}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 2244425208
+  ObjectInterest: 1
+  Flags: 524289
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 1166338739}
+  - {fileID: 1166338738}
+  ForceRemoteRenderTimeframe: 0
 --- !u!64 &1193295440
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -7727,6 +8496,55 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.095721364, y: 0.4993081, z: 0.60113}
   m_Center: {x: -0.0044440627, y: 0.24965405, z: -0.00070762634}
+--- !u!114 &1215872797
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952871}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff4ccebf05df545c39290dedb543d2c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkGrabbable
+--- !u!114 &1215872798
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952871}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &1215872799
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952871}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 1495915089
+  ObjectInterest: 1
+  Flags: 524289
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 1215872798}
+  - {fileID: 1215872797}
+  ForceRemoteRenderTimeframe: 0
 --- !u!1 &1252714981
 GameObject:
   m_ObjectHideFlags: 0
@@ -7817,6 +8635,55 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: -8391340123276554108, guid: 76b1cb2f956994db58fea31c1c8b3f94, type: 2}
+--- !u!114 &1477864271
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952880}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff4ccebf05df545c39290dedb543d2c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkGrabbable
+--- !u!114 &1477864272
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952880}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &1477864273
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952880}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 1559333821
+  ObjectInterest: 1
+  Flags: 524289
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 1477864272}
+  - {fileID: 1477864271}
+  ForceRemoteRenderTimeframe: 0
 --- !u!114 &1480976547
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8471,6 +9338,55 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.0921129, y: 0.48234135, z: 0.11064649}
   m_Center: {x: 0.2906893, y: 0.23346803, z: 0.13874733}
+--- !u!114 &1480976573
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952877}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff4ccebf05df545c39290dedb543d2c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkGrabbable
+--- !u!114 &1480976574
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952877}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &1480976575
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952877}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 2709112701
+  ObjectInterest: 1
+  Flags: 524289
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 1480976574}
+  - {fileID: 1480976573}
+  ForceRemoteRenderTimeframe: 0
 --- !u!64 &1490063203
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -8728,6 +9644,55 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.38950336, y: 0.44590783, z: 0.40694523}
   m_Center: {x: -0.030176103, y: 0.31244922, z: 0.02777338}
+--- !u!114 &1520643726
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952863}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff4ccebf05df545c39290dedb543d2c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkGrabbable
+--- !u!114 &1520643727
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952863}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &1520643728
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952863}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 3132943798
+  ObjectInterest: 1
+  Flags: 524289
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 1520643727}
+  - {fileID: 1520643726}
+  ForceRemoteRenderTimeframe: 0
 --- !u!114 &1528567155
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8920,6 +9885,104 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.080578804, y: 0.13496006, z: 0.080578804}
   m_Center: {x: 0, y: 0.06748003, z: 0}
+--- !u!114 &1528567159
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952884}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff4ccebf05df545c39290dedb543d2c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkGrabbable
+--- !u!114 &1528567160
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952884}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &1528567161
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952884}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 2193773052
+  ObjectInterest: 1
+  Flags: 524289
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 1528567160}
+  - {fileID: 1528567159}
+  ForceRemoteRenderTimeframe: 0
+--- !u!114 &1548682599
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952869}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff4ccebf05df545c39290dedb543d2c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkGrabbable
+--- !u!114 &1548682600
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952869}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &1548682601
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952869}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 3114271018
+  ObjectInterest: 1
+  Flags: 524289
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 1548682600}
+  - {fileID: 1548682599}
+  ForceRemoteRenderTimeframe: 0
 --- !u!114 &1565394553
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9112,6 +10175,55 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.22799477, y: 0.33883727, z: 0.20391512}
   m_Center: {x: 0.003331706, y: 0.1675579, z: 0.0038819313}
+--- !u!114 &1565394557
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952867}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff4ccebf05df545c39290dedb543d2c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkGrabbable
+--- !u!114 &1565394558
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952867}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &1565394559
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952867}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 2192161143
+  ObjectInterest: 1
+  Flags: 524289
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 1565394558}
+  - {fileID: 1565394557}
+  ForceRemoteRenderTimeframe: 0
 --- !u!114 &1582911622
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9430,6 +10542,55 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.24832457, y: 0.03969407, z: 0.19894552}
   m_Center: {x: -0.000000029802322, y: 0.019847035, z: 0}
+--- !u!114 &1582911632
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952882}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff4ccebf05df545c39290dedb543d2c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkGrabbable
+--- !u!114 &1582911633
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952882}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &1582911634
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952882}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 3707017252
+  ObjectInterest: 1
+  Flags: 524289
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 1582911633}
+  - {fileID: 1582911632}
+  ForceRemoteRenderTimeframe: 0
 --- !u!1001 &1614397194
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -9961,6 +11122,104 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.044999838, y: 2.73, z: 1.02}
   m_Center: {x: -0.03275001, y: 1.365, z: 0}
+--- !u!114 &1623170858
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952911}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff4ccebf05df545c39290dedb543d2c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkGrabbable
+--- !u!114 &1623170859
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952911}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &1623170860
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952911}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 2465226165
+  ObjectInterest: 1
+  Flags: 524289
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 1623170859}
+  - {fileID: 1623170858}
+  ForceRemoteRenderTimeframe: 0
+--- !u!114 &1631895488
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952874}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff4ccebf05df545c39290dedb543d2c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkGrabbable
+--- !u!114 &1631895489
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952874}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &1631895490
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952874}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 1657327003
+  ObjectInterest: 1
+  Flags: 524289
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 1631895489}
+  - {fileID: 1631895488}
+  ForceRemoteRenderTimeframe: 0
 --- !u!64 &1636461457
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -10547,6 +11806,104 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.08760786, y: 1.0361376, z: 0.35376167}
   m_Center: {x: -0.015354633, y: 1.2452807, z: 0.06994963}
+--- !u!114 &1697124377
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952870}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff4ccebf05df545c39290dedb543d2c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkGrabbable
+--- !u!114 &1697124378
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952870}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &1697124379
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952870}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 3580722003
+  ObjectInterest: 1
+  Flags: 524289
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 1697124378}
+  - {fileID: 1697124377}
+  ForceRemoteRenderTimeframe: 0
+--- !u!114 &1749660813
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952865}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff4ccebf05df545c39290dedb543d2c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkGrabbable
+--- !u!114 &1749660814
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952865}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &1749660815
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952865}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 2234918661
+  ObjectInterest: 1
+  Flags: 524289
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 1749660814}
+  - {fileID: 1749660813}
+  ForceRemoteRenderTimeframe: 0
 --- !u!64 &1771744456
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -10761,6 +12118,55 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.53984046, y: 0.105851054, z: 0.5398407}
   m_Center: {x: 0, y: 0.052925527, z: 0}
+--- !u!114 &1773958925
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952886}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff4ccebf05df545c39290dedb543d2c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkGrabbable
+--- !u!114 &1773958926
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952886}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &1773958927
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952886}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 3089334006
+  ObjectInterest: 1
+  Flags: 524289
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 1773958926}
+  - {fileID: 1773958925}
+  ForceRemoteRenderTimeframe: 0
 --- !u!114 &1806286021
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10974,6 +12380,104 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.06635904, y: 0.22493339, z: 0.06635904}
   m_Center: {x: 0, y: 0.11246669, z: 0}
+--- !u!114 &1806286026
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952881}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff4ccebf05df545c39290dedb543d2c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkGrabbable
+--- !u!114 &1806286027
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952881}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &1806286028
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952881}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 2458388051
+  ObjectInterest: 1
+  Flags: 524289
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 1806286027}
+  - {fileID: 1806286026}
+  ForceRemoteRenderTimeframe: 0
+--- !u!114 &1917738561
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952892}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff4ccebf05df545c39290dedb543d2c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkGrabbable
+--- !u!114 &1917738562
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952892}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &1917738563
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952892}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 413517856
+  ObjectInterest: 1
+  Flags: 524289
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 1917738562}
+  - {fileID: 1917738561}
+  ForceRemoteRenderTimeframe: 0
 --- !u!64 &1935362103
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -11230,6 +12734,55 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.44134215, y: 0.9976475, z: 0.22834611}
   m_Center: {x: -0.040147677, y: 0.5053544, z: 0.0058180094}
+--- !u!114 &1964119707
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952868}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff4ccebf05df545c39290dedb543d2c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkGrabbable
+--- !u!114 &1964119708
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952868}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &1964119709
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952868}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 4224039037
+  ObjectInterest: 1
+  Flags: 524289
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 1964119708}
+  - {fileID: 1964119707}
+  ForceRemoteRenderTimeframe: 0
 --- !u!114 &1992953114
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -11590,6 +13143,104 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.32999992, y: 0.52957606, z: 0.021194458}
   m_Center: {x: 0, y: 0.29524386, z: -0.004898548}
+--- !u!114 &1992953126
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952876}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff4ccebf05df545c39290dedb543d2c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkGrabbable
+--- !u!114 &1992953127
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952876}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &1992953128
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952876}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 22054418
+  ObjectInterest: 1
+  Flags: 524289
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 1992953127}
+  - {fileID: 1992953126}
+  ForceRemoteRenderTimeframe: 0
+--- !u!114 &2001849100
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952872}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff4ccebf05df545c39290dedb543d2c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkGrabbable
+--- !u!114 &2001849101
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952872}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &2001849102
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952872}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 4127691780
+  ObjectInterest: 1
+  Flags: 524289
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 2001849101}
+  - {fileID: 2001849100}
+  ForceRemoteRenderTimeframe: 0
 --- !u!1 &2020709504
 GameObject:
   m_ObjectHideFlags: 0
@@ -11900,6 +13551,104 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.20064867, y: 0.41678846, z: 0.20064878}
   m_Center: {x: 0.005718529, y: 0.20839423, z: 0}
+--- !u!114 &2028905420
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952887}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff4ccebf05df545c39290dedb543d2c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkGrabbable
+--- !u!114 &2028905421
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952887}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &2028905422
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952887}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 2360151584
+  ObjectInterest: 1
+  Flags: 524289
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 2028905421}
+  - {fileID: 2028905420}
+  ForceRemoteRenderTimeframe: 0
+--- !u!114 &2073088317
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952889}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff4ccebf05df545c39290dedb543d2c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkGrabbable
+--- !u!114 &2073088318
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952889}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &2073088319
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952889}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 2377662814
+  ObjectInterest: 1
+  Flags: 524289
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 2073088318}
+  - {fileID: 2073088317}
+  ForceRemoteRenderTimeframe: 0
 --- !u!114 &2104874305
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -12134,6 +13883,55 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.21020341, y: 0.33078444, z: 0.21020317}
   m_Center: {x: 0.007625699, y: 0.16539222, z: 0}
+--- !u!114 &2104874311
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952885}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff4ccebf05df545c39290dedb543d2c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkGrabbable
+--- !u!114 &2104874312
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952885}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &2104874313
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158952885}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 3480903253
+  ObjectInterest: 1
+  Flags: 524289
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 2104874312}
+  - {fileID: 2104874311}
+  ForceRemoteRenderTimeframe: 0
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

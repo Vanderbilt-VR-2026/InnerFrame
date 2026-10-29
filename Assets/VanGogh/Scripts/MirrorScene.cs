@@ -10,7 +10,10 @@ using UnityEngine.XR.Interaction.Toolkit.Interactables;
 /// his canvas, at his eye height, facing him. While you do, he paints himself: the canvas goes from blank to a sketch,
 /// to colour, to his 1887 self-portrait. Let go and the mirror hangs itself back on the wall. His AI answers are told
 /// which of these is happening (SpeechToProxy.SceneContext).
-/// On the VG_Vincent prefab root (VanGoghAssetSetup adds it). Local to this headset: nothing here is networked (#77).
+/// On the VG_Vincent prefab root (VanGoghAssetSetup adds it).
+/// With other players (#77): the room's Vincent (VincentRoom, Assets/Script/Network) runs on one device, which decides
+/// here from whether anyone holds the mirror (a shared NetworkGrabbable) and publishes each step; the other devices
+/// show its canvas stage, painting and lines instead of deciding.
 /// </summary>
 [RequireComponent(typeof(SpeechToProxy))]
 public class MirrorScene : MonoBehaviour
@@ -54,11 +57,13 @@ public class MirrorScene : MonoBehaviour
     VincentAlive alive;
     XRGrabInteractable grab;
     PaintedBedroomMovable movable;
+    NetworkGrabbable shared;   // the mirror, when players share the room's objects
     Transform mirror, brush;
     Vector3 glassLocal, mirrorHome, brushHome;
     Quaternion mirrorHomeTurn;
     Material paint;
     int shownStage = -1;
+    bool paintingNow, following;
     float grabCheckIn;   // the grab is checked in the first frame and once more a second later
     int grabChecksLeft = 2;
 
@@ -78,6 +83,7 @@ public class MirrorScene : MonoBehaviour
 
         mirror = grab.transform;
         movable = grab.GetComponent<PaintedBedroomMovable>();
+        shared = grab.GetComponent<NetworkGrabbable>();
         mirrorHome = mirror.position;
         mirrorHomeTurn = mirror.rotation;
         var glass = mirror.Find(GlassName)?.GetComponent<Renderer>();
@@ -104,13 +110,38 @@ public class MirrorScene : MonoBehaviour
 
     void Update()
     {
+        if (mirror == null)   // the room's mirror was removed while the scene runs
+        {
+            Debug.LogWarning("[VanGogh] The mirror is gone from the scene, so the mirror scene stops.");
+            enabled = false;
+            return;
+        }
         KeepGrabOn(Time.deltaTime);
-        bool held = grab.isSelected || HeldOnDesktop();
+        bool heldHere = grab.isSelected || HeldOnDesktop();
+        bool held = heldHere;
+        if (shared != null && shared.IsShared)
+        {
+            shared.HeldHere = heldHere;   // sent to everyone while this player owns the mirror
+            held = shared.Held;           // held by anyone in the room
+        }
         // the mirror's face is its local -Z, the side away from the wall
         var centre = mirror.TransformPoint(glassLocal);
-        var step = Decide(Time.deltaTime, held, centre, -mirror.forward, talker.IsBusy, talker.LastReply != null);
-        Apply(step);
-        if (alive != null) alive.PaintingFrom = step.painting ? centre : (Vector3?)null;   // he looks at the mirror while he paints
+        var room = VincentRoom.Current;
+        // still joining the room: don't greet on our own before knowing whether another player runs him
+        if (room == null && NetworkSession.Arriving) return;
+        if (room != null && !room.InCharge)   // another device runs him: show its step
+        {
+            Apply(new Step { stage = room.Stage, painting = room.Painting, scene = talker.SceneContext });
+            following = true;
+        }
+        else
+        {
+            if (following) { TakeOver(shownStage); following = false; }
+            var step = Decide(Time.deltaTime, held, centre, -mirror.forward, talker.IsBusy, talker.LastReply != null);
+            Apply(step);
+            if (room != null) room.Publish(step);
+        }
+        if (alive != null) alive.PaintingFrom = paintingNow ? centre : (Vector3?)null;   // he looks at the mirror while he paints
     }
 
     // The room's physics table has the mirror as not liftable; this scene needs it picked up: same grab, switched on.
@@ -127,9 +158,11 @@ public class MirrorScene : MonoBehaviour
         Debug.Log("[VanGogh] mirror grab on");
     }
 
-    // The desktop grabber (Editor without a headset) has no grab event: held while the left button is down and it's off the wall.
+    // The desktop grabber (Editor without a headset) has no grab event: held while the left button is down and it's off
+    // the wall. Shared, only while this player owns it: another player moving it isn't this one holding it.
     bool HeldOnDesktop() =>
-        Mouse.current != null && Mouse.current.leftButton.isPressed && (mirror.position - mirrorHome).sqrMagnitude > 1e-6f;
+        Mouse.current != null && Mouse.current.leftButton.isPressed && (mirror.position - mirrorHome).sqrMagnitude > 1e-6f
+        && (shared == null || !shared.IsShared || shared.HasStateAuthority);
 
     /// <summary>
     /// One step of the scene, from plain inputs, so tests can drive it without XR. `answered`: he has answered a
@@ -191,15 +224,29 @@ public class MirrorScene : MonoBehaviour
         return step;
     }
 
+    /// <summary>
+    /// The device that ran him left and this one runs him now: carry on from the canvas the room had, without greeting
+    /// or explaining again.
+    /// </summary>
+    public void TakeOver(int stage)
+    {
+        painted = stage <= 0 ? 0f : stage == 1 ? 0.01f : stage == 2 ? PaintSeconds / 2f : PaintSeconds;
+        greeted = explained = askedAgain = true;
+        everHeld = stage > 0;
+        greetEnded = askEnded = clock;
+        pending = talking = null;
+    }
+
     public void Apply(Step step)
     {
+        paintingNow = step.painting;
         if (step.stage != shownStage) ShowStage(step.stage);
         if (step.say != null) Say(step.say);
         if (step.scene != talker.SceneContext) talker.SceneContext = step.scene;
         if (step.rehang)
         {
-            mirror.SetPositionAndRotation(mirrorHome, mirrorHomeTurn);
-            grab.SetTargetPose(new Pose(mirrorHome, mirrorHomeTurn));   // else XRI may still apply the last held pose
+            // shared: whoever let go may be another player, so it's hung back once this device owns it
+            if (shared != null && shared.IsShared) shared.WhenOwned(Rehang); else Rehang();
         }
         if (brush != null)   // a small loop while he paints: 2 cm across, 1.5 times a second
         {
@@ -208,12 +255,21 @@ public class MirrorScene : MonoBehaviour
         }
     }
 
+    void Rehang()
+    {
+        mirror.SetPositionAndRotation(mirrorHome, mirrorHomeTurn);
+        grab.SetTargetPose(new Pose(mirrorHome, mirrorHomeTurn));   // else XRI may still apply the last held pose
+    }
+
     void ShowStage(int stage)
     {
         shownStage = stage;
         paint.SetTexture("_BaseMap", stage == 0 ? null : stages[stage - 1]);
         paint.SetColor("_BaseColor", stage == 0 ? Primed : Color.white);
     }
+
+    /// <summary>One of his mirror lines by its id ("greet", "stage1"...): the device in charge picked it (VincentRoom).</summary>
+    public void SayLine(string id) => Say(id);
 
     void Say(string id)
     {

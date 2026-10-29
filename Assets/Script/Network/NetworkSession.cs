@@ -19,6 +19,7 @@ public class NetworkSession : MonoBehaviour
     // Prefab built by InnerFrame > Multiplayer > Rebuild Network Player Prefab
     const string PlayerPrefabPath = "NetworkPlayer";
     const float RetrySeconds = 3f;
+    const float SettleSeconds = 1.5f;   // after joining, for what the room already has (its Vincent) to arrive
 
     [Tooltip("Sideways gap between players who join the same room, so they don't start inside each other. 0 = off")]
     public float spawnSpacing = 0.7f;
@@ -27,7 +28,15 @@ public class NetworkSession : MonoBehaviour
     public NetworkRunner Runner { get; private set; }
 
     string roomScene; // scene whose room we should be in; null after leaving on purpose
-    bool joining;
+    bool joining, arriving;
+    float settledAt;
+
+    /// <summary>
+    /// The scene has just loaded and its room is still being joined, or was joined a moment ago and what the room
+    /// already has may still be arriving. Scripts that would otherwise act on their own wait (Vincent's greeting, see
+    /// MirrorScene). Over when the first attempt ends, joined or not, so offline play only waits for that attempt.
+    /// </summary>
+    public static bool Arriving => Instance != null && (Instance.arriving || Time.unscaledTime < Instance.settledAt);
     float nextRetry;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -73,10 +82,11 @@ public class NetworkSession : MonoBehaviour
     IEnumerator Join(string sceneName, bool rejoin = false)
     {
         joining = true;
+        if (!rejoin) arriving = true;
         yield return Leave();
         yield return null;   // let the scene pick its rig first (the Editor's desktop rig swaps in on load)
 
-        if (!FindPlayerRig(out var rig, out var eyes)) { joining = false; yield break; } // not a scene people walk around in
+        if (!FindPlayerRig(out var rig, out var eyes)) { joining = false; Arrived(0f); yield break; } // not a scene people walk around in
         // the rig's own scene: with several scenes open in the Editor, the active one may be an Untitled one
         if (!string.IsNullOrEmpty(rig.gameObject.scene.name)) sceneName = rig.gameObject.scene.name;
 
@@ -85,6 +95,7 @@ public class NetworkSession : MonoBehaviour
         {
             Debug.LogError("[NetworkSession] Missing Resources/NetworkPlayer prefab. Run InnerFrame > Multiplayer > Rebuild Network Player Prefab.");
             joining = false;
+            Arrived(0f);
             yield break;
         }
         roomScene = sceneName; // from here on, Update keeps retrying until we're in
@@ -120,6 +131,7 @@ public class NetworkSession : MonoBehaviour
             if (Runner == runner) Runner = null;
             if (runner != null) Destroy(runner.gameObject);
             joining = false;
+            Arrived(0f);
             yield break;
         }
 
@@ -127,7 +139,16 @@ public class NetworkSession : MonoBehaviour
         if (!rejoin) ShiftRig(rig, eyes, runner.SessionInfo.PlayerCount - 1);
         // Avatar root stays at the world origin; NetworkPlayer moves its head and hands in world space.
         runner.Spawn(prefab, Vector3.zero, Quaternion.identity, runner.LocalPlayer);
+        VincentRoom.SpawnIfNeeded(runner);   // one Vincent for the room, run by the first player in
         joining = false;
+        Arrived(SettleSeconds);
+    }
+
+    void Arrived(float settle)
+    {
+        if (!arriving) return;
+        arriving = false;
+        settledAt = Time.unscaledTime + settle;
     }
 
     /// <summary>

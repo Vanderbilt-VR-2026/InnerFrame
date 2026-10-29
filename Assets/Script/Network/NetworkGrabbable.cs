@@ -25,6 +25,15 @@ public class NetworkGrabbable : NetworkBehaviour, IStateAuthorityChanged
 
     bool Online => Object != null && Object.IsValid;
 
+    /// <summary>In a room: the object is synced (offline it's an ordinary grab object).</summary>
+    public bool IsShared => Online;
+
+    /// <summary>Someone in the room is holding it: an XR grab, or HeldHere on the owner's device.</summary>
+    [Networked] public NetworkBool Held { get; set; }
+
+    /// <summary>Held by code on this device (a desktop carry the XR grab doesn't see). Sent while this player owns it.</summary>
+    public bool HeldHere { get; set; }
+
     /// <summary>
     /// Call before moving the object by code (not by an XR grab, which does this itself):
     /// asks to own it, so the move is sent to everyone instead of being overwritten.
@@ -54,9 +63,34 @@ public class NetworkGrabbable : NetworkBehaviour, IStateAuthorityChanged
     {
         grab.selectEntered.RemoveListener(OnGrabbed);
         grab.selectExited.RemoveListener(OnReleased);
+        // a shared object vanishing mid-scene (seen with the Painted Bedroom's mirror): say so, to find out why
+        if (!quitting && gameObject.scene.isLoaded && Time.frameCount != sceneUnloadFrame)
+            Debug.LogWarning($"[NetworkGrabbable] {name} was destroyed while its scene is still open (frame {Time.frameCount}, {Time.time:F1} s)", this);
+    }
+
+    static bool quitting;
+    static int sceneUnloadFrame = -1;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void WatchQuitAndUnload()
+    {
+        quitting = false;
+        Application.quitting += () => quitting = true;
+        UnityEngine.SceneManagement.SceneManager.sceneUnloaded += _ => sceneUnloadFrame = Time.frameCount;
     }
 
     public override void Spawned() => ApplyOwnership();
+
+    public override void Despawned(NetworkRunner runner, bool hasState)
+    {
+        if (runner != null && runner.IsRunning && !runner.IsShutdown)
+            Debug.LogWarning($"[NetworkGrabbable] {name} despawned by Fusion while still in the room (state kept: {hasState})", this);
+    }
+
+    public override void FixedUpdateNetwork()
+    {
+        if (HasStateAuthority) Held = grab.isSelected || HeldHere;
+    }
 
     public void StateAuthorityChanged()
     {

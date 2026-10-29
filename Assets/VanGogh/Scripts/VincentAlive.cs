@@ -25,6 +25,9 @@ public class VincentAlive : MonoBehaviour
     public float Yaw { get; private set; }
     public float Lean { get; private set; }
 
+    /// <summary>His voice when it comes from another device (VincentRoom's stream); he leans to it as to his own.</summary>
+    public AudioSource OtherVoice { get; set; }
+
     Transform figure;
     AudioSource voice;
     readonly float[] samples = new float[Samples];
@@ -41,9 +44,10 @@ public class VincentAlive : MonoBehaviour
     void Update()
     {
         float rms = 0f;
-        if (voice != null && voice.isPlaying)
+        var speaking = voice != null && voice.isPlaying ? voice : OtherVoice != null && OtherVoice.isPlaying ? OtherVoice : null;
+        if (speaking != null)
         {
-            voice.GetOutputData(samples, 0);
+            speaking.GetOutputData(samples, 0);
             float sum = 0f;
             foreach (float s in samples) sum += s * s;
             rms = Mathf.Sqrt(sum / Samples);

@@ -13,6 +13,8 @@ using UnityEngine.SceneManagement;
 /// The proxy answers with JSON; his voice (audio_url) then plays from this object's AudioSource, and its text shows
 /// in his caption (VanGoghCaption), as his scripted lines do.
 /// The models and any key stay on the proxy, never in the app. This object's forward faces the visitor.
+/// With other players in the room (Room set, by VincentRoom in Assets/Script/Network), one device answers for
+/// everyone: a question asked elsewhere is sent there, and the others show what it shows (Follow).
 /// </summary>
 public class SpeechToProxy : MonoBehaviour
 {
@@ -37,8 +39,30 @@ public class SpeechToProxy : MonoBehaviour
     /// each question as the form field "scene". Empty: not sent. Set by MirrorScene; the Gallery portrait never sets it.</summary>
     public string SceneContext { get; set; }
 
-    enum State { Idle, Recording, Waiting, Playing, Error }
+    /// <summary>One Vincent for several players (VincentRoom). Null: this device has its own Vincent.</summary>
+    public interface ISharedRoom
+    {
+        /// <summary>This device answers for the room.</summary>
+        bool InCharge { get; }
+        /// <summary>Another player is asking, or their question is being answered: don't start one.</summary>
+        bool OthersBusy { get; }
+        /// <summary>This player started (true) or stopped recording a question.</summary>
+        void Asking(bool on);
+        /// <summary>Not in charge: send the recorded question to the device that is.</summary>
+        void SendQuestion(float[] samples, int rate);
+        /// <summary>In charge: his answer, for everyone to hear.</summary>
+        void Answered(AudioClip clip, string text);
+    }
+
+    public ISharedRoom Room { get; set; }
+
+    public enum State { Idle, Recording, Waiting, Playing, Error }
     State state;
+    bool playingElsewhere;   // an answer from the device in charge: its voice isn't ours, the room says when it ends
+    float waitingUntil;      // our question went to the device in charge; its answer is on its way until then
+
+    /// <summary>What his caption shows: idle, listening, thinking, speaking, or can't hear you.</summary>
+    public State Current => state;
     InputAction talk;
     VanGoghCaption caption;
     float errorUntil;
@@ -73,23 +97,48 @@ public class SpeechToProxy : MonoBehaviour
 
     void Update()
     {
-        if (state == State.Playing && !voice.isPlaying) SetState(State.Idle);
+        if (state == State.Playing && !playingElsewhere && !voice.isPlaying) SetState(State.Idle);
         if (state == State.Error && Time.time >= errorUntil) SetState(State.Idle);
     }
 
     /// <summary>Plays a clip through his voice and shows its words in his caption.</summary>
     public void Say(AudioClip clip, string text)
     {
+        playingElsewhere = false;
         voice.clip = clip;
         voice.Play();
         SetState(State.Playing);
         if (caption != null) caption.Words(text);
     }
 
+    /// <summary>
+    /// Another device answers for the room (Room): show what its Vincent shows. `words`: a new answer's text, played
+    /// from the room's voice for `seconds`. This player's own recording, and their own scripted line, aren't overridden;
+    /// their question in flight waits for its answer.
+    /// </summary>
+    public void Follow(State shown, string words, float seconds)
+    {
+        if (state == State.Recording) return;
+        if (state == State.Playing && !playingElsewhere && voice.isPlaying) return;
+        if (words != null)
+        {
+            if (voice.isPlaying) voice.Stop();
+            SetState(State.Playing);
+            playingElsewhere = true;
+            if (caption != null) caption.Words(words, seconds);
+            return;
+        }
+        bool ownOnItsWay = state == State.Waiting && Time.time < waitingUntil;
+        if (ownOnItsWay && shown != State.Error) return;
+        if (state == State.Playing && playingElsewhere && shown == State.Playing) return;   // still speaking there
+        if (shown == State.Playing) shown = State.Idle;   // a line or an answer that started before we followed it
+        if (shown != state) SetState(shown);
+    }
+
     /// <summary>Stops a recording or a question in progress (the scene is changing).</summary>
     public void Cancel()
     {
-        if (state == State.Recording) Microphone.End(null);
+        if (state == State.Recording) { Microphone.End(null); Room?.Asking(false); }
         StopAllCoroutines();
         autoStop = null;
         if (state == State.Recording || state == State.Waiting) SetState(State.Idle);
@@ -99,6 +148,7 @@ public class SpeechToProxy : MonoBehaviour
     {
         // Only the talker in the scene the player is in listens, and never while a question is in flight.
         if (gameObject.scene != SceneManager.GetActiveScene() || state == State.Waiting || state == State.Recording) return;
+        if (Room != null && Room.OthersBusy) return;   // another player's question first
 #if UNITY_ANDROID && !UNITY_EDITOR
         if (!UnityEngine.Android.Permission.HasUserAuthorizedPermission(UnityEngine.Android.Permission.Microphone))
         {
@@ -111,6 +161,7 @@ public class SpeechToProxy : MonoBehaviour
         int seconds = AIProxySettings.Current.maxSeconds;
         recording = Microphone.Start(null, false, seconds, SampleRate);
         SetState(State.Recording);
+        Room?.Asking(true);
         autoStop = StartCoroutine(StopAfter(seconds));
     }
 
@@ -132,6 +183,7 @@ public class SpeechToProxy : MonoBehaviour
         int samples = Microphone.GetPosition(null);
         if (samples <= 0 && recording != null) samples = recording.samples;   // stopped by the time limit: the whole clip
         Microphone.End(null);
+        Room?.Asking(false);
         if (recording == null || samples < recording.frequency / 2) { SetState(State.Idle); return; }   // under 0.5 s
 
         int channels = recording.channels;
@@ -143,6 +195,13 @@ public class SpeechToProxy : MonoBehaviour
             float sum = 0f;
             for (int c = 0; c < channels; c++) sum += data[i * channels + c];
             mono[i] = sum / channels;
+        }
+        if (Room != null && !Room.InCharge)   // the device in charge asks, and everyone hears his answer
+        {
+            Room.SendQuestion(mono, recording.frequency);
+            SetState(State.Waiting);
+            waitingUntil = Time.time + TimeoutSeconds * 2;
+            return;
         }
         StartCoroutine(Ask(Wav(mono, recording.frequency)));
     }
@@ -185,6 +244,7 @@ public class SpeechToProxy : MonoBehaviour
         }
         LastReply = answer.reply;
         Say(clip, answer.reply);
+        Room?.Answered(clip, answer.reply);
         double playing = Time.realtimeSinceStartupAsDouble;
         var t = answer.timings_ms ?? new Timings();
         Debug.Log($"[VanGogh] release->response {Ms(released, responded)} ms, release->audio start {Ms(released, playing)} ms; " +
@@ -222,7 +282,7 @@ public class SpeechToProxy : MonoBehaviour
     }
 
     /// <summary>16-bit PCM WAV, mono.</summary>
-    static byte[] Wav(float[] samples, int rate)
+    public static byte[] Wav(float[] samples, int rate)
     {
         int dataBytes = samples.Length * 2;
         var bytes = new byte[44 + dataBytes];

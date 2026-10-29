@@ -95,5 +95,6 @@ Recorder of your avatar while in Play mode.
 
 - No "who's talking" indicator on the avatars.
 - Voice volume and distances are a first guess (`NetworkPlayerVoiceBuilder`).
-- Other players don't hear Vincent's answers or your questions to him; that's
-  a design decision for the Van Gogh track.
+- Vincent's answers reach everyone in the room through his own Photon Voice
+  stream (`VincentRoom`, see `docs/multiplayer/README.md`). Your question to
+  him still isn't broadcast as voice chat.

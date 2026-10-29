@@ -15,6 +15,8 @@ Code: `Assets/Script/Network/`.
 | `Editor/NetworkPlayerPrefabBuilder` | Builds `Resources/NetworkPlayer.prefab`. Menu: **InnerFrame → Multiplayer → Rebuild Network Player Prefab**. |
 | `Editor/PaintedAvatarBuilder` | Builds the Painted Bedroom's avatar, `Resources/NetworkPlayer_PaintedBedroom.prefab`, and its textures, materials and meshes in `PaintedAvatar/`. Menu: **InnerFrame → Multiplayer → Rebuild Painted Bedroom Avatar**. |
 | `Editor/NetworkGrabbableMenu` | Makes many objects shared at once (see below). |
+| `VincentRoom` | One Vincent for the whole room (see "One Vincent for the room"). Spawned by `NetworkSession` in a scene with a Vincent. |
+| `Editor/VincentRoomPrefabBuilder` | Builds `Resources/VincentRoom.prefab`. Menu: **InnerFrame → Multiplayer → Rebuild Vincent Room Prefab**. |
 
 ## A different avatar per scene
 
@@ -171,6 +173,51 @@ headset and watch it move in the Editor's Scene view, then drop it and check
 it lands in the same place on both. A real hand-off needs a second pair of
 hands: two headsets, or the XR Device Simulator (an XR Interaction Toolkit
 sample) driving the Editor player.
+
+## One Vincent for the room
+
+Without this, every player has their own Vincent (#77). With it, the first
+player in the room runs Vincent for everyone. When they leave, the next
+player takes over and carries on from the same canvas.
+
+- **His scene** (Painted Bedroom): the device in charge decides, from whether
+  *anyone* holds the mirror, which line he says, the canvas stage and whether
+  he's painting. The other devices show the same thing: the same canvas, his
+  brush and his gaze, and the same lines, played from their own copies of
+  the clips.
+- **Questions:** anyone can hold B (T in the Editor), but only one question
+  at a time. A question asked on another device is recorded there and sent
+  to the device in charge (`SendReliableDataToPlayer`, μ-law, about 16 KB a
+  second of speech). That device asks the AI proxy, so **only the device in
+  charge needs to reach the proxy**.
+- **Answers:** his answer plays on the device in charge. It streams to
+  everyone else through Photon Voice, from his mouth, with his caption.
+  Everyone needs the Voice App ID (`docs/voice/README.md`); without it, the
+  others see the caption but don't hear him.
+- **The mirror** has to be shared too (**Make Painted Bedroom Objects
+  Shared**). Otherwise the device in charge only notices its own player
+  holding it.
+- **Arriving:** while a device is still joining the Painted Bedroom's room,
+  its Vincent waits instead of greeting on his own, until it knows whether
+  someone else runs him (`NetworkSession.Arriving`). The first player in
+  hears the greeting about 2 seconds after joining, not after the scene
+  loads. Offline, he starts once the join attempt has failed.
+
+Setup, once: **InnerFrame → Multiplayer → Rebuild Vincent Room Prefab**. If
+the prefab is missing, the Console warns, and each player keeps their own
+Vincent as before.
+
+Test with two devices, both from the same build:
+
+1. Both join the Painted Bedroom. The first one's Console says `This device
+   runs Vincent for the room`, the second's `Following the room's Vincent`.
+2. Both hear his greeting at the same time.
+3. The second player holds the mirror beside his canvas: both see him paint,
+   and both canvases go through the same stages.
+4. The second player holds B and asks him something: the first device's
+   Console logs `Question from player 2`, and both hear the answer from him.
+5. The first player leaves: the second's Console says `this one runs him now`,
+   and the canvas stays where it was.
 
 ## Not synced (yet)
 

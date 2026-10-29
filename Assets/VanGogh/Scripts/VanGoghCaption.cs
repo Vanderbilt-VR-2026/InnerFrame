@@ -68,14 +68,15 @@ public class VanGoghCaption : MonoBehaviour
         return caption;
     }
 
-    /// <summary>His words, a sentence per page in time with his voice, until `null`: then they stay a second and fade.</summary>
-    public void Words(string text)
+    /// <summary>His words, a sentence per page in time with his voice, until `null`: then they stay a second and fade.
+    /// `seconds`: how long the words last when his voice plays from somewhere else (another device's answer).</summary>
+    public void Words(string text, float seconds = 0f)
     {
         if (string.IsNullOrEmpty(text)) { wordsLeft = Mathf.Min(wordsLeft, WordsLinger); return; }
         wordsLeft = float.PositiveInfinity;
         pages.Clear();
         foreach (var sentence in Sentences(text)) Fit(sentence);
-        float clip = voice != null && voice.clip != null ? voice.clip.length : 0f, chars = 0f, at = 0f;
+        float clip = seconds > 0f ? seconds : voice != null && voice.clip != null ? voice.clip.length : 0f, chars = 0f, at = 0f;
         foreach (var p in pages) chars += p.text.Length;
         for (int i = 0; i < pages.Count; i++)
         {

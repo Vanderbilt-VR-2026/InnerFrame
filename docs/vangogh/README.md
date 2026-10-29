@@ -132,7 +132,10 @@ until his voice is free. B stops a scripted line, as it stops any of his answers
   happening (mirror on the wall, held, sketching, colour, paused, finished; the exact texts are at the top of
   `MirrorScene`). Each question sends it as the form field `scene`. The proxy uses it once `feat/vangogh-persona` is
   merged; until then it ignores it. The Gallery portrait never sets it, so its requests are unchanged.
-- **Not networked (#77):** the mirror and the canvas are local to each headset.
+- **With other players (#77):** one device runs him for the room (`VincentRoom`, see `docs/multiplayer/README.md`,
+  "One Vincent for the room"). There, `Decide(...)` reads whether anyone holds the shared mirror
+  (`NetworkGrabbable.Held`). On the other devices `MirrorScene` doesn't decide: it shows the room's stage, painting
+  and lines. Without a room (offline, or no `VincentRoom` prefab) each headset has its own Vincent as before.
 - **What the model can't do:** Vincent is imported as a still mesh (no rig, no animation), so he doesn't move his arm
   or turn his head; only the brush in his hand makes a small loop while he paints. He doesn't look at you or at the
   mirror.

@@ -111,6 +111,7 @@ public static class PaintedAvatarBuilder
         player.rightHand = Hand(meshes, root.transform, "RightHand", -1f, new Vector3(0.22f, EyeY - 0.8f, 0.02f), m, tinted);
 
         player.tinted = tinted.ToArray();
+        NetworkPlayerVoiceBuilder.AddTo(root, player.head); // voice chat (Assets/Script/Voice)
 
         PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
     }

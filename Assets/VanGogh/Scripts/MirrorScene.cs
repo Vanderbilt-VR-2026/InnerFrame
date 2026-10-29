@@ -10,7 +10,8 @@ using UnityEngine.XR.Interaction.Toolkit.Interactables;
 /// his canvas, at his eye height, facing him. While you do, he paints himself: the canvas goes from blank to a sketch,
 /// to colour, to his 1887 self-portrait. Let go and the mirror hangs itself back on the wall. His AI answers are told
 /// which of these is happening (SpeechToProxy.SceneContext).
-/// On the VG_Vincent prefab root (VanGoghAssetSetup adds it). Local to this headset: nothing here is networked (#77).
+/// On the VG_Vincent prefab root (VanGoghAssetSetup adds it). In multiplayer, Assets/Script/Network/MirrorLink.cs shares
+/// it (#77): one headset decides (this script's Decide), the others follow what it decides; see the hooks below.
 /// </summary>
 [RequireComponent(typeof(SpeechToProxy))]
 public class MirrorScene : MonoBehaviour
@@ -49,6 +50,84 @@ public class MirrorScene : MonoBehaviour
     public Vector3 Target { get; private set; }
     public Vector3 Head { get; private set; }
     public float Progress => painted / PaintSeconds;
+
+    // ---- Shared mirror scene (multiplayer, #77): hooks used by Assets/Script/Network/MirrorLink.cs ----
+
+    /// <summary>Another headset decides the scene; this one only shows what it decides (ApplyFromRoom, SayLine).</summary>
+    public bool Follow { get; set; }
+    /// <summary>Another player holds the mirror; MirrorLink moves ours to where theirs is.</summary>
+    public bool HeldByOther { get; set; }
+    /// <summary>This headset's player holds the mirror.</summary>
+    public bool HeldLocally => grab != null && (grab.isSelected || HeldOnDesktop());
+    public Transform Mirror => mirror;
+    /// <summary>The last step Decide made here (when this headset decides).</summary>
+    public Step LastStep { get; private set; }
+    /// <summary>The frame LastStep was decided in (only this frame's step is sent).</summary>
+    public int LastStepFrame { get; private set; } = -1;
+    public float Painted => painted;
+    /// <summary>He has greeted and explained (so a headset taking over doesn't start his introduction again).</summary>
+    public bool IntroDone => explained;
+    /// <summary>The scene sentences, so a headset can send one as a number.</summary>
+    public static readonly string[] Scenes = { OnWall, HeldNotYet, Sketching, Colouring, Paused, Finished };
+
+    /// <summary>This headset takes over deciding, from where the previous one was.</summary>
+    public void Resume(float paintedSoFar, bool introDone)
+    {
+        painted = paintedSoFar;
+        greeted = true; greetEnded = Mathf.Max(greetEnded, 0f);
+        if (introDone) { explained = askedAgain = true; askEnded = Mathf.Max(askEnded, 0f); }
+        if (painted > 0f) everHeld = true;
+        pending = null;
+    }
+
+    /// <summary>Shows what the deciding headset decided: canvas stage, painting or not, the scene for his answers.</summary>
+    public void ApplyFromRoom(int stage, bool painting, int sceneIndex)
+    {
+        Apply(new Step { stage = stage, painting = painting, scene = Scenes[Mathf.Clamp(sceneIndex, 0, Scenes.Length - 1)] });
+        if (alive != null) alive.PaintingFrom = painting ? mirror.TransformPoint(glassLocal) : (Vector3?)null;
+    }
+
+    /// <summary>Plays one of his scripted lines (the deciding headset chose it).</summary>
+    public void SayLine(string id) { if (!string.IsNullOrEmpty(id) && !talker.IsAsking) Say(id); }   // never over our own question
+
+    /// <summary>Puts our copy of the mirror where another player holds theirs, and keeps our hands off it meanwhile.</summary>
+    public void FollowPose(Vector3 position, Quaternion rotation)
+    {
+        if (!following)
+        {
+            following = true;
+            var rb = mirror.GetComponent<Rigidbody>();
+            if (rb != null) { kinematicBefore = rb.isKinematic; rb.isKinematic = true; }
+            grab.enabled = false;
+        }
+        mirror.SetPositionAndRotation(position, rotation);
+    }
+
+    /// <summary>The other player let go: our hands may take it again.</summary>
+    public void StopFollowing()
+    {
+        if (!following) return;
+        following = false;
+        var rb = mirror.GetComponent<Rigidbody>();
+        if (rb != null) rb.isKinematic = kinematicBefore;
+        grab.enabled = true;
+    }
+
+    /// <summary>Back on the wall, where it hangs in the room.</summary>
+    public void Rehang()
+    {
+        mirror.SetPositionAndRotation(mirrorHome, mirrorHomeTurn);
+        grab.SetTargetPose(new Pose(mirrorHome, mirrorHomeTurn));   // else XRI may still apply the last held pose
+    }
+
+    /// <summary>Another player took the mirror at the same moment and goes first: let go of ours.</summary>
+    public void DropLocal()
+    {
+        if (grab.isSelected && grab.interactionManager != null) grab.interactionManager.CancelInteractableSelection((IXRSelectInteractable)grab);
+    }
+
+    bool following, kinematicBefore;
+    // ---- end shared mirror scene hooks ----
 
     SpeechToProxy talker;
     VincentAlive alive;
@@ -104,11 +183,14 @@ public class MirrorScene : MonoBehaviour
 
     void Update()
     {
-        KeepGrabOn(Time.deltaTime);
-        bool held = grab.isSelected || HeldOnDesktop();
+        if (!following) KeepGrabOn(Time.deltaTime);   // shared mirror: while another player holds it, ours stays off
+        if (Follow) return;                              // shared mirror: another headset decides; MirrorLink applies it
+        bool held = grab.isSelected || HeldOnDesktop() || HeldByOther;
         // the mirror's face is its local -Z, the side away from the wall
         var centre = mirror.TransformPoint(glassLocal);
-        var step = Decide(Time.deltaTime, held, centre, -mirror.forward, talker.IsBusy, talker.LastReply != null);
+        // shared Vincent: while another player is asking him, his lines wait too
+        var step = Decide(Time.deltaTime, held, centre, -mirror.forward, talker.IsBusy || talker.BlockedBy != null, talker.LastReply != null);
+        LastStep = step; LastStepFrame = Time.frameCount;
         Apply(step);
         if (alive != null) alive.PaintingFrom = step.painting ? centre : (Vector3?)null;   // he looks at the mirror while he paints
     }

@@ -105,6 +105,7 @@ Tag every claim in the PR body **[V]** (verified: say how and where) or
 | Per-feature docs | `docs/<feature>/README.md` |
 | Review skill for AI agents | `.claude/skills/adversarial-review/` |
 | Known review false positives | `.claude/skills/adversarial-review/references/known-false-positives.md` |
+| Making or refining a 3D object: start here (triage, reference views, Tripo or Blender, Unity import) | `.claude/skills/asset-pipeline/` |
 
 Each feature (Gallery, Bedroom...) gets `docs/<feature>/README.md`, modeled
 on PR #7's Bedroom README: how to open it, controls, physics layers, how to

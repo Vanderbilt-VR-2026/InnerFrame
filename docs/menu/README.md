@@ -12,9 +12,12 @@ itself on startup.
 | Move it | Point at the title bar (or touch it) and hold **grip**, then move. It turns to face you |
 | Close it | **X** in the title bar, or the Menu button again |
 | Go back | **Back to …**: the scene you came from (or the Gallery if you started here). Hidden when there's nowhere to go back to |
-| Talk | **Talk** is a placeholder for speaking to the painter. It does nothing yet |
 
 The panel opens 0.55 m in front of you, inside the controllers' 2 m ray.
+
+Talking to Vincent isn't on the menu: in the Gallery (his portrait) or the
+Painted Bedroom (his figure), hold the right controller's **B** button (**T**
+in the Editor), speak and let go. See `docs/vangogh/README.md`.
 
 **Without a headset** (Editor Play mode): click the Game view, press **M**, and
 click the buttons with the mouse. In the Painted Bedroom's desktop mode the
@@ -29,9 +32,6 @@ controller (a headset or the XR Interaction Simulator).
 | `PlayerMenu` | Creates itself on startup. Listens for the Menu button, remembers the previous scene, adds an XR UI EventSystem if the scene has none |
 | `PlayerMenuPanel` | Builds the panel in code (world-space canvas), the drag handle (XR Grab Interactable on the title bar) and the buttons |
 
-Speech and the AI reply are not on this branch. They stay on
-`sonya/multiplayer-menu` until there is a proxy to talk to.
-
 ## Hardware tests (please run on a headset)
 
 1. Press ≡: the panel appears in front of you, level and readable.
@@ -39,4 +39,3 @@ Speech and the AI reply are not on this branch. They stay on
 3. Teleport away and back: the panel hasn't moved.
 4. X closes it; ≡ opens it again in front of you.
 5. From Gallery go to another scene, open the menu: **Back to Gallery** returns you.
-6. Talk: pressing it does nothing, and nothing appears in the Console.

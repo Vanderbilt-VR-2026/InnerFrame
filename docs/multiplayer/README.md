@@ -158,3 +158,5 @@ sample) driving the Editor player.
 - Objects created at runtime. Spawn those with `Runner.Spawn` from a
   prefab that has a Network Object.
 - Voice: see `docs/voice/README.md` (push-to-talk with Photon Voice).
+- Talking to Vincent: shared in the Gallery (`docs/vangogh/README.md` → Shared Vincent); the Painted
+  Bedroom's mirror scene is still per headset (#77).

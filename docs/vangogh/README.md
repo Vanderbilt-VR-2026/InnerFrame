@@ -91,6 +91,43 @@ The first press asks for microphone permission; press again after allowing it.
 Plain `http://` needs **Player Settings > Other Settings > Configuration > Allow downloads
 over HTTP = Always allowed**; this feature sets it.
 
+## Shared Vincent (multiplayer, phase 1: Gallery)
+
+With other players in the room (`docs/multiplayer/README.md`), talking to Vincent is shared:
+
+- When someone holds B, everyone else's hint says *Player 1 is asking Vincent…* and B does nothing for them.
+- When his answer comes, everyone hears it from the portrait and sees his words; the hint shows what was asked
+  (*Player 1 asked: "…"*). When he stops, anyone may ask.
+- If two players press B at once, the lower player number goes first; the other's question is dropped.
+- A player who leaves mid-question frees him for the others; a lock nobody frees ends after 75 s.
+
+**Everyone must reach the same proxy**, because each headset plays his answer from it (`audio_url`):
+
+- **Quest + Editor on one Mac:** the USB setup above already does it: the Quest's `localhost:8000` is the Mac.
+- **Several headsets:** the Wi-Fi setup above on one Mac, with every headset's AI Proxy Settings pointing at it.
+- A headset that can't reach it still shows his words, timed as if he spoke them, and logs a warning.
+
+Not shared yet: the **Painted Bedroom**. Its mirror, canvas and scripted lines are still per headset (#77), so
+sharing his answers there would contradict what each player sees; there he stays private per player until #77.
+
+- **Code:** `Assets/Script/Network/VincentLink.cs` on each player's avatar (both avatar builders add it), and the
+  hooks marked *Shared Vincent* in `Scripts/SpeechToProxy.cs` (`IsAsking`, `Answered`, `BlockedBy`, `SayRemote`).
+- Messages are Fusion RPCs from the asker's avatar. A normal RPC carries at most 512 bytes, so the question and his
+  answer travel in 100-character pieces.
+- After pulling this, rebuild both avatars: **InnerFrame → Multiplayer → Rebuild Network Player Prefab** and
+  **Rebuild Painted Bedroom Avatar**.
+
+### Test it (Quest + Editor)
+
+1. Start the proxy, `adb reverse tcp:8000 tcp:8000`, build to the Quest, then press Play in the Gallery in the
+   Editor (as in `docs/multiplayer/README.md`). Both Consoles: `(2 in room)`.
+2. Hold B in the headset and ask something. The Editor's hint shows *Player N is asking Vincent…*; pressing T there
+   does nothing.
+3. The answer plays in both, from the portrait; the Editor's hint shows the question. Console:
+   `[VanGogh] Player N asked "…"; he said "…" (shared)`.
+4. When he stops, ask from the Editor (T): the same, the other way round.
+5. Press B and T at the same moment: only the lower player number's question is answered.
+
 ## Hold the mirror (Painted Bedroom)
 
 Vincent is painting himself and needs a mirror (concept sheet, frame 07).

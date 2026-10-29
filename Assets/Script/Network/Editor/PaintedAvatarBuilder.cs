@@ -112,6 +112,7 @@ public static class PaintedAvatarBuilder
 
         player.tinted = tinted.ToArray();
         NetworkPlayerVoiceBuilder.AddTo(root, player.head); // voice chat (Assets/Script/Voice)
+        root.AddComponent<VincentLink>(); // shared Vincent: questions and answers for the room
 
         PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
     }

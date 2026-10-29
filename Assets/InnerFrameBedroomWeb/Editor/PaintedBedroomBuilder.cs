@@ -30,6 +30,11 @@ namespace InnerFrame.PaintedBedroom.EditorTools
         public static readonly string[] ShellObjects = { "Room_Walls", "Room_Floor", "Room_Ceiling", "Door_Frames" };   // Door_Frames includes the landings behind the doors
         // parts of the room that stay put; everything else in the painting can be picked up and moved
         static readonly string[] FixedObjects = { "Room_Walls", "Room_Floor", "Room_Ceiling", "Room_Skirting", "Window_View", "Door_Frames", "Room_Details" };
+        // movable objects that collide with their mesh instead of a box per part (convex, except the ones below)
+        static readonly string[] MeshColliderObjects = { "Bed", "Pillow_Back", "Pillow_Front" };
+        // concave mesh colliders: only for objects the physics table keeps kinematic (the Bed: hasPhysics off), since Unity
+        // refuses a concave collider on a moving body
+        static readonly string[] ConcaveColliderObjects = { "Bed" };
 
         public const float Emission = 0.11f;        // a little of each painted colour glows, so shadows stay coloured, not grey
         public const float EmissionScale = 0.35f;   // applied to the per-material glow from the web study (which was lit flat, like the canvas)
@@ -235,7 +240,8 @@ namespace InnerFrame.PaintedBedroom.EditorTools
 
         /// <summary>
         /// Every object except the room shell becomes movable: box colliders fitted to each of its
-        /// parts (so a pillow can be picked off the bed), a kinematic Rigidbody (it stays where you
+        /// parts (so a pillow can be picked off the bed; the bed and pillows use mesh colliders, see
+        /// MeshColliderObjects), a kinematic Rigidbody (it stays where you
         /// leave it, no falling), the desktop marker, and an XR Grab Interactable for the headset.
         /// </summary>
         static int MakeMovable(GameObject room, out bool xrGrab)
@@ -253,6 +259,15 @@ namespace InnerFrame.PaintedBedroom.EditorTools
                 foreach (var mf in filters)
                 {
                     if (mf.sharedMesh == null || mf.name.EndsWith("_ink")) continue;   // outlines follow their part
+                    // the Tripo bed and pillows: a box around a leaning pillow or a lumpy mattress is far too big,
+                    // so a dropped pillow would float; collide with the mesh itself instead
+                    if (Array.IndexOf(MeshColliderObjects, obj.name) >= 0)
+                    {
+                        var mc = mf.gameObject.AddComponent<MeshCollider>();
+                        mc.sharedMesh = mf.sharedMesh;
+                        mc.convex = Array.IndexOf(ConcaveColliderObjects, obj.name) < 0;   // only a kinematic body may be concave
+                        continue;
+                    }
                     // the part's bounds, measured in its object's space (works for FBX parts with their own rotation too)
                     Bounds mb = mf.sharedMesh.bounds;
                     var local = new Bounds(obj.InverseTransformPoint(mf.transform.TransformPoint(mb.center)), Vector3.zero);

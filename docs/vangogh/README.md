@@ -91,42 +91,70 @@ The first press asks for microphone permission; press again after allowing it.
 Plain `http://` needs **Player Settings > Other Settings > Configuration > Allow downloads
 over HTTP = Always allowed**; this feature sets it.
 
-## Shared Vincent (multiplayer, phase 1: Gallery)
+## Shared Vincent (multiplayer)
 
-With other players in the room (`docs/multiplayer/README.md`), talking to Vincent is shared:
+With other players in the room (`docs/multiplayer/README.md`), Vincent is the same for everyone, in the Gallery and
+in the Painted Bedroom.
+
+**Talking to him** (both scenes):
 
 - When someone holds B, everyone else's hint says *Player 1 is asking Vincent…* and B does nothing for them.
-- When his answer comes, everyone hears it from the portrait and sees his words; the hint shows what was asked
+- When his answer comes, everyone hears it from him and sees his words; the hint shows what was asked
   (*Player 1 asked: "…"*). When he stops, anyone may ask.
 - If two players press B at once, the lower player number goes first; the other's question is dropped.
 - A player who leaves mid-question frees him for the others; a lock nobody frees ends after 75 s.
 
-**Everyone must reach the same proxy**, because each headset plays his answer from it (`audio_url`):
+**The mirror scene** (Painted Bedroom, #77):
+
+- Whoever holds the mirror, everyone sees it in their hands; nobody else can take it meanwhile. Two grabs at the same
+  moment: the lower player number keeps it. Let go, and it hangs itself back on the wall for everyone.
+- One headset decides the scene: the player already deciding, or (the first one in, or when the decider leaves) the
+  lowest player number. Everyone sees the same canvas stage and hears each scripted line once, together.
+- A player who takes over carries on from where the canvas was; a player who joins mid-portrait sees it as it is.
+- His scripted lines wait while anyone is asking him, and never play over your own question.
+
+**Everyone must reach the same proxy**, because each headset plays his answers from it (`audio_url`):
 
 - **Quest + Editor on one Mac:** the USB setup above already does it: the Quest's `localhost:8000` is the Mac.
 - **Several headsets:** the Wi-Fi setup above on one Mac, with every headset's AI Proxy Settings pointing at it.
 - A headset that can't reach it still shows his words, timed as if he spoke them, and logs a warning.
+- His scripted mirror lines are recorded clips in the app, so they need no proxy.
 
-Not shared yet: the **Painted Bedroom**. Its mirror, canvas and scripted lines are still per headset (#77), so
-sharing his answers there would contradict what each player sees; there he stays private per player until #77.
+**Code** (both on each player's avatar; both avatar builders add them):
 
-- **Code:** `Assets/Script/Network/VincentLink.cs` on each player's avatar (both avatar builders add it), and the
-  hooks marked *Shared Vincent* in `Scripts/SpeechToProxy.cs` (`IsAsking`, `Answered`, `BlockedBy`, `SayRemote`).
-- Messages are Fusion RPCs from the asker's avatar. A normal RPC carries at most 512 bytes, so the question and his
-  answer travel in 100-character pieces.
+- `Assets/Script/Network/VincentLink.cs`: questions and answers (Fusion RPCs from the asker's avatar; texts in
+  100-character pieces, since a normal RPC carries at most 512 bytes). Hooks marked *Shared Vincent* in
+  `Scripts/SpeechToProxy.cs` (`IsAsking`, `Answered`, `BlockedBy`, `SayRemote`).
+- `Assets/Script/Network/MirrorLink.cs`: the mirror and the scene (networked properties: the holder's mirror pose; the
+  decider's stage, progress, scene and latest line). Hooks marked *Shared mirror scene* in `Scripts/MirrorScene.cs`
+  (`Follow`, `HeldByOther`, `ApplyFromRoom`, `SayLine`, `FollowPose`, `Rehang`, `Resume`...).
+- Alone, or outside a room, everything runs as before.
 - After pulling this, rebuild both avatars: **InnerFrame → Multiplayer → Rebuild Network Player Prefab** and
   **Rebuild Painted Bedroom Avatar**.
 
 ### Test it (Quest + Editor)
 
-1. Start the proxy, `adb reverse tcp:8000 tcp:8000`, build to the Quest, then press Play in the Gallery in the
-   Editor (as in `docs/multiplayer/README.md`). Both Consoles: `(2 in room)`.
-2. Hold B in the headset and ask something. The Editor's hint shows *Player N is asking Vincent…*; pressing T there
-   does nothing.
-3. The answer plays in both, from the portrait; the Editor's hint shows the question. Console:
-   `[VanGogh] Player N asked "…"; he said "…" (shared)`.
-4. When he stops, ask from the Editor (T): the same, the other way round.
-5. Press B and T at the same moment: only the lower player number's question is answered.
+Start the proxy, `adb reverse tcp:8000 tcp:8000`, build to the Quest, then press Play in the Editor
+(as in `docs/multiplayer/README.md`). Both Consoles: `(2 in room)`.
+
+Gallery:
+
+1. Hold B in the headset and ask something. The Editor's hint shows *Player N is asking Vincent…*; T does nothing there.
+2. The answer plays in both, from the portrait; the Editor's hint shows the question.
+3. When he stops, ask from the Editor (T): the same, the other way round.
+4. Press B and T at the same moment: only the lower player number's question is answered.
+
+Painted Bedroom (both players go there through the menu or the door):
+
+5. His greeting plays once in both, at the same time (the first player in decides).
+6. Take the mirror in the headset: the Editor sees it move with your hand, and can't take it.
+7. Hold it beside the canvas: both canvases go sketch → colour → finished together, and each line plays once in both.
+8. Let go: the mirror hangs back on the wall in both.
+9. Ask him (B) while he's painting: both hear the answer, and it fits what's happening.
+10. Leave the room on the deciding player's side mid-portrait: the other carries on from the same canvas stage.
+
+Known limits: the held mirror moves on the others' screens at the network's rate (no smoothing yet), so it can look
+slightly steppy; and a scripted line that started just before someone pressed B can be cut by the answer.
 
 ## Hold the mirror (Painted Bedroom)
 
@@ -169,7 +197,7 @@ until his voice is free. B stops a scripted line, as it stops any of his answers
   happening (mirror on the wall, held, sketching, colour, paused, finished; the exact texts are at the top of
   `MirrorScene`). Each question sends it as the form field `scene`. The proxy uses it once `feat/vangogh-persona` is
   merged; until then it ignores it. The Gallery portrait never sets it, so its requests are unchanged.
-- **Not networked (#77):** the mirror and the canvas are local to each headset.
+- **Multiplayer (#77):** shared; see *Shared Vincent* above (`MirrorLink`).
 - **What the model can't do:** Vincent is imported as a still mesh (no rig, no animation), so he doesn't move his arm
   or turn his head; only the brush in his hand makes a small loop while he paints. He doesn't look at you or at the
   mirror.

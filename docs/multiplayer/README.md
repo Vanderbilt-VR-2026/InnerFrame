@@ -152,11 +152,14 @@ it lands in the same place on both. A real hand-off needs a second pair of
 hands: two headsets, or the XR Device Simulator (an XR Interaction Toolkit
 sample) driving the Editor player.
 
+## Vincent
+
+Talking to Vincent and the Painted Bedroom's mirror scene are shared: see `docs/vangogh/README.md` →
+Shared Vincent (`VincentLink`, `MirrorLink` on each avatar).
+
 ## Not synced (yet)
 
 - Hinged doors (`BedroomHingedDoor`) and anything that isn't a grab object.
 - Objects created at runtime. Spawn those with `Runner.Spawn` from a
   prefab that has a Network Object.
 - Voice: see `docs/voice/README.md` (push-to-talk with Photon Voice).
-- Talking to Vincent: shared in the Gallery (`docs/vangogh/README.md` → Shared Vincent); the Painted
-  Bedroom's mirror scene is still per headset (#77).

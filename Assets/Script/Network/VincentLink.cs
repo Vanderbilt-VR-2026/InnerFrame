@@ -13,9 +13,8 @@ using UnityEngine.SceneManagement;
 /// On each player's avatar (NetworkPlayer prefabs; added by their builders). Only your own avatar sends; every
 /// avatar's copy receives. Needs every player's AI Proxy Settings to point at the same proxy (docs/vangogh/README.md).
 ///
-/// Phase 1 shares only where Vincent has no MirrorScene (the Gallery). In the Painted Bedroom the mirror, his canvas
-/// and his scripted lines are still per headset (#77), so sharing his answers there would contradict what each player
-/// sees; it stays private until #77 shares the scene too.
+/// Shared in both scenes: the Gallery portrait and the Painted Bedroom's Vincent, whose mirror scene MirrorLink shares
+/// (#77), so his answers there match what everyone sees.
 /// </summary>
 public class VincentLink : NetworkBehaviour
 {
@@ -182,8 +181,8 @@ public class VincentLink : NetworkBehaviour
         if (t != null) t.BlockedBy = null;
     }
 
-    /// <summary>Phase 1: shared only where there is no mirror scene (see the class comment).</summary>
-    static bool Shared(SpeechToProxy t) => t.GetComponent<MirrorScene>() == null;
+    /// <summary>Every Vincent is shared (the Painted Bedroom's since MirrorLink shares its mirror scene).</summary>
+    static bool Shared(SpeechToProxy t) => t != null;
 
     static SpeechToProxy FindTalker()
     {

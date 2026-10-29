@@ -1,0 +1,13 @@
+InnerFrame Figma node 2:37 design inputs, exported 2026-10-26.
+User-supplied design: https://www.figma.com/design/dRg2LX8SNV5wouBX1Zr76N/InnerFrame?node-id=2-37
+Portrait replacement: use Assets/VanGogh/Art/VG_SelfPortrait_1887.jpg, Vincent van Gogh, Self-Portrait, 1887, AIC accession 1954.326. Source: https://www.artic.edu/artworks/80607/self-portrait . Digital image courtesy of the Art Institute of Chicago. CC0/public-domain image per the existing main asset inventory (API is_public_domain=true recorded 2026-10-26) and Cici review; no new AIC API verification is claimed here.
+The former Portrait.png was a Figma node 2:2 export with unverified upload provenance. No redistribution licence is established for that file. The migration removes its active reference and deletes it only after a project dependency check; historical Git copies are not erased.
+Remaining Figma UI layer exports are user-provided design assets whose public submission was expressly authorized. This authorization does not establish a licence for the former third-party portrait.
+CloseBackground.png: exact 4x node 2:34 (84x84).
+Divider.png: exact 4x node 2:9 (449x12).
+EnterBackground.png: exact 4x node 2:30 (448x144).
+These exports are individual visual layers only; all interface text remains editable TMP text. The glass is generated 3D geometry, not a board screenshot.
+CormorantGaramond-Medium.ttf and Inter-Regular.ttf: static Google Fonts TrueType responses for Cormorant Garamond weight500 and Inter weight400. Both under SIL OFL1.1; license texts included. Fonts are unmodified.
+Font URLs:
+https://fonts.gstatic.com/s/cormorantgaramond/v21/co3umX5slCNuHLi8bLeY9MK7whWMhyjypVO7abI26QOD_s06KnTOjw.ttf
+https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfAZ9hjQ.ttf

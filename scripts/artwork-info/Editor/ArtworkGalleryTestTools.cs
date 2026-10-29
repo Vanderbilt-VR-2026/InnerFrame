@@ -16,7 +16,7 @@ namespace InnerFrame.EditorTools
     public static class ArtworkGalleryTestTools
     {
         const string Source = "Assets/Scenes/Gallery.unity";
-        const string Folder = "Assets/ArtworkInfo/MuseumGenerated 16";
+        const string Folder = ArtworkInfoReviewMigration.Generated;
         const string Output = "Assets/Scenes/GalleryArtworkInfoTest.unity";
 
         static void Check(bool ok, string message)
@@ -70,7 +70,7 @@ namespace InnerFrame.EditorTools
                     Folder + "/ArtworkDetailPanel.prefab");
 
                 Check(labelPrefab != null && detailPrefab != null,
-                    "MuseumGenerated 16 prefabs missing. Nothing regenerated.");
+                    "Generated prefabs missing; run review migration first. Nothing regenerated.");
                 Check(labelPrefab.GetComponent<ArtworkInfoDisplay>() != null,
                     "Placard controller missing.");
                 var detailController = detailPrefab.GetComponent<ArtworkDetailPanel>();

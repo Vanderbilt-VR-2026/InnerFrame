@@ -1092,12 +1092,12 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Texture: {fileID: 2800000, guid: b4d44d6d59a514d05813ddb04ba2d58b, type: 3}
+  m_Texture: {fileID: 2800000, guid: cfeeb65ac6bc04736a0379f2135e685f, type: 3}
   m_UVRect:
     serializedVersion: 2
-    x: 0
+    x: 0.08823529
     y: 0
-    width: 1
+    width: 0.8235294
     height: 1
 --- !u!1 &5254598370267350404
 GameObject:

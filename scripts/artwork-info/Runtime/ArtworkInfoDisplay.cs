@@ -58,7 +58,7 @@ namespace InnerFrame.ArtworkInfo
             panel.gameObject.SetActive(true);
             var follow = panel.GetComponent<ArtworkHeadFollow>();
             if (follow == null) follow = panel.gameObject.AddComponent<ArtworkHeadFollow>();
-            follow.Begin(eyes, panelDistance);
+            follow.Begin(eyes, panelDistance, transform);
         }
         public void Close()
         {

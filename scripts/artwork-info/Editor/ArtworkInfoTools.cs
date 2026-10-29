@@ -34,9 +34,11 @@ namespace InnerFrame.EditorTools
             Require(Shader.Find("Universal Render Pipeline/Lit") != null, "URP Lit shader required.");
             Require(Shader.Find("Universal Render Pipeline/Unlit") != null, "URP Unlit shader required.");
             ArtworkFigmaPanel.Preflight();
-            // Every run gets its own directory: no old prototype, source, prefab or scene is overwritten.
+            // Never create numbered duplicates or overwrite the approved assets. Use migration for an existing set.
             if (!AssetDatabase.IsValidFolder(Root)) AssetDatabase.CreateFolder("Assets", "ArtworkInfo");
-            folder = AssetDatabase.GenerateUniqueAssetPath(Root + "/MuseumGenerated");
+            folder = ArtworkInfoReviewMigration.Generated;
+            Require(!AssetDatabase.IsValidFolder(folder) && !AssetDatabase.IsValidFolder(ArtworkInfoReviewMigration.Legacy),
+                "Approved assets already exist. Use menu 6 (review migration), not regeneration.");
             AssetDatabase.CreateFolder(Root, System.IO.Path.GetFileName(folder));
             var previousScenes=EditorSceneManager.GetSceneManagerSetup();
             Scene scene=default;
@@ -155,7 +157,7 @@ namespace InnerFrame.EditorTools
             PlacardText(canvas,serif,"Title","The Bedroom",15,16,124,16,12,15);
             canvas.Find("Title").GetComponent<TMP_Text>().fontStyle=FontStyles.Bold;
             PlacardText(canvas,serif,"Artist","Vincent van Gogh",15,34,145,14,10,13);
-            PlacardText(canvas,serif,"Metadata","1889\nOil on canvas\n72.4 × 90.7 cm\nThe Art Institute of Chicago",15,64,152,56,9.5f,14);
+            PlacardText(canvas,serif,"Metadata","1889\nOil on canvas\n73.6 × 92.3 cm\nThe Art Institute of Chicago",15,64,152,56,9.5f,14);
             var rule=PlacardSlot(canvas,"Divider",15,126,145,0.35f).gameObject.AddComponent<Image>();
             rule.color=new Color(.70f,.70f,.70f); rule.raycastTarget=false;
             PlacardText(canvas,serif,"Description","Van Gogh painted his bedroom\nin Arles as a personal refuge.\nThe simple furnishings and\nvivid colors reflect his desire\nfor rest and renewal.",15,136,152,72,9.5f,14);
@@ -201,7 +203,7 @@ namespace InnerFrame.EditorTools
         {
             var text=PlacardSlot(canvas,name,x,y,w,h).gameObject.AddComponent<TextMeshProUGUI>();
             text.font=font; text.fontSize=size*3; text.color=Color.black;
-            text.enableAutoSizing=false; text.enableWordWrapping=false; text.raycastTarget=false;
+            text.enableAutoSizing=false; text.textWrappingMode=TextWrappingModes.NoWrap; text.raycastTarget=false;
             text.alignment=TextAlignmentOptions.TopLeft;
             var face=font.faceInfo;
             float half=(leading*3-(face.ascentLine-face.descentLine)*text.fontSize/face.pointSize*face.scale)/2;
@@ -342,7 +344,9 @@ namespace InnerFrame.EditorTools
             var panel=display.PanelTransform; var position=panel.position; var rotation=panel.rotation;
             Require(panel.parent==null && panel.localScale==Vector3.one,"Panel must be independent and world scale one.");
             CheckGlassStructure(panel.gameObject);
-            Require(Mathf.Abs(Vector3.Distance(position,camera.transform.position)-1.35f)<0.001f,"Expected 1.35m.");
+            var follow=panel.GetComponent<ArtworkHeadFollow>();
+            Require(follow!=null && follow.HasSafePose,"No safe pose at this camera position; move back before UI checks.");
+            Require(Vector3.Distance(position,camera.transform.position)<=1.351f,"Exceeded preferred distance.");
             Require(Vector3.Dot(panel.forward,(position-camera.transform.position).normalized)>0.99f,"Front (-Z) must face viewer.");
             display.MoreButton.onClick.Invoke(); Require(display.PanelTransform==panel,"Repeated More duplicated panel.");
             var enter=panel.GetComponentInChildren<ArtworkEnterAction>();
@@ -362,8 +366,9 @@ namespace InnerFrame.EditorTools
             {
                 camera.transform.position+=Vector3.right;
                 camera.transform.Rotate(20,30,10);
-                Require(panel.position==position && panel.rotation==rotation,
-                    "Panel moved after opening.");
+                follow.RefreshPose();
+                Require(follow.HasSafePose && panel.position!=position && Quaternion.Angle(panel.rotation,camera.transform.rotation)<0.01f,
+                    "Camera-relative placement did not update.");
                 var panelCanvas=panel.GetComponentInChildren<Canvas>(true);
                 Require(panelCanvas!=null,"Figma detail Canvas missing during layout validation.");
                 ArtworkFigmaPanel.Check((RectTransform)panelCanvas.transform);
@@ -373,11 +378,12 @@ namespace InnerFrame.EditorTools
             finally
             {
                 camera.transform.SetPositionAndRotation(oldPosition,oldRotation);
+                follow.RefreshPose();
             }
             ClickThroughUIRaycast(panel.GetComponent<ArtworkDetailPanel>().CloseButton,camera); Require(!display.IsOpen,"Close failed.");
             display.MoreButton.onClick.Invoke(); Require(display.IsOpen && display.PanelTransform==panel,"Reopen failed.");
             display.Close();
-            Debug.Log("[ArtworkInfo] Screen-point raycast, Button handler, sorting structure and overflow checks passed. Actual rendering, mouse clicks, multi-frame world lock, visual quality and Quest input still require manual testing.");
+            Debug.Log("[ArtworkInfo] Screen-point raycast, Button handler, sorting structure and overflow checks passed. Actual rendering, mouse clicks, multi-frame following/collision, visual quality and Quest input still require manual testing.");
         }
 
         [MenuItem("Tools/InnerFrame/Artwork Info/3. Create XR Test Copy From Open Standalone Scene")]
@@ -385,7 +391,7 @@ namespace InnerFrame.EditorTools
         {
             Require(!EditorApplication.isPlaying,"Exit Play Mode.");
             var test=SceneManager.GetActiveScene();
-            Require(test.name=="ArtworkInfoTestScene" && test.path.StartsWith(Root+"/MuseumGenerated",StringComparison.Ordinal),"Open a generated standalone scene first.");
+            Require(test.name=="ArtworkInfoTestScene" && test.path.StartsWith(ArtworkInfoReviewMigration.Generated+"/",StringComparison.Ordinal),"Open a generated standalone scene first.");
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
             string path=System.IO.Path.GetDirectoryName(test.path).Replace('\\','/')+"/ArtworkInfoXRTestScene.unity";
             Require(AssetDatabase.LoadAssetAtPath<SceneAsset>(path)==null,"XR test already exists; refusing to overwrite.");

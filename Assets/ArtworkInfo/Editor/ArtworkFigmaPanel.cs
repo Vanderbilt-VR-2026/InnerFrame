@@ -24,9 +24,11 @@ namespace InnerFrame.EditorTools
 
         public static void Preflight()
         {
-            foreach(var name in new[]{"Portrait.png","CloseBackground.png","Divider.png","EnterBackground.png"})
+            foreach(var name in new[]{"CloseBackground.png","Divider.png","EnterBackground.png"})
                 if(AssetDatabase.LoadAssetAtPath<Texture2D>(Design+name)==null)
                     throw new InvalidOperationException("Missing Figma design asset: "+Design+name+". Install the supplied design bundle; see docs/artwork-info/README.md. No generic substitute will be generated.");
+            if(AssetDatabase.LoadAssetAtPath<Texture2D>(ArtworkInfoReviewMigration.Portrait)==null)
+                throw new InvalidOperationException("Missing canonical AIC portrait: "+ArtworkInfoReviewMigration.Portrait);
             foreach(var name in new[]{"CormorantGaramond-Medium.ttf","Inter-Regular.ttf"})
                 if(AssetDatabase.LoadAssetAtPath<Font>(Design+name)==null)
                     throw new InvalidOperationException("Missing design font: "+Design+name+". Install the supplied design bundle first.");
@@ -36,7 +38,9 @@ namespace InnerFrame.EditorTools
         {
             var serif=FontAsset("CormorantGaramond-Medium",folder);
             var sans=FontAsset("Inter-Regular",folder);
-            Picture(canvas,"Portrait — Figma 2:2","Portrait.png",30,48,112,136);
+            var portrait=Slot(canvas,"Portrait — AIC 1954.326",30,48,112,136).gameObject.AddComponent<RawImage>();
+            portrait.raycastTarget=false;
+            ArtworkInfoReviewMigration.SetPortrait(portrait,AssetDatabase.LoadAssetAtPath<Texture2D>(ArtworkInfoReviewMigration.Portrait));
             Label(canvas,serif,"Title — 1:7","THE BEDROOM",28,189,112,19,16,19,Color.black);
             Picture(canvas,"Divider — 2:9","Divider.png",28,212,112.0045f,3);
             Label(canvas,sans,"Artist and Year — 2:3","Vincent van Gogh · 1889",28,219,116,12,10,12,Ink);
@@ -137,7 +141,7 @@ namespace InnerFrame.EditorTools
             text.raycastTarget=false; text.enableAutoSizing=false;
             // Figma's single-line labels must stay on one line. TMP's default word wrap can
             // move a final word to a second line even when the design intends a fixed run.
-            text.enableWordWrapping=value.IndexOf('\n')>=0;
+            text.textWrappingMode=value.IndexOf('\n')>=0 ? TextWrappingModes.Normal : TextWrappingModes.NoWrap;
             // Figma AUTO resolves to 15/12/19 px for these runs. Fixed line-height preserves composition.
             text.richText=true;
             text.text="<line-height="+(lineHeight*Scale).ToString(System.Globalization.CultureInfo.InvariantCulture)+">"+value;
@@ -161,7 +165,7 @@ namespace InnerFrame.EditorTools
         {
             var title=canvas.Find("Title — 1:7").GetComponent<TMP_Text>();
             if(title.fontSize!=16*Scale || title.rectTransform.sizeDelta!=new Vector2(112,19)*Scale ||
-                title.enableAutoSizing || title.enableWordWrapping)
+                title.enableAutoSizing || title.textWrappingMode!=TextWrappingModes.NoWrap)
                 throw new InvalidOperationException("Title regression: Figma size/box changed.");
         }
 

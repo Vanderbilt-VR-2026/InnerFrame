@@ -1,0 +1,17 @@
+{
+  "Runtime/ArtworkInfoDisplay.cs": "e9c1b01c9e8de2ef6781aa337f4510d44c01d9018eba8dcee69dbe2224359a8d",
+  "Runtime/ArtworkDesktopInput.cs": "53bb46596b3292371fec42c8af72c5c4ed0559cfd15fcf11a4150ae876ed2439",
+  "Runtime/ArtworkRoundedRaycast.cs": "cda5aafdf917ee140370b568fce64754a28e37f3a34d4c0d86fca1c60d42ed4b",
+  "Runtime/ArtworkDetailPanel.cs": "24cd8c9391cbce7e212b32c340803d75026657fdb8ca59b1b1a913a6595809ee",
+  "Runtime/ArtworkHeadFollow.cs": "67a09ac043bdb50d5e5c6a93646c894d872866fe3ce46c6f330ce0c4bc430a8d",
+  "Runtime/ArtworkDesktopCamera.cs": "7aba0b144eba66e97baf40b2848f0d1d6301780aed129f92d4ea8d3d2b60e130",
+  "Runtime/ArtworkInfoLayout.cs": "3b6b8e5e30b28b58a3b6dad5f8d7d8704388a79c011a2e3eab6fb4b58f27291e",
+  "Runtime/ArtworkEnterAction.cs": "2eb73b91bb65f7378638a75c63ed72549cca5d3194dc372245b8fdeaa5a53f25",
+  "Editor/ArtworkGlassBuilder.cs": "2fcaa2e17927204bfb607de0eb9404b5459a0b5512582ccc397a12ea33c676cc",
+  "Editor/ArtworkInfoTools.cs": "077e2db932a03b7aa3066676c82fbefbec92610ebf699aaf02546775e8173d1f",
+  "Editor/ArtworkFigmaPanel.cs": "5a12fedf7dd7df5a3524412b68d3f51905bca48f6533da6522e4417af0f727ba",
+  "Editor/ArtworkGalleryTestTools.cs": "5fd97356598da844b98030959c47712ace49763597e8884323b8026ded3fbf54",
+  "Editor/ArtworkWhiteSurfaceFix.cs": "5121e0d218bba9fd21725881e0643298dfac8d6000212c176a8ac89cc82eb06f",
+  "Editor/ArtworkInfoGeometry.cs": "b99054e86517bf7320d6c80eb66dad7da06ac43caf066f99f6211a23524df7f2",
+  "Design/NOTICE.txt": "c695b30173d9d85aa29beae62357755964ff2483ef0ebbdc670652a5df458eb5"
+}

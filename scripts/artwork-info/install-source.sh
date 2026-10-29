@@ -16,6 +16,9 @@ if target.exists() and not args.update_source:
 manifest=target/'.source-hashes.json'
 known=json.loads(manifest.read_text()) if manifest.exists() else {}
 legacy={'Runtime/ArtworkInfoDisplay.cs': '8446b7a878d306dcda324a5bf7f9b52e5ca709da0f84a10b12b6d676ece61d79', 'Runtime/ArtworkInfoLayout.cs': '41577b5638f39ee3021c7b318085bbc7f65b6c8999f6ec3eb5efb0cd8eb8c3c0', 'Editor/ArtworkInfoTools.cs': 'f49e68d73711f879f71fdcce1eb94c2f6554914174929fde22924743f0cc373d'}
+# Only exact published PR112 baseline files are eligible for this guarded upgrade.
+review_baseline=source/'review-baseline-hashes.json'
+if review_baseline.exists(): legacy.update(json.loads(review_baseline.read_text()))
 files=sorted(source.glob('Runtime/*.cs'))+sorted(source.glob('Editor/*.cs'))
 payload={str(f.relative_to(source)):f.read_bytes() for f in files}
 digest=lambda data:hashlib.sha256(data).hexdigest()
@@ -25,7 +28,9 @@ archive=zipfile.ZipFile(bundle) if bundle and bundle.is_file() else None
 try:
     for name,sha in expected.items():
         relative='Design/'+name
-        if archive:
+        if name == "NOTICE.txt":
+            data=(source/"NOTICE.txt").read_bytes()
+        elif archive:
             # Read only named manifest members; no extractall or user-controlled output paths.
             info=archive.getinfo(relative)
             if info.file_size>8*1024*1024: sys.exit('Oversize design input: '+name)
@@ -52,5 +57,5 @@ for relative,data in payload.items():
     destination=target/relative; destination.parent.mkdir(parents=True,exist_ok=True)
     destination.write_bytes(data)
 manifest.write_text(json.dumps({name:digest(data) for name,data in payload.items()},indent=2)+'\n')
-print('Source and exact Figma inputs installed. Existing .meta, prefabs, scenes and materials preserved. Let Unity compile, then Tools > InnerFrame > Artwork Info > 1. Generate Standalone Museum Assets.')
+print('Source installed. Existing Unity assets preserved. For PR112 review fixes, let Unity compile then run Tools > InnerFrame > Artwork Info > 6. Apply PR112 Review Fixes (No Regeneration). Do not regenerate approved assets.')
 PY

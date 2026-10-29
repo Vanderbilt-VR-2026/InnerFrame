@@ -1,3 +1,5 @@
+> Historical evidence for 910c82f only. See README.md and REVIEW_FIXES.md for the uncommitted PR112 corrections and outstanding Unity checks.
+
 # Issue #14 submission review
 
 Prepared from the uploaded Mac snapshot at 459ae53. Gallery and installed Unity assets are copied byte-for-byte; no Unity generation or YAML edits were performed.

@@ -84,9 +84,15 @@ The submission includes the author-supplied design inputs, their original notice
 
 | Local destination | Source | License / provenance |
 |---|---|---|
-| `Assets/ArtworkInfo/Design/Portrait.png` | User's InnerFrame Figma `dRg2LX8SNV5wouBX1Zr76N`, node `2:2`, exact individual 4× export | User-supplied reproduction of public-domain Van Gogh portrait; original upload provenance is not recorded in Figma. Not asserted to be Art Institute CC0. Retained unchanged from the supplied design; publication authorized by the author. Original image-provider provenance remains unrecorded; no new provider attribution is invented. |
+| `Assets/VanGogh/Art/VG_SelfPortrait_1887.jpg` | Existing main asset, AIC *Self-Portrait* (1887), accession 1954.326, [artwork 80607](https://www.artic.edu/artworks/80607/self-portrait); exact original image and metadata reused | CC0, Digital image courtesy of the Art Institute of Chicago. main records API `is_public_domain: true` checked 2026-10-26. This review did not freshly retrieve that API. The PR112 migration binds this image in the unchanged portrait slot, with a centered UV crop. The author reports menu 6 completed in Unity; the resulting prefab reference is included here. |
 | `Assets/ArtworkInfo/Design/CloseBackground.png`, `Divider.png`, `EnterBackground.png` | Same user-provided Figma file, nodes `2:34`, `2:9`, `2:30` | User's design layers, exported individually; publication authorized by the author. No claim of a third-party open-source license. |
 | `Assets/ArtworkInfo/Design/CormorantGaramond-Medium.ttf` | [Google Fonts Cormorant Garamond](https://github.com/google/fonts/tree/main/ofl/cormorantgaramond), static weight 500 from fonts.gstatic.com | SIL OFL 1.1; unmodified font; `CormorantGaramond-OFL.txt` included in bundle. |
 | `Assets/ArtworkInfo/Design/Inter-Regular.ttf` | [Google Fonts Inter](https://github.com/google/fonts/tree/main/ofl/inter), static weight 400 from fonts.gstatic.com | SIL OFL 1.1; unmodified font; `Inter-OFL.txt` included in bundle. |
 
 Exact source URLs, export dimensions and notices are included in the bundle's `Design/NOTICE.txt`. The panel's text remains editable TMP; no full-board screenshot is used as an implementation texture. The existing Bedroom CC0 image is unchanged but no longer used in the Figma detail panel.
+
+### PR112 portrait correction
+
+The former `Assets/ArtworkInfo/Design/Portrait.png` came from a Figma node export with unrecorded image-provider provenance. The earlier statement that author approval alone justified its public redistribution was insufficient and is withdrawn. Its licence is **unverified**. Do not regenerate or republish it. Menu 6 replaced the active prefab reference with the existing AIC image and deleted the old asset after checking project dependencies. Other generated folders were preserved; no unrelated variants were rewritten.
+
+The old image already exists in feature-branch history. Changing the latest tree does not erase that history. Cici must decide an approved merge strategy (for example, a reviewed squash of the cleaned tree); this work does not rewrite history or establish rights to the old image. The canonical AIC JPG and its three original `.meta` files are copied exactly from main at the same paths, without merging unrelated VanGogh code or creating a second design image.

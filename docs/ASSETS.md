@@ -46,6 +46,15 @@ This entry records the supported development workflow; it does not assign a blan
 - Record any externally sourced or image-generated assets separately if found.
 - Update `Assets/InnerFrame_Unity_Assets/README.txt`, whose model/texture counts no longer match the expanded folder.
 
+### Notes on the Tripo models in the Painted Bedroom (Charlyne Dong, 10/29)
+
+Four objects in `Assets/InnerFrameBedroomWeb` are AI-generated meshes made with [Tripo](https://www.tripo3d.ai) (web app, Pro plan, account of Charlyne Dong), replacing the earlier procedural ones: `Chair_Front` and `Chair_Back` (one shared chair model), `Bed` (frame, mattress, sheet and blanket in one model; it replaces the separate `Blanket` object), and `Pillow_Back` and `Pillow_Front` (one shared pillow model).
+
+- **Inputs:** multi-view images made with OpenAI's image model (GPT) from the team's concept sheet of the room, which was itself generated from *The Bedroom* (public domain). The pillow views used renders of the Tripo bed as the style reference.
+- **Outputs kept:** Tripo's mesh (HD model, then Tripo's quad retopology) and its base-colour texture, written into the room data by `Art/Source/PaintedBedroom/blender/room_io.py` as `Data/Textures/Chair_tripo_basecolor.png`, `Bed_tripo_basecolor.png` and `Pillow_tripo_basecolor.png`.
+- **License:** Tripo's help pages state that on a paid plan the user owns the generated models and may use, modify and distribute them commercially, with Tripo keeping a non-exclusive license to display them ([commercial use](https://www.tripo3d.ai/help/privacy-policy/can-i-use-models-commercially)). This was read from Tripo's help pages on 10/29, not from the full Terms of Service; check the terms in force before any use outside this course project.
+- The source `.glb` files and the GPT view images are kept locally, not in the repo.
+
 ## Package samples (third-party)
 
 Imported with Package Manager (select the package, then the **Samples** tab).

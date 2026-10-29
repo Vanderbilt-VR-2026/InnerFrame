@@ -65,12 +65,6 @@ MonoBehaviour:
     restUntilGrabbed: 1
     useGravity: 1
     mass: 1
-  - objectName: Blanket
-    liftable: 0
-    hasPhysics: 0
-    restUntilGrabbed: 0
-    useGravity: 0
-    mass: 1
   - objectName: Smock
     liftable: 0
     hasPhysics: 0

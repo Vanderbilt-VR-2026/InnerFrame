@@ -1,115 +1,130 @@
 # InnerFrame
 
-InnerFrame is a multi-user VR experience that lets people step inside a famous painting, explore its world together, and interact with the artist who created it.
-
-Our first experience recreates Vincent van Gogh's *The Bedroom* as an explorable 3D room that keeps the painting's distinctive visual style.
-
-**Sprint 1:** [demo videos](https://drive.google.com/drive/folders/1R5MCu-oDcUeqRx6421TgvTctF0386qeQ?usp=sharing) · [Quest APK](https://drive.google.com/file/d/17uiKnb5k6u_mXPp79ScKJSJxzH3hdjVu/view?usp=sharing) · [what's in the build](#sprint-1-sep-17--oct-1) · [team and roles](#team-and-roles)
-
-## The experience
-
-1. A group of people meets in a shared virtual gallery.
-2. They find *The Bedroom*, along with some context about the painting.
-3. They step through the canvas into the room itself.
-4. Inside, they explore together, interact with objects, and talk with a 3D Van Gogh about the painting.
-
-## Getting started
-
-You only need to do these steps once per computer.
-
-1. **Install the tools**
-   - [Unity Hub](https://unity.com/download), then Unity **6000.3.23f1**. Please use this exact version. When installing it, also tick **Android Build Support**, which you need for building to the Quest.
-   - Git and Git LFS:
-     - Mac: `brew install git git-lfs`
-     - Windows: install [Git for Windows](https://git-scm.com/download/win). It includes Git LFS; keep that box ticked.
-
-2. **Download the project.** Put it in a folder that isn't synced by iCloud or OneDrive. On Windows, run these commands in Git Bash.
-
-```bash
-   git clone https://github.com/Vanderbilt-VR-2026/InnerFrame.git
-   cd InnerFrame
-   bash scripts/setup.sh
-```
-
-   `setup.sh` turns on Git LFS for this project and downloads the big files, such as models and textures. From then on, `git pull` downloads new ones automatically.
-
-3. **Open it in Unity.** In Unity Hub, click **Add → Add project from disk** and choose the `InnerFrame` folder. The first time you open it, Unity takes a few minutes to import everything.
-
-**Target device:** Meta Quest 3
-
-For day-to-day work (branches, pushing, and what the automatic check does), see [CONTRIBUTING.md](CONTRIBUTING.md).
+InnerFrame is a VR experience for Meta Quest 3 where people step inside a famous painting, explore it together, and talk with the artist.
+The first painting is Vincent van Gogh's *The Bedroom* (1889).
 
 ## Team and roles
 
 Roles are flexible, and design and QA are everyone's job.
 
-| Member | Major | Relevant skills | Responsibilities |
-|---|---|---|---|
-| Sonya Vu | CS | Programming, HCI | AI dialogue, programming interaction |
-| Charlyne Dong | CS | Product ideation and development, agents/AI, prototyping | Project management, concept, player experience |
-| Rowling Lin | Counseling | Graphic design, UX/UI design, Figma, interaction design | Storyboarding, prototyping, interaction design, visual design |
-| Serena Deng | CS | Product ideation and development, programming, concept development | Prototyping, player experience, programming interaction |
-| Cici Luo | CS | Software engineering, networking, backend systems, Git, system integration | Multiplayer, player synchronization, shared interactions, Unity systems integration |
+| Member        | Major      | Relevant skills                                                            | Responsibilities                                                                    |
+| ------------- | ---------- | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Sonya Vu      | CS         | Programming, HCI                                                           | AI dialogue, programming interaction                                                |
+| Charlyne Dong | CS         | Product ideation and development, agents/AI, prototyping                   | Project management, concept, player experience                                      |
+| Rowling Lin   | Counseling | Graphic design, UX/UI design, Figma, interaction design                    | Storyboarding, prototyping, interaction design, visual design                       |
+| Serena Deng   | CS         | Product ideation and development, programming, concept development         | Prototyping, player experience, programming interaction                             |
+| Cici Luo      | CS         | Software engineering, networking, backend systems, Git, system integration | Multiplayer, player synchronization, shared interactions, Unity systems integration |
 
-### Who did what in Sprint 1
+## Sprint 3 (Oct 15 – 29)
 
-| Member | Sprint 1 focus |
-|---|---|
-| Cici Luo | **Gallery and entry experience**: the VR gallery and the walk up to *The Bedroom*. Also the engineering foundation: Unity/XR setup (OpenXR + XR Interaction Toolkit for Quest 3), Git LFS and repo structure, asset checks that run locally and in CI, and review/merge onto `main`. |
-| Rowling Lin | **Playable Bedroom**: graybox layout at the right scale, controller movement, grabbable objects, hinged doors, collision surfaces. |
-| Sonya Vu | **Gallery ↔ Bedroom transition** (`SceneChangeButton`, `SceneFader`): press the pedestal button to fade out, load the other scene, and fade back in. Also painting-to-world prototyping. |
-| Serena Deng | **Painterly visual direction**: stylized furniture and props in Blender with brushstroke textures, brought into Unity in `Bedroom_StyleExperiment` on top of Rowling's layout. Built the Sprint 1 APK. |
-| Charlyne Dong | **Painting-to-world prototyping and project management**: World Labs/Marble and Meshy experiments, sprint specs, backlog, and the demo video. |
+Sprint 2 gave us one painted room you could walk around and touch. Sprint 3 brought it to life: **Vincent is in the room and you can talk to him**, **other players are in the room with you**, and the room itself was refined object by object against the painting.
 
-## Course
+**Demo video:** [InnerFrame Sprint 3 demo](TODO-link): two players in the Painted Bedroom, talking to Vincent, and holding the mirror while he paints his self-portrait.
+**APK:** [InnerFrame-sprint3.apk](TODO-link), built from this branch (`sprint_3`).
+**Board:** [InnerFrame Dashboard](https://github.com/orgs/Vanderbilt-VR-2026/projects/12): 14 epics, each task tagged with its sprint.
 
-Built for *CS 4249 / CSET-CMA 3257: Virtual Reality Design* at Vanderbilt University, Fall 2026.
+### Iteration since Sprint 2
 
-## Sprint 1 (Sep 17 – Oct 1)
+Sprint 2's README set Sprint 3's first goals. Where they stand:
 
-| | |
-|---|---|
-| Demo videos | [InnerFrame Sprint 1 demo (Google Drive)](https://drive.google.com/drive/folders/1R5MCu-oDcUeqRx6421TgvTctF0386qeQ?usp=sharing) |
-| Quest build | [InnerFrame-Sprint1.apk](https://drive.google.com/file/d/17uiKnb5k6u_mXPp79ScKJSJxzH3hdjVu/view?usp=sharing) (install steps below) |
-| Backlog | [InnerFrame Dashboard](https://github.com/orgs/Vanderbilt-VR-2026/projects/12) (project board, 6 epics) · [Issues](https://github.com/Vanderbilt-VR-2026/InnerFrame/issues?q=is%3Aissue) |
-| Headset test | [#12](https://github.com/Vanderbilt-VR-2026/InnerFrame/issues/12): the full path on a real Quest 3, built from `main` |
+- Refine the room object by object (#31): **done** for the bed, chairs, pillows, washstand set, towel, wall pictures, window, clothes and doors ([#107](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/107), [#111](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/111), [#123](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/123), [#124](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/124), [#125](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/125)). Only the brush box is still being remade.
+- The painterly look (#30): flat lighting, new floor, wall and door textures, and colours measured against the painting landed.
+- Physics on the furniture: a dropped pillow used to float about 10 cm above the bed, because the bed and pillows were boxes. They now use their own shapes, so pillows land on the bed and the pitcher stands in the basin ([#123](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/123), [#124](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/124)).
+- Additional implementations: talking to Vincent, the mirror scene, multiplayer and voice chat.
 
-**Sprint goal:** a rough but playable path from the Gallery into the painting, and a decision on how to turn the painting into a 3D world. Visual polish was not the goal.
+### What's in this branch (`sprint_3`)
 
-### What works in the build
-1. Launch on Quest 3. You start in the **Gallery**, in immersive VR.
-2. Teleport across the gallery floor to *The Bedroom*.
-3. Press the button on its pedestal. The view fades out and you land in the **Bedroom**.
-4. In the Bedroom: walk around, grab the tumbler and the brush (Grip), and open the hinged doors.
-5. Press the pedestal button in the Bedroom to fade back to the Gallery.
+- **Gallery** (`Assets/Scenes/Gallery.unity`): *The Bedroom* on its pedestal, and now Van Gogh's 1887 self-portrait beside it at the same scale. You can ask the portrait questions. The pedestal button takes you to the Painted Bedroom.
+- **Painted Bedroom** (`Assets/InnerFrameBedroomWeb/Scenes/PaintedBedroom.unity`), refined object by object against the painting:
+  - **New furniture:** Tripo models for the bed (blanket included), both chairs and pillows, the washstand with its basin, pitcher, carafe, soap dish, clothes brush, glass tumbler and two bottles, the towel, and the peg rail with its garments and the straw hat, each sized to the painting.
+  - **New surfaces:** painted, tileable textures for the floor, walls and doors.
+  - **Closer colours:** the window, the clothes on the pegs, the hat and the doors, each measured against the painting and corrected; the coat repainted with the painting's long brushstrokes.
+  - **The wall pictures** cut from the painting itself, and **flat lighting** so the forms come from the brushstrokes, not Unity's shading.
+  - **Better physics:** a dropped pillow lands on the bed and the pitcher stands in the basin, using the objects' own shapes instead of boxes.
+![The bed at the start of Sprint 3 and now, next to the painting|591](docs/sprint3/bed-before-after.png)
+![The washstand and chairs at the start of Sprint 3 and now, next to the painting|594](docs/sprint3/washstand-chairs-before-after.png)
+- **Vincent, in 3D**, standing at his easel. He breathes, turns toward you, and leans with his voice.
+- **Talk to Vincent:** hold **B**, ask a question, let go. He answers out loud in character (Arles, October 1888, or Saint-Rémy, September 1889, with `VANGOGH_PERSONA_YEAR=1889`), with captions on a painted wooden sign.
+![Vincent van Gogh standing at his easel in the Painted Bedroom|454](docs/sprint3/vincent-easel.png)
+- **Hold the mirror:** Vincent asks you to take the mirror off the wall and hold it beside his canvas so he can see himself. While you hold it there, his self-portrait goes from a blank canvas to a sketch, to colour, to finished. Move it away and he asks for it back.
+- **Multiplayer:** everyone in the same scene is in the same room and sees each other. In the Painted Bedroom you appear as a painted Van Gogh head and hands, with a hat band in your own colour.
+  - **Shared objects:** pick up, carry or drop an object, and everyone sees it.
+  - **Shared Vincent:** one headset runs the mirror scene and everyone sees the same canvas and hears each line once. When one player asks him something, the others see who is asking and hear the answer.
+  - **Voice chat:** hold **X** to talk to the room. Each voice comes from that player's avatar.
 
-The Bedroom in the build is the painterly version (`Bedroom_StyleExperiment`): Serena's stylized furniture on Rowling's layout. Rowling's original graybox, with more grabbable objects, is in `Assets/Scenes/Bedroom.unity` (see [docs/bedroom/README.md](docs/bedroom/README.md)) but isn't in the build.
+### Run it
 
-All of this was checked on a Quest 3 in [#12](https://github.com/Vanderbilt-VR-2026/InnerFrame/issues/12) (immersive launch, tracking, teleport, the round trip, grabbing, no visible lag).
+- **Editor:** Unity **6000.3.23f1**. Clone, run `bash scripts/setup.sh` (Git LFS), open the project, open `Assets/Scenes/Gallery.unity` and press Play. Without a headset, the Editor has a desktop player (W A S D and the mouse).
+- **Vincent's voice:** start the local proxy on a laptop on the same network: steps in [`Tools/VanGoghProxy/README.md`](Tools/VanGoghProxy/README.md) and [docs/vangogh/README.md](docs/vangogh/README.md). It runs free local models (Whisper, Qwen 2.5 via Ollama, macOS `say`); no API key. Without it, Vincent's scripted lines still play.
+- **Quest 3:** install the APK above, or File > Build Profiles > **Android** > Build And Run with the Quest on USB in Developer Mode.
+
+| Action | Quest | Editor |
+|---|---|---|
+| Teleport / walk | Right / left thumbstick | W A S D + mouse |
+| Grab | Grip | Click / E |
+| Ask Vincent | Hold **B** | Hold **T** |
+| Talk to other players | Hold **X** | Hold **V** |
+| Menu | ≡ (left) | M |
+
+### Contributions
+
+| Member       | Sprint 3                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Sonya**    | Merged the Sprint 2 build into `main`: physics, player menu, teleport and rig settings ([#103](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/103)). Multiplayer with Photon Fusion: rooms per scene, avatars, the painted Van Gogh avatar, the desktop test player ([#116](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/116)). Shared Painted Bedroom objects ([#121](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/121)). This README and the demo video.                                                                                                                                                                                                                                                                                                     |
+| **Cici**     | Vincent's voice proxy: speech to text, the AI, his voice ([#113](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/113)). Talk to Van Gogh: the Gallery portrait and the 3D Vincent ([#114](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/114)). The mirror scene, painted-sign captions, a living Vincent, Tripo easel and palette ([#118](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/118)). Asset pipeline skills for per-object design ([#115](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/115)).                                                                                                                                                                                                                                                   |
+| **Serena**   | Voice chat between players with Photon Voice 2 ([#119](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/119)). Shared Vincent: questions, answers and the mirror scene across players ([#120](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/120)). Coordinated the two-player test and recording.                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| **Charlyne** | The Painted Bedroom's look: moved the room into one Blender file and refined every object toward the painting ([#107](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/107), [#111](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/111)); Tripo furniture with new floor, wall and door textures and drop-tested colliders ([#123](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/123), [#124](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/124), [#125](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/125)); one copy of the room ([#108](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/108), [#110](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/110)). Sprint master: rebuilt the board (14 epics) and wrote the Sprint 3 spec. |
+| **Rowling**  | The historically grounded 1889 Van Gogh persona, with 30 historical Q&A tests ([#117](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/117)). The painting's introduction in the Gallery: a wall placard beside *The Bedroom*, and a detail panel that opens with **More** and follows your view (draft, [#112](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/112)).                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+
 
 ### Known issues
-- The controller ray reaches too far, so objects can be used from across the room ([#18](https://github.com/Vanderbilt-VR-2026/InnerFrame/issues/18)).
-- The Bedroom's return button needs a better spot ([#17](https://github.com/Vanderbilt-VR-2026/InnerFrame/issues/17)).
-- The transition fades to plain black instead of an image ([#16](https://github.com/Vanderbilt-VR-2026/InnerFrame/issues/16)).
-- Single player only. Multiplayer, voice and the 3D Van Gogh come in later sprints.
 
-### Painting-to-world experiments
-We tested three ways to turn the painting into a 3D world ([#15](https://github.com/Vanderbilt-VR-2026/InnerFrame/issues/15)):
+- Vincent needs the proxy running on a laptop nearby; where it runs on Demo Day is still open.
+- The macOS voice sounds robotic, and the 1889 persona's limits are enforced by its prompt rather than a fixed rule.
+- Vincent has no rig: no mouth movement or blinking.
+- On other players' screens, the held mirror moves at the network's rate, so it can look a little steppy.
+- The free Photon plan allows 20 players at once and is for development only.
+- The new room hasn't been tested on a Quest yet, and its frame rate with the Tripo models still needs measuring ([#98](https://github.com/Vanderbilt-VR-2026/InnerFrame/issues/98), [#109](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/109)). It opens in the Unity Editor with no errors from the room, and the physics drop tests pass.
+- The brush box is out of the room until its Tripo version is ready. When it comes back, **InnerFrame → Multiplayer → Make Painted Bedroom Objects Shared** has to be run again so it's shared.
 
-| Approach | Good at | Problem |
-|---|---|---|
-| World Labs / Marble | The whole room keeps the painting's look | One baked scene: no separate objects to grab |
-| Meshy | Separate objects that keep the painterly style (the bed kept its yellow wood and red blanket) | Very heavy: one bed was about 790k faces, too much for Quest without cleanup |
-| Blender + Unity (in the build now) | Clean objects that are easy to make interactive | Looks less like the painting |
+## Next: Sprint 4
 
-### Next: Sprint 2 (Oct 1 – 15)
-Combine the three: Marble builds the room, Meshy builds only the objects you interact with (chair and pitcher first), Blender cleans them up when needed, and Unity adds physics and VR interaction. The first problem to solve: the Marble room already has a chair baked in, so the real, grabbable chair needs a way to replace it. Basic multiplayer also starts in Sprint 2.
+- **Remaining issues from Sprint 3**
+	- Frame-rate budget, and removing the unused shadow pass ([#98](https://github.com/Vanderbilt-VR-2026/InnerFrame/issues/98), [#109](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/109)).
+	- Painterly colour grading and outlines ([#30](https://github.com/Vanderbilt-VR-2026/InnerFrame/issues/30)).
+	- A smooth entry into the painting ([#16](https://github.com/Vanderbilt-VR-2026/InnerFrame/issues/16)), the gallery entrance ([#104](https://github.com/Vanderbilt-VR-2026/InnerFrame/issues/104)), object interactions ([#105](https://github.com/Vanderbilt-VR-2026/InnerFrame/issues/105)) and sounds ([#106](https://github.com/Vanderbilt-VR-2026/InnerFrame/issues/106)).
+	- The brush box, as a Tripo model.
 
-### Install the APK
-1. Download the APK to your computer.
-2. Connect your Meta Quest to your computer with a USB cable.
-3. Enable Developer Mode and accept the headset’s USB debugging prompt.
-4. Install the APK using Meta Quest Developer Hub.
-5. Launch InnerFrame on the headset.
+- **Story flow:** the gallery follows Van Gogh's last two years, from hope in Arles, through the asylum at Saint-Rémy, to one last moment of hope.
+![Who Vincent is in each painting: The Bedroom, Café Terrace at Night, The Starry Night and Almond Blossom|800](docs/sprint3/vincent-chapters.png)
+	- **Sunflowers** (Charlyne): Arles, 1888, painted for Gauguin's room in the Yellow House.
+	- **Café Terrace at Night:** Arles, 1888, a busy café under the stars. The crowd stays still; only Vincent talks.
+	- **The Bedroom** (Charlyne): Arles, 1888. Keep refining the room and its interactions.
+	- **The Starry Night** (Cici): Saint-Rémy, 1889. Vincent on a hill above the town at night, styled after *The Little Prince*.
+	- **Almond Blossom:** Saint-Rémy, 1890, painted for the birth of his nephew. It ends the journey on hope.
 
-Built on October 1, 2026.
+- **Intro scene** (Rowling): players start in a painted town at night under a swirling sky, and point at **Begin** to enter the gallery. Concept:
+![Concept for the intro scene: InnerFrame written in a starry sky above a painted town, with a Begin sign|282](docs/sprint3/intro-scene-concept.png)
+
+- **Gamification design doc** (Serena): the full journey across scenes, how people talk to Vincent, and how a **portrait deck** ties the paintings together.
+
+- **Improve the flow of each painting**
+	- **Conversation** (Sonya): Convai integration, for better conversation quality and a more consistent character.
+	- **Multiplayer rule:** the first player to start a conversation gets Vincent's answer; if they leave, the other can carry on.
+	- **Avatars** (Sonya): a player look in each painting's style, like the Bedroom's painted head and hands.
+	- **Music and audio** (Rowling): music between paintings that follows the story's mood, plus object and footstep sounds ([#106](https://github.com/Vanderbilt-VR-2026/InnerFrame/issues/106)).
+	- **Artist info panel** (Rowling, [#112](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/112)): a placard beside each painting, and a panel that opens with **More**, about the artist and the painting, with **Enter** to step inside.
+
+- **Info panel example draft**
+![The detail panel for The Bedroom|291](docs/sprint3/artwork-detail-panel.png)
+
+| Who      | Sprint 4                                                       |
+| -------- | -------------------------------------------------------------- |
+| Cici     | The Starry Night; the entrance / intro scene                   |
+| Charlyne | Sunflowers; Bedroom refinement (visuals and conversation flow) |
+| Serena   | Gamification design doc; user journey; conversation flow       |
+| Sonya    | Convai integration; avatar for gallery and the painting scenes |
+| Rowling  | Music and audio between scenes, lobby and intro scene          |
+
+---
+Getting started, Sprint 1 and APK install: [Sprint 1 README](https://github.com/Vanderbilt-VR-2026/InnerFrame/blob/4a446d02e9332498396e2c648747f50fe0cc165a/README.md) · [Sprint 2 README](https://github.com/Vanderbilt-VR-2026/InnerFrame/blob/sprint_2/README.md) · Day-to-day work: [CONTRIBUTING.md](CONTRIBUTING.md) · *CS 4249 / CSET-CMA 3257: Virtual Reality Design*, Vanderbilt University, Fall 2026.

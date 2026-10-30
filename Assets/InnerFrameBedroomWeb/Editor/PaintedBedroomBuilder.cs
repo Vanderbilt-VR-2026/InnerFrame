@@ -31,10 +31,10 @@ namespace InnerFrame.PaintedBedroom.EditorTools
         // parts of the room that stay put; everything else in the painting can be picked up and moved
         static readonly string[] FixedObjects = { "Room_Walls", "Room_Floor", "Room_Ceiling", "Room_Skirting", "Window_View", "Door_Frames", "Room_Details" };
         // movable objects that collide with their mesh instead of a box per part (convex, except the ones below)
-        static readonly string[] MeshColliderObjects = { "Bed", "Pillow_Back", "Pillow_Front" };
-        // concave mesh colliders: only for objects the physics table keeps kinematic (the Bed: hasPhysics off), since Unity
+        static readonly string[] MeshColliderObjects = { "Bed", "Pillow_Back", "Pillow_Front", "Basin", "Pitcher" };
+        // concave mesh colliders: only for objects the physics table keeps kinematic (Bed and Basin: hasPhysics off), since Unity
         // refuses a concave collider on a moving body
-        static readonly string[] ConcaveColliderObjects = { "Bed" };
+        static readonly string[] ConcaveColliderObjects = { "Bed", "Basin" };
 
         public const float Emission = 0.11f;        // a little of each painted colour glows, so shadows stay coloured, not grey
         public const float EmissionScale = 0.35f;   // applied to the per-material glow from the web study (which was lit flat, like the canvas)

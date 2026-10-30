@@ -17,12 +17,6 @@ MonoBehaviour:
   desktopScale: 0.8
   desktopReach: 2
   rows:
-  - objectName: Clothes_Dark
-    liftable: 0
-    hasPhysics: 0
-    restUntilGrabbed: 0
-    useGravity: 0
-    mass: 1
   - objectName: SoapDish
     liftable: 1
     hasPhysics: 1
@@ -48,12 +42,6 @@ MonoBehaviour:
     useGravity: 1
     mass: 1
   - objectName: Mirror
-    liftable: 0
-    hasPhysics: 0
-    restUntilGrabbed: 0
-    useGravity: 0
-    mass: 1
-  - objectName: Smock
     liftable: 0
     hasPhysics: 0
     restUntilGrabbed: 0
@@ -149,12 +137,6 @@ MonoBehaviour:
     restUntilGrabbed: 0
     useGravity: 1
     mass: 100
-  - objectName: Cloth_Pale
-    liftable: 0
-    hasPhysics: 0
-    restUntilGrabbed: 0
-    useGravity: 0
-    mass: 1
   - objectName: Carafe
     liftable: 1
     hasPhysics: 1

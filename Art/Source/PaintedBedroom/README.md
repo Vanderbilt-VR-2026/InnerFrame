@@ -82,12 +82,12 @@ and pressing grip no longer teleports.
 | `Runtime/*.cs` | Desktop walker, desktop grab/inspect, the movable marker, rig selector, physics applier |
 | `Resources/PaintedBedroomPhysicsTable.asset` | Hand-tuned settings that survive a re-import (only in `Assets/InnerFrameBedroomWeb/`, see [the physics table](#tuned-settings-the-physics-table)) |
 
-**Movable (29):**
+**Movable (26):**
 - **Bed:** Bed (with the blanket, since the Tripo bed in #123), Pillow_Back, Pillow_Front
 - **Washstand:** Washstand, Carafe, Basin, Pitcher, Tumbler, SoapDish, Bottle_Tall, Bottle_Short, ClothesBrush (BrushBox dropped)
 - **Chairs:** Chair_Front, Chair_Back
 - **Wall pictures:** Mirror, Picture_Landscape, Picture_PortraitMan, Picture_PortraitWoman, Picture_DrawingLeft, Picture_DrawingRight
-- **Cloth and pegs:** Towel, Smock, Clothes_Dark, Cloth_Pale, PegRail, Hat
+- **Cloth and pegs:** Towel, PegRail (one Tripo model with the three garments that were Smock, Clothes_Dark and Cloth_Pale), Hat
 - **Openings:** Window, Door_Left, Door_Right
 
 **Fixed:** Room_Walls, Room_Floor, Room_Ceiling, Room_Skirting, Door_Frames

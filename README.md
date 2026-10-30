@@ -21,9 +21,9 @@ Sprint 2 gave us one painted room you could walk around and touch. Sprint 3 brou
 
 **Demo videos:**
 - [Talking to Vincent (Google Drive)](https://drive.google.com/file/d/1By2kR-1te0LT-Me9GGv40InFYGAyXVat/view?usp=sharing): asking Vincent questions and his AI answers.
-- Multiplayer test (TODO-link): two players in the Painted Bedroom, sharing objects and holding the mirror while he paints his self-portrait.
+- [Multiplayer test (Google Drive)](https://drive.google.com/file/d/1wI7SEcz5pCkFCM_bx09htdvD6e4RiZov/view?usp=sharing): two players in the Painted Bedroom, sharing objects and holding the mirror while he paints his self-portrait.
 
-**APK:** [InnerFrame-sprint3.apk](TODO-link), built from this branch (`sprint_3`).
+**APK:** [InnerFrame-sprint3.apk (Google Drive)](https://drive.google.com/file/d/1NI4j2W_qiFJgR4KCf8WKev_z2hbBEXhM/view?usp=sharing), built from this branch (`sprint_3`).
 **Board:** [InnerFrame Dashboard](https://github.com/orgs/Vanderbilt-VR-2026/projects/12): 14 epics, each task tagged with its sprint.
 
 ### Iteration since Sprint 2
@@ -79,6 +79,30 @@ Sprint 2's README set Sprint 3's first goals. Where they stand:
 | **Charlyne** | The Painted Bedroom's look: moved the room into one Blender file and refined every object toward the painting ([#107](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/107), [#111](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/111)); Tripo furniture with new floor, wall and door textures and drop-tested colliders ([#123](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/123), [#124](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/124), [#125](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/125)); one copy of the room ([#108](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/108), [#110](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/110)). Sprint master: rebuilt the board (14 epics) and wrote the Sprint 3 spec. |
 | **Rowling**  | The historically grounded 1889 Van Gogh persona, with 30 historical Q&A tests ([#117](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/117)). The painting's introduction in the Gallery: a wall placard beside *The Bedroom*, and a detail panel that opens with **More** and follows your view (draft, [#112](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/112)).                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 
+### Tests
+
+**On a Quest 3** (Sonya, Oct 29, APK from `main`, both demo videos recorded from these runs)
+- **Two players in one room:** the Quest and a Unity Editor player joined the same Gallery room (`Joined InnerFrame_Gallery as player 2 (2 in room)`) and saw each other.
+- **Voice chat:** push-to-talk works both ways, Quest to Editor and Editor to Quest. The Editor first sent silence until its microphone input was fixed on the Mac.
+- **Talking to Vincent:** spoken questions went through the proxy on a MacBook Air (M4) and he answered in character, about 2.4 s per question (hearing 0.45 s, thinking 1.6 s, speaking 0.4 s). Asked about his ear, he gave the fixed in-character line instead of an AI answer.
+
+**Vincent's AI** (proxy and persona)
+- **Speed** ([#113](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/113)): recorded questions answered in 1.9–3.0 s on an M4 Pro.
+- **Later-life guard** ([#113](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/113)): 9 of 9 questions about his ear or his death got the fixed line, without calling the AI.
+- **1889 persona** ([#117](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/117)): 30 historical questions and 9 regression tests; the 1888 persona still keeps its cut-off.
+
+**The mirror scene and Vincent** ([#118](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/118), scripted in the Editor)
+- Greeting, explanation and request timing; the canvas at 50% and 100%; the "bring it back" line; the facing check; the mirror rehanging exactly on its nail.
+- Every caption page fits the painted sign, and his palette and brush stay in his hands while he breathes and turns.
+
+**The room** ([#107](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/107)–[#125](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/125))
+- **Drop tests:** each object lifted 30 cm and dropped lands where it should: pillows on the mattress, the pitcher in the basin (also from 60 cm), bottles, tumbler and the rest on the table.
+- **Blender to Unity:** exporting the room from Blender gives the same data byte for byte (`room_io.py check`).
+- **Fit:** the table, its objects, the chairs, peg rail and hat touch nothing they shouldn't.
+
+**Every pull request:** `bash scripts/ci-local.sh` passed (the same checks as GitHub: Git LFS, missing `.meta` files, blocked packages, conflicts with `main`).
+
+**Not tested yet:** frame rate on the Quest with the new Tripo room ([#98](https://github.com/Vanderbilt-VR-2026/InnerFrame/issues/98)); two Quests on different networks; Rowling's info panel on a headset ([#112](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/112)).
 
 ### Known issues
 
@@ -89,10 +113,11 @@ Sprint 2's README set Sprint 3's first goals. Where they stand:
 - The free Photon plan allows 20 players at once and is for development only.
 - The new room hasn't been tested on a Quest yet, and its frame rate with the Tripo models still needs measuring ([#98](https://github.com/Vanderbilt-VR-2026/InnerFrame/issues/98), [#109](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/109)). It opens in the Unity Editor with no errors from the room, and the physics drop tests pass.
 - The brush box is out of the room until its Tripo version is ready. When it comes back, **InnerFrame → Multiplayer → Make Painted Bedroom Objects Shared** has to be run again so it's shared.
+- When one player asks Vincent, the others don't hear the question: voice chat pauses while B is held, so they see it as text and hear only his answer ([#126](https://github.com/Vanderbilt-VR-2026/InnerFrame/issues/126)).
 
 ## Next: Sprint 4
 
-- **Remaining issues from Sprint 3**
+- **Carried over from Sprint 3**
 	- Frame-rate budget, and removing the unused shadow pass ([#98](https://github.com/Vanderbilt-VR-2026/InnerFrame/issues/98), [#109](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/109)).
 	- Painterly colour grading and outlines ([#30](https://github.com/Vanderbilt-VR-2026/InnerFrame/issues/30)).
 	- A smooth entry into the painting ([#16](https://github.com/Vanderbilt-VR-2026/InnerFrame/issues/16)), the gallery entrance ([#104](https://github.com/Vanderbilt-VR-2026/InnerFrame/issues/104)), object interactions ([#105](https://github.com/Vanderbilt-VR-2026/InnerFrame/issues/105)) and sounds ([#106](https://github.com/Vanderbilt-VR-2026/InnerFrame/issues/106)).

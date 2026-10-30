@@ -29,7 +29,7 @@ DEFAULT_OUT = os.path.normpath(os.path.join(HERE, "..", "reference"))
 EYE = 1.6
 
 GROUPS = {
-    "bed": ["Bed", "Pillow_Back", "Pillow_Front", "Blanket"],
+    "bed": ["Bed", "Pillow_Back", "Pillow_Front"],   # Blanket is part of Bed since the Tripo bed (10/28)
     "chairs": ["Chair_Front", "Chair_Back"],
     "washstand": ["Washstand", "Carafe", "Basin", "Pitcher", "Tumbler", "SoapDish", "ClothesBrush",
                   "Bottle_Tall", "Bottle_Short", "BrushBox"],
@@ -44,7 +44,9 @@ CLOSEUP_FOCUS = {"room": ["Window"], "pictures": ["Picture_Landscape", "Mirror"]
 def bbox(names):
     lo = Vector((1e9,) * 3); hi = Vector((-1e9,) * 3)
     for n in names:
-        emp = bpy.data.objects[n]
+        emp = bpy.data.objects.get(n)
+        if emp is None:   # e.g. the pillows, removed until the Tripo ones arrive (10/29)
+            continue
         for ob in emp.children_recursive:
             if ob.type != "MESH" or ob.name.endswith("_ink"):
                 continue

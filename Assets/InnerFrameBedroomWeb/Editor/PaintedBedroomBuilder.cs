@@ -285,6 +285,10 @@ namespace InnerFrame.PaintedBedroom.EditorTools
                 rb.isKinematic = true;
                 rb.useGravity = false;
                 rb.interpolation = RigidbodyInterpolation.Interpolate;
+                // mesh-collider objects have thin parts (the basin's 1.2 cm floor): a dropped pitcher fell through it
+                // in one physics step, so check the whole path (works for kinematic bodies too)
+                if (Array.IndexOf(MeshColliderObjects, obj.name) >= 0)
+                    rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
 
                 obj.gameObject.AddComponent<PaintedBedroomMovable>();
 

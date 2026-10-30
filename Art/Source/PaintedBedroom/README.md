@@ -5,11 +5,16 @@ with Claude. From the painter's spot it lines up with the canvas. From anywhere
 else it is a real room: every object is a separate 3D model you can walk
 around, pick up, turn over and put back.
 
-**Status: experiment, not wired into the project.** This folder lives outside
-`Assets/` on purpose: Unity doesn't import it, and it doesn't touch the Bedroom
-scene (Rowling's). It goes into `Assets/` only after the team decides how it
-relates to the Bedroom scene. The `.meta` files Unity needs are then made by
-opening it in Unity, never by hand.
+**Where things are (one copy of the room since 10/25).**
+- **`Assets/InnerFrameBedroomWeb/`**: the package Unity plays: the room data (`Data/`), the
+  importer and builder (`Editor/`), the runtime scripts and the physics table, and what Unity
+  builds from them (`Generated/`, `Scenes/`). This is the only copy of the room data.
+- **This folder, `Art/Source/PaintedBedroom/`**: the sources the data is made from, outside
+  `Assets/` so Unity doesn't import them: the Blender file and its export tool (`blender/`), the
+  before/after tools (`tools/`) and the original generator (`web/`, archived since the freeze).
+
+Like a Photoshop file and the PNG exported from it: you edit `blender/painted_bedroom.blend`,
+export, and the export lands in the game's `Data/` directly.
 
 ## Try it (about 2 minutes)
 
@@ -28,7 +33,7 @@ Unity 6000.3.23f1, the InnerFrame project (URP, Input System, XRI 3.3.2).
    mouse.
 
 Ignore the menu item **Build Scene from Blender FBX**: that route needs a
-Blender export that isn't part of this folder.
+Blender FBX export that the project doesn't use.
 
 **Re-running Import and Build rebuilds `PaintedBedroom.unity` from scratch.**
 Any changes you made by hand in that scene are lost. To experiment in Unity,
@@ -91,37 +96,21 @@ trees and houses seen through the window). That's 6 fixed + 31 movable = 37.
 
 ## Updating to a new export
 
-There are two copies of the package:
-- **`Art/Source/PaintedBedroom/InnerFrameBedroomWeb/`** (this folder): where
-  new exports from `web/` land, and where importer and builder changes are
-  made.
-- **`Assets/InnerFrameBedroomWeb/`**: the copy Unity plays. Its `Runtime/`
-  scripts are newer than this folder's (gravity and mass-based grabbing, the
-  physics table), and it holds the table and the built scene.
+The room data exists once, in `Assets/InnerFrameBedroomWeb/Data/`. To change the room:
 
-The team updates the room with **Import and Build**. When a new export or
-an importer change lands here:
-
-1. Copy **`Data/`** from this folder into `Assets/InnerFrameBedroomWeb/Data/`.
-   If texture names changed (the #49 rename from `tex_012.png` to
-   `tex_blanket.png`, for example), first delete the old
-   `Assets/InnerFrameBedroomWeb/Data/Textures/` in Unity's Project window.
-   Otherwise the old files stay alongside the new ones.
-2. Copy the **`Editor/`** scripts too (`PaintedBedroomImporter.cs`,
-   `PaintedBedroomBuilder.cs`, `PaintedBedroomFixedViews.cs`). A new export
-   can need a newer importer: the #50 export added `*_height.png` maps,
-   which the older importer doesn't read. This doesn't touch
-   `PaintedBedroomPhysicsTableEditor.cs`, which only exists in `Assets/`.
-3. **Don't copy `Runtime/`.** This folder's versions are older, and copying
-   them over breaks the physics table (it stops compiling).
-4. Run **Tools > InnerFrame > Painted Bedroom > Import and Build (no Blender)**.
-5. If material names changed, delete the old materials left in
-   `Assets/InnerFrameBedroomWeb/Generated/Materials/` (the numbered ones,
-   such as `blanket_33.mat`) in Unity's Project window. Import and Build
+1. Edit `blender/painted_bedroom.blend` and export (see `blender/README.md`). The export writes
+   straight into `Assets/InnerFrameBedroomWeb/Data/`.
+2. In Unity, run **Tools > InnerFrame > Painted Bedroom > Import and Build (no Blender)**.
+3. If material names changed, delete the old materials left in
+   `Assets/InnerFrameBedroomWeb/Generated/Materials/` in Unity's Project window. Import and Build
    creates new ones but never deletes.
-6. Press Play. The tuned settings below are applied automatically. The
-   table's rows match objects by name, and object names didn't change in #49
-   or #50.
+4. Press Play. The physics table (below) is applied automatically; its rows match objects by name.
+5. Commit the `.blend`, the changed files in `Data/` and what Unity rebuilt (`Generated/`,
+   `Scenes/`, any new `.meta`) together, staged by name.
+
+Importer and builder changes are made in `Assets/InnerFrameBedroomWeb/Editor/` directly. Before
+10/25 there was a second copy of the whole package here, which drifted from the one in `Assets/`
+(#107's room only reached the game in #108); it was removed.
 
 ## Tuned settings: the physics table
 

@@ -1,7 +1,7 @@
 // Export the web scene (../index.html) to the Unity package's data format.
 //
 //   npm install playwright && npx playwright install chromium
-//   node export_unity.mjs ../../InnerFrameBedroomWeb/Data
+//   node export_unity.mjs ../../../../../Assets/InnerFrameBedroomWeb/Data   (archived since the freeze, #51)
 //
 // Writes room.json, room.bytes and Textures/tex_<material>.png (plus tex_<material>_height.png
 // stroke relief maps) into the given folder.

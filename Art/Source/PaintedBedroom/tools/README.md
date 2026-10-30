@@ -9,14 +9,14 @@ Two tools so every change to the Painted Bedroom can be judged the same way:
 
 ## Render Fixed Views
 
-`InnerFrameBedroomWeb/views.json` holds fixed cameras: the painter's view (key P) plus, for each
+`Assets/InnerFrameBedroomWeb/views.json` holds fixed cameras: the painter's view (key P) plus, for each
 object group (bed, chairs, washstand, pictures, room), the room centre at eye height and a close-up.
 **Don't change these cameras**: that would break every before/after comparison. They are a frozen
 copy: if the generator ever re-fits the painter camera in `room.json`, `views.json` deliberately
 doesn't follow, so old and new renders stay comparable.
 
-1. Copy `InnerFrameBedroomWeb` into `Assets/` (or use the project once #28 has moved it there) and
-   run *Tools > InnerFrame > Painted Bedroom > Import and Build (no Blender)*.
+1. Run *Tools > InnerFrame > Painted Bedroom > Import and Build (no Blender)* if the scene is out
+   of date.
 2. *Tools > InnerFrame > Painted Bedroom > Render Fixed Views*.
 3. The folder opens: `FixedViews/<date_time>/` in the project folder (outside `Assets/`, ignored by
    git). For each group, `<group>_sheet.png` shows:
@@ -42,14 +42,14 @@ unity run <project> -- -executeMethod InnerFrame.PaintedBedroom.EditorTools.Pain
 
 ## compare_exports.py
 
-Plain Python 3, nothing to install. Before exporting from the generator, keep a copy of the
-current data, then compare:
+Plain Python 3, nothing to install (git and git-lfs for `--git`). After exporting from Blender,
+compare the game's data with what is on `main`:
 
 ```
-cp -R ../InnerFrameBedroomWeb/Data /tmp/data_before
-# ...export from the generator...
-python3 compare_exports.py /tmp/data_before ../InnerFrameBedroomWeb/Data
+python3 compare_exports.py --git origin/main
 ```
+
+Or compare two data folders: `python3 compare_exports.py OLD_DATA_DIR NEW_DATA_DIR`.
 
 Example output, after one chair part was changed:
 
@@ -73,8 +73,8 @@ Use it to check that an export changed only the objects you meant to change (pas
 the PR), and that exporting the same source twice gives `identical` (the export must be
 deterministic, #31).
 
-Paths here assume the package is still in `Art/Source/PaintedBedroom/`; after #28 moves it into
-`Assets/`, use that folder's `Data/` instead.
+The room data lives once, in `Assets/InnerFrameBedroomWeb/Data/`; `--git` reads older revisions
+from wherever the data was at the time.
 
 ## Tested
 

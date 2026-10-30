@@ -1,17 +1,19 @@
 # Painted Bedroom in Blender
 
 **In use since the freeze (#51, 10/14).** The generator (`../web/`) was exported one last time in #52;
-from then on the room is refined here, object by object, and `Data/` is written back from this file.
+from then on the room is refined here, object by object, and the game's room data
+(`Assets/InnerFrameBedroomWeb/Data/`) is written back from this file.
 Don't re-export from the generator: it would overwrite the work in the `.blend`.
 
 The shared source for refining the Painted Bedroom (#44, part of #31). You change objects in
 `painted_bedroom.blend`, export, and Unity imports the result with Serena's importer, unchanged.
 
 ```
-InnerFrameBedroomWeb/Data  ──import──▶  painted_bedroom.blend  ──export──▶  InnerFrameBedroomWeb/Data  ──▶  Unity
-(room.json, room.bytes,                 (you edit here)                     (same format)                    Import and Build
- Textures/tex_*.png)                                                                                          (no Blender)
+painted_bedroom.blend  ──export──▶  Assets/InnerFrameBedroomWeb/Data  ──▶  Unity: Import and Build (no Blender)
+(you edit here)                     (room.json, room.bytes, Textures/)
 ```
+The `.blend`'s textures are the files in `Assets/InnerFrameBedroomWeb/Data/Textures/` (linked by
+relative path), so the Blender file and the game always show the same pictures.
 
 Why not FBX: the Builder's *Build Scene from Blender FBX* path drops glass, per-material glow and
 unlit settings. Writing Serena's own data format back keeps every material setting and needs no
@@ -48,14 +50,15 @@ Needs Blender 5.2 (tested with 5.2.2). Below, `blender` means
    ```
    blender -b painted_bedroom.blend -P room_io.py -- export
    ```
-   It rewrites `../InnerFrameBedroomWeb/Data/room.json` and `room.bytes` (and copies any new
+   It rewrites `Assets/InnerFrameBedroomWeb/Data/room.json` and `room.bytes` (and copies any new
    texture into `Data/Textures/`). The last line lists the parts that changed; their ink outlines
-   were rebuilt.
-4. **Look at it in Unity**: copy `InnerFrameBedroomWeb` into `Assets/` (don't commit that copy),
-   then *Tools > InnerFrame > Painted Bedroom > Import and Build (no Blender)*, Play, press P.
+   were rebuilt. To see what changed against `main`: `python3 ../tools/compare_exports.py --git origin/main`.
+4. **Look at it in Unity**: *Tools > InnerFrame > Painted Bedroom > Import and Build (no Blender)*,
+   Play, press P.
 5. **Before/after**: `render_views.py` (below) from the same cameras, next to the painting.
-6. **Commit together**: the `.blend` and the `Data/` files it exported, in one commit, staged by
-   name. Never commit one without the other.
+6. **Commit together**: the `.blend`, the `Data/` files it exported and what Unity rebuilt
+   (`Generated/`, `Scenes/`, new `.meta` files), in one commit, staged by name. Never commit the
+   `.blend` without its export, or the game and the source disagree.
 
 To check that nothing changed by accident (for example after only looking around):
 
@@ -121,7 +124,7 @@ cameras for the final screenshots.
 - **Lighting differs from Unity.** Judge colour and brightness in Unity. Blender is for shape,
   placement and textures.
 - **Reset**: `blender -b -P room_io.py -- import` rebuilds `painted_bedroom.blend` from
-  `../InnerFrameBedroomWeb/Data`, discarding edits that weren't exported.
+  `Assets/InnerFrameBedroomWeb/Data`, discarding edits that weren't exported.
 - **Tested** [V]: an untouched export is byte-identical to Serena's data; moving one part of
   Chair_Front changed only that part and its outline; the exported data imports in Unity
   6000.3.23f1 without errors (37 objects, 76 materials, 451 renderers).

@@ -47,23 +47,11 @@ MonoBehaviour:
     restUntilGrabbed: 1
     useGravity: 1
     mass: 1
-  - objectName: Bottle_Tall
-    liftable: 1
-    hasPhysics: 1
-    restUntilGrabbed: 1
-    useGravity: 1
-    mass: 1
   - objectName: Mirror
     liftable: 0
     hasPhysics: 0
     restUntilGrabbed: 0
     useGravity: 0
-    mass: 1
-  - objectName: Bottle_Short
-    liftable: 1
-    hasPhysics: 1
-    restUntilGrabbed: 1
-    useGravity: 1
     mass: 1
   - objectName: Smock
     liftable: 0
@@ -88,12 +76,6 @@ MonoBehaviour:
     hasPhysics: 0
     restUntilGrabbed: 0
     useGravity: 0
-    mass: 1
-  - objectName: Tumbler
-    liftable: 1
-    hasPhysics: 1
-    restUntilGrabbed: 1
-    useGravity: 1
     mass: 1
   - objectName: Door_Right
     liftable: 0
@@ -144,12 +126,6 @@ MonoBehaviour:
     useGravity: 0
     mass: 200
   - objectName: Pillow_Front
-    liftable: 1
-    hasPhysics: 1
-    restUntilGrabbed: 1
-    useGravity: 1
-    mass: 1
-  - objectName: BrushBox
     liftable: 1
     hasPhysics: 1
     restUntilGrabbed: 1

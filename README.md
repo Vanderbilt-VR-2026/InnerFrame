@@ -26,6 +26,29 @@ Sprint 2 gave us one painted room you could walk around and touch. Sprint 3 brou
 **APK:** [InnerFrame-sprint3.apk (Google Drive)](https://drive.google.com/file/d/1NI4j2W_qiFJgR4KCf8WKev_z2hbBEXhM/view?usp=sharing), built from this branch (`sprint_3`).
 **Board:** [InnerFrame Dashboard](https://github.com/orgs/Vanderbilt-VR-2026/projects/12): 14 epics, each task tagged with its sprint.
 
+### Run it
+
+- **Editor:** Unity **6000.3.23f1**. Clone, run `bash scripts/setup.sh` (Git LFS), open the project, open `Assets/Scenes/Gallery.unity` and press Play. Without a headset, the Editor has a desktop player (W A S D and the mouse).
+- **Quest 3:** install the APK above (Meta Quest Developer Hub → Device manager, or `adb install -r`), or File > Build Profiles > **Android** > Build And Run with the Quest on USB in Developer Mode.
+
+> [!IMPORTANT]
+> **Vincent's AI answers don't work with the APK alone.** The APK plays his scripted mirror lines by itself, but his answers to your questions come from a small proxy that must run **on a Mac** (his voice uses macOS's `say`). Without it, he can't answer.
+>
+> **Dependencies on the Mac:**
+> 1. [Ollama](https://ollama.com/download) and its model: `ollama pull qwen2.5:7b` (about 4.7 GB).
+> 2. The proxy's Python packages, once, in `Tools/VanGoghProxy`: `python3 -m venv .venv` then `.venv/bin/pip install -r requirements.txt`. The first start also downloads a speech-to-text model (about 150 MB).
+> 3. Start it and leave it running: `.venv/bin/python proxy.py`. Free local models, no API key.
+>
+> **Connecting:** the Editor works as soon as the proxy runs. A Quest must be plugged into that Mac with USB, then run `adb reverse tcp:8000 tcp:8000` (again after every reconnect). Over Wi-Fi instead, the APK has to be built with the Mac's address. Details: [`Tools/VanGoghProxy/README.md`](Tools/VanGoghProxy/README.md), [docs/vangogh/README.md](docs/vangogh/README.md).
+
+| Action | Quest | Editor |
+|---|---|---|
+| Teleport / walk | Right / left thumbstick | W A S D + mouse |
+| Grab | Grip | Click / E |
+| Ask Vincent | Hold **B** | Hold **T** |
+| Talk to other players | Hold **X** | Hold **V** |
+| Menu | ≡ (left) | M |
+
 ### Iteration since Sprint 2
 
 Sprint 2's README set Sprint 3's first goals. Where they stand:
@@ -54,20 +77,6 @@ Sprint 2's README set Sprint 3's first goals. Where they stand:
   - **Shared objects:** pick up, carry or drop an object, and everyone sees it.
   - **Shared Vincent:** one headset runs the mirror scene and everyone sees the same canvas and hears each line once. When one player asks him something, the others see who is asking and hear the answer.
   - **Voice chat:** hold **X** to talk to the room. Each voice comes from that player's avatar.
-
-### Run it
-
-- **Editor:** Unity **6000.3.23f1**. Clone, run `bash scripts/setup.sh` (Git LFS), open the project, open `Assets/Scenes/Gallery.unity` and press Play. Without a headset, the Editor has a desktop player (W A S D and the mouse).
-- **Vincent's voice:** start the local proxy on a laptop on the same network: steps in [`Tools/VanGoghProxy/README.md`](Tools/VanGoghProxy/README.md) and [docs/vangogh/README.md](docs/vangogh/README.md). It runs free local models (Whisper, Qwen 2.5 via Ollama, macOS `say`); no API key. Without it, Vincent's scripted lines still play.
-- **Quest 3:** install the APK above, or File > Build Profiles > **Android** > Build And Run with the Quest on USB in Developer Mode.
-
-| Action | Quest | Editor |
-|---|---|---|
-| Teleport / walk | Right / left thumbstick | W A S D + mouse |
-| Grab | Grip | Click / E |
-| Ask Vincent | Hold **B** | Hold **T** |
-| Talk to other players | Hold **X** | Hold **V** |
-| Menu | ≡ (left) | M |
 
 ### Contributions
 

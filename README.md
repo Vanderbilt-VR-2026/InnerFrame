@@ -22,6 +22,7 @@ Sprint 2 gave us one painted room you could walk around and touch. Sprint 3 brou
 **Demo videos:**
 - [Talking to Vincent (Google Drive)](https://drive.google.com/file/d/1By2kR-1te0LT-Me9GGv40InFYGAyXVat/view?usp=sharing): asking Vincent questions and his AI answers.
 - Multiplayer test (TODO-link): two players in the Painted Bedroom, sharing objects and holding the mirror while he paints his self-portrait.
+
 **APK:** [InnerFrame-sprint3.apk](TODO-link), built from this branch (`sprint_3`).
 **Board:** [InnerFrame Dashboard](https://github.com/orgs/Vanderbilt-VR-2026/projects/12): 14 epics, each task tagged with its sprint.
 

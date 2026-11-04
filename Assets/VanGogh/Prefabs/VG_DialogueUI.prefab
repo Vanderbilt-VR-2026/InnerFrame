@@ -1,0 +1,59 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &718788160887856758
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5838370616563442328}
+  - component: {fileID: 5718142585657475665}
+  m_Layer: 0
+  m_Name: VG_DialogueUI
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &5838370616563442328
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 718788160887856758}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 100, y: 100}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &5718142585657475665
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 718788160887856758}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1aab7b6506b864b509e9e544fd79dfb0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::VG_DialogueUI
+  settings: {fileID: 11400000, guid: 944e3c98f2c554ef8b35133592047e36, type: 2}
+  font: {fileID: 12800000, guid: bcd4f48eb014349918dac147f6f5974e, type: 3}
+  box: {fileID: 21300000, guid: edf7a226c16bd4ef79f51dd478681e41, type: 3}
+  nameTab: {fileID: 21300000, guid: 7e89235467b5f4e0b98aca0eff7409eb, type: 3}
+  hintPlate: {fileID: 21300000, guid: 9f50b8c8a5267475ca8041a1ba718641, type: 3}
+  star: {fileID: 21300000, guid: c1ef4f34c4d2248f497abd3f7026131d, type: 3}
+  starRing: {fileID: 21300000, guid: 2fe4b7ab599a3468bad5fce75ecf9cbb, type: 3}
+  key: {fileID: 21300000, guid: fa5999ee9d473407d8c783ece4e17a55, type: 3}
+  autoStep: 1

@@ -33,6 +33,12 @@ public static class VanGoghAssetSetup
     const string SignUnlit = CaptionUI + "VG_Sign_A.png", SignLit = CaptionUI + "VG_Sign_B.png";   // from Art/Source/VanGogh/Caption/bake_sign.py
     // the 9-slice borders drawn by make_caption_sprites.py (PARCHMENT_BORDER, PILL_H / 2)
     const int ParchmentBorderPixels = 96, PillBorderPixels = 64;
+    // the dialogue box's sprites, from Art/Source/VanGogh/make_box_sprites.py (SLICE)
+    const int BoxBorderPixels = 64;
+    // the reusable dialogue UI (Scripts/UI): its prefab, and one settings asset per scene that uses it
+    const string Prefabs = "Assets/VanGogh/Prefabs/", DialoguePrefab = Prefabs + "VG_DialogueUI.prefab";
+    const string OutlineMaterial = CaptionUI + "VG_Outline.mat";   // the mirror's outlines (VG_MirrorOutline)
+    static readonly Color Chrome = new Color32(0xE9, 0xC1, 0x4A, 0xFF);
     const float VincentHeight = 1.70f;
 
     // Prefab layout in Vincent's own space: he faces +z, his right hand is at +x, metres at 1.70 m tall.
@@ -57,7 +63,7 @@ public static class VanGoghAssetSetup
             var easel = Furniture(SaveMaterial(EaselMaterial, "Universal Render Pipeline/Lit", ImportTexture(EaselTexture, 1024)));
             var palette = Furniture(SaveMaterial(PaletteMaterial, "Universal Render Pipeline/Lit", ImportTexture(PaletteTexture, 1024)));
             var stages = Stages.Select(s => ImportTexture(CanvasStages + s + ".png", 1024)).ToArray();
-            BuildVincent(skin, easel, palette, stages, ReadMirrorLines());
+            BuildVincent(skin, easel, palette, stages, ReadMirrorLines(), Outline());
         }
         AssetDatabase.SaveAssets();
         Debug.Log("[VanGoghAssetSetup] Rebuild done");
@@ -103,7 +109,7 @@ public static class VanGoghAssetSetup
         return AssetDatabase.LoadAssetAtPath<Sprite>(path);
     }
 
-    // Resources/VG_Caption: VanGoghCaption with its sprites and font; it builds the panels itself at runtime.
+    // Resources/VG_Caption: VanGoghCaption with its sprites and font, in Box style; it builds the panels itself at runtime.
     static void BuildCaption()
     {
         var root = new GameObject("VG_Caption", typeof(RectTransform));
@@ -115,8 +121,56 @@ public static class VanGoghAssetSetup
         caption.pill = ImportSprite(CaptionUI + "VG_Caption_Pill.png", PillBorderPixels);
         caption.button = ImportSprite(CaptionUI + "VG_Caption_Button.png", 0);
         caption.font = AssetDatabase.LoadAssetAtPath<Font>(CaptionFont);
+        caption.style = VG_CaptionStyle.Box;
+        caption.dialogue = BuildDialogueUI(caption.font, caption.button);
         PrefabUtility.SaveAsPrefabAsset(root, CaptionPrefab);
         Object.DestroyImmediate(root);
+    }
+
+    // Prefabs/VG_DialogueUI: the dialogue UI with its sprites, font and the Bedroom's settings; it builds itself at runtime.
+    static VG_DialogueUI BuildDialogueUI(Font font, Sprite key)
+    {
+        if (!AssetDatabase.IsValidFolder(Prefabs.TrimEnd('/'))) AssetDatabase.CreateFolder("Assets/VanGogh", "Prefabs");
+        // the Bedroom as approved (1.3 m); the Starry Night from its blockout (7ab7a24: SN_DialogueBox.cs:16-20,
+        // SN_Hint.cs:10-11, SN_UIRoot.cs:15), at 1.6 m
+        var bedroom = DialogueSettings("Bedroom", 1.3f, 0.032f, 0.025f, 0.036f, 0.025f, "The Yellow House", 0f, null);
+        DialogueSettings("StarryNight", 1.6f, 0.040f, 0.030f, 0.045f, 0.030f, "A Night with Vincent", 0.5f, Color.white);
+        var root = new GameObject("VG_DialogueUI", typeof(RectTransform));
+        var ui = root.AddComponent<VG_DialogueUI>();
+        ui.settings = bedroom;
+        ui.font = font;
+        ui.key = key;
+        ui.box = ImportSprite(CaptionUI + "VG_Box.png", BoxBorderPixels);
+        ui.nameTab = ImportSprite(CaptionUI + "VG_NameTab.png", BoxBorderPixels);
+        ui.hintPlate = ImportSprite(CaptionUI + "VG_HintPlate.png", BoxBorderPixels);
+        ui.star = ImportSprite(CaptionUI + "VG_Star.png", 0);
+        ui.starRing = ImportSprite(CaptionUI + "VG_StarRing.png", 0);
+        var prefab = PrefabUtility.SaveAsPrefabAsset(root, DialoguePrefab).GetComponent<VG_DialogueUI>();
+        Object.DestroyImmediate(root);
+        return prefab;
+    }
+
+    // Made once, then left alone, so tuning in the Inspector stays. Sizes in metres at `distance`, kept as angles; the
+    // rest are VG_DialogueSettings' defaults (15 deg under the gaze, 20 deg dead zone, gaze pitch -30..45, 0.5 s).
+    static VG_DialogueSettings DialogueSettings(string scene, float distance, float words, float name, float title, float line,
+        string hintTitle, float hintFadeIn, Color? lineColour)
+    {
+        string path = Prefabs + "VG_Dialogue_" + scene + ".asset";
+        var settings = AssetDatabase.LoadAssetAtPath<VG_DialogueSettings>(path);
+        if (settings != null) return settings;
+        settings = ScriptableObject.CreateInstance<VG_DialogueSettings>();
+        float Degrees(float metres) => 2f * Mathf.Atan(metres / 2f / distance) * Mathf.Rad2Deg;
+        settings.distance = distance;
+        settings.boxWidth = Degrees(VG_DialogueBox.Width);
+        settings.wordsCap = Degrees(words);
+        settings.nameCap = Degrees(name);
+        settings.titleCap = Degrees(title);
+        settings.lineCap = Degrees(line);
+        settings.hintTitle = hintTitle;
+        settings.hintFadeIn = hintFadeIn;
+        if (lineColour.HasValue) settings.lineColour = lineColour.Value;
+        AssetDatabase.CreateAsset(settings, path);
+        return settings;
     }
 
     // Mono, Vorbis quality 70, decompressed on load (short lines that should start at once), no Android override.
@@ -176,6 +230,22 @@ public static class VanGoghAssetSetup
         return m;
     }
 
+    // Unlit chrome yellow, both faces, opaque: the outlines pulse in width, not alpha, so nothing is transparent.
+    static Material Outline()
+    {
+        var material = AssetDatabase.LoadAssetAtPath<Material>(OutlineMaterial);
+        if (material == null)
+        {
+            material = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+            AssetDatabase.CreateAsset(material, OutlineMaterial);
+        }
+        material.SetColor("_BaseColor", Chrome);   // URP copies it into _Color itself when it loads the material
+        material.SetFloat("_Cull", (float)UnityEngine.Rendering.CullMode.Off);
+        material.doubleSidedGI = true;             // as URP sets it for two-sided materials on the next load
+        EditorUtility.SetDirty(material);
+        return material;
+    }
+
     // Read/Write off, medium mesh compression, no cameras, lights, animation or colliders.
     static void ImportModel(string path, bool keepMaterials)
     {
@@ -215,7 +285,7 @@ public static class VanGoghAssetSetup
     static GameObject Spawn(string path, Transform parent) =>
         (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(path), parent);
 
-    static void BuildVincent(Material skin, Material easel, Material palette, Texture2D[] stages, MirrorScene.Line[] lines)
+    static void BuildVincent(Material skin, Material easel, Material palette, Texture2D[] stages, MirrorScene.Line[] lines, Material outline)
     {
         var root = new GameObject("VG_Vincent");
         var body = Spawn(Vincent, root.transform);
@@ -239,6 +309,7 @@ public static class VanGoghAssetSetup
         var mirrorScene = root.AddComponent<MirrorScene>();
         mirrorScene.stages = stages;
         mirrorScene.lines = lines;
+        mirrorScene.outline = outline;
 
         // What VincentAlive moves: everything but the easel, about a pivot between his feet
         var figure = new GameObject("Figure").transform;

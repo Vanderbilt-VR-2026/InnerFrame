@@ -5,23 +5,28 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
 
+/// <summary>Where the player is with the mirror, for the hint under his words (VanGoghCaption).</summary>
+public enum VG_MirrorStep { None, Asked, HeldOutside, HeldInside, Parked, FinishedAway }
+
 /// <summary>
-/// Hold the mirror for Vincent (PaintedBedroom). He asks you to take the room's mirror off the wall and hold it beside
-/// his canvas, at his eye height, facing him. While you do, he paints himself: the canvas goes from blank to a sketch,
-/// to colour, to his 1887 self-portrait. Let go and the mirror hangs itself back on the wall. His AI answers are told
-/// which of these is happening (SpeechToProxy.SceneContext).
+/// Hold the mirror for Vincent (PaintedBedroom). He asks you to take the room's mirror off the wall and bring it near
+/// his face. While its glass is within ZoneRadius of his head, held or left there, he paints himself: the canvas goes
+/// from blank to a sketch, to colour, to his 1887 self-portrait. Away from him, he pauses and never loses his place.
+/// Let go near him before he's done and the mirror glides to the Target pose beside the canvas and stays there while he
+/// paints; let go anywhere else, or once he's done, and it hangs itself back on the wall. Two outlines show where it
+/// is and where it goes (VG_MirrorOutline). His AI answers are told what's happening (SpeechToProxy.SceneContext).
 /// On the VG_Vincent prefab root (VanGoghAssetSetup adds it). In multiplayer, Assets/Script/Network/MirrorLink.cs shares
 /// it (#77): one headset decides (this script's Decide), the others follow what it decides; see the hooks below.
 /// </summary>
 [RequireComponent(typeof(SpeechToProxy))]
 public class MirrorScene : MonoBehaviour
 {
-    // "Held right": room metres (the rig is scaled 0.8 here), degrees, seconds.
+    // Room metres (the rig is scaled 0.8 here) and seconds; all guesses until tried on a Quest.
     const float EyeHeight = 1.55f;        // his eyes on the 1.70 m model; times his spawn scale, 1.28 m in the room
     const float BesideCanvas = 0.25f;     // the target: half the canvas's width plus this, sideways from its centre
-    const float TargetRadius = 0.45f;     // the mirror's centre within this of the target
-    const float FacingAngle = 50f;        // the mirror's face within this of the direction to his head
-    const float PaintSeconds = 24f;       // held right this long, all told, finishes the portrait
+    const float ZoneRadius = 1.0f;        // the glass's centre within this of his head, in any orientation (Target is 0.88 m out)
+    const float GlideSeconds = 0.25f;     // let go near him: to the Target pose in this long
+    const float PaintSeconds = 24f;       // near his face this long, all told, finishes the portrait
 
     // When he speaks (seconds).
     const float GreetAfterLoad = 2f, ExplainAfterGreet = 10f, AskAgainAfter = 20f, BackAfterOut = 1.5f, BackAtMostEvery = 10f;
@@ -46,10 +51,15 @@ public class MirrorScene : MonoBehaviour
 
     [Tooltip("Sketch, colour, finished.")] public Texture2D[] stages = new Texture2D[3];
     [Tooltip("From Art/Source/VanGogh/mirror_lines.txt.")] public Line[] lines;
+    [Tooltip("Unlit chrome yellow for the outlines; set by VanGoghAssetSetup.")] public Material outline;
 
     public Vector3 Target { get; private set; }
     public Vector3 Head { get; private set; }
     public float Progress => painted / PaintSeconds;
+    /// <summary>This frame's step, on every headset (the deciding one or not).</summary>
+    public VG_MirrorStep Now { get; private set; }
+    /// <summary>Left near his face before he's done: it stands at the Target pose.</summary>
+    public bool Parked => parked;
 
     // ---- Shared mirror scene (multiplayer, #77): hooks used by Assets/Script/Network/MirrorLink.cs ----
 
@@ -75,7 +85,7 @@ public class MirrorScene : MonoBehaviour
     {
         painted = paintedSoFar;
         greeted = true; greetEnded = Mathf.Max(greetEnded, 0f);
-        if (introDone) { explained = askedAgain = true; askEnded = Mathf.Max(askEnded, 0f); }
+        if (introDone) { explained = askedAgain = asked = true; askEnded = Mathf.Max(askEnded, 0f); }
         if (painted > 0f) everHeld = true;
         pending = null;
     }
@@ -113,11 +123,15 @@ public class MirrorScene : MonoBehaviour
         grab.enabled = true;
     }
 
-    /// <summary>Back on the wall, where it hangs in the room.</summary>
+    /// <summary>Let go: near his face before he's done, it glides to the Target pose and stays there; otherwise back on
+    /// the wall. MirrorLink calls this on every headset when anyone lets go, so every headset parks it the same way.</summary>
     public void Rehang()
     {
-        mirror.SetPositionAndRotation(mirrorHome, mirrorHomeTurn);
-        grab.SetTargetPose(new Pose(mirrorHome, mirrorHomeTurn));   // else XRI may still apply the last held pose
+        parked = !Done && InZone(mirror.TransformPoint(glassLocal));
+        rest = parked ? ParkPose() : new Pose(mirrorHome, mirrorHomeTurn);
+        glideFrom = new Pose(mirror.position, mirror.rotation);
+        glideLeft = parked ? GlideSeconds : 0f;
+        if (!parked) Put(rest);
     }
 
     /// <summary>Another player took the mirror at the same moment and goes first: let go of ours.</summary>
@@ -140,11 +154,19 @@ public class MirrorScene : MonoBehaviour
     int shownStage = -1;
     float grabCheckIn;   // the grab is checked in the first frame and once more a second later
     int grabChecksLeft = 2;
+    // where it rests when nobody holds it (the wall, or the Target pose), and the glide there
+    Pose rest, glideFrom;
+    float glideLeft;
+    bool parked, asked, grabbedOnce;
+    VG_MirrorOutline wallOutline, targetOutline;
 
     // decision state
     float clock, painted, outFor, greetEnded = -1f, askEnded = -1f, lastBack = float.NegativeInfinity;
     bool greeted, explained, askedAgain, everHeld, wasHeld, backThisTime;
     string pending, talking;
+
+    bool Done => painted >= PaintSeconds || shownStage == 3;   // shownStage: a following headset doesn't paint itself
+    bool InZone(Vector3 glassCentre) => Vector3.Distance(glassCentre, Head) <= ZoneRadius;
 
     void Start()
     {
@@ -159,6 +181,7 @@ public class MirrorScene : MonoBehaviour
         movable = grab.GetComponent<PaintedBedroomMovable>();
         mirrorHome = mirror.position;
         mirrorHomeTurn = mirror.rotation;
+        rest = new Pose(mirrorHome, mirrorHomeTurn);
         var glass = mirror.Find(GlassName)?.GetComponent<Renderer>();
         var centre = glass != null ? glass.bounds : new Bounds(mirror.position, Vector3.zero);
         if (glass == null)   // the room's meshes get regenerated (open PR #109 reorders the mirror's parts)
@@ -176,23 +199,35 @@ public class MirrorScene : MonoBehaviour
         ShowStage(0);
         brush = Array.Find(GetComponentsInChildren<Transform>(true), t => t.name == BrushName);   // in his Figure
         if (brush != null) brushHome = brush.localPosition;
+        if (outline != null)
+        {
+            wallOutline = VG_MirrorOutline.Make("VG_MirrorOutline_Wall", outline, rest, gameObject.scene, VG_MirrorOutline.Wide);
+            targetOutline = VG_MirrorOutline.Make("VG_MirrorOutline_Target", outline, ParkPose(), gameObject.scene, VG_MirrorOutline.Thin);
+        }
         Debug.Log($"[VanGogh] mirror scene: target {Target:F3}, his head {Head:F3}");
     }
 
-    void OnDestroy() { if (paint != null) Destroy(paint); }
+    void OnDestroy()
+    {
+        if (paint != null) Destroy(paint);
+        if (wallOutline != null) Destroy(wallOutline.gameObject);
+        if (targetOutline != null) Destroy(targetOutline.gameObject);
+    }
 
     void Update()
     {
         if (!following) KeepGrabOn(Time.deltaTime);   // shared mirror: while another player holds it, ours stays off
-        if (Follow) return;                              // shared mirror: another headset decides; MirrorLink applies it
         bool held = grab.isSelected || HeldOnDesktop() || HeldByOther;
-        // the mirror's face is its local -Z, the side away from the wall
-        var centre = mirror.TransformPoint(glassLocal);
-        // shared Vincent: while another player is asking him, his lines wait too
-        var step = Decide(Time.deltaTime, held, centre, -mirror.forward, talker.IsBusy || talker.BlockedBy != null, talker.LastReply != null);
-        LastStep = step; LastStepFrame = Time.frameCount;
-        Apply(step);
-        if (alive != null) alive.PaintingFrom = step.painting ? centre : (Vector3?)null;   // he looks at the mirror while he paints
+        if (!Follow)   // shared mirror: otherwise another headset decides and MirrorLink applies it
+        {
+            var centre = mirror.TransformPoint(glassLocal);
+            // shared Vincent: while another player is asking him, his lines wait too
+            var step = Decide(Time.deltaTime, held, centre, talker.IsBusy || talker.BlockedBy != null, talker.LastReply != null);
+            LastStep = step; LastStepFrame = Time.frameCount;
+            Apply(step);
+            if (alive != null) alive.PaintingFrom = step.painting ? centre : (Vector3?)null;   // he looks at the mirror while he paints
+        }
+        Track(Time.deltaTime, held);
     }
 
     // The room's physics table has the mirror as not liftable; this scene needs it picked up: same grab, switched on.
@@ -209,15 +244,35 @@ public class MirrorScene : MonoBehaviour
         Debug.Log("[VanGogh] mirror grab on");
     }
 
-    // The desktop grabber (Editor without a headset) has no grab event: held while the left button is down and it's off the wall.
+    // The desktop grabber (Editor without a headset) has no grab event: held while the left button is down and it's
+    // away from where it rests.
     bool HeldOnDesktop() =>
-        Mouse.current != null && Mouse.current.leftButton.isPressed && (mirror.position - mirrorHome).sqrMagnitude > 1e-6f;
+        Mouse.current != null && Mouse.current.leftButton.isPressed && (mirror.position - rest.position).sqrMagnitude > 1e-6f;
+
+    /// <summary>Every headset, deciding or not: the glide, this frame's step and the outlines. Public for tests.</summary>
+    public void Track(float dt, bool held)
+    {
+        if (held) { parked = false; glideLeft = 0f; grabbedOnce = true; }
+        if (glideLeft > 0f)
+        {
+            glideLeft -= dt;
+            float t = Mathf.SmoothStep(0f, 1f, 1f - Mathf.Max(glideLeft, 0f) / GlideSeconds);
+            Put(new Pose(Vector3.Lerp(glideFrom.position, rest.position, t), Quaternion.Slerp(glideFrom.rotation, rest.rotation, t)));
+        }
+        bool near = InZone(mirror.TransformPoint(glassLocal)), onWall = (mirror.position - mirrorHome).sqrMagnitude < 1e-6f;
+        Now = Done ? (onWall ? VG_MirrorStep.None : VG_MirrorStep.FinishedAway)
+            : held ? (near ? VG_MirrorStep.HeldInside : VG_MirrorStep.HeldOutside)
+            : parked ? VG_MirrorStep.Parked : asked && onWall ? VG_MirrorStep.Asked : VG_MirrorStep.None;
+        if (wallOutline == null) return;
+        wallOutline.Show(asked && !grabbedOnce);   // from his request until it's first taken
+        targetOutline.Show(held && !Done, dashed: !near, bright: near);
+    }
 
     /// <summary>
     /// One step of the scene, from plain inputs, so tests can drive it without XR. `answered`: he has answered a
     /// question (SpeechToProxy.LastReply is set); with `voiceBusy` false, that answer has ended.
     /// </summary>
-    public Step Decide(float dt, bool held, Vector3 mirrorCentre, Vector3 mirrorFace, bool voiceBusy, bool answered)
+    public Step Decide(float dt, bool held, Vector3 mirrorCentre, bool voiceBusy, bool answered)
     {
         clock += dt;
         var step = new Step();
@@ -237,8 +292,7 @@ public class MirrorScene : MonoBehaviour
         if (!askedAgain && askEnded >= 0f && !everHeld && clock - askEnded >= AskAgainAfter) { askedAgain = true; pending = "ask"; }
         if (held && !everHeld) { everHeld = true; pending = "grab"; }
 
-        bool right = held && Vector3.Distance(mirrorCentre, Target) <= TargetRadius
-                     && Vector3.Angle(mirrorFace, Head - mirrorCentre) <= FacingAngle;
+        bool right = (held || parked) && InZone(mirrorCentre);   // the hanging mirror never counts
         bool started = painted > 0f, done = painted >= PaintSeconds;
         if (right && !done)
         {
@@ -250,8 +304,9 @@ public class MirrorScene : MonoBehaviour
             step.painting = true;
         }
 
-        // out of place mid-painting: after a moment he asks for it back, at most once each time and every so often
-        if (started && !done && !right) outFor += dt;
+        // held away from his face mid-painting (not parked, not on the wall): after a moment he asks for it back, at most
+        // once each time and every so often
+        if (started && !done && held && !right) outFor += dt;
         else { outFor = 0f; backThisTime = false; if (pending == "back") pending = null; }
         if (outFor >= BackAfterOut && !backThisTime && clock - lastBack >= BackAtMostEvery)
         {
@@ -278,11 +333,7 @@ public class MirrorScene : MonoBehaviour
         if (step.stage != shownStage) ShowStage(step.stage);
         if (step.say != null) Say(step.say);
         if (step.scene != talker.SceneContext) talker.SceneContext = step.scene;
-        if (step.rehang)
-        {
-            mirror.SetPositionAndRotation(mirrorHome, mirrorHomeTurn);
-            grab.SetTargetPose(new Pose(mirrorHome, mirrorHomeTurn));   // else XRI may still apply the last held pose
-        }
+        if (step.rehang) Rehang();
         if (brush != null)   // a small loop while he paints: 2 cm across, 1.5 times a second
         {
             float a = Time.time * 1.5f * 2f * Mathf.PI;
@@ -301,6 +352,7 @@ public class MirrorScene : MonoBehaviour
     {
         var line = Array.Find(lines, l => l.id == id);
         if (line.clip == null) { Debug.LogWarning($"[VanGogh] No clip for the mirror line \"{id}\""); return; }
+        asked |= id == "ask";
         talker.Say(line.clip, line.text);
         Debug.Log($"[VanGogh] mirror: {id} ({Progress:P0} painted)");
     }
@@ -320,12 +372,28 @@ public class MirrorScene : MonoBehaviour
         Target = new Vector3(centre.x, Head.y, centre.z) + across * (halfWidth + BesideCanvas);
     }
 
+    /// <summary>The Target pose: the glass's centre on Target, upright, its face (local -Z) toward his head.</summary>
+    public Pose ParkPose()
+    {
+        var turn = Quaternion.LookRotation(Target - Head, Vector3.up);   // both at his eye height: level
+        return new Pose(Target - turn * Vector3.Scale(glassLocal, mirror.lossyScale), turn);
+    }
+
+    // Moves the mirror. Its Rigidbody too, else its interpolation draws one frame back toward the hand; and XRI is told
+    // the same pose, else it may still apply the last held one.
+    void Put(Pose pose)
+    {
+        mirror.SetPositionAndRotation(pose.position, pose.rotation);
+        if (mirror.TryGetComponent<Rigidbody>(out var body)) { body.position = pose.position; body.rotation = pose.rotation; }
+        grab.SetTargetPose(pose);
+    }
+
 #if UNITY_EDITOR
     void OnDrawGizmos()
     {
         if (!Application.isPlaying) Locate();
         Gizmos.color = new Color(1f, 0.8f, 0.1f);
-        Gizmos.DrawWireSphere(Target, TargetRadius);
+        Gizmos.DrawWireSphere(Head, ZoneRadius);
         Gizmos.DrawLine(Target, Head);
     }
 #endif

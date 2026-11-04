@@ -55,3 +55,5 @@ MonoBehaviour:
   button: {fileID: 21300000, guid: fa5999ee9d473407d8c783ece4e17a55, type: 3}
   lit: 1
   font: {fileID: 12800000, guid: bcd4f48eb014349918dac147f6f5974e, type: 3}
+  style: 0
+  dialogue: {fileID: 5718142585657475665, guid: 7dec7f57815ac467388af4b7b0b212dc, type: 3}

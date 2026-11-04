@@ -31,7 +31,39 @@ October 1888, text-to-speech), and his answer plays from the portrait.
     unchanged. The scripts take the exported GLB as their argument; the licence of these two models for the public repo
     is not yet confirmed (see `docs/ASSETS.md`).
 - Why B and not A: A is already bound to XRI's Jump on the right hand.
-- **Captions** (storybook style, from Cici's concept): `Scripts/VanGoghCaption.cs`, made by `SpeechToProxy`.
+- **Captions:** `Scripts/VanGoghCaption.cs`, made by `SpeechToProxy`, in one of two styles, chosen by the `style` field
+  on `Resources/VG_Caption` (the asset tool sets **Box**; switch back to **Sign** with that one field).
+- **Box style** (the default, from Cici's concepts V1–V3, 2026-11-04; after the 11/03 playtest found the sign and the
+  pill too easy to miss and VR text too small):
+  - His words sit in a dark dialogue box low in your view: night blue at 88 % with a 4 mm chrome-yellow border, his
+    name on a tab centred on that border at the left (a star in a thin circle, then *Vincent*; opaque, drawn over the
+    border), the words in cream, left-aligned, 3.2 cm capitals, up to three lines. The words start one capital height
+    below the tab (the top padding is computed from the tab's size). A small star in its bottom-right corner pulses
+    while more pages follow.
+  - Just above its left end, a hint: a small star, the title (*The Yellow House* in the Painted Bedroom, a placeholder;
+    none at the Gallery portrait), and one instruction line on a clean, softly edged plate, 2 cm above the tab. The
+    plate is the box's night blue at "70 %" as the concept composites it (in sRGB); the project blends in linear space,
+    where that takes 85 % (`plate_alpha` in the sprite script), else it reads grey over light things. The line
+    shows, first, his state (*Listening…*, *Vincent is thinking…*, *Vincent can't hear you right now*, or who else is
+    asking); else the mirror's next step (*Take the mirror off the wall*, *Hold the mirror up to Vincent*, *Let go: the
+    mirror stays here*, *Hang the mirror back on the wall*, from `MirrorScene.Now`); else *Hold (B) to ask Vincent*
+    with the B in its circle (T in the Editor).
+  - The hint shows within 4 m of Vincent or the portrait; the box whenever he speaks. Both fade over 0.2 s.
+  - Both hang 1.3 m ahead of your eyes, 15° below your gaze (`VG_FollowGroup`). They stay put until your gaze is 20°
+    away, then ease after it (98 % in 0.5 s); they follow pitch between −30° and +45° of gaze and stay upright. When they
+    appear they're already in place. Sizes are world metres: 0.95 m wide is about 40° at 1.3 m whatever the rig's scale.
+  - They are drawn over the room (a UI material with `unity_GUIZTestMode` = Always), so the easel or the chair never cut
+    through them. Something nearer than 1.3 m (the easel, his palette, the mirror you hold) is still drawn behind them:
+    judge on the Quest whether that feels wrong.
+  - Pages, timing and fades are the same rules as the sign's (below), at one size: a sentence that needs more than three
+    lines splits at the comma nearest its middle.
+  - Code: `Scripts/UI/` (`VG_DialogueUI` and its parts `VG_FollowGroup`, `VG_DialogueBox`, `VG_Hint`, `VG_Paging`,
+    `VG_UI`, with `VG_DialogueSettings`). They know nothing about Vincent or the mirror; `VanGoghCaption` tells them
+    what to show. See *Use the dialogue UI in another scene* below.
+  - Sprites: `VG_Box.png`, `VG_NameTab.png`, `VG_HintPlate.png` (9-slice, 64 px borders), `VG_Star.png`,
+    `VG_StarRing.png`, drawn by `Art/Source/VanGogh/make_box_sprites.py` (Pillow); the asset tool imports them (borders,
+    mipmaps, max 1024). The key circle is the sign's `VG_Caption_Button.png`.
+- **Sign style** (2026-10-27, storybook style, from Cici's concept):
   - His words, scripted lines and AI answers alike, appear on the wooden sign Cici made with Tripo, baked flat into a
     picture (`Art/Source/VanGogh/Caption/bake_sign.py` renders its front twice: `VG_Sign_A.png` unlit, `VG_Sign_B.png`
     softly lit, the default; `sign_rect.json` says where its parchment panel is). The sign is a fixed 1.00 m wide, so his
@@ -56,6 +88,31 @@ October 1888, text-to-speech), and his answer plays from the portrait.
   own timings).
 - After changing the image or its material, run **Tools > InnerFrame > Van Gogh > Rebuild
   assets**.
+
+## Use the dialogue UI in another scene
+
+The box and hint are one prefab, `Assets/VanGogh/Prefabs/VG_DialogueUI.prefab` (made by the asset tool), with no tie to
+Vincent, the mirror or the Bedroom.
+
+1. Put the prefab in the scene (or `Instantiate` it), anywhere; it follows the main camera.
+2. Give it a settings asset: `VG_Dialogue_Bedroom` (as approved: 1.3 m, 15° under the gaze, a 40° box) or
+   `VG_Dialogue_StarryNight` (1.6 m and the blockout's text sizes; `belowGaze` is the field to tune so the box
+   clears the village). For a new scene, duplicate one. Set it before the first call; the UI builds itself then.
+   - In each asset: distance, `belowGaze`, dead zone, gaze pitch clamp, ease time; sizes as angles (box width,
+     capitals); colours and tints; the hint's title and its fade-in on each change.
+   - The tool makes these two once and then leaves them alone, so tuning in the Inspector stays.
+3. Call it:
+   - `Say(speaker, text, clip)`: one sentence a page, timed to the clip (0.06 s a character without one). Play the
+     clip yourself, and set `Voice` to that AudioSource so the pages keep its time.
+   - `Clear()`: the words stay a second, then fade.
+   - `SetHint(title, line)`: `title` null takes the asset's; `""` hides the title row. `{B}` in the line draws B in
+     a button circle. A null line hides the hint.
+   - `IsSpeaking`: from `Say` until a second after `Clear`.
+   - Also: `Prewarm(texts)` (font atlas, at load), `Snap()` (straight into place), `Head` (follow something other
+     than the main camera), `autoStep = false` + `Step(dt)` (drive it from your own clock), `HintLine`, `BoxHeight`,
+     `VG_Paging.Estimate(text)` (a clip-less line's length).
+4. Line queues, priorities and what the hint says are the scene's own logic: in the Bedroom `VanGoghCaption`, in The
+   Starry Night `SN_Voice` and `SN_Game`.
 
 ## Run the proxy (on a Mac)
 
@@ -107,7 +164,8 @@ in the Painted Bedroom.
 **The mirror scene** (Painted Bedroom, #77):
 
 - Whoever holds the mirror, everyone sees it in their hands; nobody else can take it meanwhile. Two grabs at the same
-  moment: the lower player number keeps it. Let go, and it hangs itself back on the wall for everyone.
+  moment: the lower player number keeps it. Let go, and every headset does the same: near his face before he's done,
+  it glides to the spot beside the canvas; anywhere else, it hangs itself back on the wall (`MirrorScene.Rehang`).
 - One headset decides the scene: the player already deciding, or (the first one in, or when the decider leaves) the
   lowest player number. Everyone sees the same canvas stage and hears each scripted line once, together.
 - A player who takes over carries on from where the canvas was; a player who joins mid-portrait sees it as it is.
@@ -149,12 +207,15 @@ Painted Bedroom (both players go there through the menu or the door):
 5. His greeting plays once in both, at the same time (the first player in decides).
 6. Take the mirror in the headset: the Editor sees it move with your hand, and can't take it.
 7. Hold it beside the canvas: both canvases go sketch → colour → finished together, and each line plays once in both.
-8. Let go: the mirror hangs back on the wall in both.
+8. Let go near his face: the mirror goes to the spot beside the canvas in both. Let go far from him: back on the wall in
+   both.
 9. Ask him (B) while he's painting: both hear the answer, and it fits what's happening.
 10. Leave the room on the deciding player's side mid-portrait: the other carries on from the same canvas stage.
 
 Known limits: the held mirror moves on the others' screens at the network's rate (no smoothing yet), so it can look
-slightly steppy; and a scripted line that started just before someone pressed B can be cut by the answer.
+slightly steppy; and a scripted line that started just before someone pressed B can be cut by the answer. Let go right
+at the zone's edge (1.0 m from his head), two headsets may disagree for that release: one parks it, the other hangs it
+back, because the others see the holder's pose a network tick late. Not seen yet; untested.
 
 ## Hold the mirror (Painted Bedroom)
 
@@ -163,29 +224,45 @@ Vincent is painting himself and needs a mirror (concept sheet, frame 07).
    explains, and asks you to take the mirror off the back wall, by the towel.
 2. Pick it up with the ray (point at it from up to 2 m away; on the Quest the glass is 1.8–2.3 m up, out of a hand's
    reach). You can still walk around.
-3. Hold it beside his canvas, to the left of the canvas as you face it, level with his eyes, with the glass facing him.
-   He paints. The canvas goes from blank to a charcoal sketch, to colour at halfway, to the finished 1887
-   self-portrait, and he comments at each stage. There are no bars or UI: the canvas is the progress.
-4. Move it away and he stops; nothing is lost. After 1.5 s he asks for it back, at most once every 10 s.
-5. Let go and the mirror hangs itself back on the wall. When the portrait is finished he thanks you.
+   Until you do, a solid chrome-yellow outline glows around it on the wall.
+3. Bring it near his face: within 1.0 m of his head, in any orientation. He paints. The canvas goes from blank to a
+   charcoal sketch, to colour at halfway, to the finished 1887 self-portrait, and he comments at each stage. While you
+   hold it, a dashed outline beside the canvas shows a good place; it pulses while the mirror is too far, and turns
+   solid and brighter once it's near enough.
+4. Move it away and he pauses; nothing is lost, and he carries on from the same point when it's back. After 1.5 s held
+   away he asks for it back, at most once every 10 s.
+5. Let go near him before he's done: the mirror glides (0.25 s) to the outline's spot beside the canvas, upright, glass
+   to him, and stays there as if on a stand while he finishes. Take it again whenever you like.
+6. Let go anywhere else, or after he's done: it hangs itself back on the wall. When the portrait is finished he thanks
+   you.
 
 Talking with B works the whole time. His scripted lines never cut into a question or an answer: the newest one waits
 until his voice is free. B stops a scripted line, as it stops any of his answers.
 
 - **Code:** `Assets/VanGogh/Scripts/MirrorScene.cs`, on the `VG_Vincent` prefab (the asset tool adds it).
-  - All the decisions are in `MirrorScene.Decide(...)`, which takes plain inputs (time step, held, the mirror's centre
-    and face, voice busy, has answered), so it can be tested without XR.
-  - In Play mode the Scene view shows the target as a yellow sphere, with a line to his eyes.
+  - All the decisions are in `MirrorScene.Decide(...)`, which takes plain inputs (time step, held, the mirror's centre,
+    voice busy, has answered), so it can be tested without XR. `Track(...)` runs on every headset after it: the glide,
+    the outlines, and `MirrorScene.Now`, the step the hint shows (asked, held outside, held inside, parked, finished
+    away from the wall).
+  - Releases go through `MirrorScene.Rehang()`, which `MirrorLink` also calls on every headset: inside the zone and
+    unfinished → the Target pose; otherwise the wall. Both are teleports of the mirror's kinematic body (transform,
+    Rigidbody and XRI's target pose), so it doesn't drift and interpolation doesn't flash it back toward the hand.
+  - `VG_MirrorOutline.cs`: the two outlines, square tubes in a generated mesh (unlit, depth-tested, `VG_Outline.mat`),
+    one draw call while shown, never both at once.
+  - In Play mode the Scene view shows the zone as a yellow sphere around his head, with a line to the target.
 - **Constants** (top of `MirrorScene`):
 
   | Constant | Value |
   |---|---|
   | `EyeHeight` | 1.55 on the model, which is 1.28 m in the room |
   | `BesideCanvas` | 0.25 m: the target is half the canvas's width plus this, sideways from its centre |
-  | `TargetRadius` | 0.45 m |
-  | `FacingAngle` | 50° |
-  | `PaintSeconds` | 24 s of holding it right, in total |
-  | When he speaks | greet at 2 s; explain 10 s after the greeting ends; ask again 20 s after the ask; the "back" line after 1.5 s out of place, at most every 10 s |
+  | `ZoneRadius` | 1.0 m from the glass's centre to his head (the target is 0.88 m out); no facing check |
+  | `GlideSeconds` | 0.25 s, from where you let go to the Target pose |
+  | `PaintSeconds` | 24 s near his face (held or parked), in total |
+  | When he speaks | greet at 2 s; explain 10 s after the greeting ends; ask again 20 s after the ask; the "back" line after 1.5 s held away, at most every 10 s |
+  | Outlines (`VG_MirrorOutline`) | #E9C14A square tubes, 2 cm outside the frame: on the wall 18 mm (seen from across the room); the target 9 mm, 6–12 mm while pulsing at 1 Hz, dashes 4 cm with 2.5 cm gaps; #FFE286 when in place |
+
+  All of these are guesses until tried on a Quest.
 - **The mirror** is the room's own `Mirror`, with the XR Grab Interactable the room's builder gave it; no second grab.
   - The room's physics table has it as not liftable, and this scene needs it picked up, so `MirrorScene` switches that
     same grab on while Vincent is in the room: in the first frame (after the room has applied its table) and once more
@@ -215,10 +292,11 @@ until his voice is free. B stops a scripted line, as it stops any of his answers
 3. Walk to the mirror on the back wall, in the left corner by the towel. Point the centre dot at it and hold the left
    mouse button (the desktop grabber). He says "Yes, that one…". The Console shows `[VanGogh] mirror grab on` once,
    right after Play starts.
-4. Carry it to the left of his canvas, near the front wall. Scroll to bring it nearer or farther, and use Z/X to turn
-   it until the glass faces him. The sketch appears and he speaks.
-5. Hold it there. At about 12 s the colour appears; at 24 s the portrait is finished and he thanks you.
-6. Walk it away for a couple of seconds: he asks for it back. Release the button: the mirror is back on the wall.
+4. Carry it toward him; the dashed outline shows beside the canvas. Within 1.0 m of his head it turns solid, the
+   sketch appears and he speaks.
+5. Release the button there: the mirror moves to the outline's spot and stays. At about 12 s the colour appears; at
+   24 s the portrait is finished and he thanks you.
+6. Take it again and walk it away: he asks for it back after 1.5 s. Release it far from him: it's back on the wall.
 
 On the desktop the mirror counts as held once it has left the wall, not at the click.
 
@@ -227,12 +305,15 @@ On the desktop the mirror counts as held once it has left the wall, not at the c
 1. Build as usual.
 2. In the room, turn left to find Vincent. The mirror's glass is 1.8–2.3 m up in the room, out of a hand's reach at
    this rig scale, so take it with the ray.
-3. Hold it to the left of his canvas, at his eye level, and turn your wrist until the glass faces him.
+3. Bring it near his face; let go there once.
 4. Check:
    - each stage and line;
-   - that letting go hangs it back;
+   - that the outlines read against the blue walls, and don't shimmer;
+   - that letting go near him parks it beside the canvas (it shouldn't drift or jitter), and far away hangs it back;
    - that B works while he paints;
-   - that his words show in full, and whether the caption's size and sharpness feel right.
+   - that his words show in full, and whether the dialogue box's size and sharpness feel right (text, border, plate);
+   - that the box and hint follow your head calmly (no swimming while you look around a little), and how it feels when
+     the easel or the mirror is nearer than the box but drawn behind it.
 
 ## Vincent feels alive (Painted Bedroom)
 

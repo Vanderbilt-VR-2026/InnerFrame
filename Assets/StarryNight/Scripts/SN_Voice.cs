@@ -9,14 +9,17 @@ namespace InnerFrame.StarryNight
     public enum SN_SayMode { Replace, Append, Keep }
 
     /// <summary>Vincent's voice: plays his lines one after another (a line already playing finishes; one already playing
-    /// or queued isn't queued again) and feeds the dialogue box. A line lasts its clip, or SN_Paging's estimate.</summary>
+    /// or queued isn't queued again) and shows each in the shared dialogue box (VG_DialogueUI.Say, speaker "Vincent"),
+    /// clearing it when the line ends. A line lasts its clip, or VG_Paging's estimate. The queue is the game's; the box
+    /// only shows the line it is given.</summary>
     public class SN_Voice : MonoBehaviour
     {
         const float PauseAfterLine = 0.4f;
+        public const string Speaker = "Vincent";
 
         public AudioSource source;
         public SN_Lines lines;
-        public SN_DialogueBox box;
+        public VG_DialogueUI ui;
 
         readonly List<KeyValuePair<SN_Lines.Line, bool>> queue = new List<KeyValuePair<SN_Lines.Line, bool>>();   // (line, kept)
         SN_Lines.Line current;
@@ -45,31 +48,25 @@ namespace InnerFrame.StarryNight
             if (current != null)
             {
                 t += dt;
-                bool playing = source != null && source.isPlaying && source.clip == current.clip;
-                if (box != null) box.Step(dt, playing ? source.time : t);
                 if (t >= duration)
                 {
                     current = null;
-                    if (box != null) box.EndLine();
+                    if (ui != null) ui.Clear();   // the words stay a second more, then fade
                 }
                 return;
             }
-            if (queue.Count == 0)
-            {
-                if (box != null) box.Step(dt, -1f);
-                return;
-            }
+            if (queue.Count == 0) return;
             current = queue[0].Key;
             queue.RemoveAt(0);
             t = 0f;
             float clip = current.clip != null ? current.clip.length : 0f;
-            duration = (clip > 0f ? clip : SN_Paging.EstimateSeconds(current.text)) + PauseAfterLine;
+            duration = (clip > 0f ? clip : VG_Paging.Estimate(current.text)) + PauseAfterLine;
             if (source != null && current.clip != null)
             {
                 source.clip = current.clip;
                 source.Play();
             }
-            if (box != null) { box.ShowLine(current.text, clip); box.Step(dt, 0f); }
+            if (ui != null) ui.Say(Speaker, current.text, current.clip);   // its pages keep the voice's time (ui.Voice)
             LineStarted?.Invoke(current.id, duration);
         }
     }

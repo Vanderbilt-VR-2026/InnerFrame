@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5dadae0b1232c4c3d9d053a29573bbf8, type: 3}
   m_Name: SN_Layout
   m_EditorClassIdentifier: Assembly-CSharp::InnerFrame.StarryNight.SN_Layout
-  version: 2
+  version: 3
   rigScale: 0.8
   eyeHeight: 1.28
   playerStart: {x: 2.4, y: 0, z: -4}
@@ -263,7 +263,6 @@ MonoBehaviour:
   sketchHoldSeconds: 1.5
   editorGrabReach: 1.5
   beamLength: 45
-  uiBelowGaze: 22
   ambient: {r: 0.078431375, g: 0.1254902, b: 0.24313726, a: 1}
   moonLight: {r: 0.56078434, g: 0.6509804, b: 0.8509804, a: 1}
   moonLightIntensity: 0.35

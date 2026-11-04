@@ -159,8 +159,9 @@ MonoBehaviour:
   charcoalPrefab: {fileID: 6944759433794721852, guid: d49b2f453d5bf4027a6ad172d6d73b00, type: 3}
   vincentPrefab: {fileID: 6420064449198729876, guid: de7d49b7d388641e8afb5d6ba7c1ee81, type: 3}
   skyPrefab: {fileID: 5371594711493017759, guid: 8ca71066159d644f3b1987c3e5a24147, type: 3}
-  uiPrefab: {fileID: 2275859064414179965, guid: 6df60333099614d6da3e3ead509c66aa, type: 3}
   beamPrefab: {fileID: 5515488106971740343, guid: dc42fd1b102544b8db8791fb32e70fa7, type: 3}
+  uiPrefab: {fileID: 718788160887856758, guid: 7dec7f57815ac467388af4b7b0b212dc, type: 3}
+  uiSettings: {fileID: 11400000, guid: 31635d97d2171430f9f0ee35fc6e4ce2, type: 2}
 --- !u!4 &567451547
 Transform:
   m_ObjectHideFlags: 0

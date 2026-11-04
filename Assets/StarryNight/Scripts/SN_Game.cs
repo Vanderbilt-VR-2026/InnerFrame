@@ -41,7 +41,8 @@ namespace InnerFrame.StarryNight
         public SN_Grabbable lanternGrab, sketchbook, page;
         public Transform vincent;
         public SN_Voice voice;
-        public SN_UIRoot ui;
+        [Tooltip("The shared dialogue box and hint (VG_DialogueUI, the StarryNight settings); stepped here, not by itself.")]
+        public VG_DialogueUI ui;
         public SN_Beam beam;
 
         public SN_IInput Input { get; set; }
@@ -147,7 +148,7 @@ namespace InnerFrame.StarryNight
                     if (page != null) page.gameObject.SetActive(true);
                     voice.Say("L09");
                     morningStarArmed = true;
-                    if (ui != null && ui.hint != null) ui.hint.Set(TakeThePage);
+                    if (ui != null) ui.SetHint(null, TakeThePage);   // the settings' title, "A Night with Vincent"
                 }
             }
             if (morningStarArmed && !voice.Busy)
@@ -177,7 +178,7 @@ namespace InnerFrame.StarryNight
             sky.Step(dt, hp, layout.starBloomSeconds);
             if (beam != null) beam.Step(dt);
             voice.Step(dt);
-            if (ui != null && ui.hint != null) ui.hint.Step(dt);
+            if (ui != null) ui.Step(dt);   // pages and fades (its autoStep is off: the game's clock drives it)
         }
 
         void OnLanternDown()
@@ -309,7 +310,7 @@ namespace InnerFrame.StarryNight
         {
             State = s;
             Raise(s);
-            if (ui != null && ui.hint != null) ui.hint.Set(HintFor(s));
+            if (ui != null) ui.SetHint(null, HintFor(s));
         }
 
         void Raise(SN_State s)

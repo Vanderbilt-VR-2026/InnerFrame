@@ -7,8 +7,9 @@ namespace InnerFrame.StarryNight
 {
     /// <summary>
     /// The only thing in StarryNight.unity besides the player rig: at runtime it spawns the hilltop, the rock, the
-    /// cypress, the lantern, the sketchbook, the page, the charcoal, Vincent, the sky, the UI and the beam from the prefabs in
-    /// Assets/StarryNight/Prefabs, places them from SN_Layout, and starts SN_Game.
+    /// cypress, the lantern, the sketchbook, the page, the charcoal, Vincent, the sky and the beam from the prefabs in
+    /// Assets/StarryNight/Prefabs, and the shared dialogue box (Assets/VanGogh/Prefabs/VG_DialogueUI.prefab with the
+    /// VG_Dialogue_StarryNight settings), places them from SN_Layout, and starts SN_Game.
     /// Editor fallback (no XR device): the mouse aims, Space is the trigger, G grabs or releases the nearest grabbable
     /// within SN_Layout.editorGrabReach, 1 and 2 jump to the player start and the player seat (DesktopTestRig walks
     /// and looks: W A S D, click to capture the mouse).
@@ -18,7 +19,9 @@ namespace InnerFrame.StarryNight
         public SN_Layout layout;
         public SN_Lines lines;
         public GameObject hilltopPrefab, rockPrefab, cypressPrefab, lanternPrefab, sketchbookPrefab, pagePrefab,
-            charcoalPrefab, vincentPrefab, skyPrefab, uiPrefab, beamPrefab;
+            charcoalPrefab, vincentPrefab, skyPrefab, beamPrefab;
+        [Tooltip("VG_DialogueUI.prefab: Vincent's words and the hint, as in every scene.")] public GameObject uiPrefab;
+        [Tooltip("VG_Dialogue_StarryNight: where the box sits (1.6 m, 22 deg under the gaze) and its sizes.")] public VG_DialogueSettings uiSettings;
 
         public SN_Game Game { get; private set; }
         public Transform World { get; private set; }
@@ -43,7 +46,7 @@ namespace InnerFrame.StarryNight
             else
 #endif
                 Game.Input = xrInput = new SN_InputXR(FindAnyObjectByType<XROrigin>());
-            Game.ui.Init();
+            Game.ui.Snap();   // in place at once; it follows the main camera from here
             Game.Begin();
         }
 
@@ -155,15 +158,17 @@ namespace InnerFrame.StarryNight
             sky.villageGlow = R("VillageGlow");
             sky.Build(layout, farClip);
 
-            var ui = Instantiate(uiPrefab, World).GetComponent<SN_UIRoot>();
+            var ui = Instantiate(uiPrefab, World).GetComponent<VG_DialogueUI>();
             ui.name = "SN_UI";
-            ui.belowGaze = layout.uiBelowGaze;
+            ui.settings = uiSettings;   // before its first call: it builds itself then
+            ui.autoStep = false;        // SN_Game steps it, so the tests' clock drives it too
             var beam = Instantiate(beamPrefab, World).GetComponent<SN_Beam>();
             beam.name = "SN_Beam";
 
             var voice = vincent.GetComponentInChildren<SN_Voice>();
             voice.lines = lines;
-            voice.box = ui.box;
+            voice.ui = ui;
+            ui.Voice = voice.source;    // the pages keep the voice's own time while it plays the line's clip
             PrewarmFont(ui);
 
             var game = World.gameObject.AddComponent<SN_Game>();
@@ -181,15 +186,13 @@ namespace InnerFrame.StarryNight
             return game;
         }
 
-        void PrewarmFont(SN_UIRoot ui)
+        /// <summary>Every character the box and the hint will draw, into the font's atlas at once (no rebuild mid-scene).</summary>
+        void PrewarmFont(VG_DialogueUI ui)
         {
-            var label = ui.box.labels[0];
-            var texts = new System.Collections.Generic.List<string> { SN_Hint.Title, SN_Game.TakeThePage };
+            var texts = new System.Collections.Generic.List<string> { SN_Voice.Speaker, ui.settings.hintTitle, SN_Game.TakeThePage, "0123456789.,;:!?'-" };
             foreach (SN_State s in System.Enum.GetValues(typeof(SN_State))) texts.Add(SN_Game.HintFor(s));
             if (lines != null) foreach (var l in lines.lines) texts.Add(l.text);
-            var sizes = new System.Collections.Generic.HashSet<int> { label.fontSize };
-            foreach (var t in ui.GetComponentsInChildren<UnityEngine.UI.Text>(true)) sizes.Add(t.fontSize);
-            SN_DialogueBox.Prewarm(label.font, texts, sizes);
+            ui.Prewarm(texts);
         }
 
         public static void ApplyRenderSettings(SN_Layout layout)

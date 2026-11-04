@@ -105,7 +105,7 @@ namespace InnerFrame.StarryNight.EditorTools
             var L = w.L;
             Check(w.game.State == SN_State.Arrive, "starts in Arrive");
             WalkTo(w, new Vector3(1.3f, 0f, -1.1f));
-            Check(w.game.State == SN_State.Sit, $"within {L.arriveDistance} m of Vincent -> Sit (L01)");
+            Check(w.game.State == SN_State.Sit && w.game.ui.IsSpeaking, $"within {L.arriveDistance} m of Vincent -> Sit (L01, his words in the box)");
             WalkTo(w, L.playerSeat, eye: 0.95f);
             Check(w.game.State == SN_State.Lantern, "head in SN_PlayerSeat -> Lantern (L02)");
             LookAt(w, w.game.lantern.transform.position);
@@ -131,8 +131,8 @@ namespace InnerFrame.StarryNight.EditorTools
             w.game.sketchbook.ReleaseFallback();
             // the letter is a side event: once L10 is over, the Stars hint is still shown and the idle repeat still fires
             for (int guard = 0; w.game.voice.Busy && guard < 600; guard++) Step(w, Dt);
-            Check(w.game.State == SN_State.Stars && w.game.ui.hint.Line == SN_Game.HintFor(SN_State.Stars),
-                $"letter during Stars: after L10 the hint is the Stars hint (\"{w.game.ui.hint.Line}\")");
+            Check(w.game.State == SN_State.Stars && w.game.ui.HintLine == SN_Game.HintFor(SN_State.Stars),
+                $"letter during Stars: after L10 the hint is the Stars hint (\"{w.game.ui.HintLine}\")");
             var repeated = new List<string>();
             Action<string, float> onRepeat = (id, d) => repeated.Add(id);
             w.game.voice.LineStarted += onRepeat;
@@ -174,7 +174,7 @@ namespace InnerFrame.StarryNight.EditorTools
             Check(w.game.Score.starsWoken == 4 && w.game.Score.namedInOrder == 3 && w.game.Score.windTraced && w.game.Score.letterFound, "score: 4/12 stars, 3/3 named, wind, letter");
             Check(SameStates(w, SN_State.Arrive, SN_State.Sit, SN_State.Lantern, SN_State.Stars, SN_State.Sketchbook, SN_State.Wind, SN_State.Dawn, SN_State.Done),
                 "transitions: Arrive, Sit, Lantern, Stars, Sketchbook, Wind, Dawn, Done");
-            W($"  dialogue box: {w.game.ui.box.HeightMetres:F3} m tall on its last page; hint: \"{w.game.ui.hint.Line}\"");
+            W($"  dialogue box: {w.game.ui.BoxHeight:F3} m tall on its last page; speaking {w.game.ui.IsSpeaking}; hint: \"{w.game.ui.HintLine}\"");
         }
 
         static void AimedAway()
@@ -265,7 +265,8 @@ namespace InnerFrame.StarryNight.EditorTools
             game.Input = w.input;
             game.HeadOverride = w.head;
             game.AutoStep = false;
-            game.ui.Init(w.head);
+            game.ui.Head = w.head;   // follow the test head, not Camera.main
+            game.ui.Snap();
             game.voice.LineStarted += (id, d) =>
             {
                 linesStarted++;
@@ -283,7 +284,7 @@ namespace InnerFrame.StarryNight.EditorTools
         static void OnState(SN_State s, float t)
         {
             // the hint each state sets; a side event (the letter) sets none: the one already shown stays
-            string hint = SN_Game.HintFor(s) ?? (current != null && current.game.ui != null ? "unchanged: " + current.game.ui.hint.Line : "");
+            string hint = SN_Game.HintFor(s) ?? (current != null && current.game.ui != null ? "unchanged: " + current.game.ui.HintLine : "");
             W($"  t={t,6:F1}  [SN] {s}  (hint: \"{hint}\")");
         }
 

@@ -3,15 +3,12 @@
     /usr/bin/python3 -I make_sprites.py
 
 Writes power-of-two PNGs to Assets/StarryNight/Textures/, then run Tools > InnerFrame > Starry Night > Build in Unity
-(it sets the import settings, including the 9-slice borders below):
-  SN_UI_Panel.png      the dialogue box: rounded night-blue panel (#0E1A3F, 88 %) with a thin chrome-yellow edge (9-slice)
-  SN_UI_Tab.png        the name tab: the same, smaller radius (9-slice)
-  SN_UI_StarCircle.png a four-point star in a thin circle (the name tab's icon)
-  SN_UI_Star.png       a four-point star (the hint's icon, and the "more pages" star)
+(it sets the import settings):
   SN_StarCore.png      a star's bright core;  SN_StarHalo.png  its halo (soft concentric rings)
   SN_Moon.png          a crescent moon with a glow;  SN_Dot.png  a soft dot (the wind's dotted guide, village lights)
   SN_Flame.png         the lantern's flame;  SN_Mist.png  a soft fog card
   SN_Line.png          soft across, even along: the beam (LineRenderer)
+The dialogue box and the hint are the shared VG_DialogueUI (Assets/VanGogh/Prefabs), with its own sprites.
 """
 import math
 import sys
@@ -23,53 +20,13 @@ from PIL import Image, ImageDraw, ImageFilter
 
 OUT = Path(__file__).resolve().parents[3] / "Assets/StarryNight/Textures"
 SS = 4                                   # drawn at 4x, then downsampled: smooth edges
-NIGHT = (0x0E, 0x1A, 0x3F)
-CHROME = (0xE9, 0xC1, 0x4A)
-PANEL_ALPHA = round(0.88 * 255)
 SEED = 1889
-PANEL_SIZE, PANEL_RADIUS, PANEL_EDGE, PANEL_BORDER = 256, 48, 5, 64     # px at output size; border = 9-slice border
-TAB_SIZE, TAB_RADIUS, TAB_EDGE, TAB_BORDER = 128, 30, 4, 40
 
 
 def save(img, name):
     OUT.mkdir(parents=True, exist_ok=True)
     img.save(OUT / name, optimize=True)
     print(name, img.size)
-
-
-def rounded_panel(size, radius, edge):
-    s = size * SS
-    img = Image.new("RGBA", (s, s), (0, 0, 0, 0))
-    d = ImageDraw.Draw(img)
-    d.rounded_rectangle([0, 0, s - 1, s - 1], radius=radius * SS, fill=CHROME + (255,))
-    e = edge * SS
-    d.rounded_rectangle([e, e, s - 1 - e, s - 1 - e], radius=max(1, (radius - edge) * SS), fill=NIGHT + (PANEL_ALPHA,))
-    return img.resize((size, size), Image.LANCZOS)
-
-
-def four_point_star(size, colour, inner=0.16, margin=0.06):
-    s = size * SS
-    img = Image.new("RGBA", (s, s), (0, 0, 0, 0))
-    d = ImageDraw.Draw(img)
-    c, r = s / 2, s / 2 * (1 - margin)
-    pts = []
-    for k in range(8):
-        ang = math.pi / 2 + k * math.pi / 4
-        rad = r if k % 2 == 0 else r * inner * 2
-        pts.append((c + rad * math.cos(ang), c - rad * math.sin(ang)))
-    d.polygon(pts, fill=colour + (255,))
-    return img.resize((size, size), Image.LANCZOS)
-
-
-def star_in_circle(size):
-    s = size * SS
-    img = Image.new("RGBA", (s, s), (0, 0, 0, 0))
-    d = ImageDraw.Draw(img)
-    w = max(1, round(0.035 * s))
-    d.ellipse([w, w, s - 1 - w, s - 1 - w], outline=CHROME + (255,), width=w)
-    star = four_point_star(size, CHROME, margin=0.24).resize((s, s), Image.LANCZOS)
-    img.alpha_composite(star)
-    return img.resize((size, size), Image.LANCZOS)
 
 
 def radial(size, fn):
@@ -148,10 +105,6 @@ def soft_line(w=64, h=32):
     return to_rgba((255, 255, 255), np.exp(-(v / 0.45) ** 2) * (np.abs(v) < 1))
 
 
-save(rounded_panel(PANEL_SIZE, PANEL_RADIUS, PANEL_EDGE), "SN_UI_Panel.png")
-save(rounded_panel(TAB_SIZE, TAB_RADIUS, TAB_EDGE), "SN_UI_Tab.png")
-save(star_in_circle(128), "SN_UI_StarCircle.png")
-save(four_point_star(128, CHROME), "SN_UI_Star.png")
 save(star_core(), "SN_StarCore.png")
 save(star_halo(), "SN_StarHalo.png")
 save(moon(), "SN_Moon.png")

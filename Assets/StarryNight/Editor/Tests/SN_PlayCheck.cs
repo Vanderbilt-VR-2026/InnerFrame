@@ -9,8 +9,9 @@ namespace InnerFrame.StarryNight.EditorTools
     /// <summary>
     /// Play-mode check of SN_Bootstrap's temporary network measure: opens StarryNight.unity, enters Play mode for
     /// CheckSeconds, then logs "[SN PlayCheck]" lines: network runners and NetworkPlayers in the scene, whether
-    /// NetworkSession is connected, where the rig is against SN_Layout's player start. Exit code 0 when there is no
-    /// runner, no NetworkPlayer, no connection, and the rig is still at the start.
+    /// NetworkSession is connected, where the rig is against SN_Layout's player start, and the dialogue UI (the hint the
+    /// game set; the follow group at the settings' distance from the camera). Exit code 0 when there is no runner, no
+    /// NetworkPlayer, no connection, the rig is still at the start and the UI is in place.
     /// Batch only: -executeMethod InnerFrame.StarryNight.EditorTools.SN_PlayCheck.RunBatch (without -quit).
     /// Entering Play mode reloads the domain, so the state lives in SessionState.
     /// </summary>
@@ -73,6 +74,13 @@ namespace InnerFrame.StarryNight.EditorTools
             Vector3 rigPos = rig != null ? rig.position : Vector3.positiveInfinity;
             float originOff = Flat(originPos - start), rigOff = Flat(rigPos - start);
             var game = Object.FindAnyObjectByType<SN_Game>();
+            // the shared dialogue box, in Play mode: the hint set by the game, the follow group in front of the camera
+            var follow = game != null && game.ui != null ? game.ui.GetComponentInChildren<VG_FollowGroup>(true) : null;
+            float uiDistance = follow != null && cam != null ? Vector3.Distance(follow.transform.position, cam.transform.position) : -1f;
+            bool uiOk = game != null && game.ui != null && game.ui.HintLine == SN_Game.HintFor(SN_State.Arrive)
+                        && follow != null && Mathf.Abs(uiDistance - game.ui.settings.distance) < 0.05f;
+            Debug.Log($"[SN PlayCheck] dialogue UI: hint '{(game != null && game.ui != null ? game.ui.HintLine : "none")}', follow group {uiDistance:F3} m from the camera " +
+                      $"(settings {(game != null && game.ui != null ? game.ui.settings.distance : -1f):F2} m): {(uiOk ? "ok" : "WRONG")}");
             Debug.Log($"[SN PlayCheck] after {now - playStart:F1} s of Play: NetworkRunner objects {runners}, NetworkPlayer objects {players}, NetworkSession connected {connected}");
             Debug.Log($"[SN PlayCheck] player start {start:F3}; XR Origin {(origin != null ? origin.gameObject.activeInHierarchy ? "active" : "inactive" : "missing")} at {originPos:F3} ({originOff:F3} m off); " +
                       $"active rig '{(rig != null ? rig.name : "none")}' at {rigPos:F3} ({rigOff:F3} m off)");
@@ -83,7 +91,7 @@ namespace InnerFrame.StarryNight.EditorTools
             Debug.Log($"[SN PlayCheck] active rig moved {moved:F3} m between its first frame and now (ShiftRig would move it {0.7f:F1} m sideways)");
             // The XR Origin is the rig and must sit exactly at the start. The Editor's DesktopTestRig settles once when its
             // CharacterController is created on the slope (before any network code can run), then must not move.
-            bool ok = runners == 0 && players == 0 && !connected && originOff < OriginTolerance && firstOff < DesktopRigTolerance && moved < OriginTolerance;
+            bool ok = runners == 0 && players == 0 && !connected && originOff < OriginTolerance && firstOff < DesktopRigTolerance && moved < OriginTolerance && uiOk;
             Finish(ok, ok ? "PASS" : "FAIL");
         }
 

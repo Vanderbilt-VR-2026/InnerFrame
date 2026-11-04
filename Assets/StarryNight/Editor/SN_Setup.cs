@@ -2,17 +2,16 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
-using UnityEngine.UI;
 using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
 using UnityEngine.XR.Interaction.Toolkit.Interactors.Casters;
 using UnityEngine.XR.Interaction.Toolkit.Locomotion.Teleportation;
-using UnityEngine.XR.Interaction.Toolkit.UI;
 using Object = UnityEngine.Object;
 
 namespace InnerFrame.StarryNight.EditorTools
@@ -21,7 +20,9 @@ namespace InnerFrame.StarryNight.EditorTools
     /// Tools > InnerFrame > Starry Night > Build: makes every prefab, material, generated mesh and texture and model
     /// import setting of The Starry Night, and the scene (the player rig and one SN_Bootstrap). Running it twice changes
     /// nothing: existing assets and prefab objects are found and updated in place, never re-created; an SN_Layout below
-    /// SN_Layout.CurrentVersion gets the art pass's values once (logged old -> new).
+    /// SN_Layout.CurrentVersion is brought up once, step by step (logged old -> new). The dialogue box and the hint are
+    /// the shared VG_DialogueUI (Assets/VanGogh/Prefabs, made by VanGoghAssetSetup) with its StarryNight settings; this
+    /// tool only points SN_Bootstrap at them (and, once, moved SN_Layout's uiBelowGaze into those settings).
     /// Sources outside Unity: Art/Source/StarryNight (make_sprites.py, make_textures.py, make_path.py, make_tripo.py,
     /// make_props.py, make_lines.sh, lines.txt; flowers_atlas.json is read here).
     /// </summary>
@@ -38,7 +39,8 @@ namespace InnerFrame.StarryNight.EditorTools
         const string XrOriginName = "XR Origin (XR Rig)";
         const string VincentModel = "Assets/VanGogh/Art/Vincent/VG_Vincent.fbx";
         const string VincentMaterial = "Assets/VanGogh/Art/M_Vincent.mat";
-        const string FontPath = "Assets/VanGogh/Art/Fonts/LibreBaskerville-Regular.ttf";
+        const string DialoguePrefab = "Assets/VanGogh/Prefabs/VG_DialogueUI.prefab";
+        const string DialogueSettingsPath = "Assets/VanGogh/Prefabs/VG_Dialogue_StarryNight.asset";
         const float RayDistance = 2f;          // XRRigSettings.RayDistance (the Gallery's and the Bedroom's)
         const string TeleportLayer = "Teleport";
         const float DefaultFarClip = 1000f;    // the Starter XR Origin's camera (prefab: far clip plane: 1000)
@@ -102,10 +104,18 @@ namespace InnerFrame.StarryNight.EditorTools
                 return layout;
             }
             if (layout.version >= SN_Layout.CurrentVersion) return layout;   // tuned values are kept
+            if (layout.version < 2) CopyDefaults(layout, ArtPassFields, 2, "the art pass");
+            if (layout.version < 3) MoveUiToDialogueSettings(layout);
+            return layout;
+        }
+
+        /// <summary>Gives `fields` SN_Layout's defaults (each change logged) and sets the version.</summary>
+        static void CopyDefaults(SN_Layout layout, string[] fields, int version, string what)
+        {
             var defaults = ScriptableObject.CreateInstance<SN_Layout>();
             var src = new SerializedObject(defaults);
             var dst = new SerializedObject(layout);
-            foreach (var name in ArtPassFields)
+            foreach (var name in fields)
             {
                 var from = src.FindProperty(name);
                 var to = dst.FindProperty(name);
@@ -113,12 +123,34 @@ namespace InnerFrame.StarryNight.EditorTools
                 if (before != after) Debug.Log($"[SN Setup] Layout {name}: {before} -> {after}");
                 dst.CopyFromSerializedProperty(from);
             }
-            dst.FindProperty("version").intValue = SN_Layout.CurrentVersion;
+            dst.FindProperty("version").intValue = version;
             dst.ApplyModifiedPropertiesWithoutUndo();
             Object.DestroyImmediate(defaults);
             EditorUtility.SetDirty(layout);
-            Debug.Log($"[SN Setup] Layout moved to version {SN_Layout.CurrentVersion} (the art pass)");
-            return layout;
+            Debug.Log($"[SN Setup] Layout moved to version {version} ({what})");
+        }
+
+        /// <summary>Version 3: the scene's own dialogue box gave way to VG_DialogueUI. SN_Layout.uiBelowGaze (read from
+        /// the asset's text: the field is gone from the class) becomes VG_Dialogue_StarryNight.belowGaze; the asset drops
+        /// the field when it is saved. The other settings stay as VanGoghAssetSetup made them (logged). Runs once.</summary>
+        static void MoveUiToDialogueSettings(SN_Layout layout)
+        {
+            var m = Regex.Match(File.ReadAllText(Path.GetFullPath(LayoutPath)), @"^\s*uiBelowGaze:\s*([-+0-9.eE]+)\s*$", RegexOptions.Multiline);
+            float belowGaze = m.Success ? float.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture) : 22f;   // the art pass's default
+            var ui = Load<VG_DialogueSettings>(DialogueSettingsPath);
+            string Deg(float f) => f.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
+            Debug.Log($"[SN Setup] Layout uiBelowGaze: {(m.Success ? m.Groups[1].Value : "(none)")} -> (removed; {DialogueSettingsPath} belowGaze)");
+            Debug.Log($"[SN Setup] VG_Dialogue_StarryNight belowGaze: {Deg(ui.belowGaze)} -> {Deg(belowGaze)}");
+            Debug.Log($"[SN Setup] VG_Dialogue_StarryNight unchanged: distance {Deg(ui.distance)} m, boxWidth {Deg(ui.boxWidth)} deg, " +
+                      $"plateTint #{ColorUtility.ToHtmlStringRGBA(ui.plateTint)} (the hint's plate on), hintTitle '{ui.hintTitle}', hintFadeIn {Deg(ui.hintFadeIn)} s");
+            if (ui.belowGaze != belowGaze)
+            {
+                ui.belowGaze = belowGaze;
+                EditorUtility.SetDirty(ui);
+            }
+            layout.version = 3;
+            EditorUtility.SetDirty(layout);
+            Debug.Log("[SN Setup] Layout moved to version 3 (the shared dialogue box)");
         }
 
         /// <summary>A serialized value as text (numbers, vectors, colours, strings, arrays and plain classes).</summary>
@@ -232,16 +264,6 @@ namespace InnerFrame.StarryNight.EditorTools
                     i.textureType = TextureImporterType.Default; i.sRGBTexture = true; i.alphaIsTransparency = true; i.mipmapEnabled = true;
                     i.wrapMode = TextureWrapMode.Clamp; i.filterMode = FilterMode.Bilinear; i.maxTextureSize = 256;
                     i.textureCompression = TextureImporterCompression.Compressed;
-                });
-            var borders = new Dictionary<string, int> { { "SN_UI_Panel", 64 }, { "SN_UI_Tab", 40 }, { "SN_UI_StarCircle", 0 }, { "SN_UI_Star", 0 } };
-            foreach (var kv in borders)
-                Texture($"{Tex}/{kv.Key}.png", i =>
-                {
-                    i.textureType = TextureImporterType.Sprite; i.spriteImportMode = SpriteImportMode.Single; i.sRGBTexture = true;
-                    i.alphaIsTransparency = true; i.mipmapEnabled = true; i.wrapMode = TextureWrapMode.Clamp; i.filterMode = FilterMode.Bilinear;
-                    i.spriteBorder = Vector4.one * kv.Value; i.spritePixelsPerUnit = 100f; i.maxTextureSize = 256;
-                    i.textureCompression = TextureImporterCompression.Uncompressed;
-                    Override(i, "Android", TextureImporterFormat.RGBA32, 256);
                 });
         }
 
@@ -387,7 +409,7 @@ namespace InnerFrame.StarryNight.EditorTools
                 m.SetShaderPassEnabled("MotionVectors", false);
             });
 
-        static void Glow(string name, string texture, Color c, bool additive) => Mat(name, "InnerFrame/StarryNight/Glow", m =>
+        static Material Glow(string name, string texture, Color c, bool additive, int queue = -1) => Mat(name, "InnerFrame/StarryNight/Glow", m =>
         {
             Tex2(m, Load<Texture2D>($"{Tex}/{texture}.png"));
             Colour(m, c);
@@ -395,6 +417,7 @@ namespace InnerFrame.StarryNight.EditorTools
             m.SetFloat("_DstBlend", (float)(additive ? BlendMode.One : BlendMode.OneMinusSrcAlpha));
             m.SetFloat("_Premultiply", additive ? 1f : 0f);
             m.enableInstancing = true;
+            m.renderQueue = queue;   // -1: the shader's (Transparent)
         });
 
         static void BuildMaterials(SN_Layout l)
@@ -461,15 +484,14 @@ namespace InnerFrame.StarryNight.EditorTools
             Glow("SN_StarHalo", "SN_HaloPainted", Color.white, true);
             Glow("SN_Moon", "SN_MoonPainted", Color.white, true);
             Glow("SN_Guide", "SN_Dot", Color.white, true);
-            Glow("SN_Beam", "SN_Line", Color.white, true);
+            // The beam draws just before the dialogue box and the hint, so they always draw over it. VG_DialogueUI draws
+            // with a copy of Canvas.GetDefaultCanvasMaterial() (VG_DialogueUI.cs, Build: "onTop"), whose queue is read here,
+            // not changed; still after the far hills and the horizon (Transparent - 30, - 20).
+            int uiQueue = Canvas.GetDefaultCanvasMaterial().renderQueue;
+            Glow("SN_Beam", "SN_Line", Color.white, true, uiQueue - 1);
             Glow("SN_Village", "SN_Dot", new Color(StarYellow.r * 1.3f, StarYellow.g * 1.2f, StarYellow.b, 1f), true);
             Glow("SN_VillageGlow", "SN_StarCore", new Color(1f, 0.74f, 0.38f, 0.55f), true);
             Glow("SN_Flame", "SN_Flame", Color.white, true);
-            Mat("SN_UIOverlay", "UI/Default", m =>
-            {
-                m.SetInt("unity_GUIZTestMode", (int)CompareFunction.Always);   // drawn over the world: the cypress or the rock never cut through it
-                m.renderQueue = 3100;
-            });
         }
 
         // ---------------------------------------------------------------------------------------------- meshes
@@ -804,159 +826,6 @@ namespace InnerFrame.StarryNight.EditorTools
                 line.enabled = false;
                 Comp<SN_Beam>(root);
             });
-
-            BuildUI(l);
-        }
-
-        // ---------------------------------------------------------------------------------------------- UI
-
-        const float U = SN_DialogueBox.UnitsPerMetre;
-
-        static RectTransform Rect(GameObject parent, string name)
-        {
-            var go = Child(parent, name);
-            return Comp<RectTransform>(go);
-        }
-
-        static void Place(RectTransform r, Vector2 anchorMin, Vector2 anchorMax, Vector2 pivot, Vector2 pos, Vector2 size)
-        {
-            r.anchorMin = anchorMin; r.anchorMax = anchorMax; r.pivot = pivot; r.anchoredPosition = pos; r.sizeDelta = size;
-            r.localScale = Vector3.one; r.localRotation = Quaternion.identity;
-        }
-
-        static void Stretch(RectTransform r, float left, float right, float top, float bottom)
-        {
-            r.anchorMin = Vector2.zero; r.anchorMax = Vector2.one; r.pivot = new Vector2(0.5f, 0.5f);
-            r.offsetMin = new Vector2(left, bottom); r.offsetMax = new Vector2(-right, -top);
-            r.localScale = Vector3.one; r.localRotation = Quaternion.identity;
-        }
-
-        static Image Img(RectTransform r, string sprite, Color c, Material mat, float borderMetres = 0f)
-        {
-            var img = Comp<Image>(r.gameObject);
-            img.sprite = Load<Sprite>($"{Tex}/{sprite}.png");
-            img.color = c;
-            img.material = mat;
-            img.raycastTarget = false;
-            if (borderMetres > 0f)
-            {
-                img.type = Image.Type.Sliced;
-                // the sprite's border, in pixels, drawn borderMetres wide (canvas reference 100 px per unit, as VanGoghCaption)
-                img.pixelsPerUnitMultiplier = img.sprite.border.x * 100f / (img.sprite.pixelsPerUnit * borderMetres * U);
-            }
-            else { img.type = Image.Type.Simple; img.preserveAspect = true; }
-            return img;
-        }
-
-        static Text Txt(RectTransform r, Font font, Material mat, int size, Color c, TextAnchor align, string text)
-        {
-            var t = Comp<Text>(r.gameObject);
-            t.font = font; t.material = mat; t.fontSize = size; t.color = c; t.alignment = align; t.text = text;
-            t.horizontalOverflow = HorizontalWrapMode.Wrap; t.verticalOverflow = VerticalWrapMode.Overflow;
-            t.supportRichText = false; t.raycastTarget = false; t.lineSpacing = 1f;
-            return t;
-        }
-
-        static void Shadowed(Text t)
-        {
-            var s = Comp<Shadow>(t.gameObject);
-            s.effectColor = new Color(0f, 0f, 0f, 0.65f);
-            s.effectDistance = new Vector2(4f, -4f);   // 2 mm
-            s.useGraphicAlpha = true;
-        }
-
-        static void BuildUI(SN_Layout l)
-        {
-            var overlay = M("SN_UIOverlay");
-            var font = Load<Font>(FontPath);
-            Prefab("SN_UI", root =>
-            {
-                var rect = Comp<RectTransform>(root);
-                rect.sizeDelta = new Vector2(1f * U, 0.5f * U);
-                rect.localScale = Vector3.one / U;
-                var canvas = Comp<Canvas>(root);
-                canvas.renderMode = RenderMode.WorldSpace;
-                canvas.sortingOrder = 100;
-                var lazy = Comp<LazyFollow>(root);
-                lazy.positionFollowMode = LazyFollow.PositionFollowMode.Follow;
-                lazy.rotationFollowMode = LazyFollow.RotationFollowMode.LookAtWithWorldUp;
-                lazy.targetOffset = SN_UIRoot.OffsetFor(l.uiBelowGaze);
-                lazy.minDistanceAllowed = SN_UIRoot.FollowAfterMetres;
-                lazy.maxDistanceAllowed = SN_UIRoot.FollowAfterMetres;
-                lazy.timeUntilThresholdReachesMaxDistance = 0f;
-                lazy.minAngleAllowed = SN_UIRoot.TurnThresholdDegrees;
-                lazy.maxAngleAllowed = SN_UIRoot.TurnThresholdDegrees;
-                lazy.timeUntilThresholdReachesMaxAngle = 0f;
-                lazy.movementSpeed = SN_UIRoot.EaseSpeed;
-                lazy.snapOnEnable = true;
-
-                // the dialogue box
-                var box = Rect(root, "Box");
-                Place(box, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero,
-                    new Vector2(SN_DialogueBox.Width * U, SN_DialogueBox.MinHeight * U));
-                var dialogue = Comp<SN_DialogueBox>(box.gameObject);
-                var body = Rect(box.gameObject, "Body");
-                Stretch(body, 0, 0, 0, 0);
-                var group = Comp<CanvasGroup>(body.gameObject);
-                group.alpha = 0f; group.interactable = false; group.blocksRaycasts = false;
-                var panel = Rect(body.gameObject, "Panel");
-                Stretch(panel, 0, 0, 0, 0);
-                Img(panel, "SN_UI_Panel", Color.white, overlay, SN_DialogueBox.PanelBorder);
-                var labels = new Text[2];
-                for (int i = 0; i < 2; i++)
-                {
-                    var tr = Rect(body.gameObject, i == 0 ? "TextA" : "TextB");
-                    Stretch(tr, SN_DialogueBox.MarginX * U, SN_DialogueBox.MarginX * U, SN_DialogueBox.MarginTop * U, SN_DialogueBox.MarginBottom * U);
-                    labels[i] = Txt(tr, font, overlay, SN_DialogueBox.FontSize(SN_DialogueBox.LineCapHeight), SN_DialogueBox.Cream, TextAnchor.MiddleLeft, "");
-                }
-                var tab = Rect(body.gameObject, "Tab");
-                Place(tab, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 0.5f), new Vector2(SN_DialogueBox.TabInset * U, 0f),
-                    new Vector2(SN_DialogueBox.TabWidth * U, SN_DialogueBox.TabHeight * U));
-                Img(tab, "SN_UI_Tab", Color.white, overlay, 0.028f);
-                var icon = Rect(tab.gameObject, "Icon");
-                Place(icon, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2((0.014f + SN_DialogueBox.TabIcon / 2f) * U, 0f),
-                    Vector2.one * SN_DialogueBox.TabIcon * U);
-                Img(icon, "SN_UI_StarCircle", Color.white, overlay);
-                var nameRect = Rect(tab.gameObject, "Name");
-                Stretch(nameRect, (0.028f + SN_DialogueBox.TabIcon) * U, 0.01f * U, 0f, 0f);
-                var nameText = Txt(nameRect, font, overlay, SN_DialogueBox.FontSize(SN_DialogueBox.NameCapHeight), SN_DialogueBox.Cream, TextAnchor.MiddleLeft, "Vincent");
-                nameText.horizontalOverflow = HorizontalWrapMode.Overflow;
-                var more = Rect(body.gameObject, "More");
-                Place(more, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(0.5f, 0.5f),
-                    new Vector2(-(SN_DialogueBox.MoreInset + SN_DialogueBox.MoreSize / 2f) * U, (SN_DialogueBox.MoreInset + SN_DialogueBox.MoreSize / 2f) * U),
-                    Vector2.one * SN_DialogueBox.MoreSize * U);
-                var moreImg = Img(more, "SN_UI_Star", Color.white, overlay);
-                dialogue.box = box;
-                dialogue.body = group;
-                dialogue.labels = labels;
-                dialogue.more = moreImg;
-                labels[1].gameObject.SetActive(false);
-
-                // the hint, just above the box's left end
-                var hintRect = Rect(box.gameObject, "Hint");
-                Place(hintRect, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 0f),
-                    new Vector2(0.01f * U, (SN_DialogueBox.TabHeight / 2f + 0.03f) * U), new Vector2(0.9f * U, 0.17f * U));
-                var hintGroup = Comp<CanvasGroup>(hintRect.gameObject);
-                hintGroup.interactable = false; hintGroup.blocksRaycasts = false; hintGroup.alpha = 1f;
-                var hint = Comp<SN_Hint>(hintRect.gameObject);
-                var hIcon = Rect(hintRect.gameObject, "Icon");
-                Place(hIcon, Vector2.zero, Vector2.zero, new Vector2(0.5f, 0.5f), new Vector2(0.026f * U, 0.105f * U), Vector2.one * 0.046f * U);
-                Img(hIcon, "SN_UI_Star", Color.white, overlay);
-                var title = Rect(hintRect.gameObject, "Title");
-                Place(title, Vector2.zero, Vector2.zero, Vector2.zero, new Vector2(0.065f * U, 0.065f * U), new Vector2(0.85f * U, 0.08f * U));
-                var titleText = Txt(title, font, overlay, SN_DialogueBox.FontSize(SN_DialogueBox.TitleCapHeight), Color.white, TextAnchor.MiddleLeft, SN_Hint.Title);
-                titleText.horizontalOverflow = HorizontalWrapMode.Overflow;
-                Shadowed(titleText);
-                var lineRect = Rect(hintRect.gameObject, "Line");
-                Place(lineRect, Vector2.zero, Vector2.zero, Vector2.zero, new Vector2(0.065f * U, 0f), new Vector2(0.85f * U, 0.06f * U));
-                var lineText = Txt(lineRect, font, overlay, SN_DialogueBox.FontSize(SN_DialogueBox.HintCapHeight), Color.white, TextAnchor.MiddleLeft, SN_Game.HintFor(SN_State.Arrive));
-                lineText.horizontalOverflow = HorizontalWrapMode.Overflow;
-                Shadowed(lineText);
-                hint.group = hintGroup; hint.title = titleText; hint.line = lineText;
-
-                var ui = Comp<SN_UIRoot>(root);
-                ui.box = dialogue; ui.hint = hint; ui.lazy = lazy; ui.belowGaze = l.uiBelowGaze;
-            });
         }
 
         // ---------------------------------------------------------------------------------------------- scene
@@ -969,7 +838,8 @@ namespace InnerFrame.StarryNight.EditorTools
             GameObject P(string n) => Load<GameObject>($"{Prefabs}/{n}.prefab");
             b.hilltopPrefab = P("SN_Hilltop"); b.rockPrefab = P("SN_Rock"); b.cypressPrefab = P("SN_Cypress");
             b.lanternPrefab = P("SN_Lantern"); b.sketchbookPrefab = P("SN_Sketchbook"); b.pagePrefab = P("SN_Page"); b.charcoalPrefab = P("SN_Charcoal");
-            b.vincentPrefab = P("SN_Vincent"); b.skyPrefab = P("SN_Sky"); b.uiPrefab = P("SN_UI"); b.beamPrefab = P("SN_Beam");
+            b.vincentPrefab = P("SN_Vincent"); b.skyPrefab = P("SN_Sky"); b.beamPrefab = P("SN_Beam");
+            b.uiPrefab = Load<GameObject>(DialoguePrefab); b.uiSettings = Load<VG_DialogueSettings>(DialogueSettingsPath);
         }
 
         static void BuildScene(SN_Layout l, SN_Lines lines)

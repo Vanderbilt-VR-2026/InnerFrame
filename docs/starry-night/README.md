@@ -16,8 +16,8 @@ lines are unchanged; the seat moved, the sky was re-aimed from it, and most plac
   spawns everything else from `Assets/StarryNight/Prefabs` at runtime.
 - After changing `SN_Layout.asset` (every number of the scene: places, sizes, timings), `lines.txt`, or the sources in
   `Art/Source/StarryNight`: **Tools > InnerFrame > Starry Night > Build**. Running it twice changes nothing. An older
-  `SN_Layout.asset` (version 0, the blockout's) gets the art pass's values once, each logged `old -> new`; a tuned one
-  (version 2) is kept.
+  `SN_Layout.asset` is brought up once, step by step, each value logged `old -> new` (version 2: the art pass's values;
+  version 3: `uiBelowGaze` moved into the dialogue box's settings); a current one is kept as tuned.
 - The art comes from scripts that give the same files on every run (Cici's input images and Tripo GLBs live outside the
   repo, in `refs/3-starry-night/art-inputs`):
   - `make_textures.py <inputs> <concept dir>` and `make_path.py <inputs>` (`/usr/bin/python3 -I`, Pillow, numpy);
@@ -64,10 +64,16 @@ and teleport (the hilltop is a teleport area out to 5.5 m; low invisible walls s
 | G | grab, or release, the nearest grabbable within 1.5 m (held in front of the view) |
 | 1 / 2 | jump to the player start / the player seat |
 
-The UI (an objective hint and Vincent's dialogue box) follows the head lazily with XRI's `LazyFollow`: 1.6 m ahead and
-22° below the gaze (`SN_Layout.uiBelowGaze`; at a level gaze the box spans −24° to −18° and the hint's top is at −10°,
-under the village), upright, moving only once you look more than 20° away; drawn on top of the world. Text sizes are
-named constants in `SN_DialogueBox` (4.0 cm capitals for his line at 1.6 m).
+Vincent's words and the hint use the shared dialogue box, the same as in every scene: `VG_DialogueUI`
+(`Assets/VanGogh/Prefabs/VG_DialogueUI.prefab`, spawned by `SN_Bootstrap` like everything else) with this scene's
+settings, `VG_Dialogue_StarryNight.asset`: 1.6 m ahead, its top edge 22° below the gaze (at a level gaze the box spans
+−29° to −22° and the hint's plate −19° to −14°, under the village's lowest windows; looking 25° up the hint's top is at
+10°, under the swirl), 33° wide, 4.0 cm capitals for his line, the hint ("A Night with Vincent" and the state's line) on
+its plate, as in the Bedroom. It moves only once you look more than 20° away and is drawn over the world. `SN_Voice` keeps
+the line queue (a newer story line drops older ones not yet started) and calls `Say("Vincent", text, clip)` and `Clear`;
+`SN_Game` sets the hint (`SetHint`) and steps the UI each frame. The controller beam draws just before the UI (render
+queue 2999 against its 3000), so the box and the hint always draw over it. To change where the box sits, edit the
+settings asset (the Bedroom has its own).
 
 ## The [SN] log (for testers)
 
@@ -100,7 +106,8 @@ NetworkPlayer in the scene, the rig not moved (`Editor/Tests/SN_PlayCheck.cs`).
 | Mist | three drifting, near-horizontal noise layers under the hill and five soft puffs that face you (8 transparent renderers) | `SN_Mist.shader`, `SN_MeshGen.MistLayer` |
 | Ground | `grass.png` made seamless (offset blend), tiled every 1.6 m; the path a ragged, alpha-clipped warm dirt strip; 80 crossed-card flower clusters (one mesh, one material), denser by the rock, the lantern and the path, none on the path or the seat | `make_textures.py`, `SN_MeshGen` |
 | Light | a cool, low blue moonlight and the lantern's warm point light, neither casting shadows (one additional light: within the Mobile quality level's limit) | `SN_Layout` |
-| Still placeholder | Vincent (the static model, standing past the rock's left end at his Bedroom scale; `SN_VincentSeat` marks where the seated Vincent goes), the UI sprites, Vincent's lines (macOS `say`, voice Daniel) | |
+| Dialogue box and hint | the shared `VG_DialogueUI` with `VG_Dialogue_StarryNight` (above) | `Assets/VanGogh` (VanGoghAssetSetup) |
+| Still placeholder | Vincent (the static model, standing past the rock's left end at his Bedroom scale; `SN_VincentSeat` marks where the seated Vincent goes), Vincent's lines (macOS `say`, voice Daniel) | |
 
 ## Tests
 
@@ -110,7 +117,11 @@ NetworkPlayer in the scene, the rig not moved (`Editor/Tests/SN_PlayCheck.cs`).
   N1 wakes it but doesn't advance; tracing the wind backwards doesn't complete it; the lantern down before sitting skips
   Sit), each with its positive control; and the letter found during Stars: after L10 the Stars hint is still shown and
   the 25 s repeat still fires.
-- `SN_PlayCheck.RunBatch` (batch, without `-quit`): the Play-mode check of the temporary network measure above.
+- `SN_UICheck.RunBatch -snLog <file>` (batch): the dialogue box in this scene: every line's pages fit in three lines at
+  full size; where the box and the hint sit from the seat; a 15° head turn leaves it, a 30° turn catches up in under
+  0.6 s (72 Hz); the beam's render queue is below the UI's.
+- `SN_PlayCheck.RunBatch` (batch, without `-quit`): the Play-mode check of the temporary network measure above, and that
+  the dialogue UI shows the first hint at the settings' distance from the camera.
 
 ## Requested hardware tests (Quest)
 

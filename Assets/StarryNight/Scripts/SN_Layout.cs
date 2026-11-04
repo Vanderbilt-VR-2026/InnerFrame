@@ -19,17 +19,19 @@ namespace InnerFrame.StarryNight
     /// <summary>
     /// Every number of The Starry Night, in world units (metres, degrees, seconds), with the rig at the project's 0.8
     /// scale (a standing eye at about 1.28 m). Blockout values from the step-2 prompt; the art pass (step 4,
-    /// 2026-11-04) moved the seat and re-aimed the sky from it (version 2: SN_Setup moves an older asset's values here
-    /// once, and logs them). SN_Setup builds meshes from some of them (the hill, the path, the far hills, the horizon,
-    /// the mist, the flowers, the swirl mask): change those, then run Tools > InnerFrame > Starry Night > Build again.
+    /// 2026-11-04) moved the seat and re-aimed the sky from it (version 2); the shared dialogue box (version 3) took
+    /// over uiBelowGaze (now VG_Dialogue_StarryNight.belowGaze). SN_Setup brings an older asset up once, step by step,
+    /// and logs every value it changes. SN_Setup builds meshes from some of them (the hill, the path, the far hills, the
+    /// horizon, the mist, the flowers, the swirl mask): change those, then run Tools > InnerFrame > Starry Night > Build again.
     /// </summary>
     [CreateAssetMenu(menuName = "InnerFrame/Starry Night/Layout", fileName = "SN_Layout")]
     public class SN_Layout : ScriptableObject
     {
-        /// <summary>The art pass's values. An asset below it is brought up to it once by SN_Setup.</summary>
-        public const int CurrentVersion = 2;
+        /// <summary>2: the art pass's values; 3: the dialogue box moved to VG_DialogueUI (uiBelowGaze went to its
+        /// settings). An asset below it is brought up to it once by SN_Setup.</summary>
+        public const int CurrentVersion = 3;
 
-        [Tooltip("0: the blockout's values. SN_Setup sets the art pass's values once and then this to CurrentVersion.")]
+        [Tooltip("0: the blockout's values. SN_Setup brings an older asset up to CurrentVersion once, step by step.")]
         public int version;
 
         [Header("Player")]
@@ -211,10 +213,6 @@ namespace InnerFrame.StarryNight
         public float sketchMaxDistance = 0.6f, sketchMaxViewAngle = 25f, sketchValleyYaw = 60f, sketchHoldSeconds = 1.5f;
         public float editorGrabReach = 1.5f;
         public float beamLength = 45f;
-
-        [Header("UI")]
-        [Tooltip("The dialogue box and the hint sit this many degrees below the gaze.")]
-        public float uiBelowGaze = 22f;
 
         [Header("Light")]
         public Color ambient = new Color32(0x14, 0x20, 0x3E, 0xFF);

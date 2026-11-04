@@ -177,7 +177,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::InnerFrame.StarryNight.SN_Voice
   source: {fileID: 7711038197997696538}
   lines: {fileID: 0}
-  box: {fileID: 0}
+  ui: {fileID: 0}
 --- !u!1 &6420064449198729876
 GameObject:
   m_ObjectHideFlags: 0

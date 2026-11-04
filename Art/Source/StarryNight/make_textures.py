@@ -8,13 +8,16 @@ Writes to Assets/StarryNight/Textures/ (power-of-two sizes) and the data files b
   SN_SkyPainted.png      sky-painted.png, 2048 x 1024: the paint panel
   SN_Horizon.png         horizon.png's band, magenta keyed out (soft, despilled), 2048 x 512 RGBA
   SN_HorizonGlow.png     the band's lit windows (warm pixels), 1024 x 256, a mask; horizon_glow.json: the brightest clusters
-  SN_FarHills.png        the band's far hills alone (u 0.0195..0.5475, top rows: no spire, no village), over a solid lower
-                         part fading to the mist's blue, 1024 x 256 RGBA: the ring of hills round the rest of the horizon
+  SN_FarHills.png        the far hills' paint, without a silhouette (the look pass): the band's hills, each column shifted
+                         up so its ridge is the top row, made seamless across, fading down to the mist's blue, a soft top
+                         edge; 1024 x 256 RGBA. The ring's silhouette is geometry (SN_MeshGen.HillRing), one round the
+                         whole horizon, not repeated. horizon_ridge.json: the band's own ridge (v from the top) per degree
   SN_Grass.png           grass.png made seamless (offset blend), 1024 x 1024
   SN_PathDirt.png        the path: a warm dirt colour sampled from the concept (S01), ragged alpha edges, 256 x 1024
   SN_Flowers.png         flowers.png's six clumps, keyed and despilled, in a 2048 x 1024 atlas; flowers_atlas.json
   SN_Sketch.png          sketch-page.png, 1024 x 1024 (the sketchbook's pages and the page)
   SN_Cypress_BaseColor.png, SN_Rock_BaseColor.png   the Tripo models' base colours, 2048 -> 1024
+  SN_BushA_BaseColor.png, SN_BushB_BaseColor.png, SN_CloudA_BaseColor.png   the look pass's Tripo bushes and cloud, 2048 -> 1024
   SN_HaloPainted.png     a star's halo as Van Gogh paints it: yellow core, pale-yellow dabs, blue-white strokes, 512 x 512
   SN_StarAtlas.png       a star's core (left) and the painted halo (right), 1024 x 512, for the star fields
   SN_MoonPainted.png     a larger crescent in a bigger, softer painted glow, 512 x 512
@@ -81,23 +84,50 @@ json.dump({"source": "horizon.png", "band_rows_in_source": [r0, r1], "band_aspec
            "spire_tip_uv_in_band": [round((spire_px[0] + 0.5) / hz.size[0], 4), round((spire_px[1] - r0) / (r1 - r0), 4)],
            "glow_clusters": peaks}, open(HERE / "horizon_glow.json", "w"), indent=1)
 
-# the far hills for the ring: the band, u 0.0195..0.5475 (both ends in a valley, so the mirrored repeat shows no twin
-# peaks; the spire at u 0.68 stays out), rows v 0..0.28 from the top, then a solid foot
+# the band's own ridge (the topmost solid row of each column), one value per degree of its 96: SN_MeshGen keeps the ring's
+# silhouette under it where the two meet
 hb = np.asarray(band, dtype=np.float64)
 bh, bw = hb.shape[:2]
-hills = Image.fromarray(hb[: int(bh * 0.28), int(bw * 0.0195): int(bw * 0.5475)].astype(np.uint8)).resize((1024, 150), Image.LANCZOS)
-hv = np.asarray(hills, dtype=np.float64)
-solid = hv[..., 3] > 200
-foot_top = np.median(hv[-12:][solid[-12:]][:, :3], axis=0)          # the hills' colour along the strip's bottom
-mist_rgb = np.array([0.60, 0.67, 0.86]) * 255 * 0.55
-foot = np.zeros((106, 1024, 4))
-t = (np.arange(106) / 105.0)[:, None, None]
-foot[..., :3] = foot_top * (1 - t) + mist_rgb * t
-foot[..., 3] = 255
-# the strip's lowest rows are solid: blend them into the foot so there's no seam
-far = np.concatenate([hv, foot], axis=0)
-far[140:150, :, 3] = 255
-save(Image.fromarray(K.bleed(far.clip(0, 255).astype(np.uint8), passes=8)), "SN_FarHills.png")
+solid_rows = hb[..., 3] > 128
+ridge_px = np.array([int(np.argmax(solid_rows[:, x])) if solid_rows[:, x].any() else bh for x in range(bw)])
+samples = []
+for k in range(97):
+    x = min(bw - 1, int(round(k / 96 * (bw - 1))))
+    w = ridge_px[max(0, x - bw // 192): x + bw // 192 + 1]
+    samples.append(round(float(w.min()) / bh, 4))   # the highest ridge in the degree round it
+json.dump({"source": "SN_Horizon.png (the band)", "note": "v from the band's top of its ridge, at u = k / 96 (k = 0..96)",
+           "ridge_v_from_top": samples}, open(HERE / "horizon_ridge.json", "w"), indent=1)
+
+# the far hills' paint for the ring: the band's hills (u 0.0195..0.5475, 0.2 of the band's height down from each column's
+# ridge: no spire, no village), each column shifted up so it starts at its ridge (no silhouette left), made seamless across
+# by crossfading its own last 128 columns into its first (no feature appears twice), then a foot fading to the mist's
+# blue; the top 5 rows fade in (the geometry's edge reads painted, not cut)
+x0, x1 = int(bw * 0.0195), int(bw * 0.5475)
+rows_h = int(bh * 0.2)
+cols = []
+for x in range(x0, x1):
+    r = ridge_px[x]
+    col = hb[r: r + rows_h, x, :3]
+    if len(col) < rows_h:
+        col = np.vstack([col, np.repeat(col[-1:], rows_h - len(col), axis=0)])
+    cols.append(col)
+fill = np.stack(cols, axis=1)                                          # rows_h x (x1 - x0) x 3
+XF = 128
+fill = np.asarray(Image.fromarray(fill.clip(0, 255).astype(np.uint8)).resize((1024 + XF, 150), Image.LANCZOS), dtype=np.float64)
+t = (np.arange(XF) / XF)[None, :, None]
+fill[:, :XF] = fill[:, 1024:] * (1 - t) + fill[:, :XF] * t            # column 0 continues column 1023's neighbour
+fill = fill[:, :1024]
+foot_top = np.median(fill[-12:].reshape(-1, 3), axis=0)
+w = np.linspace(0, 1, 24)[:, None, None]                               # the hills' last rows ease into the foot: no step
+fill[-24:] = fill[-24:] * (1 - w) + foot_top * w
+mist_rgb = np.array([0.74, 0.79, 0.98]) * 255   # a light haze: from above, the ring's foot reads as far mist
+foot = np.zeros((106, 1024, 3))
+tt = (np.arange(106) / 105.0)[:, None, None]
+foot[...] = foot_top * (1 - tt) + mist_rgb * tt
+far = np.concatenate([fill, foot], axis=0)
+alpha = np.full(far.shape[:2], 255.0)
+alpha[:5] = (np.arange(5) / 5.0 * 255)[:, None]
+save(Image.fromarray(np.dstack([far, alpha]).clip(0, 255).astype(np.uint8)), "SN_FarHills.png")
 
 # ------------------------------------------------------------------------------------------------- grass
 
@@ -209,6 +239,8 @@ def glb_image(path):
 
 save(glb_image(IN / "cypress.glb").convert("RGB").resize((1024, 1024), Image.LANCZOS), "SN_Cypress_BaseColor.png")
 save(glb_image(IN / "rock.glb").convert("RGB").resize((1024, 1024), Image.LANCZOS), "SN_Rock_BaseColor.png")
+for glb, name in (("bush-a.glb", "SN_BushA"), ("bush-b.glb", "SN_BushB"), ("cloud-a.glb", "SN_CloudA")):   # the look pass
+    save(glb_image(IN / glb).convert("RGB").resize((1024, 1024), Image.LANCZOS), name + "_BaseColor.png")
 
 # ------------------------------------------------------------------------------------------------- painted halos, moon, star atlas
 

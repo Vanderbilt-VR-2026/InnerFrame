@@ -20,7 +20,7 @@ RenderSettings:
   m_FogDensity: 0.01
   m_LinearFogStart: 25
   m_LinearFogEnd: 220
-  m_AmbientSkyColor: {r: 0.078431375, g: 0.1254902, b: 0.24313726, a: 1}
+  m_AmbientSkyColor: {r: 0.15686275, g: 0.2, b: 0.33333334, a: 1}
   m_AmbientEquatorColor: {r: 0.114, g: 0.125, b: 0.133, a: 1}
   m_AmbientGroundColor: {r: 0.047, g: 0.043, b: 0.035, a: 1}
   m_AmbientIntensity: 1
@@ -162,6 +162,7 @@ MonoBehaviour:
   beamPrefab: {fileID: 5515488106971740343, guid: dc42fd1b102544b8db8791fb32e70fa7, type: 3}
   uiPrefab: {fileID: 718788160887856758, guid: 7dec7f57815ac467388af4b7b0b212dc, type: 3}
   uiSettings: {fileID: 11400000, guid: 31635d97d2171430f9f0ee35fc6e4ce2, type: 2}
+  grading: {fileID: 11400000, guid: feb26a72c6808406c9ab9b369aa8c169, type: 2}
 --- !u!4 &567451547
 Transform:
   m_ObjectHideFlags: 0

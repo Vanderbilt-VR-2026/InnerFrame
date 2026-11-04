@@ -1,10 +1,13 @@
 using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using UnityEngine;
 
 namespace InnerFrame.StarryNight.EditorTools
 {
     /// <summary>The generated meshes (the hill, the path, the far hills, the painted horizon's strip, the village glow,
-    /// the mist layers, the flowers) and the swirl mask, from SN_Layout (same output for the same layout).</summary>
+    /// the mist layers, the flowers), the bushes' and clouds' placements, and the swirl mask, from SN_Layout (same output
+    /// for the same layout).</summary>
     public static class SN_MeshGen
     {
         const int HillSegments = 96, HillRings = 40, SkirtRings = 14;
@@ -133,28 +136,49 @@ namespace InnerFrame.StarryNight.EditorTools
         }
 
         /// <summary>
-        /// The ring of far hills round the rest of the horizon, hillRingRadiusFraction x R from the hill's centre, seen
-        /// from inside: SN_FarHills.png (the painted horizon's own hills; their silhouette is the texture's alpha) repeated
-        /// eight times round it, mirrored. Three rows: the strip's top at hillRingMaxPitch, its foot at hillRingMinPitch
-        /// (v 150/256 of the texture's 256 rows), and the ring's bottom far below. Behind the painted horizon it sinks by
-        /// (hillRingMaxPitch - hillRingUnderHorizonPitch), out of sight; over the horizon's faded ends it rises back.
+        /// The far hills round the horizon (the look pass), hillRingRadiusFraction x R from the hill's centre, seen from
+        /// inside: one continuous silhouette, generated (a seeded sum of sines round the circle, so it closes on itself
+        /// and nothing repeats), between ridgeMinPitch and ridgeMaxPitch. Within the painted strip's span it sinks out of
+        /// sight behind the strip (HorizonCover); over the strip's faded ends and ridgeJunctionDeg beyond, it stays
+        /// ridgeJunctionMargin under the strip's own ridge (horizon_ridge.json), so as the strip fades the ring shows
+        /// below it, never a second ridge above. Painted with SN_FarHills.png (the strip's hills without a silhouette,
+        /// seamless across, mirrored every ridgeTileDeg; its seam is behind the strip). Three rows: the ridge, the hills'
+        /// foot 10 degrees lower, and the ring's bottom far below.
         /// </summary>
-        public static Mesh HillRing(SN_Layout l, float skyRadius)
+        public static Mesh HillRing(SN_Layout l, float skyRadius, float[] stripRidgeV, StringBuilder report = null)
         {
-            const int Seg = 180, Copies = 8;
-            const float StripV = 1f - 150f / 256f;
+            const int Seg = 360;
+            const float FootV = 1f - 150f / 256f;   // SN_FarHills.png: the hills' paint in its top 150 of 256 rows
             float R0 = l.HillRingRadius(skyRadius), bottom = -0.4f * R0;
+            float depth = l.hillRingMaxPitch - l.hillRingMinPitch, sinkBy = l.hillRingMaxPitch - l.hillRingUnderHorizonPitch;
+            float start = (l.HorizonYawMin + l.HorizonYawMax) * 0.5f;   // the seam (u wraps) behind the strip's middle
+            var ridge = RidgeProfile(l, Seg);
             var b = new Builder();
+            float outMin = 99f, outMax = -99f, junctionWorst = 99f;
             for (int s = 0; s <= Seg; s++)
             {
-                float a = s * 2f * Mathf.PI / Seg;
-                float sink = (l.hillRingMaxPitch - l.hillRingUnderHorizonPitch) * HorizonCover(l, a * Mathf.Rad2Deg);
-                float top = l.eyeHeight + R0 * Mathf.Tan((l.hillRingMaxPitch - sink) * Mathf.Deg2Rad);
-                float foot = l.eyeHeight + R0 * Mathf.Tan((l.hillRingMinPitch - sink) * Mathf.Deg2Rad);
+                float yaw = start + s * 360f / Seg;
+                float p = ridge[s % Seg];
+                float w = JunctionWeight(l, yaw);
+                if (w > 0f)
+                {
+                    float limit = StripRidgePitch(l, skyRadius, stripRidgeV, yaw) - l.ridgeJunctionMargin;
+                    p = Mathf.Lerp(p, Mathf.Min(p, limit), w);
+                    if (w >= 1f && HorizonCover(l, yaw) <= 0f) junctionWorst = Mathf.Min(junctionWorst, StripRidgePitch(l, skyRadius, stripRidgeV, yaw) - p);
+                }
+                float cover = HorizonCover(l, yaw);
+                if (cover <= 0f && w <= 0f) { outMin = Mathf.Min(outMin, p); outMax = Mathf.Max(outMax, p); }
+                p -= sinkBy * cover;
+                // behind the strip the hills' paint closes up to its haze (from above, no dark band shows under the strip)
+                float top = l.eyeHeight + R0 * Mathf.Tan(p * Mathf.Deg2Rad);
+                float foot = l.eyeHeight + R0 * Mathf.Tan((p - depth * (1f - 0.95f * cover)) * Mathf.Deg2Rad);
+                float a = yaw * Mathf.Deg2Rad;
                 Vector3 dir = new Vector3(Mathf.Sin(a), 0f, Mathf.Cos(a));
-                float u = s / (float)Seg * Copies;
+                // the paint's u, warped by a slow wave, so its repeats don't line up round the ring
+                float deg = s * 360f / Seg;
+                float u = deg / Mathf.Max(1f, l.ridgeTileDeg) + 0.22f * Mathf.Sin(deg * 3f * Mathf.Deg2Rad) + 0.12f * Mathf.Sin(deg * 7f * Mathf.Deg2Rad + 1.3f);
                 b.Add(dir * R0 + Vector3.up * top, new Vector2(u, 1f));
-                b.Add(dir * R0 + Vector3.up * foot, new Vector2(u, StripV));
+                b.Add(dir * R0 + Vector3.up * foot, new Vector2(u, FootV));
                 b.Add(dir * R0 + Vector3.up * bottom, new Vector2(u, 0f));
             }
             for (int s = 0; s < Seg; s++)
@@ -165,7 +189,48 @@ namespace InnerFrame.StarryNight.EditorTools
                     b.Tri(t0, t1, b1, inward);
                     b.Tri(t0, b1, b0, inward);
                 }
+            report?.AppendLine($"[SN Setup] Far hills: one ridge round the horizon (seed {l.ridgeSeed}); outside the strip it runs {outMin:F2}..{outMax:F2} deg; " +
+                               $"over the strip's faded ends it stays at least {junctionWorst:F2} deg under the strip's own ridge");
             return b.Build("SN_HillRing");
+        }
+
+        /// <summary>The ridge's pitch at Seg steps round the circle (from yaw `start`): a seeded sum of sines (2 to 26
+        /// waves round the circle, falling amplitude), scaled into ridgeMinPitch..ridgeMaxPitch.</summary>
+        static float[] RidgeProfile(SN_Layout l, int seg)
+        {
+            var rnd = new System.Random(l.ridgeSeed);
+            var waves = new List<(int k, float amp, float phase)>();
+            for (int k = 2; k <= 26; k++) waves.Add((k, (float)(Mathf.Pow(k, -1.15f) * (0.5 + rnd.NextDouble())), (float)(rnd.NextDouble() * 2 * System.Math.PI)));
+            var raw = new float[seg];
+            for (int s = 0; s < seg; s++)
+            {
+                float t = s * 2f * Mathf.PI / seg, v = 0f;
+                foreach (var w in waves) v += w.amp * Mathf.Sin(w.k * t + w.phase);
+                raw[s] = v;
+            }
+            float lo = raw.Min(), hi = raw.Max();
+            for (int s = 0; s < seg; s++) raw[s] = Mathf.Lerp(l.ridgeMinPitch, l.ridgeMaxPitch, Mathf.Pow((raw[s] - lo) / (hi - lo), 1.2f));
+            return raw;
+        }
+
+        /// <summary>1 over the strip's faded ends (and anywhere inside its span), falling to 0 at ridgeJunctionDeg outside them.</summary>
+        static float JunctionWeight(SN_Layout l, float yaw)
+        {
+            float d = Mathf.DeltaAngle((l.HorizonYawMin + l.HorizonYawMax) * 0.5f, yaw);
+            float outside = Mathf.Abs(d) - l.horizonWidthDeg * 0.5f;   // degrees past the strip's end (negative inside)
+            return 1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(outside / Mathf.Max(l.ridgeJunctionDeg, 0.01f)));
+        }
+
+        /// <summary>The painted strip's own ridge, as a pitch from the seat eye, at a yaw (clamped into its span).</summary>
+        public static float StripRidgePitch(SN_Layout l, float skyRadius, float[] ridgeV, float yaw)
+        {
+            float d = Mathf.DeltaAngle((l.HorizonYawMin + l.HorizonYawMax) * 0.5f, yaw);
+            float u = Mathf.Clamp01((d + l.horizonWidthDeg * 0.5f) / l.horizonWidthDeg);
+            float x = u * (ridgeV.Length - 1);
+            int i = Mathf.Min((int)x, ridgeV.Length - 2);
+            float v = Mathf.Lerp(ridgeV[i], ridgeV[i + 1], x - i);
+            HorizonFrame(l, skyRadius, out float radius, out float top, out float bottom);
+            return Mathf.Atan2(Mathf.Lerp(top, bottom, v), radius) * Mathf.Rad2Deg;
         }
 
         /// <summary>The village's lit windows: small quads facing the seat, round (villageYaw, villagePitch) from it.</summary>
@@ -305,14 +370,14 @@ namespace InnerFrame.StarryNight.EditorTools
         /// atlas each, flowers_atlas.json), placed with a fixed seed: denser round the rock, the lantern and the path's
         /// edges; none on the path, the seat, the rock or Vincent's spot. Normals point up so both faces light alike.
         /// </summary>
-        public static Mesh Flowers(SN_Layout l, string atlasJson)
+        public static Mesh Flowers(SN_Layout l, string atlasJson, List<Footprint> bushes = null, StringBuilder report = null)
         {
             var atlas = JsonUtility.FromJson<FlowerAtlas>(atlasJson);
             var rnd = new System.Random(l.flowerSeed);
             float R() => (float)rnd.NextDouble();
             var line = PathLine(l);
             var b = new Builder();
-            int placed = 0, tries = 0;
+            int placed = 0, tries = 0, underBush = 0;
             var spots = new List<Vector2>();
             while (placed < l.flowerClusters && tries < 20000)
             {
@@ -326,6 +391,7 @@ namespace InnerFrame.StarryNight.EditorTools
                 float dVincent = (q - new Vector2(l.vincentStand.x, l.vincentStand.z)).magnitude;
                 float dStart = (q - new Vector2(l.playerStart.x, l.playerStart.z)).magnitude;
                 if (dPath < l.pathWidth * 0.5f + 0.12f || dRock < 0.06f || dLantern < 0.22f || dSeat < 0.75f || dVincent < 0.45f || dStart < 0.8f) continue;
+                if (bushes != null && bushes.Any(f => (f.at - q).magnitude < f.radius * 0.8f)) { underBush++; continue; }   // fill between the bushes, not under them
                 bool tooClose = false;
                 foreach (var o in spots) if ((o - q).sqrMagnitude < 0.3f * 0.3f) { tooClose = true; break; }
                 if (tooClose) continue;
@@ -353,7 +419,156 @@ namespace InnerFrame.StarryNight.EditorTools
                 }
             }
             if (placed < l.flowerClusters) Debug.LogWarning($"[SN Setup] Flowers: placed {placed} of {l.flowerClusters}");
+            report?.AppendLine($"[SN Setup] Flowers: {placed} of {l.flowerClusters} card clusters placed ({underBush} tries fell under a bush)");
             return b.Build("SN_Flowers");
+        }
+
+        /// <summary>A placed copy's footprint on the ground: its centre, its radius, its height.</summary>
+        public struct Footprint { public Vector2 at; public float radius, height; }
+
+        /// <summary>A model's footprint radius (its farthest vertex from the vertical axis, in the mesh's space after
+        /// `node`) and its height.</summary>
+        public static (float radius, float height) Size(Mesh mesh, Matrix4x4 node)
+        {
+            float r = 0f, lo = float.MaxValue, hi = float.MinValue;
+            foreach (var v0 in mesh.vertices)
+            {
+                var v = node.MultiplyPoint3x4(v0);
+                r = Mathf.Max(r, new Vector2(v.x, v.z).magnitude);
+                lo = Mathf.Min(lo, v.y); hi = Mathf.Max(hi, v.y);
+            }
+            return (r, hi - lo);
+        }
+
+        /// <summary>
+        /// The bushes (the look pass), with a fixed seed: bushACount of A, then bushBCount of B, random yaw, scale in
+        /// bushScale, half of them mirrored on X; denser round the rock, the lantern, the path's edges, the cypress's foot
+        /// and the hill's rim, sparse in the open grass. Each footprint stays clear of the path's centre line, the seat,
+        /// the rock, the lantern, Vincent's spot, the start, the cypress's trunk and the teleport walls' line (the
+        /// bushClear* values); within openViewRadius of the seat nothing is taller than openViewHeight. A bush sits on
+        /// the ground's lowest point under it, a little sunk, leaning bushSlopeFollow of the way with the slope.
+        /// </summary>
+        public static void Bushes(SN_Layout l, (float radius, float height) a, (float radius, float height) bb,
+            List<Matrix4x4> outA, List<Matrix4x4> outB, List<Footprint> placed, StringBuilder report)
+        {
+            var rnd = new System.Random(l.bushSeed);
+            float R() => (float)rnd.NextDouble();
+            var line = PathLine(l);
+            var seat = new Vector2(l.playerSeat.x, l.playerSeat.z);
+            var cyp = new Vector2(l.cypressBase.x, l.cypressBase.z);
+            int rejectedClear = 0, rejectedView = 0;
+            foreach (var (count, size, list, name) in new[] { (l.bushACount, a, outA, "A"), (l.bushBCount, bb, outB, "B") })
+            {
+                int n = 0, tries = 0;
+                while (n < count && tries < 60000)
+                {
+                    tries++;
+                    float ang = R() * 2f * Mathf.PI, rad = Mathf.Sqrt(R()) * l.bushAreaRadius;
+                    var q = new Vector2(Mathf.Sin(ang) * rad, Mathf.Cos(ang) * rad);
+                    float s = Mathf.Lerp(l.bushScale.x, l.bushScale.y, R());
+                    float r = size.radius * s;
+                    float dPath = DistanceToLine(line, q);
+                    float dRock = Mathf.Max(Mathf.Abs(q.x) - l.rockFootprint.x * 0.5f, Mathf.Abs(q.y) - l.rockFootprint.y * 0.5f);
+                    float dLantern = (q - new Vector2(l.lantern.x, l.lantern.z)).magnitude;
+                    float dSeat = (q - seat).magnitude;
+                    float dVincent = (q - new Vector2(l.vincentStand.x, l.vincentStand.z)).magnitude;
+                    float dStart = (q - new Vector2(l.playerStart.x, l.playerStart.z)).magnitude;
+                    float dCyp = (q - cyp).magnitude;
+                    float dWalls = Mathf.Abs(q.magnitude - l.edgeColliderRadius);
+                    if (dPath < l.bushClearPath + r || dRock < l.bushClearRock + r || dLantern < l.bushClearLantern + r || dSeat < l.bushClearSeat + r ||
+                        dVincent < l.bushClearVincent + r || dStart < l.bushClearStart + r || dCyp < l.bushClearCypress + r || dWalls < l.bushClearWalls + r)
+                    { rejectedClear++; continue; }
+                    if (dSeat - r < l.openViewRadius && size.height * s > l.openViewHeight)
+                    {
+                        s = Mathf.Min(s, l.openViewHeight / size.height);   // shorter here, so the view stays open
+                        r = size.radius * s;
+                        if (s < l.bushScale.x) { rejectedView++; continue; }
+                    }
+                    if (placed.Any(f => (f.at - q).magnitude < (f.radius + r) * 0.72f)) continue;
+                    float rim = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(l.hillEdgeRadius - 1.4f, l.hillEdgeRadius - 0.2f, q.magnitude));
+                    float near = Mathf.Max(Mathf.Max(Bump(dRock, 0.2f + r, 1.0f), Bump(dLantern, 0.3f + r, 1.2f)),
+                                           Mathf.Max(Mathf.Max(Bump(dPath, 0.4f + r, 0.9f), Bump(dCyp, 0.3f + r, 1.5f)), rim));
+                    if (R() > 0.1f + 0.9f * near) continue;
+                    float yaw = R() * 360f;
+                    bool mirror = R() < 0.5f;
+                    // the ground: its lowest point under the footprint, and its slope
+                    float y = l.GroundHeight(q.x, q.y);
+                    for (int k = 0; k < 8; k++)
+                    {
+                        float t = k * Mathf.PI / 4f;
+                        y = Mathf.Min(y, l.GroundHeight(q.x + Mathf.Sin(t) * r * 0.6f, q.y + Mathf.Cos(t) * r * 0.6f));
+                    }
+                    const float e = 0.1f;
+                    var normal = new Vector3(l.GroundHeight(q.x - e, q.y) - l.GroundHeight(q.x + e, q.y), 2f * e, l.GroundHeight(q.x, q.y - e) - l.GroundHeight(q.x, q.y + e)).normalized;
+                    var up = Vector3.Slerp(Vector3.up, normal, l.bushSlopeFollow);
+                    var rot = Quaternion.FromToRotation(Vector3.up, up) * Quaternion.Euler(0f, yaw, 0f);
+                    var m = Matrix4x4.TRS(new Vector3(q.x, y - 0.03f * s, q.y), rot, new Vector3(mirror ? -s : s, s, s));
+                    list.Add(m);
+                    placed.Add(new Footprint { at = q, radius = r, height = size.height * s });
+                    n++;
+                }
+                float tallNear = placed.Where(f => (f.at - seat).magnitude - f.radius < l.openViewRadius).Select(f => f.height).DefaultIfEmpty(0f).Max();
+                report.AppendLine($"[SN Setup] Bushes {name}: {n} of {count} placed ({tries} tries); footprint radius {size.radius:F2} m, height {size.height:F2} m at scale 1; " +
+                                  $"the tallest within {l.openViewRadius} m of the seat so far {tallNear:F2} m");
+            }
+            report.AppendLine($"[SN Setup] Bushes: {rejectedClear} tries fell in a keep-out, {rejectedView} were too tall for the open view even at the smallest scale");
+        }
+
+        /// <summary>
+        /// The clouds (the look pass), with a fixed seed: cloudCount copies in cloudClusters clusters round the rim (so
+        /// they read as one bank), centres cloudInnerRadius..cloudOuterRadius from the hill's centre, scale in cloudScale,
+        /// half mirrored; each turns its broad side to the hill (+- cloudFaceJitterDeg). Each cloud's top stays under
+        /// cloudTopMaxY and, seen from the seat eye, under cloudTopMaxPitch (checked on its vertices; lowered until it is).
+        /// </summary>
+        public static List<Matrix4x4> Clouds(SN_Layout l, Mesh mesh, Matrix4x4 node, StringBuilder report)
+        {
+            var rnd = new System.Random(l.cloudSeed);
+            float R() => (float)rnd.NextDouble();
+            float G() { double u1 = 1.0 - rnd.NextDouble(), u2 = rnd.NextDouble(); return (float)(System.Math.Sqrt(-2.0 * System.Math.Log(u1)) * System.Math.Cos(2.0 * System.Math.PI * u2)); }
+            var verts = mesh.vertices.Select(v => node.MultiplyPoint3x4(v)).ToArray();
+            float halfH = verts.Max(v => v.y);
+            var eye = l.SeatEye;
+            var clusters = new float[Mathf.Max(1, l.cloudClusters)];
+            float offset = R() * 360f;
+            for (int i = 0; i < clusters.Length; i++) clusters[i] = offset + i * 360f / clusters.Length + G() * 12f;
+            var list = new List<Matrix4x4>();
+            float worst = -90f; int lowered = 0, pushed = 0;
+            for (int i = 0; i < l.cloudCount; i++)
+            {
+                float ang = (clusters[i % clusters.Length] + G() * 360f / clusters.Length * 0.28f) * Mathf.Deg2Rad;
+                float rad = Mathf.Lerp(l.cloudInnerRadius, l.cloudOuterRadius, R());
+                var c = new Vector3(Mathf.Sin(ang) * rad, 0f, Mathf.Cos(ang) * rad);
+                float s = Mathf.Lerp(l.cloudScale.x, l.cloudScale.y, Mathf.Sqrt(R()));   // more large than small: they join into a bank
+                float yaw = Mathf.Atan2(-c.x, -c.z) * Mathf.Rad2Deg + (R() * 2f - 1f) * l.cloudFaceJitterDeg;
+                bool mirror = R() < 0.5f;
+                var scale = new Vector3(mirror ? -s : s, s, s);
+                var rot = Quaternion.Euler(0f, yaw, 0f);
+                // the top: under cloudTopMaxY, a little lower at random (billows), then lowered until every vertex is under
+                // cloudTopMaxPitch from the seat eye
+                c.y = l.cloudTopMaxY - halfH * s - R() * 1.0f;
+                // the whole cloud outside cloudClearRadius from the hill's centre
+                for (int guard = 0; guard < 80; guard++)
+                {
+                    var m0 = Matrix4x4.TRS(c, rot, scale);
+                    if (verts.Min(v => { var w = m0.MultiplyPoint3x4(v); return new Vector2(w.x, w.z).magnitude; }) >= l.cloudClearRadius) break;
+                    var outward = new Vector3(c.x, 0f, c.z).normalized * 0.1f;
+                    c += outward;
+                    if (guard == 0) pushed++;
+                }
+                float maxPitch = 0f;
+                for (int guard = 0; guard < 80; guard++)
+                {
+                    var m0 = Matrix4x4.TRS(c, rot, scale);
+                    maxPitch = verts.Max(v => SN_Layout.YawPitch(m0.MultiplyPoint3x4(v) - eye).y);
+                    if (maxPitch <= l.cloudTopMaxPitch) break;
+                    c.y -= 0.1f; if (guard == 0) lowered++;
+                }
+                worst = Mathf.Max(worst, maxPitch);
+                list.Add(Matrix4x4.TRS(c, rot, scale));
+            }
+            report.AppendLine($"[SN Setup] Clouds: {list.Count} in {clusters.Length} clusters; seen from the seat eye the highest cloud vertex is at {worst:F2} deg " +
+                              $"(limit {l.cloudTopMaxPitch}); {lowered} lowered to meet it; {pushed} pushed outward to keep every part {l.cloudClearRadius} m or more from the centre");
+            return list;
         }
 
         static float Bump(float d, float from, float width) => 1f - Mathf.Clamp01((d - from) / width);

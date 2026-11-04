@@ -20,16 +20,17 @@ namespace InnerFrame.StarryNight
     /// Every number of The Starry Night, in world units (metres, degrees, seconds), with the rig at the project's 0.8
     /// scale (a standing eye at about 1.28 m). Blockout values from the step-2 prompt; the art pass (step 4,
     /// 2026-11-04) moved the seat and re-aimed the sky from it (version 2); the shared dialogue box (version 3) took
-    /// over uiBelowGaze (now VG_Dialogue_StarryNight.belowGaze). SN_Setup brings an older asset up once, step by step,
-    /// and logs every value it changes. SN_Setup builds meshes from some of them (the hill, the path, the far hills, the
+    /// over uiBelowGaze (now VG_Dialogue_StarryNight.belowGaze); the look pass (version 4) added the Tripo bushes and
+    /// clouds, a fuller mist, warmer light, one far horizon line and the colour grading switch. SN_Setup brings an older
+    /// asset up once, step by step, and logs every value it changes. SN_Setup builds meshes from some of them (the hill, the path, the far hills, the
     /// horizon, the mist, the flowers, the swirl mask): change those, then run Tools > InnerFrame > Starry Night > Build again.
     /// </summary>
     [CreateAssetMenu(menuName = "InnerFrame/Starry Night/Layout", fileName = "SN_Layout")]
     public class SN_Layout : ScriptableObject
     {
         /// <summary>2: the art pass's values; 3: the dialogue box moved to VG_DialogueUI (uiBelowGaze went to its
-        /// settings). An asset below it is brought up to it once by SN_Setup.</summary>
-        public const int CurrentVersion = 3;
+        /// settings); 4: the look pass. An asset below it is brought up to it once by SN_Setup.</summary>
+        public const int CurrentVersion = 4;
 
         [Tooltip("0: the blockout's values. SN_Setup brings an older asset up to CurrentVersion once, step by step.")]
         public int version;
@@ -55,8 +56,10 @@ namespace InnerFrame.StarryNight
         public Vector3 lantern = new Vector3(0.85f, 0f, -0.55f);     // on the grass by the seat, valley side (y above the ground)
         // on the rock (each dropped from about 1 cm above it, so it settles): the nearest spots to the blockout's where
         // the whole footprint is over the Tripo rock and the rock under it varies by 2.5 cm or less (the page: 4 cm)
+        // (the look pass: the page moved within reach of the seat, 0.73 m; no spot that flat within 0.75 m for the
+        // sketchbook at its yaw, so it stays)
         public Vector3 sketchbook = new Vector3(-0.07f, 0.285f, -0.09f);
-        public Vector3 page = new Vector3(0.21f, 0.287f, 0.14f);
+        public Vector3 page = new Vector3(0.22f, 0.296f, -0.21f);
         public Vector3 charcoal = new Vector3(-0.10f, 0.288f, 0.12f); // by Vincent's seat
         public float charcoalYaw = 70f;
         public Vector3 sketchbookSize = new Vector3(0.30f, 0.02f, 0.22f);
@@ -88,6 +91,29 @@ namespace InnerFrame.StarryNight
         [Tooltip("The grass texture repeats every this many metres; the path's dirt every pathTileMetres along it.")]
         public float grassTileMetres = 1.6f, pathTileMetres = 2.4f;
 
+        [Header("Bushes (the look pass: Tripo, each kind one combined mesh, SN_Scatter; placements by SN_Setup)")]
+        public int bushSeed = 1888;
+        public int bushACount = 50, bushBCount = 25;
+        public Vector2 bushScale = new Vector2(0.7f, 1.3f);
+        [Tooltip("A bush's footprint stays this far from: the path's centre line, the seat, the rock's footprint, the lantern, Vincent's spot, the start, the cypress's trunk.")]
+        public float bushClearPath = 0.4f, bushClearSeat = 0.6f, bushClearRock = 0.2f, bushClearLantern = 0.3f, bushClearVincent = 0.45f, bushClearStart = 0.8f, bushClearCypress = 0.3f;
+        [Tooltip("A bush's footprint doesn't straddle the teleport walls' line (edgeColliderRadius) by less than this.")]
+        public float bushClearWalls = 0.05f;
+        [Tooltip("Within this of the seat (a footprint's nearest edge) nothing is taller than openViewHeight: the view to the valley stays open.")]
+        public float openViewRadius = 1.5f, openViewHeight = 0.6f;
+        [Tooltip("Bushes out to this radius: past the walls onto the rim's slope, where the mist begins.")]
+        public float bushAreaRadius = 6.6f;
+        [Tooltip("How much a bush leans with the slope under it (0: upright, 1: square to the ground).")]
+        public float bushSlopeFollow = 0.6f;
+        [Tooltip("SN_Scatter.normalBend: the leaves' normals bent toward up (lit from above, softer).")]
+        public float bushNormalBend = 0.5f;
+        [Tooltip("The materials' tints (URP Lit, over the Tripo textures; above 1 brightens).")]
+        public Color bushATint = new Color(1.0f, 1.1f, 0.78f, 1f), bushBTint = new Color(1.05f, 1.12f, 0.85f, 1f);
+
+        [Header("Ground tints (the look pass: lighter and more saturated through the materials, not the textures)")]
+        public Color grassTint = new Color(1.32f, 1.24f, 0.6f, 1f);
+        public Color pathTint = new Color(1.18f, 1.02f, 0.8f, 1f);
+
         [Header("Flowers (one mesh of crossed cards, alpha-clipped)")]
         public int flowerClusters = 80;
         public int flowerSeed = 1890;
@@ -96,9 +122,15 @@ namespace InnerFrame.StarryNight
 
         [Header("Far away")]
         public float hillRingRadiusFraction = 0.6f;   // x the sky radius R
-        [Tooltip("The far hills' painted strip (SN_FarHills.png) spans these pitches, seen from the hill's centre; its hill tops reach about 1 degree under the strip's top.")]
+        [Tooltip("The far hills' paint (SN_FarHills.png) runs (max - min) degrees down from the ridge; behind the painted horizon the ridge sinks by (max - under), out of sight. The ridge's own height: ridgeMinPitch..ridgeMaxPitch.")]
         public float hillRingMinPitch = -6f, hillRingMaxPitch = 4f;
-        public float hillRingUnderHorizonPitch = -9f; // behind the painted horizon, the strip's top sinks to this
+        public float hillRingUnderHorizonPitch = -9f;
+        [Tooltip("The look pass: the far hills' ridge, one generated, non-repeating silhouette round the horizon (pitch from the hill's centre at eye height): between these, from this seed; within the painted strip's span it sinks out of sight; where they meet it stays ridgeJunctionMargin under the strip's own ridge (horizon_ridge.json).")]
+        public float ridgeMinPitch = -1.2f, ridgeMaxPitch = 2.4f;
+        public int ridgeSeed = 1853;
+        public float ridgeJunctionMargin = 0.6f, ridgeJunctionDeg = 12f;
+        [Tooltip("The ridge's paint (SN_FarHills.png, seamless across) repeats about every this many degrees (its u is warped a little).")]
+        public float ridgeTileDeg = 90f;
         [Tooltip("The painted horizon (horizon.png's band): this wide, its top this high, seen from the seat, at the far hills' radius less horizonInset.")]
         public float horizonWidthDeg = 96f, horizonTopPitch = 4f, horizonInset = 2.5f;
         [Tooltip("The band's width / height (Art/Source/StarryNight/horizon_glow.json, band_aspect).")]
@@ -122,17 +154,35 @@ namespace InnerFrame.StarryNight
         public float villageLightSize = 0.6f;
 
         [Header("Mist (a few drifting, near-horizontal noise layers and a handful of puffs)")]
-        public float[] mistLayerHeights = { -2.4f, -3.2f, -4.2f };
+        public float[] mistLayerHeights = { -1.9f, -2.5f, -3.3f, -4.3f };
+        [Tooltip("Each layer's size against the shared annulus (inner and outer radius): the upper ones end nearer, so from the seat they stay under the village.")]
+        public float[] mistLayerScale = { 0.62f, 0.85f, 1f, 1.15f };
         [Tooltip("The layers stop short of the painted horizon: seen from the seat their far edge is below its village (about -10 degrees).")]
         public float mistInnerRadius = 5.6f, mistOuterRadius = 22f;
         [Tooltip("Each layer rises this much per metre outward.")]
         public float mistRise = 0f;
         public float mistTileMetres = 12f;
-        public Vector2[] mistDrift = { new Vector2(0.0040f, 0.0012f), new Vector2(-0.0028f, 0.0020f), new Vector2(0.0018f, -0.0026f) };
-        public Color mistColour = new Color(0.60f, 0.67f, 0.86f, 0.30f);
-        public int mistPuffs = 5;
+        public Vector2[] mistDrift = { new Vector2(0.0035f, -0.0015f), new Vector2(0.0040f, 0.0012f), new Vector2(-0.0028f, 0.0020f), new Vector2(0.0018f, -0.0026f) };
+        public Color mistColour = new Color(0.54f, 0.61f, 0.88f, 0.39f);
+        public int mistPuffs = 6;
         public float mistPuffRadius = 8.6f, mistPuffY = -2.2f, mistPuffSpreadYaw = 140f;
         public Vector2 mistPuffSize = new Vector2(6.5f, 2.6f);
+
+        [Header("Clouds (the look pass: the Tripo cloud, one combined mesh, a bank round the rim)")]
+        public int cloudSeed = 1853, cloudCount = 25;
+        public Vector2 cloudScale = new Vector2(0.8f, 2.5f);
+        [Tooltip("Cloud centres between these radii from the hill's centre.")]
+        public float cloudInnerRadius = 6.3f, cloudOuterRadius = 11f;
+        [Tooltip("No part of a cloud comes nearer the hill's centre than this (pushed outward until it doesn't).")]
+        public float cloudClearRadius = 6f;
+        [Tooltip("Seen from the seat eye, every cloud's top stays under this pitch (under the painted horizon's own mist); and under the hilltop.")]
+        public float cloudTopMaxPitch = -12.5f, cloudTopMaxY = -0.6f;
+        [Tooltip("Clusters round the ring, so the clouds read as one bank; each cloud's broad side turns to the hill, +- this.")]
+        public int cloudClusters = 5;
+        public float cloudFaceJitterDeg = 35f;
+        public Color cloudTint = new Color(1.1f, 1.12f, 1.22f, 1f);
+        [Tooltip("SN_Scatter.normalBend for the clouds: lit softly from above, so no side reads heavy against the mist.")]
+        public float cloudNormalBend = 1.6f;
 
         [Header("Sky")]
         public float skyRadiusMax = 150f;
@@ -215,11 +265,11 @@ namespace InnerFrame.StarryNight
         public float beamLength = 45f;
 
         [Header("Light")]
-        public Color ambient = new Color32(0x14, 0x20, 0x3E, 0xFF);
-        public Color moonLight = new Color32(0x8F, 0xA6, 0xD9, 0xFF);
-        public float moonLightIntensity = 0.35f;
-        public Color lanternLight = new Color32(0xFF, 0xB8, 0x5C, 0xFF);
-        public float lanternIntensity = 2.2f, lanternRange = 4.5f;
+        public Color ambient = new Color32(0x28, 0x33, 0x55, 0xFF);
+        public Color moonLight = new Color32(0x86, 0xA8, 0xEC, 0xFF);
+        public float moonLightIntensity = 0.55f;
+        public Color lanternLight = new Color32(0xFF, 0xA8, 0x48, 0xFF);
+        public float lanternIntensity = 6f, lanternRange = 6.5f;
         public Color fog = new Color32(0x16, 0x26, 0x4C, 0xFF);
         public float fogStart = 25f, fogEnd = 220f;
         [Tooltip("At full dawn: the ambient light, the fog, and the far hills' colour.")]
@@ -228,6 +278,12 @@ namespace InnerFrame.StarryNight
         [Tooltip("The far hills' tint (as horizonNight / horizonDawn, a little darker: farther away).")]
         public Color hillRingNight = new Color(0.56f, 0.60f, 0.74f, 1f);
         public Color hillRingDawn = new Color(0.84f, 0.85f, 0.90f, 1f);
+
+        [Header("Colour grading (the look pass; off by default: its cost on a Quest is not measured yet)")]
+        [Tooltip("On: SN_Bootstrap adds a global Volume with SN_Grading.asset (Color Adjustments) and turns post-processing on for the scene's camera.")]
+        public bool colourGrading;
+        public float gradingPostExposure = 0.35f, gradingContrast = 14f, gradingSaturation = 20f;
+        public Color gradingFilter = new Color(1f, 0.97f, 0.92f, 1f);
 
         // ---------------------------------------------------------------------------------------------------------
 

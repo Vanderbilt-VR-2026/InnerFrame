@@ -31,7 +31,7 @@ Material:
     m_Floats:
     - _Billboard: 0
     m_Colors:
-    - _BaseColor: {r: 0.6, g: 0.67, b: 0.86, a: 0.3}
+    - _BaseColor: {r: 0.54, g: 0.61, b: 0.88, a: 0.39}
     - _NearFade: {r: 2, g: 3, b: 0, a: 0}
     - _Scroll: {r: 0, g: 0, b: 0, a: 0}
   m_BuildTextureStacks: []

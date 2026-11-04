@@ -1,6 +1,8 @@
 using Unity.XR.CoreUtils;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.XR;
 
 namespace InnerFrame.StarryNight
@@ -22,6 +24,7 @@ namespace InnerFrame.StarryNight
             charcoalPrefab, vincentPrefab, skyPrefab, beamPrefab;
         [Tooltip("VG_DialogueUI.prefab: Vincent's words and the hint, as in every scene.")] public GameObject uiPrefab;
         [Tooltip("VG_Dialogue_StarryNight: where the box sits (1.6 m, 22 deg under the gaze) and its sizes.")] public VG_DialogueSettings uiSettings;
+        [Tooltip("SN_Grading.asset (Color Adjustments): used only when SN_Layout.colourGrading is on.")] public VolumeProfile grading;
 
         public SN_Game Game { get; private set; }
         public Transform World { get; private set; }
@@ -47,6 +50,7 @@ namespace InnerFrame.StarryNight
 #endif
                 Game.Input = xrInput = new SN_InputXR(FindAnyObjectByType<XROrigin>());
             Game.ui.Snap();   // in place at once; it follows the main camera from here
+            if (layout.colourGrading) GradeCamera(Camera.main);
             Game.Begin();
         }
 
@@ -103,6 +107,16 @@ namespace InnerFrame.StarryNight
                 moonLight.transform.rotation = Quaternion.LookRotation(-SN_Layout.Dir(layout.moonYaw, layout.moonPitch));
                 moonLight.color = layout.moonLight;
                 moonLight.intensity = layout.moonLightIntensity;
+            }
+
+            foreach (var scatter in hill.GetComponentsInChildren<SN_Scatter>(true)) scatter.Build();   // the bushes and the clouds: one mesh each
+            if (layout.colourGrading && grading != null)
+            {
+                var volume = new GameObject("SN_Grading").AddComponent<Volume>();
+                volume.transform.SetParent(World, false);
+                volume.isGlobal = true;
+                volume.priority = 10f;
+                volume.sharedProfile = grading;
             }
 
             var village = hill.transform.Find("Village");   // the blockout's window dots: off unless SN_Layout.villageDots
@@ -193,6 +207,14 @@ namespace InnerFrame.StarryNight
             foreach (SN_State s in System.Enum.GetValues(typeof(SN_State))) texts.Add(SN_Game.HintFor(s));
             if (lines != null) foreach (var l in lines.lines) texts.Add(l.text);
             ui.Prewarm(texts);
+        }
+
+        /// <summary>The colour grading switch (SN_Layout.colourGrading, off by default): post-processing on for this scene's
+        /// camera at runtime (the rig prefab is not changed), so the global SN_Grading volume applies.</summary>
+        public static void GradeCamera(Camera cam)
+        {
+            if (cam == null) return;
+            cam.GetUniversalAdditionalCameraData().renderPostProcessing = true;
         }
 
         public static void ApplyRenderSettings(SN_Layout layout)

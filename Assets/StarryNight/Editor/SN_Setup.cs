@@ -7,6 +7,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
 using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
@@ -33,6 +34,7 @@ namespace InnerFrame.StarryNight.EditorTools
             Models = Root + "/Models";
         public const string ScenePath = Root + "/Scenes/StarryNight.unity";
         public const string LayoutPath = Root + "/SN_Layout.asset";
+        const string GradingPath = Root + "/SN_Grading.asset";
         const string LinesPath = Audio + "/SN_Lines.asset";
         const string MaskPath = Tex + "/SN_SwirlMask.png";
         const string XrOriginPrefab = "Assets/Samples/XR Interaction Toolkit/3.3.2/Starter Assets/Prefabs/XR Origin (XR Rig).prefab";
@@ -77,6 +79,7 @@ namespace InnerFrame.StarryNight.EditorTools
             BuildMaterials(layout);
             BuildMeshes(layout);
             BuildPrefabs(layout);
+            BuildGrading(layout);
             BuildScene(layout, lines);
             AssetDatabase.SaveAssets();
             Debug.Log("[SN Setup] Built The Starry Night: materials, meshes, prefabs and " + ScenePath);
@@ -106,7 +109,34 @@ namespace InnerFrame.StarryNight.EditorTools
             if (layout.version >= SN_Layout.CurrentVersion) return layout;   // tuned values are kept
             if (layout.version < 2) CopyDefaults(layout, ArtPassFields, 2, "the art pass");
             if (layout.version < 3) MoveUiToDialogueSettings(layout);
+            if (layout.version < 4)
+            {
+                LogNewFields(layout);
+                CopyDefaults(layout, LookPassFields, 4, "the look pass");
+            }
             return layout;
+        }
+
+        /// <summary>The existing fields the look pass (version 4) changed; its new fields come with their defaults (logged).</summary>
+        static readonly string[] LookPassFields =
+        {
+            "page", "mistLayerHeights", "mistDrift", "mistColour", "mistPuffs", "ambient", "moonLight", "moonLightIntensity",
+            "lanternLight", "lanternIntensity", "lanternRange",
+        };
+
+        /// <summary>Logs each field the class has but the asset's text doesn't (it gets the class's default).</summary>
+        static void LogNewFields(SN_Layout layout)
+        {
+            string text = File.ReadAllText(Path.GetFullPath(LayoutPath));
+            var so = new SerializedObject(layout);
+            var it = so.GetIterator();
+            if (!it.NextVisible(true)) return;
+            do
+            {
+                if (it.depth != 0 || it.name == "m_Script") continue;
+                if (!Regex.IsMatch(text, @"^  " + Regex.Escape(it.name) + ":", RegexOptions.Multiline))
+                    Debug.Log($"[SN Setup] Layout {it.name}: (new) -> {Describe(it)}");
+            } while (it.NextVisible(false));
         }
 
         /// <summary>Gives `fields` SN_Layout's defaults (each change logged) and sets the version.</summary>
@@ -165,7 +195,10 @@ namespace InnerFrame.StarryNight.EditorTools
                 case SerializedPropertyType.String: return p.stringValue;
                 case SerializedPropertyType.Vector2: return V(p.vector2Value.x, p.vector2Value.y);
                 case SerializedPropertyType.Vector3: return V(p.vector3Value.x, p.vector3Value.y, p.vector3Value.z);
-                case SerializedPropertyType.Color: return "#" + ColorUtility.ToHtmlStringRGBA(p.colorValue);
+                case SerializedPropertyType.Color:
+                    var c = p.colorValue;   // a tint above 1 (HDR) as numbers; hex would clamp it
+                    return c.maxColorComponent > 1f ? "(" + string.Join(", ", new[] { c.r, c.g, c.b, c.a }.Select(x => x.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture))) + ")"
+                                                    : "#" + ColorUtility.ToHtmlStringRGBA(c);
             }
             if (p.isArray)
             {
@@ -224,7 +257,8 @@ namespace InnerFrame.StarryNight.EditorTools
                     i.textureCompression = TextureImporterCompression.CompressedHQ;
                 });
             // opaque colour maps (mipmapped, tiled where they repeat)
-            foreach (var (n, max, repeat) in new[] { ("SN_Grass", 1024, true), ("SN_Sketch", 1024, false), ("SN_Cypress_BaseColor", 1024, false), ("SN_Rock_BaseColor", 1024, false) })
+            foreach (var (n, max, repeat) in new[] { ("SN_Grass", 1024, true), ("SN_Sketch", 1024, false), ("SN_Cypress_BaseColor", 1024, false), ("SN_Rock_BaseColor", 1024, false),
+                                                     ("SN_BushA_BaseColor", 1024, false), ("SN_BushB_BaseColor", 1024, false), ("SN_CloudA_BaseColor", 1024, false) })
                 Texture($"{Tex}/{n}.png", i =>
                 {
                     i.textureType = TextureImporterType.Default; i.sRGBTexture = true; i.mipmapEnabled = true; i.alphaSource = TextureImporterAlphaSource.None;
@@ -248,7 +282,7 @@ namespace InnerFrame.StarryNight.EditorTools
                     i.textureType = TextureImporterType.Default; i.sRGBTexture = !linear; i.mipmapEnabled = true;
                     i.alphaSource = linear ? TextureImporterAlphaSource.None : TextureImporterAlphaSource.FromInput; i.alphaIsTransparency = !linear;
                     i.wrapMode = repeat ? TextureWrapMode.Repeat : TextureWrapMode.Clamp; i.filterMode = FilterMode.Trilinear;
-                    if (n == "SN_FarHills") { i.wrapModeU = TextureWrapMode.Mirror; i.wrapModeV = TextureWrapMode.Clamp; }   // round the ring, mirrored
+                    if (n == "SN_FarHills") { i.wrapModeU = TextureWrapMode.Repeat; i.wrapModeV = TextureWrapMode.Clamp; }   // round the ring (seamless across)
                     i.maxTextureSize = max; i.textureCompression = TextureImporterCompression.Compressed;
                 });
             Texture(MaskPath, i =>
@@ -272,8 +306,9 @@ namespace InnerFrame.StarryNight.EditorTools
         /// where a MeshCollider needs the mesh (the rock).</summary>
         static void ImportModels()
         {
+            // the bushes and the cloud are readable: SN_Scatter joins their copies at runtime
             foreach (var (name, readable) in new[] { ("SN_Cypress", false), ("SN_Rock", true), ("SN_Lantern", false), ("SN_Sketchbook", false),
-                                                     ("SN_Page", false), ("SN_Charcoal", false) })
+                                                     ("SN_Page", false), ("SN_Charcoal", false), ("SN_BushA", true), ("SN_BushB", true), ("SN_CloudA", true) })
             {
                 string path = $"{Models}/{name}.fbx";
                 var m = AssetImporter.GetAtPath(path) as ModelImporter;
@@ -289,6 +324,14 @@ namespace InnerFrame.StarryNight.EditorTools
         }
 
         static GameObject ModelAsset(string name) => Load<GameObject>($"{Models}/{name}.fbx");
+
+        /// <summary>A model's mesh and its node's transform inside the FBX (the mesh's space to the model's root).</summary>
+        static (Mesh mesh, Matrix4x4 node) ModelMeshNode(string model)
+        {
+            var root = ModelAsset(model);
+            var mf = root.GetComponentsInChildren<MeshFilter>(true).First();
+            return (mf.sharedMesh, root.transform.worldToLocalMatrix * mf.transform.localToWorldMatrix);
+        }
 
         static Mesh ModelMesh(string model, string mesh) =>
             AssetDatabase.LoadAllAssetsAtPath($"{Models}/{model}.fbx").OfType<Mesh>().FirstOrDefault(m => m.name == mesh)
@@ -367,7 +410,7 @@ namespace InnerFrame.StarryNight.EditorTools
 
         /// <summary>Our own URP Lit: opaque, metallic 0, no emission; an optional base map; alpha-clipped and two-sided
         /// for cards, or transparent (glass).</summary>
-        static Material Lit(string name, Color c, float smoothness, string texture = null, bool clip = false, bool transparent = false) =>
+        static Material Lit(string name, Color c, float smoothness, string texture = null, bool clip = false, bool transparent = false, bool twoSided = false) =>
             Mat(name, "Universal Render Pipeline/Lit", m =>
             {
                 Colour(m, c);
@@ -382,8 +425,8 @@ namespace InnerFrame.StarryNight.EditorTools
                 if (clip) m.EnableKeyword("_ALPHATEST_ON"); else m.DisableKeyword("_ALPHATEST_ON");
                 m.SetFloat("_Surface", transparent ? 1f : 0f);
                 m.SetFloat("_Blend", 0f);
-                m.SetFloat("_Cull", (float)(clip || transparent ? CullMode.Off : CullMode.Back));
-                m.doubleSidedGI = clip || transparent;
+                m.SetFloat("_Cull", (float)(clip || transparent || twoSided ? CullMode.Off : CullMode.Back));
+                m.doubleSidedGI = clip || transparent || twoSided;
                 // the blend states, keywords and passes exactly as URP's own material validation leaves them (it runs when
                 // a session loads the material; anything different here would flip back and forth between runs)
                 m.SetFloat("_BlendModePreserveSpecular", 1f);
@@ -422,8 +465,11 @@ namespace InnerFrame.StarryNight.EditorTools
 
         static void BuildMaterials(SN_Layout l)
         {
-            Lit("SN_Grass", new Color(0.78f, 0.82f, 0.86f, 1f), 0.05f, "SN_Grass");
-            Lit("SN_Path", new Color(0.92f, 0.86f, 0.78f, 1f), 0.05f, "SN_PathDirt", clip: true);
+            Lit("SN_Grass", l.grassTint, 0.05f, "SN_Grass");          // the look pass: lighter, more saturated (SN_Layout.grassTint)
+            Lit("SN_Path", l.pathTint, 0.05f, "SN_PathDirt", clip: true);
+            Lit("SN_BushA", l.bushATint, 0.05f, "SN_BushA_BaseColor", twoSided: true);   // leaves are single sheets: both faces drawn
+            Lit("SN_BushB", l.bushBTint, 0.05f, "SN_BushB_BaseColor", twoSided: true);
+            Lit("SN_CloudA", l.cloudTint, 0f, "SN_CloudA_BaseColor");
             Lit("SN_Rock", Color.white, 0.12f, "SN_Rock_BaseColor");
             Lit("SN_Cypress", Color.white, 0.05f, "SN_Cypress_BaseColor");
             Lit("SN_Flowers", Color.white, 0.05f, "SN_Flowers", clip: true);
@@ -515,13 +561,62 @@ namespace InnerFrame.StarryNight.EditorTools
             SaveMesh(SN_MeshGen.Hill(l), "SN_Hill");
             SaveMesh(SN_MeshGen.Skirt(l), "SN_HillSkirt");
             SaveMesh(SN_MeshGen.Path(l), "SN_Path");
-            SaveMesh(SN_MeshGen.HillRing(l, R), "SN_HillRing");
+            var ridge = JsonUtility.FromJson<RidgeJson>(File.ReadAllText(Path.GetFullPath(Path.Combine(Application.dataPath, "../Art/Source/StarryNight/horizon_ridge.json"))));
+            var report = new System.Text.StringBuilder();
+            SaveMesh(SN_MeshGen.HillRing(l, R, ridge.ridge_v_from_top, report), "SN_HillRing");
             SaveMesh(SN_MeshGen.Village(l), "SN_Village");
             SaveMesh(SN_MeshGen.Horizon(l, R), "SN_Horizon");
             SaveMesh(SN_MeshGen.VillageGlow(l, R), "SN_VillageGlow");
             SaveMesh(SN_MeshGen.MistLayer(l), "SN_MistLayer");
+            // the bushes and the clouds (their placements go into the hilltop prefab); the flowers fill between the bushes
+            var bushA = ModelMeshNode("SN_BushA"); var bushB = ModelMeshNode("SN_BushB"); var cloud = ModelMeshNode("SN_CloudA");
+            bushAPlaces.Clear(); bushBPlaces.Clear();
+            var footprints = new List<SN_MeshGen.Footprint>();
+            SN_MeshGen.Bushes(l, SN_MeshGen.Size(bushA.mesh, bushA.node), SN_MeshGen.Size(bushB.mesh, bushB.node), bushAPlaces, bushBPlaces, footprints, report);
+            cloudPlaces = SN_MeshGen.Clouds(l, cloud.mesh, cloud.node, report);
             string atlas = File.ReadAllText(Path.GetFullPath(Path.Combine(Application.dataPath, "../Art/Source/StarryNight/flowers_atlas.json")));
-            SaveMesh(SN_MeshGen.Flowers(l, atlas), "SN_Flowers");
+            SaveMesh(SN_MeshGen.Flowers(l, atlas, footprints, report), "SN_Flowers");
+            foreach (var line in report.ToString().Split('\n')) if (line.Trim().Length > 0) Debug.Log(line.TrimEnd());
+        }
+
+        [Serializable] class RidgeJson { public float[] ridge_v_from_top; }
+        static readonly List<Matrix4x4> bushAPlaces = new List<Matrix4x4>(), bushBPlaces = new List<Matrix4x4>();
+        static List<Matrix4x4> cloudPlaces = new List<Matrix4x4>();
+
+        /// <summary>A child holding one SN_Scatter (one combined mesh at runtime: one renderer, one material).</summary>
+        static void Scatter(GameObject parent, string name, string model, Material mat, List<Matrix4x4> places, float normalBend)
+        {
+            var go = Child(parent, name);
+            go.transform.localPosition = Vector3.zero; go.transform.localRotation = Quaternion.identity; go.transform.localScale = Vector3.one;
+            Comp<MeshFilter>(go).sharedMesh = null;   // built at runtime
+            var r = Comp<MeshRenderer>(go);
+            r.sharedMaterial = mat;
+            r.shadowCastingMode = ShadowCastingMode.Off;
+            r.receiveShadows = false;
+            var sc = Comp<SN_Scatter>(go);
+            var (mesh, node) = ModelMeshNode(model);
+            sc.source = mesh; sc.node = node; sc.placements = places.ToArray(); sc.normalBend = normalBend;
+        }
+
+        /// <summary>SN_Grading.asset: Color Adjustments from SN_Layout (used only when SN_Layout.colourGrading is on).</summary>
+        static VolumeProfile BuildGrading(SN_Layout l)
+        {
+            var p = AssetDatabase.LoadAssetAtPath<VolumeProfile>(GradingPath);
+            if (p == null) { p = ScriptableObject.CreateInstance<VolumeProfile>(); AssetDatabase.CreateAsset(p, GradingPath); }
+            if (!p.TryGet<ColorAdjustments>(out var ca))
+            {
+                ca = p.Add<ColorAdjustments>(false);
+                ca.name = "ColorAdjustments";
+                AssetDatabase.AddObjectToAsset(ca, p);
+            }
+            ca.active = true;
+            ca.postExposure.Override(l.gradingPostExposure);
+            ca.contrast.Override(l.gradingContrast);
+            ca.saturation.Override(l.gradingSaturation);
+            ca.colorFilter.Override(l.gradingFilter);
+            EditorUtility.SetDirty(ca);
+            EditorUtility.SetDirty(p);
+            return p;
         }
 
         static Mesh MeshAsset(string name) => Load<Mesh>($"{Meshes}/{name}.asset");
@@ -628,6 +723,10 @@ namespace InnerFrame.StarryNight.EditorTools
                 Comp<MeshCollider>(skirt).sharedMesh = MeshAsset("SN_HillSkirt");   // solid, but not a teleport target
                 Shape(root, "Path", MeshAsset("SN_Path"), M("SN_Path"), Vector3.zero, Vector3.one);
                 Shape(root, "Flowers", MeshAsset("SN_Flowers"), M("SN_Flowers"), Vector3.zero, Vector3.one);
+                var bushes = Child(root, "Bushes");
+                Scatter(bushes, "BushA", "SN_BushA", M("SN_BushA"), bushAPlaces, l.bushNormalBend);
+                Scatter(bushes, "BushB", "SN_BushB", M("SN_BushB"), bushBPlaces, l.bushNormalBend);
+                Scatter(root, "Clouds", "SN_CloudA", M("SN_CloudA"), cloudPlaces, l.cloudNormalBend);
                 Shape(root, "HillRing", MeshAsset("SN_HillRing"), M("SN_HillRing"), Vector3.zero, Vector3.one);
                 Shape(root, "Horizon", MeshAsset("SN_Horizon"), M("SN_Horizon"), Vector3.zero, Vector3.one);
                 Shape(root, "VillageGlow", MeshAsset("SN_VillageGlow"), M("SN_VillageGlow"), Vector3.zero, Vector3.one);
@@ -657,8 +756,9 @@ namespace InnerFrame.StarryNight.EditorTools
                 }
                 for (int i = 0; i < l.mistLayerHeights.Length; i++)
                 {
+                    float k = i < l.mistLayerScale.Length ? l.mistLayerScale[i] : 1f;
                     var layer = Shape(mist, $"MistLayer_{i}", MeshAsset("SN_MistLayer"), M("SN_MistLayer"), Vector3.up * l.mistLayerHeights[i],
-                        Vector3.one, new Vector3(0f, i * 37f, 0f));
+                        new Vector3(k, 1f, k), new Vector3(0f, i * 37f, 0f));
                     var drift = i < l.mistDrift.Length ? l.mistDrift[i] : Vector2.zero;
                     Comp<SN_MistDrift>(layer).drift = drift;
                 }
@@ -840,6 +940,7 @@ namespace InnerFrame.StarryNight.EditorTools
             b.lanternPrefab = P("SN_Lantern"); b.sketchbookPrefab = P("SN_Sketchbook"); b.pagePrefab = P("SN_Page"); b.charcoalPrefab = P("SN_Charcoal");
             b.vincentPrefab = P("SN_Vincent"); b.skyPrefab = P("SN_Sky"); b.beamPrefab = P("SN_Beam");
             b.uiPrefab = Load<GameObject>(DialoguePrefab); b.uiSettings = Load<VG_DialogueSettings>(DialogueSettingsPath);
+            b.grading = AssetDatabase.LoadAssetAtPath<VolumeProfile>(GradingPath);
         }
 
         static void BuildScene(SN_Layout l, SN_Lines lines)

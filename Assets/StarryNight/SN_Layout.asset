@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5dadae0b1232c4c3d9d053a29573bbf8, type: 3}
   m_Name: SN_Layout
   m_EditorClassIdentifier: Assembly-CSharp::InnerFrame.StarryNight.SN_Layout
-  version: 3
+  version: 4
   rigScale: 0.8
   eyeHeight: 1.28
   playerStart: {x: 2.4, y: 0, z: -4}
@@ -27,7 +27,7 @@ MonoBehaviour:
   vincentMouth: 1.55
   lantern: {x: 0.85, y: 0, z: -0.55}
   sketchbook: {x: -0.07, y: 0.285, z: -0.09}
-  page: {x: 0.21, y: 0.287, z: 0.14}
+  page: {x: 0.22, y: 0.296, z: -0.21}
   charcoal: {x: -0.1, y: 0.288, z: 0.12}
   charcoalYaw: 70
   sketchbookSize: {x: 0.3, y: 0.02, z: 0.22}
@@ -56,6 +56,27 @@ MonoBehaviour:
   pathWidth: 0.6
   grassTileMetres: 1.6
   pathTileMetres: 2.4
+  bushSeed: 1888
+  bushACount: 50
+  bushBCount: 25
+  bushScale: {x: 0.7, y: 1.3}
+  bushClearPath: 0.4
+  bushClearSeat: 0.6
+  bushClearRock: 0.2
+  bushClearLantern: 0.3
+  bushClearVincent: 0.45
+  bushClearStart: 0.8
+  bushClearCypress: 0.3
+  bushClearWalls: 0.05
+  openViewRadius: 1.5
+  openViewHeight: 0.6
+  bushAreaRadius: 6.6
+  bushSlopeFollow: 0.6
+  bushNormalBend: 0.5
+  bushATint: {r: 1, g: 1.1, b: 0.78, a: 1}
+  bushBTint: {r: 1.05, g: 1.12, b: 0.85, a: 1}
+  grassTint: {r: 1.32, g: 1.24, b: 0.6, a: 1}
+  pathTint: {r: 1.18, g: 1.02, b: 0.8, a: 1}
   flowerClusters: 80
   flowerSeed: 1890
   flowerWidth: {x: 0.3, y: 0.46}
@@ -64,6 +85,12 @@ MonoBehaviour:
   hillRingMinPitch: -6
   hillRingMaxPitch: 4
   hillRingUnderHorizonPitch: -9
+  ridgeMinPitch: -1.2
+  ridgeMaxPitch: 2.4
+  ridgeSeed: 1853
+  ridgeJunctionMargin: 0.6
+  ridgeJunctionDeg: 12
+  ridgeTileDeg: 90
   horizonWidthDeg: 96
   horizonTopPitch: 4
   horizonInset: 2.5
@@ -89,23 +116,42 @@ MonoBehaviour:
   villageLights: 36
   villageLightSize: 0.6
   mistLayerHeights:
-  - -2.4
-  - -3.2
-  - -4.2
+  - -1.9
+  - -2.5
+  - -3.3
+  - -4.3
+  mistLayerScale:
+  - 0.62
+  - 0.85
+  - 1
+  - 1.15
   mistInnerRadius: 5.6
   mistOuterRadius: 22
   mistRise: 0
   mistTileMetres: 12
   mistDrift:
+  - {x: 0.0035, y: -0.0015}
   - {x: 0.004, y: 0.0012}
   - {x: -0.0028, y: 0.002}
   - {x: 0.0018, y: -0.0026}
-  mistColour: {r: 0.6, g: 0.67, b: 0.86, a: 0.3}
-  mistPuffs: 5
+  mistColour: {r: 0.54, g: 0.61, b: 0.88, a: 0.39}
+  mistPuffs: 6
   mistPuffRadius: 8.6
   mistPuffY: -2.2
   mistPuffSpreadYaw: 140
   mistPuffSize: {x: 6.5, y: 2.6}
+  cloudSeed: 1853
+  cloudCount: 25
+  cloudScale: {x: 0.8, y: 2.5}
+  cloudInnerRadius: 6.3
+  cloudOuterRadius: 11
+  cloudClearRadius: 6
+  cloudTopMaxPitch: -12.5
+  cloudTopMaxY: -0.6
+  cloudClusters: 5
+  cloudFaceJitterDeg: 35
+  cloudTint: {r: 1.1, g: 1.12, b: 1.22, a: 1}
+  cloudNormalBend: 1.6
   skyRadiusMax: 150
   skyRadiusFarClipFraction: 0.8
   starDistanceFraction: 0.9
@@ -263,12 +309,12 @@ MonoBehaviour:
   sketchHoldSeconds: 1.5
   editorGrabReach: 1.5
   beamLength: 45
-  ambient: {r: 0.078431375, g: 0.1254902, b: 0.24313726, a: 1}
-  moonLight: {r: 0.56078434, g: 0.6509804, b: 0.8509804, a: 1}
-  moonLightIntensity: 0.35
-  lanternLight: {r: 1, g: 0.72156864, b: 0.36078432, a: 1}
-  lanternIntensity: 2.2
-  lanternRange: 4.5
+  ambient: {r: 0.15686275, g: 0.2, b: 0.33333334, a: 1}
+  moonLight: {r: 0.5254902, g: 0.65882355, b: 0.9254902, a: 1}
+  moonLightIntensity: 0.55
+  lanternLight: {r: 1, g: 0.65882355, b: 0.28235295, a: 1}
+  lanternIntensity: 6
+  lanternRange: 6.5
   fog: {r: 0.08627451, g: 0.14901961, b: 0.29803923, a: 1}
   fogStart: 25
   fogEnd: 220
@@ -276,3 +322,8 @@ MonoBehaviour:
   dawnFog: {r: 0.6039216, g: 0.6509804, b: 0.72156864, a: 1}
   hillRingNight: {r: 0.56, g: 0.6, b: 0.74, a: 1}
   hillRingDawn: {r: 0.84, g: 0.85, b: 0.9, a: 1}
+  colourGrading: 0
+  gradingPostExposure: 0.35
+  gradingContrast: 14
+  gradingSaturation: 20
+  gradingFilter: {r: 1, g: 0.97, b: 0.92, a: 1}

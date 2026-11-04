@@ -1,4 +1,4 @@
-# The Starry Night (step 4: the first art pass)
+# The Starry Night (step 4b: the look pass)
 
 Owner: Cici (Sprint 4). A small hilltop above Saint-Rémy at night. Vincent sits by a rock with a lantern and his
 sketchbook; one cypress; a village far below; a huge sky. **The sky is the game:** it starts as a real night and turns
@@ -9,6 +9,18 @@ Step 2 made it playable with placeholders; step 4 (2026-11-04) is the first art 
 lines are unchanged; the seat moved, the sky was re-aimed from it, and most placeholders were replaced by name (see
 "What is made of what" below). Vincent is still the standing placeholder.
 
+Step 4b (2026-11-04, after #135) changed two things, again with the gameplay, states, timings and lines unchanged:
+- **The shared dialogue box.** Vincent's words and the hint now use `VG_DialogueUI`, as in every scene (see Controls).
+- **The look pass**, closer to the concepts S01, G1 and G2:
+  - Cici's Tripo bushes, 50 + 25 copies, so the hilltop reads lush;
+  - her Tripo cloud, 25 copies, as a bank round the rim over a fuller mist;
+  - a warmer, stronger lantern, a cooler and brighter moon, more ambient light, and lighter, more saturated grass,
+    bushes and path (material tints, not repainted textures);
+  - one far horizon line instead of the mirrored hills;
+  - the page within reach of the seat;
+  - the beam drawn under the UI;
+  - an optional colour grading switch.
+
 ## Open and play
 
 - Scene: `Assets/StarryNight/Scenes/StarryNight.unity`. It holds only the player rig (the Starter Assets
@@ -17,11 +29,13 @@ lines are unchanged; the seat moved, the sky was re-aimed from it, and most plac
 - After changing `SN_Layout.asset` (every number of the scene: places, sizes, timings), `lines.txt`, or the sources in
   `Art/Source/StarryNight`: **Tools > InnerFrame > Starry Night > Build**. Running it twice changes nothing. An older
   `SN_Layout.asset` is brought up once, step by step, each value logged `old -> new` (version 2: the art pass's values;
-  version 3: `uiBelowGaze` moved into the dialogue box's settings); a current one is kept as tuned.
+  version 3: `uiBelowGaze` moved into the dialogue box's settings; version 4: the look pass); a current one is kept as
+  tuned.
 - The art comes from scripts that give the same files on every run (Cici's input images and Tripo GLBs live outside the
   repo, in `refs/3-starry-night/art-inputs`):
   - `make_textures.py <inputs> <concept dir>` and `make_path.py <inputs>` (`/usr/bin/python3 -I`, Pillow, numpy);
-  - `make_tripo.py -- <inputs>` and `make_props.py` (Blender 5.2.2: `Blender --background --factory-startup --python …`):
+  - `make_tripo.py -- <inputs>`, `make_tripo_look.py -- <inputs>` and `make_props.py` (Blender 5.2.2:
+    `Blender --background --factory-startup --python …`):
     one FBX per object in `Assets/StarryNight/Models` (the team's export settings; the exporter's timestamp and ids are
     pinned in `sn_blender.py`, so the FBX bytes repeat; the `.blend` files kept beside the scripts do not).
 - The scene is not in the build list (`EditorBuildSettings` unchanged). To try it on a Quest, add it to your build
@@ -98,14 +112,17 @@ NetworkPlayer in the scene, the rig not moved (`Editor/Tests/SN_PlayCheck.cs`).
 | Cypress | Tripo model, 9,401 triangles, 7 m tall, 1.6 m at its widest (no decimation) | `make_tripo.py` |
 | Rock | Tripo model scaled ×1.457 so its top's area-weighted mean is 0.26 m (1.46 × 0.82 × 0.31 m), with a MeshCollider of its own shape | `make_tripo.py` |
 | Lantern | base, iron frame, glass (transparent), cap, handle, a wick key that turns as it dims; 628 triangles | `make_props.py` |
-| Sketchbook, page, charcoal | the sketchbook open to 120° on one cover, the sketch on its page; a torn page with the sketch; a stick of charcoal by Vincent's seat (all grabbable; each on the rock where its footprint is flat) | `make_props.py`, `sketch-page.png` |
+| Sketchbook, page, charcoal | the sketchbook open to 120° on one cover, the sketch on its page; a torn page with the sketch; a stick of charcoal by Vincent's seat (all grabbable; each on the rock where its footprint is flat). The page lies 0.73 m from the seat (the look pass); the sketchbook stays 0.96 m away: at its yaw no spot on the rock within 0.75 m is flat enough | `make_props.py`, `sketch-page.png` |
 | The sky | the night (`sky-night.png`) round the whole dome, mirrored in yaw, from the start; the painting (`sky-painted.png`) on a panel centred at yaw +28°, 112.5° × 75° (pitch −8° to 67°), seen from the seat | `make_textures.py`, `SN_Sky.shader` |
 | The wind's path | Cici's red line along the swirl, 24 points, the 3 at its outer end dropped (inside the panel's soft edge): 21 points from (−14°, 40°) up to 54° and into the swirl's centre at (23°, 31°); the swirl band 8° either side | `make_path.py`, `SN_Layout.guidePath` |
 | Stars | the 12 story stars with painted halos (N3's 5° across, 2.5° clear right of the cypress; the others 3.5°); 150 small stars that twinkle (a third, faint, before the lantern) and 25 medium ones whose halos grow as stars are woken and as the sky is painted: one mesh and one draw call each; a painted moon | `SN_Sky`, `make_textures.py` |
-| The valley | the painted horizon (`horizon.png`, keyed): 96° wide, its top 4° above the horizontal, the spire at yaw 6° (the village's direction), the ends fading over 8°; the lit windows glow at night, with three soft glow sprites; the same painted hills (`SN_FarHills.png`) round the rest of the horizon; the blockout's window dots are off (`SN_Layout.villageDots`) | `make_textures.py`, `SN_Horizon.shader` |
-| Mist | three drifting, near-horizontal noise layers under the hill and five soft puffs that face you (8 transparent renderers) | `SN_Mist.shader`, `SN_MeshGen.MistLayer` |
-| Ground | `grass.png` made seamless (offset blend), tiled every 1.6 m; the path a ragged, alpha-clipped warm dirt strip; 80 crossed-card flower clusters (one mesh, one material), denser by the rock, the lantern and the path, none on the path or the seat | `make_textures.py`, `SN_MeshGen` |
-| Light | a cool, low blue moonlight and the lantern's warm point light, neither casting shadows (one additional light: within the Mobile quality level's limit) | `SN_Layout` |
+| The valley | the painted horizon (`horizon.png`, keyed): 96° wide, its top 4° above the horizontal, the spire at yaw 6° (the village's direction), the ends fading over 8°; the lit windows glow at night, with three soft glow sprites; round the rest of the horizon one generated, continuous ridge (`SN_MeshGen.HillRing`: a seeded sum of sines, nothing repeated), painted with the strip's own hills (`SN_FarHills.png`, seamless across), sunk out of sight behind the strip and kept 0.6° under the strip's own ridge where they meet (`horizon_ridge.json`); the blockout's window dots are off (`SN_Layout.villageDots`) | `make_textures.py`, `SN_Horizon.shader` |
+| Mist | four drifting, near-horizontal noise layers under the hill (the upper ones end nearer, so from the seat they stay under the village) and six soft puffs that face you (10 transparent renderers) | `SN_Mist.shader`, `SN_MeshGen.MistLayer` |
+| Clouds | Cici's Tripo cloud, 25 copies in 5 clusters round the rim, 6–13 m from the centre, scale 0.8–2.5, turned broadside to the hill, half mirrored; seen from the seat every top stays under −12.5° (under the strip's own painted mist); opaque URP Lit with its normals bent up (soft light from above); one combined mesh, one draw | `make_tripo_look.py`, `SN_MeshGen.Clouds`, `SN_Scatter` |
+| Bushes | Cici's two Tripo bushes, 50 + 25 copies (random yaw, scale 0.7–1.3, half mirrored), denser by the rock, the lantern, the path's edges, the cypress's foot and the rim; clear of the path (0.4 m from its centre line), the seat, the rock, the lantern, Vincent, the start and the walls' line; nothing taller than 0.6 m within 1.5 m of the seat; each kind one combined mesh, one draw | `make_tripo_look.py`, `SN_MeshGen.Bushes`, `SN_Scatter` |
+| Ground | `grass.png` made seamless (offset blend), tiled every 1.6 m; the path a ragged, alpha-clipped warm dirt strip; 80 crossed-card flower clusters (one mesh, one material), denser by the rock, the lantern and the path, none on the path, the seat or under a bush; grass and path tinted lighter and more saturated (`SN_Layout.grassTint`, `pathTint`) | `make_textures.py`, `SN_MeshGen` |
+| Light | a cool blue moonlight (0.55) and the lantern's warm point light (6, range 6.5 m), neither casting shadows (one additional light: within the Mobile quality level's limit); a flat ambient #283355 | `SN_Layout` |
+| Colour grading (off by default) | `SN_Layout.colourGrading`: on, `SN_Bootstrap` adds a global Volume with `SN_Grading.asset` (Color Adjustments: post exposure 0.35, contrast 14, saturation 20, a warm filter) and turns post-processing on for the scene's camera at runtime (the rig prefab is not changed). Off by default until its cost is measured on a Quest | `SN_Setup` (the profile), `SN_Bootstrap` |
 | Dialogue box and hint | the shared `VG_DialogueUI` with `VG_Dialogue_StarryNight` (above) | `Assets/VanGogh` (VanGoghAssetSetup) |
 | Still placeholder | Vincent (the static model, standing past the rock's left end at his Bedroom scale; `SN_VincentSeat` marks where the seated Vincent goes), Vincent's lines (macOS `say`, voice Daniel) | |
 
@@ -131,7 +148,9 @@ NetworkPlayer in the scene, the rig not moved (`Editor/Tests/SN_PlayCheck.cs`).
 4. The wind: is the dotted line visible against the night, and does following it feel like painting?
 5. The lantern: grab it by the handle, pull the trigger; does the hill go dark enough for the stars to read?
 6. Sitting: does the seat zone (0.6 m) catch you when you sit down on the floor beside the rock?
-7. Frame rate through the whole scene, especially with the painted sky, the mist layers and the horizon (33 transparent
-   renderers at the most, about 47,000 triangles).
+7. Frame rate through the whole scene, especially with the painted sky, the mist layers, the clouds and the bushes
+   (35 transparent renderers at the most, about 160,500 triangles; then once more with `SN_Layout.colourGrading` on).
 8. The art pass: from the seat, do the cypress, Vincent and the valley sit where the concept (G2) has them? Is N3 easy to
-   tell from the cypress? Can you reach the sketchbook (0.96 m from the seat) and the page (1.1 m) without getting up?
+   tell from the cypress? Can you reach the page (0.73 m from the seat) and the sketchbook (0.96 m) without getting up?
+9. The look pass: does the hilltop read lush and the hill float in a sea of cloud? Do the bushes near the seat stay out
+   of the way? Does the far ridge read as one line all round, with no doubled hills where the painted strip ends?

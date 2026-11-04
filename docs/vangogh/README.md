@@ -57,8 +57,9 @@ October 1888, text-to-speech), and his answer plays from the portrait.
     judge on the Quest whether that feels wrong.
   - Pages, timing and fades are the same rules as the sign's (below), at one size: a sentence that needs more than three
     lines splits at the comma nearest its middle.
-  - Code: `Scripts/UI/` (`VG_FollowGroup`, `VG_DialogueBox`, `VG_Hint`, `VG_UI`). They know nothing about Vincent or the
-    mirror, so they can move to a shared folder; `VanGoghCaption` tells them what to show.
+  - Code: `Scripts/UI/` (`VG_DialogueUI` and its parts `VG_FollowGroup`, `VG_DialogueBox`, `VG_Hint`, `VG_Paging`,
+    `VG_UI`, with `VG_DialogueSettings`). They know nothing about Vincent or the mirror; `VanGoghCaption` tells them
+    what to show. See *Use the dialogue UI in another scene* below.
   - Sprites: `VG_Box.png`, `VG_NameTab.png`, `VG_HintPlate.png` (9-slice, 64 px borders), `VG_Star.png`,
     `VG_StarRing.png`, drawn by `Art/Source/VanGogh/make_box_sprites.py` (Pillow); the asset tool imports them (borders,
     mipmaps, max 1024). The key circle is the sign's `VG_Caption_Button.png`.
@@ -87,6 +88,31 @@ October 1888, text-to-speech), and his answer plays from the portrait.
   own timings).
 - After changing the image or its material, run **Tools > InnerFrame > Van Gogh > Rebuild
   assets**.
+
+## Use the dialogue UI in another scene
+
+The box and hint are one prefab, `Assets/VanGogh/Prefabs/VG_DialogueUI.prefab` (made by the asset tool), with no tie to
+Vincent, the mirror or the Bedroom.
+
+1. Put the prefab in the scene (or `Instantiate` it), anywhere; it follows the main camera.
+2. Give it a settings asset: `VG_Dialogue_Bedroom` (as approved: 1.3 m, 15° under the gaze, a 40° box) or
+   `VG_Dialogue_StarryNight` (1.6 m and the blockout's text sizes; `belowGaze` is the field to tune so the box
+   clears the village). For a new scene, duplicate one. Set it before the first call; the UI builds itself then.
+   - In each asset: distance, `belowGaze`, dead zone, gaze pitch clamp, ease time; sizes as angles (box width,
+     capitals); colours and tints; the hint's title and its fade-in on each change.
+   - The tool makes these two once and then leaves them alone, so tuning in the Inspector stays.
+3. Call it:
+   - `Say(speaker, text, clip)`: one sentence a page, timed to the clip (0.06 s a character without one). Play the
+     clip yourself, and set `Voice` to that AudioSource so the pages keep its time.
+   - `Clear()`: the words stay a second, then fade.
+   - `SetHint(title, line)`: `title` null takes the asset's; `""` hides the title row. `{B}` in the line draws B in
+     a button circle. A null line hides the hint.
+   - `IsSpeaking`: from `Say` until a second after `Clear`.
+   - Also: `Prewarm(texts)` (font atlas, at load), `Snap()` (straight into place), `Head` (follow something other
+     than the main camera), `autoStep = false` + `Step(dt)` (drive it from your own clock), `HintLine`, `BoxHeight`,
+     `VG_Paging.Estimate(text)` (a clip-less line's length).
+4. Line queues, priorities and what the hint says are the scene's own logic: in the Bedroom `VanGoghCaption`, in The
+   Starry Night `SN_Voice` and `SN_Game`.
 
 ## Run the proxy (on a Mac)
 

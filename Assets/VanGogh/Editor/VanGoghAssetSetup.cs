@@ -35,6 +35,8 @@ public static class VanGoghAssetSetup
     const int ParchmentBorderPixels = 96, PillBorderPixels = 64;
     // the dialogue box's sprites, from Art/Source/VanGogh/make_box_sprites.py (SLICE)
     const int BoxBorderPixels = 64;
+    // the reusable dialogue UI (Scripts/UI): its prefab, and one settings asset per scene that uses it
+    const string Prefabs = "Assets/VanGogh/Prefabs/", DialoguePrefab = Prefabs + "VG_DialogueUI.prefab";
     const string OutlineMaterial = CaptionUI + "VG_Outline.mat";   // the mirror's outlines (VG_MirrorOutline)
     static readonly Color Chrome = new Color32(0xE9, 0xC1, 0x4A, 0xFF);
     const float VincentHeight = 1.70f;
@@ -120,13 +122,55 @@ public static class VanGoghAssetSetup
         caption.button = ImportSprite(CaptionUI + "VG_Caption_Button.png", 0);
         caption.font = AssetDatabase.LoadAssetAtPath<Font>(CaptionFont);
         caption.style = VG_CaptionStyle.Box;
-        caption.box = ImportSprite(CaptionUI + "VG_Box.png", BoxBorderPixels);
-        caption.nameTab = ImportSprite(CaptionUI + "VG_NameTab.png", BoxBorderPixels);
-        caption.hintPlate = ImportSprite(CaptionUI + "VG_HintPlate.png", BoxBorderPixels);
-        caption.star = ImportSprite(CaptionUI + "VG_Star.png", 0);
-        caption.starRing = ImportSprite(CaptionUI + "VG_StarRing.png", 0);
+        caption.dialogue = BuildDialogueUI(caption.font, caption.button);
         PrefabUtility.SaveAsPrefabAsset(root, CaptionPrefab);
         Object.DestroyImmediate(root);
+    }
+
+    // Prefabs/VG_DialogueUI: the dialogue UI with its sprites, font and the Bedroom's settings; it builds itself at runtime.
+    static VG_DialogueUI BuildDialogueUI(Font font, Sprite key)
+    {
+        if (!AssetDatabase.IsValidFolder(Prefabs.TrimEnd('/'))) AssetDatabase.CreateFolder("Assets/VanGogh", "Prefabs");
+        // the Bedroom as approved (1.3 m); the Starry Night from its blockout (7ab7a24: SN_DialogueBox.cs:16-20,
+        // SN_Hint.cs:10-11, SN_UIRoot.cs:15), at 1.6 m
+        var bedroom = DialogueSettings("Bedroom", 1.3f, 0.032f, 0.025f, 0.036f, 0.025f, "The Yellow House", 0f, null);
+        DialogueSettings("StarryNight", 1.6f, 0.040f, 0.030f, 0.045f, 0.030f, "A Night with Vincent", 0.5f, Color.white);
+        var root = new GameObject("VG_DialogueUI", typeof(RectTransform));
+        var ui = root.AddComponent<VG_DialogueUI>();
+        ui.settings = bedroom;
+        ui.font = font;
+        ui.key = key;
+        ui.box = ImportSprite(CaptionUI + "VG_Box.png", BoxBorderPixels);
+        ui.nameTab = ImportSprite(CaptionUI + "VG_NameTab.png", BoxBorderPixels);
+        ui.hintPlate = ImportSprite(CaptionUI + "VG_HintPlate.png", BoxBorderPixels);
+        ui.star = ImportSprite(CaptionUI + "VG_Star.png", 0);
+        ui.starRing = ImportSprite(CaptionUI + "VG_StarRing.png", 0);
+        var prefab = PrefabUtility.SaveAsPrefabAsset(root, DialoguePrefab).GetComponent<VG_DialogueUI>();
+        Object.DestroyImmediate(root);
+        return prefab;
+    }
+
+    // Made once, then left alone, so tuning in the Inspector stays. Sizes in metres at `distance`, kept as angles; the
+    // rest are VG_DialogueSettings' defaults (15 deg under the gaze, 20 deg dead zone, gaze pitch -30..45, 0.5 s).
+    static VG_DialogueSettings DialogueSettings(string scene, float distance, float words, float name, float title, float line,
+        string hintTitle, float hintFadeIn, Color? lineColour)
+    {
+        string path = Prefabs + "VG_Dialogue_" + scene + ".asset";
+        var settings = AssetDatabase.LoadAssetAtPath<VG_DialogueSettings>(path);
+        if (settings != null) return settings;
+        settings = ScriptableObject.CreateInstance<VG_DialogueSettings>();
+        float Degrees(float metres) => 2f * Mathf.Atan(metres / 2f / distance) * Mathf.Rad2Deg;
+        settings.distance = distance;
+        settings.boxWidth = Degrees(VG_DialogueBox.Width);
+        settings.wordsCap = Degrees(words);
+        settings.nameCap = Degrees(name);
+        settings.titleCap = Degrees(title);
+        settings.lineCap = Degrees(line);
+        settings.hintTitle = hintTitle;
+        settings.hintFadeIn = hintFadeIn;
+        if (lineColour.HasValue) settings.lineColour = lineColour.Value;
+        AssetDatabase.CreateAsset(settings, path);
+        return settings;
     }
 
     // Mono, Vorbis quality 70, decompressed on load (short lines that should start at once), no Android override.

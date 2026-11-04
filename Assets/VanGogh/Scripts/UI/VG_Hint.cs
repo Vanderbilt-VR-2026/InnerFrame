@@ -8,26 +8,31 @@ using UnityEngine.UI;
 /// </summary>
 public class VG_Hint : MonoBehaviour
 {
-    const float TitleCap = 0.036f, LineCap = 0.025f, KeyCap = 0.02f;
+    const float KeyCapShare = 0.8f;   // the button's letter, against the line's capitals
     const float Pad = 0.02f, Gap = 0.012f, StarSize = 0.045f, KeySize = 0.042f;
     const float Slice = 0.032f;   // VG_HintPlate.png's 64 px border drawn this wide: its edge softens over about 4 mm
     static readonly Color KeyLetter = new Color32(0x55, 0x36, 0x1C, 0xFF);
 
     RectTransform plate, star, key;
     Text title, before, after, letter;
+    float titleCap, lineCap;
     string shown;
 
-    public static VG_Hint Make(Transform parent, Vector2 bottomLeft, Font font, Sprite plateSprite, Sprite starSprite, Sprite keySprite, Material material)
+    public static VG_Hint Make(Transform parent, Vector2 bottomLeft, VG_DialogueSettings settings, Font font, Sprite plateSprite, Sprite starSprite, Sprite keySprite, Material material)
     {
         var self = VG_UI.Rect("Hint", parent, Vector2.zero, bottomLeft).gameObject.AddComponent<VG_Hint>();
         var root = self.transform;
-        self.plate = VG_UI.Picture("Plate", root, plateSprite, Vector2.zero, Vector2.zero, Vector2.one * Pad * 2f, Slice, material).rectTransform;
+        self.titleCap = settings.Cap(settings.titleCap);
+        self.lineCap = settings.Cap(settings.lineCap);
+        var plate = VG_UI.Picture("Plate", root, plateSprite, Vector2.zero, Vector2.zero, Vector2.one * Pad * 2f, Slice, material);
+        plate.color = settings.plateTint;
+        self.plate = plate.rectTransform;
         self.star = VG_UI.Picture("Star", root, starSprite, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.one * StarSize, 0f, material).rectTransform;
-        self.title = VG_UI.Label("Title", root, font, TitleCap, Color.white, new Vector2(0f, 0.5f), TextAnchor.MiddleLeft, material);
-        self.before = VG_UI.Label("Line", root, font, LineCap, VG_DialogueBox.Cream, new Vector2(0f, 0.5f), TextAnchor.MiddleLeft, material);
+        self.title = VG_UI.Label("Title", root, font, self.titleCap, settings.titleColour, new Vector2(0f, 0.5f), TextAnchor.MiddleLeft, material);
+        self.before = VG_UI.Label("Line", root, font, self.lineCap, settings.lineColour, new Vector2(0f, 0.5f), TextAnchor.MiddleLeft, material);
         self.key = VG_UI.Picture("Key", root, keySprite, new Vector2(0f, 0.5f), Vector2.zero, Vector2.one * KeySize, 0f, material).rectTransform;
-        self.letter = VG_UI.Label("Letter", self.key, font, KeyCap, KeyLetter, new Vector2(0.5f, 0.5f), TextAnchor.MiddleCenter, material);
-        self.after = VG_UI.Label("LineAfter", root, font, LineCap, VG_DialogueBox.Cream, new Vector2(0f, 0.5f), TextAnchor.MiddleLeft, material);
+        self.letter = VG_UI.Label("Letter", self.key, font, self.lineCap * KeyCapShare, KeyLetter, new Vector2(0.5f, 0.5f), TextAnchor.MiddleCenter, material);
+        self.after = VG_UI.Label("LineAfter", root, font, self.lineCap, settings.lineColour, new Vector2(0f, 0.5f), TextAnchor.MiddleLeft, material);
         return self;
     }
 
@@ -42,8 +47,8 @@ public class VG_Hint : MonoBehaviour
         key.gameObject.SetActive(hasKey);
         after.gameObject.SetActive(hasKey);
         title.text = titleText; before.text = line; letter.text = buttonKey; after.text = rest;
-        float lineMiddle = Pad + VG_UI.LineHeight(LineCap) / VG_UI.UnitsPerMetre / 2f;
-        float titleMiddle = lineMiddle + (VG_UI.LineHeight(LineCap) + VG_UI.LineHeight(TitleCap)) / VG_UI.UnitsPerMetre / 2f;
+        float lineMiddle = Pad + VG_UI.LineHeight(lineCap) / VG_UI.UnitsPerMetre / 2f;
+        float titleMiddle = lineMiddle + (VG_UI.LineHeight(lineCap) + VG_UI.LineHeight(titleCap)) / VG_UI.UnitsPerMetre / 2f;
         float x = Pad + StarSize + Gap, width = VG_UI.Fit(before, new Vector2(x, lineMiddle));
         if (hasKey)
         {
@@ -51,7 +56,7 @@ public class VG_Hint : MonoBehaviour
             width += Gap + KeySize + VG_UI.Fit(after, new Vector2(x + width + Gap + KeySize + Gap / 2f, lineMiddle));
         }
         if (hasTitle) width = Mathf.Max(width, VG_UI.Fit(title, new Vector2(x, titleMiddle)));
-        float top = (hasTitle ? titleMiddle + VG_UI.LineHeight(TitleCap) / VG_UI.UnitsPerMetre / 2f : 2f * lineMiddle - Pad) + Pad;
+        float top = (hasTitle ? titleMiddle + VG_UI.LineHeight(titleCap) / VG_UI.UnitsPerMetre / 2f : 2f * lineMiddle - Pad) + Pad;
         star.anchoredPosition = new Vector2(VG_UI.U(Pad + StarSize / 2f), VG_UI.U(hasTitle ? titleMiddle : lineMiddle));
         plate.sizeDelta = new Vector2(VG_UI.U(x + width + Pad), VG_UI.U(top));
     }

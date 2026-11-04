@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -7,9 +5,9 @@ using UnityEngine.UI;
 public enum VG_CaptionStyle { Box, Sign }
 
 /// <summary>
-/// Vincent's captions, one sentence at a time in time with his voice. Box style (the default; Cici's concepts V1-V3,
-/// 2026-11-04): his words in a dark dialogue box with his name on a tab, and a hint above it with the next step, both low
-/// in your view and following your head lazily (VG_FollowGroup, VG_DialogueBox, VG_Hint), drawn over the room. Sign
+/// Vincent's captions, one sentence at a time in time with his voice (VG_Paging). Box style (the default; Cici's concepts
+/// V1-V3, 2026-11-04): the reusable dialogue UI (Scripts/UI, VG_DialogueUI) with his words, and its hint with his state,
+/// the mirror's next step or how to ask him. Sign
 /// style (2026-10-27): his words on the wooden sign Cici made with Tripo, baked flat into a picture
 /// (Art/Source/VanGogh/Caption/bake_sign.py), and hints such as "Hold B to ask Vincent" on a small pill, both over his
 /// head and turning to face you. SpeechToProxy says what to show, MirrorScene where you are with the mirror; the sprites
@@ -33,47 +31,34 @@ public class VanGoghCaption : MonoBehaviour
     const float CapHeight = 0.028f, MinCapHeight = 0.022f;   // shrinks toward the minimum before taking a third line
     const int MaxLines = 2, MostLines = 3;
     const float CapPerEm = 0.77f, LinePerEm = 1.24f;   // Libre Baskerville's capitals and line height
-    const int ShortPage = 4;                       // a sentence with fewer words than this joins the next
-    const float SecondsPerChar = 0.06f, LeastPageSeconds = 2f;   // page timing without a clip
-    const float PageFade = 0.15f;                  // the cross-fade between pages (the text only)
     const float PillHeight = 0.06f, PillCap = 0.02f, PillPad = 0.025f, ButtonSize = 0.046f;
     const float AboveHead = 0.08f;                 // above his head: the pill's bottom this far over the anchor
     const float Gap = 0.02f;                       // between the pill and the words, and between a frame and the words
-    const float FadeSeconds = 0.2f, WordsLinger = 1f;
+    const float FadeSeconds = 0.2f;
     const string PrefabName = "VG_Caption";
     static readonly Color Ink = new Color32(0x40, 0x21, 0x0C, 0xFF), PillText = new Color32(0xE3, 0xC9, 0xA7, 0xFF),
         ButtonLetter = new Color32(0x55, 0x36, 0x1C, 0xFF);   // sampled from the concept
-    static readonly Regex SentenceEnd = new Regex(@"(?<=[.!?…])\s+");
     const float HintWithin = 4f;                   // Box: the hint shows while the player is this close (world metres)
-    const string BedroomTitle = "The Yellow House";   // Box: the hint's title in PaintedBedroom, a placeholder; none in the Gallery
+    const string Speaker = "Vincent", HintScene = "PaintedBedroom";   // Box: the settings' title there; none in the Gallery
 
     [Tooltip("Set by VanGoghAssetSetup.")] public Sprite signUnlit, signLit, parchment, pill, button;
     [Tooltip("The softly lit bake of the sign (B); off: the unlit one (A).")] public bool lit = true;
     [Tooltip("Set by VanGoghAssetSetup.")] public Font font;
     [Tooltip("Box: the dialogue box and hint in your view. Sign: the wooden sign and pill over his head.")]
     public VG_CaptionStyle style = VG_CaptionStyle.Box;
-    [Tooltip("Box style; set by VanGoghAssetSetup.")] public Sprite box, nameTab, hintPlate, star, starRing;
+    [Tooltip("Box style: the dialogue UI prefab (with its settings); set by VanGoghAssetSetup.")] public VG_DialogueUI dialogue;
 
-    struct Page { public string text; public int size, lines; public float start, end; }
-
-    readonly TextGenerator fitter = new TextGenerator();
-    readonly List<Page> pages = new List<Page>();
     CanvasGroup wordsGroup, pillGroup;
     RectTransform wordsPanel, pillPanel, keyCircle;
-    Text[] labels = new Text[2];   // two, so pages can cross-fade
+    readonly Text[] labels = new Text[2];   // two, so pages can cross-fade
     Text hint, key;
     AudioSource voice;
     Vector2 textArea;              // canvas units
-    int page = -1, front;          // the page shown; which label shows it
-    float wordsLeft, shown, swapLeft;   // seconds his words still show (infinite while he speaks); since Words(); of the cross-fade
+    VG_Paging paging;
     bool pillShown;
-    Color textColour = Ink;
     // Box style
-    VG_FollowGroup follow;
-    VG_DialogueBox dialogue;
-    VG_Hint boxHint;
+    VG_DialogueUI ui;
     MirrorScene mirror;
-    Material onTop;
     string stateHint, idleHint, idleKey;
 
     /// <summary>Adds a caption to `owner`. Above the anchor (owner space) it stands on it, as over Vincent's head;
@@ -90,24 +75,12 @@ public class VanGoghCaption : MonoBehaviour
     /// <summary>His words, a sentence per page in time with his voice, until `null`: then they stay a second and fade.</summary>
     public void Words(string text)
     {
-        if (string.IsNullOrEmpty(text)) { wordsLeft = Mathf.Min(wordsLeft, WordsLinger); return; }
-        wordsLeft = float.PositiveInfinity;
-        pages.Clear();
-        foreach (var sentence in Sentences(text)) Fit(sentence);
-        float clip = voice != null && voice.clip != null ? voice.clip.length : 0f, chars = 0f, at = 0f;
-        foreach (var p in pages) chars += p.text.Length;
-        for (int i = 0; i < pages.Count; i++)
-        {
-            var p = pages[i];
-            p.start = at;
-            at += clip > 0f ? clip * p.text.Length / chars : Mathf.Max(LeastPageSeconds, SecondsPerChar * p.text.Length);
-            p.end = at;
-            pages[i] = p;
-        }
-        shown = 0f; page = -1; swapLeft = 0f;
-        Turn(0);
-        labels[front].color = textColour;   // the first page shows at once
-        labels[1 - front].gameObject.SetActive(false);
+        var clip = voice != null ? voice.clip : null;
+        if (ui != null) { if (string.IsNullOrEmpty(text)) ui.Clear(); else ui.Say(Speaker, text, clip); return; }
+        if (string.IsNullOrEmpty(text)) { paging.End(); return; }
+        // the largest size, down to the minimum, that keeps it to two lines; then a third line at the size that fits the panel
+        paging.Show(text, clip != null ? clip.length : 0f, Size(CapHeight), Size(MinCapHeight), MaxLines,
+            Mathf.FloorToInt(textArea.y / MostLines / LinePerEm));
     }
 
     /// <summary>A hint on the pill, with `buttonKey` in a circle on its left; `null` hides the pill.</summary>
@@ -134,11 +107,17 @@ public class VanGoghCaption : MonoBehaviour
 
     void Build()
     {
-        var canvas = gameObject.AddComponent<Canvas>();
-        canvas.renderMode = RenderMode.WorldSpace;
         var talker = GetComponentInParent<SpeechToProxy>();
         voice = talker != null ? talker.voice : null;
-        if (style == VG_CaptionStyle.Box) { BuildBox(); return; }
+        if (style == VG_CaptionStyle.Box)
+        {
+            ui = Instantiate(dialogue, transform);
+            ui.Voice = voice;
+            ui.autoStep = false;   // this caption keeps its clock (Step)
+            mirror = GetComponentInParent<MirrorScene>();
+            return;
+        }
+        gameObject.AddComponent<Canvas>().renderMode = RenderMode.WorldSpace;
         float u = UnitsPerMetre, imageWidth = SignWidth / SignRect.width * u;
         wordsPanel = Panel("Words", null, 0f, out wordsGroup);
         wordsPanel.sizeDelta = new Vector2(imageWidth, imageWidth / ImageAspect);
@@ -164,40 +143,15 @@ public class VanGoghCaption : MonoBehaviour
         circle.raycastTarget = false;
         key = Label(keyCircle, Size(PillCap), ButtonLetter);
         hint = Label(pillPanel, Size(PillCap), PillText);
+        paging = new VG_Paging(labels, textArea.x, Ink);
     }
-
-    void BuildBox()
-    {
-        follow = new GameObject("Follow", typeof(RectTransform)).AddComponent<VG_FollowGroup>();
-        follow.transform.SetParent(transform, false);
-        onTop = new Material(Canvas.GetDefaultCanvasMaterial());
-        onTop.SetInt("unity_GUIZTestMode", (int)UnityEngine.Rendering.CompareFunction.Always);   // nothing in the room cuts through it
-        dialogue = VG_DialogueBox.Make(follow.transform, "Vincent", font, box, nameTab, starRing, star, onTop);
-        boxHint = VG_Hint.Make(follow.transform, VG_DialogueBox.Above, font, hintPlate, star, button, onTop);
-        labels = dialogue.Labels;
-        textColour = VG_DialogueBox.Cream;
-        textArea = new Vector2(dialogue.TextWidth, 0f);
-        wordsGroup = Hidden(dialogue.gameObject);
-        pillGroup = Hidden(boxHint.gameObject);
-        mirror = GetComponentInParent<MirrorScene>();
-    }
-
-    static CanvasGroup Hidden(GameObject panel)
-    {
-        var group = panel.AddComponent<CanvasGroup>();
-        group.alpha = 0f;
-        panel.SetActive(false);
-        return group;
-    }
-
-    void OnDestroy() { if (onTop != null) Destroy(onTop); }
 
     void Place(Vector3 anchor)
     {
         Build();
         transform.localPosition = anchor;
+        if (style == VG_CaptionStyle.Box) return;   // it follows your view, and scales itself (VG_DialogueUI)
         transform.localScale = Vector3.one / (UnitsPerMetre * transform.parent.lossyScale.x);
-        if (style == VG_CaptionStyle.Box) return;   // it follows your view instead
         float u = UnitsPerMetre;
         if (anchor.y >= 0f)   // over his head: the pill, then the sign standing above it
         {
@@ -218,40 +172,22 @@ public class VanGoghCaption : MonoBehaviour
 
     void Step(float dt)
     {
-        wordsLeft -= dt;
-        shown += dt;
-        if (pages.Count > 0)
-        {
-            float t = voice != null && voice.isPlaying && voice.clip != null ? voice.time : shown;   // his voice keeps the time while it plays
-            int want = page;
-            while (want + 1 < pages.Count && t >= pages[want + 1].start) want++;
-            if (want != page) Turn(want);
-            if (swapLeft > 0f)
-            {
-                swapLeft -= dt;
-                float a = 1f - Mathf.Clamp01(swapLeft / PageFade);
-                labels[front].color = new Color(textColour.r, textColour.g, textColour.b, a);
-                labels[1 - front].color = new Color(textColour.r, textColour.g, textColour.b, 1f - a);
-                if (swapLeft <= 0f) { labels[1 - front].gameObject.SetActive(false); if (dialogue != null) dialogue.Lines(pages[page].lines); }
-            }
-        }
-        if (style == VG_CaptionStyle.Box) BoxHint();
-        Fade(wordsGroup, wordsLeft > 0f, dt);
+        if (ui != null) { BoxHint(); ui.Step(dt); return; }
+        bool playing = voice != null && voice.isPlaying && voice.clip != null;   // his voice keeps the time while it plays
+        paging.Step(dt, playing ? voice.time : (float?)null);
+        Fade(wordsGroup, paging.Showing, dt);
         Fade(pillGroup, pillShown, dt);
-        if (follow != null) follow.enabled = wordsGroup.gameObject.activeSelf || pillGroup.gameObject.activeSelf;   // appears in place
     }
 
     // Box style: shown near its owner (Vincent, the portrait). The line: his state ("Listening…"), else the mirror's
-    // next step, else how to ask him, with the button in its circle.
+    // next step, else how to ask him, with the button in its circle ("Hold {B} to ask Vincent").
     void BoxHint()
     {
         var eye = Camera.main;
-        pillShown = eye != null && Vector3.Distance(eye.transform.position, transform.parent.position) <= HintWithin;
-        string title = gameObject.scene.name == "PaintedBedroom" ? BedroomTitle : "";
-        string line = stateHint ?? MirrorHint(mirror != null ? mirror.Now : VG_MirrorStep.None);
-        int at = line == null && idleHint != null ? idleHint.IndexOf($" {idleKey} ") : -1;
-        if (at >= 0) boxHint.Show(title, idleHint.Substring(0, at), idleKey, idleHint.Substring(at + idleKey.Length + 2));
-        else boxHint.Show(title, line ?? idleHint);
+        bool near = eye != null && Vector3.Distance(eye.transform.position, transform.parent.position) <= HintWithin;
+        string line = stateHint ?? MirrorHint(mirror != null ? mirror.Now : VG_MirrorStep.None)
+                      ?? idleHint?.Replace($" {idleKey} ", $" {{{idleKey}}} ");
+        ui.SetHint(gameObject.scene.name == HintScene ? null : "", near ? line : null);
     }
 
     static string MirrorHint(VG_MirrorStep step) =>
@@ -273,70 +209,6 @@ public class VanGoghCaption : MonoBehaviour
     {
         group.alpha = Mathf.MoveTowards(group.alpha, shown ? 1f : 0f, dt / FadeSeconds);
         group.gameObject.SetActive(group.alpha > 0f || shown);
-    }
-
-    // The next page comes in on the other label and cross-fades over the one showing.
-    void Turn(int to)
-    {
-        page = to;
-        front = 1 - front;
-        labels[front].gameObject.SetActive(true);
-        labels[front].fontSize = pages[to].size;
-        labels[front].text = pages[to].text;
-        labels[front].color = new Color(textColour.r, textColour.g, textColour.b, 0f);
-        swapLeft = PageFade;
-        if (dialogue == null) return;
-        dialogue.More = to < pages.Count - 1;
-        dialogue.Lines(Mathf.Max(pages[to].lines, page > 0 && to > 0 ? pages[to - 1].lines : 0));   // the page fading out fits too
-    }
-
-    // Sentences, after . ! ? or … and a space; one shorter than ShortPage words joins the next.
-    static List<string> Sentences(string text)
-    {
-        var list = new List<string>();
-        string pending = "";
-        foreach (var piece in SentenceEnd.Split(text.Trim()))
-        {
-            if (piece.Length == 0) continue;
-            pending = pending.Length == 0 ? piece : pending + " " + piece;
-            if (pending.Split(' ').Length >= ShortPage) { list.Add(pending); pending = ""; }
-        }
-        if (pending.Length > 0) { if (list.Count > 0) list[list.Count - 1] += " " + pending; else list.Add(pending); }
-        return list;
-    }
-
-    // Sign: a sentence becomes a page at the largest size, down to the minimum, that keeps it to two lines; then a third
-    // line at the size that fits the panel. Box: one size, up to three lines. Then it splits at the comma (or the space)
-    // nearest its middle.
-    void Fit(string sentence)
-    {
-        bool inBox = style == VG_CaptionStyle.Box;
-        int size = inBox ? VG_UI.FontSize(VG_DialogueBox.Cap) : Size(CapHeight), least = inBox ? size : Size(MinCapHeight);
-        int most = inBox ? VG_DialogueBox.MostLines : MaxLines;
-        while (size > least && Lines(size, sentence) > most) size -= 2;
-        if (Lines(size, sentence) <= most) { pages.Add(new Page { text = sentence, size = size, lines = Lines(size, sentence) }); return; }
-        int third = inBox ? size : Mathf.FloorToInt(textArea.y / MostLines / LinePerEm);   // the font size whose three lines fill the panel
-        if (!inBox && Lines(third, sentence) <= MostLines) { pages.Add(new Page { text = sentence, size = third, lines = MostLines }); return; }
-        int at = Nearest(sentence, ", ");
-        if (at < 0) at = Nearest(sentence, " ");
-        if (at < 0) { pages.Add(new Page { text = sentence, size = third, lines = Lines(third, sentence) }); return; }
-        Fit(sentence.Substring(0, at + 1).TrimEnd());
-        Fit(sentence.Substring(at + 1).TrimStart());
-    }
-
-    static int Nearest(string s, string mark)
-    {
-        int best = -1, mid = s.Length / 2;
-        for (int i = s.IndexOf(mark); i >= 0; i = s.IndexOf(mark, i + 1))
-            if (best < 0 || Mathf.Abs(i - mid) < Mathf.Abs(best - mid)) best = i;
-        return best;
-    }
-
-    int Lines(int size, string text)
-    {
-        labels[0].fontSize = size;
-        fitter.Populate(text, labels[0].GetGenerationSettings(new Vector2(textArea.x, 0f)));
-        return fitter.lineCount;
     }
 
     static int Size(float capHeight) => Mathf.RoundToInt(capHeight / CapPerEm * UnitsPerMetre);

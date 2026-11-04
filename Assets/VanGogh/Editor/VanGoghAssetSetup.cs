@@ -33,6 +33,8 @@ public static class VanGoghAssetSetup
     const string SignUnlit = CaptionUI + "VG_Sign_A.png", SignLit = CaptionUI + "VG_Sign_B.png";   // from Art/Source/VanGogh/Caption/bake_sign.py
     // the 9-slice borders drawn by make_caption_sprites.py (PARCHMENT_BORDER, PILL_H / 2)
     const int ParchmentBorderPixels = 96, PillBorderPixels = 64;
+    const string OutlineMaterial = CaptionUI + "VG_Outline.mat";   // the mirror's outlines (VG_MirrorOutline)
+    static readonly Color Chrome = new Color32(0xE9, 0xC1, 0x4A, 0xFF);
     const float VincentHeight = 1.70f;
 
     // Prefab layout in Vincent's own space: he faces +z, his right hand is at +x, metres at 1.70 m tall.
@@ -57,7 +59,7 @@ public static class VanGoghAssetSetup
             var easel = Furniture(SaveMaterial(EaselMaterial, "Universal Render Pipeline/Lit", ImportTexture(EaselTexture, 1024)));
             var palette = Furniture(SaveMaterial(PaletteMaterial, "Universal Render Pipeline/Lit", ImportTexture(PaletteTexture, 1024)));
             var stages = Stages.Select(s => ImportTexture(CanvasStages + s + ".png", 1024)).ToArray();
-            BuildVincent(skin, easel, palette, stages, ReadMirrorLines());
+            BuildVincent(skin, easel, palette, stages, ReadMirrorLines(), Outline());
         }
         AssetDatabase.SaveAssets();
         Debug.Log("[VanGoghAssetSetup] Rebuild done");
@@ -176,6 +178,22 @@ public static class VanGoghAssetSetup
         return m;
     }
 
+    // Unlit chrome yellow, both faces, opaque: the outlines pulse in width, not alpha, so nothing is transparent.
+    static Material Outline()
+    {
+        var material = AssetDatabase.LoadAssetAtPath<Material>(OutlineMaterial);
+        if (material == null)
+        {
+            material = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+            AssetDatabase.CreateAsset(material, OutlineMaterial);
+        }
+        material.SetColor("_BaseColor", Chrome);   // URP copies it into _Color itself when it loads the material
+        material.SetFloat("_Cull", (float)UnityEngine.Rendering.CullMode.Off);
+        material.doubleSidedGI = true;             // as URP sets it for two-sided materials on the next load
+        EditorUtility.SetDirty(material);
+        return material;
+    }
+
     // Read/Write off, medium mesh compression, no cameras, lights, animation or colliders.
     static void ImportModel(string path, bool keepMaterials)
     {
@@ -215,7 +233,7 @@ public static class VanGoghAssetSetup
     static GameObject Spawn(string path, Transform parent) =>
         (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(path), parent);
 
-    static void BuildVincent(Material skin, Material easel, Material palette, Texture2D[] stages, MirrorScene.Line[] lines)
+    static void BuildVincent(Material skin, Material easel, Material palette, Texture2D[] stages, MirrorScene.Line[] lines, Material outline)
     {
         var root = new GameObject("VG_Vincent");
         var body = Spawn(Vincent, root.transform);
@@ -239,6 +257,7 @@ public static class VanGoghAssetSetup
         var mirrorScene = root.AddComponent<MirrorScene>();
         mirrorScene.stages = stages;
         mirrorScene.lines = lines;
+        mirrorScene.outline = outline;
 
         // What VincentAlive moves: everything but the easel, about a pivot between his feet
         var figure = new GameObject("Figure").transform;

@@ -283,6 +283,7 @@ MonoBehaviour:
     text: There, it's done. Thank you, my friend. Hang the mirror back for me; Gauguin
       will want to look at himself too.
     clip: {fileID: 8300000, guid: 8522585d28e4c4152b3bf79ec3f51631, type: 3}
+  outline: {fileID: 2100000, guid: ba392b0affe7e41abad8e335a49448df, type: 2}
 --- !u!114 &143649380274928299
 MonoBehaviour:
   m_ObjectHideFlags: 0

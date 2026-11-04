@@ -2,14 +2,20 @@ using UnityEngine;
 
 namespace InnerFrame.StarryNight
 {
-    /// <summary>The lantern's light and flame. Turned down once (SN_Game decides when): both ease down together.</summary>
+    /// <summary>The lantern's light and flame, and the wick key (Knob) that turns as they go down. Turned down once
+    /// (SN_Game decides when): all three ease together.</summary>
     public class SN_Lantern : MonoBehaviour
     {
+        /// <summary>How far the wick key turns from full to out, about its own x axis.</summary>
+        public const float KnobTurnDegrees = 300f;
+
         public Light lamp;
         public Transform flame;
+        public Transform knob;
 
         float baseIntensity = -1f, from = 1f, to = 1f, t, seconds;
         Vector3 baseFlameScale;
+        Quaternion baseKnob = Quaternion.identity;
         bool dimming;
 
         public float Level { get; private set; } = 1f;
@@ -21,6 +27,7 @@ namespace InnerFrame.StarryNight
             if (baseIntensity >= 0f) return;
             baseIntensity = lamp != null ? lamp.intensity : 1f;
             baseFlameScale = flame != null ? flame.localScale : Vector3.one;
+            baseKnob = knob != null ? knob.localRotation : Quaternion.identity;
         }
 
         public void Configure(float intensity, float range, Color colour)
@@ -53,6 +60,7 @@ namespace InnerFrame.StarryNight
             Level = level;
             if (lamp != null) lamp.intensity = baseIntensity * level;
             if (flame != null) flame.localScale = baseFlameScale * Mathf.Lerp(0.35f, 1f, level);
+            if (knob != null) knob.localRotation = baseKnob * Quaternion.AngleAxis((1f - level) * KnobTurnDegrees, Vector3.right);
         }
     }
 }

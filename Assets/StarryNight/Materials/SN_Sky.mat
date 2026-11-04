@@ -24,11 +24,11 @@ Material:
     serializedVersion: 3
     m_TexEnvs:
     - _NightTex:
-        m_Texture: {fileID: 0}
+        m_Texture: {fileID: 2800000, guid: 829121fc67f3a45d6855b1c7812efb42, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _PaintTex:
-        m_Texture: {fileID: 2800000, guid: 7ae3428e6fcc8470db6d2bdcc58cbd61, type: 3}
+        m_Texture: {fileID: 2800000, guid: c218001b5d40744d6a95aeb3b74de0a8, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _SwirlMask:
@@ -39,12 +39,14 @@ Material:
     m_Floats:
     - _Dawn: 0
     - _DawnKeep: 0.25
-    - _NightTexAmount: 0
+    - _NightPitchMin: -10
+    - _NightTexAmount: 1
     - _Paint: 0
     - _PanelPitchMax: 70
     - _PanelPitchMin: -5
     - _PanelSoft: 8
     - _PanelYaw: 80
+    - _PanelYawCentre: 0
     - _SwirlEdge: 0.04
     - _SwirlProgress: 0
     m_Colors:
@@ -53,5 +55,6 @@ Material:
     - _DawnTop: {r: 0.16470589, g: 0.2901961, b: 0.54901963, a: 1}
     - _NightHorizon: {r: 0.08627451, g: 0.24705882, b: 0.5176471, a: 1}
     - _NightTop: {r: 0.07058824, g: 0.16470589, b: 0.3372549, a: 1}
+    - _SeatEye: {r: 0, g: 1.28, b: 0, a: 0}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

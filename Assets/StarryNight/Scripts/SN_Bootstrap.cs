@@ -7,7 +7,7 @@ namespace InnerFrame.StarryNight
 {
     /// <summary>
     /// The only thing in StarryNight.unity besides the player rig: at runtime it spawns the hilltop, the rock, the
-    /// cypress, the lantern, the sketchbook, the page, Vincent, the sky, the UI and the beam from the prefabs in
+    /// cypress, the lantern, the sketchbook, the page, the charcoal, Vincent, the sky, the UI and the beam from the prefabs in
     /// Assets/StarryNight/Prefabs, places them from SN_Layout, and starts SN_Game.
     /// Editor fallback (no XR device): the mouse aims, Space is the trigger, G grabs or releases the nearest grabbable
     /// within SN_Layout.editorGrabReach, 1 and 2 jump to the player start and the player seat (DesktopTestRig walks
@@ -18,7 +18,7 @@ namespace InnerFrame.StarryNight
         public SN_Layout layout;
         public SN_Lines lines;
         public GameObject hilltopPrefab, rockPrefab, cypressPrefab, lanternPrefab, sketchbookPrefab, pagePrefab,
-            vincentPrefab, skyPrefab, uiPrefab, beamPrefab;
+            charcoalPrefab, vincentPrefab, skyPrefab, uiPrefab, beamPrefab;
 
         public SN_Game Game { get; private set; }
         public Transform World { get; private set; }
@@ -102,11 +102,13 @@ namespace InnerFrame.StarryNight
                 moonLight.intensity = layout.moonLightIntensity;
             }
 
-            var rock = Instantiate(rockPrefab, World);
+            var village = hill.transform.Find("Village");   // the blockout's window dots: off unless SN_Layout.villageDots
+            if (village != null) village.gameObject.SetActive(layout.villageDots);
+
+            var rock = Instantiate(rockPrefab, World);       // SN_Rock.fbx at its own size (make_tripo.py), base on the ground
             rock.name = "SN_Rock";
-            float rockHeight = layout.rockTop + layout.rockBuried;
-            rock.transform.SetPositionAndRotation(new Vector3(0f, layout.rockTop - rockHeight / 2f, 0f), Quaternion.identity);
-            rock.transform.localScale = new Vector3(layout.rockFootprint.x, rockHeight, layout.rockFootprint.y);
+            rock.transform.SetPositionAndRotation(new Vector3(0f, -layout.rockBuried, 0f), Quaternion.identity);
+            rock.transform.localScale = Vector3.one;
 
             var cypress = Instantiate(cypressPrefab, World);
             cypress.name = "SN_Cypress";
@@ -126,6 +128,13 @@ namespace InnerFrame.StarryNight
             pageGo.name = "SN_Page";
             pageGo.transform.SetPositionAndRotation(layout.page, Quaternion.Euler(0f, -10f, 0f));
 
+            if (charcoalPrefab != null)
+            {
+                var stick = Instantiate(charcoalPrefab, World);
+                stick.name = "SN_Charcoal";
+                stick.transform.SetPositionAndRotation(layout.charcoal, Quaternion.Euler(0f, layout.charcoalYaw, 0f));
+            }
+
             var vincent = Instantiate(vincentPrefab, World);
             vincent.name = "SN_Vincent";
             vincent.transform.SetPositionAndRotation(layout.OnGround(layout.vincentStand), Quaternion.identity);   // faces +Z
@@ -140,12 +149,15 @@ namespace InnerFrame.StarryNight
 
             var sky = Instantiate(skyPrefab, World).GetComponent<SN_Sky>();
             sky.name = "SN_Sky";
-            var ring = hill.transform.Find("HillRing");
-            sky.hillRing = ring != null ? ring.GetComponent<Renderer>() : null;
+            Renderer R(string child) { var t = hill.transform.Find(child); return t != null ? t.GetComponent<Renderer>() : null; }
+            sky.hillRing = R("HillRing");
+            sky.horizon = R("Horizon");
+            sky.villageGlow = R("VillageGlow");
             sky.Build(layout, farClip);
 
             var ui = Instantiate(uiPrefab, World).GetComponent<SN_UIRoot>();
             ui.name = "SN_UI";
+            ui.belowGaze = layout.uiBelowGaze;
             var beam = Instantiate(beamPrefab, World).GetComponent<SN_Beam>();
             beam.name = "SN_Beam";
 

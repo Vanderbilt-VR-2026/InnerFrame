@@ -156,6 +156,7 @@ MonoBehaviour:
   lanternPrefab: {fileID: 2455066162435971109, guid: 8a102cceb38e7452c86cb0bf708e8494, type: 3}
   sketchbookPrefab: {fileID: 2574133240291200571, guid: bcf06f04953e349af92c0aac34801602, type: 3}
   pagePrefab: {fileID: 946948260329362961, guid: c579ef411a42e4203a2fdf47de69c06e, type: 3}
+  charcoalPrefab: {fileID: 6944759433794721852, guid: d49b2f453d5bf4027a6ad172d6d73b00, type: 3}
   vincentPrefab: {fileID: 6420064449198729876, guid: de7d49b7d388641e8afb5d6ba7c1ee81, type: 3}
   skyPrefab: {fileID: 5371594711493017759, guid: 8ca71066159d644f3b1987c3e5a24147, type: 3}
   uiPrefab: {fileID: 2275859064414179965, guid: 6df60333099614d6da3e3ead509c66aa, type: 3}

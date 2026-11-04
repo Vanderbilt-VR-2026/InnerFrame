@@ -134,6 +134,7 @@ namespace InnerFrame.StarryNight
                     Enter(SN_State.Dawn);
                     dawnT = 0f;
                     foreach (var s in sky.Stars) if (s.Spec.named != 3) s.FadeOut(layout.dawnSeconds * 0.8f);
+                    sky.FadeFields(layout.dawnSeconds * 0.8f);   // the star fields fade with them; N3 stays last
                 }
             }
             if (dawnT >= 0f)
@@ -183,6 +184,7 @@ namespace InnerFrame.StarryNight
         {
             lanternDown = true;
             foreach (var s in sky.Stars) if (!s.IsVisible) s.FadeIn(layout.starsFadeInSeconds);
+            sky.WakeFields(layout.starsFadeInSeconds);
             if (State < SN_State.Stars)
             {
                 voice.Say("L03");
@@ -198,6 +200,7 @@ namespace InnerFrame.StarryNight
             if (star == null || star.IsWoken) return;
             star.Wake();
             Score.starsWoken++;
+            sky.WakeFieldHalos(layout.starBloomSeconds);   // the medium stars' small halos
             int k = 0;
             while (k < 3 && NamedStar(k + 1) != null && NamedStar(k + 1).IsWoken) k++;
             if (k <= namedProgress) return;

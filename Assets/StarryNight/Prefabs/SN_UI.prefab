@@ -381,7 +381,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Unity.XR.Interaction.Toolkit::UnityEngine.XR.Interaction.Toolkit.UI.LazyFollow
   m_Target: {fileID: 0}
-  m_TargetOffset: {x: 0, y: -0.41411048, z: 1.5454813}
+  m_TargetOffset: {x: 0, y: -0.59937054, z: 1.4834942}
   m_FollowInLocalSpace: 0
   m_ApplyTargetInLocalSpace: 0
   m_MovementSpeed: 6
@@ -407,6 +407,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cf603d4f2481e410da9f39e748aca611, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InnerFrame.StarryNight.SN_UIRoot
+  belowGaze: 22
   box: {fileID: 2173186398192538816}
   hint: {fileID: 6973918552101175339}
   lazy: {fileID: 8998289978635862975}

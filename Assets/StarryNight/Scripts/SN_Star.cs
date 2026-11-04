@@ -3,11 +3,14 @@ using UnityEngine;
 namespace InnerFrame.StarryNight
 {
     /// <summary>
-    /// One star: a core and a halo, billboards facing the player. It fades in, blooms when woken (core x2, halo 0 to 1),
-    /// glows faintly while aimed at, and fades at dawn.
+    /// One star: a core and a halo (the painted halo sprite), billboards facing the player. It fades in, blooms when
+    /// woken (core x2, halo 0 to 1), glows faintly while aimed at, and fades at dawn.
     /// </summary>
     public class SN_Star : MonoBehaviour
     {
+        /// <summary>The painted halo's strokes reach this fraction of its quad's width (make_textures.py, SN_HaloPainted).</summary>
+        public const float HaloFill = 0.85f;
+
         static readonly int ColourId = Shader.PropertyToID("_BaseColor");
         static readonly Color CoreColour = new Color(1f, 0.96f, 0.84f, 1f);
         static readonly Color HaloColour = Color.white;   // the halo texture carries the star yellow
@@ -24,6 +27,7 @@ namespace InnerFrame.StarryNight
         float coreSize, haloSize;
         MaterialPropertyBlock block;
 
+        /// <summary>coreWorld: the core's size before the spec's size multiplier; haloWorld: the halo quad's full size.</summary>
         public void Setup(SN_StarSpec spec, int index, Vector3 position, float coreWorld, float haloWorld, bool startVisible)
         {
             Spec = spec;
@@ -31,7 +35,7 @@ namespace InnerFrame.StarryNight
             name = "Star_" + spec.name;
             transform.position = position;
             coreSize = coreWorld * spec.size;
-            haloSize = haloWorld * spec.size;
+            haloSize = haloWorld;
             visible = visibleTarget = startVisible ? 1f : 0f;
             Apply();
         }

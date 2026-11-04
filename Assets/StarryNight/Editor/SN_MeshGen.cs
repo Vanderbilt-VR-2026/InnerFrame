@@ -3,7 +3,8 @@ using UnityEngine;
 
 namespace InnerFrame.StarryNight.EditorTools
 {
-    /// <summary>The placeholder meshes and the swirl mask, generated from SN_Layout (same output for the same layout).</summary>
+    /// <summary>The generated meshes (the hill, the path, the far hills, the painted horizon's strip, the village glow,
+    /// the mist layers, the flowers) and the swirl mask, from SN_Layout (same output for the same layout).</summary>
     public static class SN_MeshGen
     {
         const int HillSegments = 96, HillRings = 40, SkirtRings = 14;
@@ -12,9 +13,12 @@ namespace InnerFrame.StarryNight.EditorTools
         {
             public readonly List<Vector3> v = new List<Vector3>();
             public readonly List<Vector2> uv = new List<Vector2>();
+            public readonly List<Color> colours = new List<Color>();
+            public readonly List<Vector3> normals = new List<Vector3>();
             public readonly List<List<int>> subs = new List<List<int>> { new List<int>() };
 
             public int Add(Vector3 p, Vector2 t) { v.Add(p); uv.Add(t); return v.Count - 1; }
+            public int Add(Vector3 p, Vector2 t, Color c) { colours.Add(c); return Add(p, t); }
 
             /// <summary>A triangle whose front face (Unity: clockwise, normal = cross(b - a, c - a)) points along `facing`.</summary>
             public void Tri(int a, int b, int c, Vector3 facing, int sub = 0)
@@ -31,9 +35,10 @@ namespace InnerFrame.StarryNight.EditorTools
                 if (v.Count > 65000) m.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
                 m.SetVertices(v);
                 m.SetUVs(0, uv);
+                if (colours.Count == v.Count) m.SetColors(colours);
                 m.subMeshCount = subs.Count;
                 for (int i = 0; i < subs.Count; i++) m.SetTriangles(subs[i], i);
-                m.RecalculateNormals();
+                if (normals.Count == v.Count) m.SetNormals(normals); else m.RecalculateNormals();
                 m.RecalculateBounds();
                 return m;
             }
@@ -49,12 +54,12 @@ namespace InnerFrame.StarryNight.EditorTools
         public static Mesh Hill(SN_Layout l)
         {
             var b = new Builder();
-            int centre = b.Add(new Vector3(0f, l.GroundHeight(0f, 0f), 0f), new Vector2(0.5f, 0.5f));
+            int centre = b.Add(new Vector3(0f, l.GroundHeight(0f, 0f), 0f), Vector2.zero);
             for (int i = 1; i <= HillRings; i++)
                 for (int s = 0; s < HillSegments; s++)
                 {
                     var p = P(l, l.hillEdgeRadius * i / HillRings, s * 2f * Mathf.PI / HillSegments);
-                    b.Add(p, new Vector2(p.x, p.z) * 0.25f);
+                    b.Add(p, new Vector2(p.x, p.z) / l.grassTileMetres);
                 }
             for (int s = 0; s < HillSegments; s++)
                 b.Tri(centre, 1 + s, 1 + (s + 1) % HillSegments, Vector3.up);
@@ -79,7 +84,7 @@ namespace InnerFrame.StarryNight.EditorTools
                 for (int s = 0; s < HillSegments; s++)
                 {
                     var p = P(l, r, s * 2f * Mathf.PI / HillSegments);
-                    b.Add(p, new Vector2(p.x, p.z) * 0.25f);
+                    b.Add(p, new Vector2(p.x, p.z) / l.grassTileMetres);
                 }
             }
             for (int i = 0; i < SkirtRings; i++)
@@ -94,7 +99,8 @@ namespace InnerFrame.StarryNight.EditorTools
             return b.Build("SN_HillSkirt");
         }
 
-        /// <summary>The path from the player start to the player seat: a strip on the ground (a smooth curve through pathPoints).</summary>
+        /// <summary>The path from the player start to the player seat: a strip on the ground (a smooth curve through pathPoints);
+        /// u across it, v along it in pathTileMetres (SN_PathDirt.png: ragged, alpha-clipped sides).</summary>
         public static Mesh Path(SN_Layout l)
         {
             var pts = l.pathPoints;
@@ -114,7 +120,7 @@ namespace InnerFrame.StarryNight.EditorTools
                 for (int k = -1; k <= 1; k += 2)
                 {
                     Vector2 q = line[i] + side * k * w;
-                    b.Add(new Vector3(q.x, l.GroundHeight(q.x, q.y) + 0.02f, q.y), new Vector2(k < 0 ? 0f : 1f, along));
+                    b.Add(new Vector3(q.x, l.GroundHeight(q.x, q.y) + 0.02f, q.y), new Vector2(k < 0 ? 0f : 1f, along / l.pathTileMetres));
                 }
             }
             for (int i = 0; i < line.Count - 1; i++)
@@ -126,86 +132,39 @@ namespace InnerFrame.StarryNight.EditorTools
             return b.Build("SN_Path");
         }
 
-        /// <summary>A flame-shaped cypress: stacked cones, swaying a little, on a short trunk (submesh 1). Origin at its base.</summary>
-        public static Mesh Cypress(SN_Layout l)
-        {
-            const int Seg = 14;
-            float H = l.cypressHeight, R = l.cypressWidth * 0.5f;
-            // tiers: base height, top height (fractions of H), radius (fraction of R), sway (fraction of R)
-            float[,] tiers =
-            {
-                { 0.08f, 0.40f, 0.78f, 0.00f }, { 0.16f, 0.52f, 1.00f, 0.06f }, { 0.30f, 0.64f, 0.92f, -0.08f },
-                { 0.44f, 0.76f, 0.76f, 0.10f }, { 0.58f, 0.86f, 0.58f, -0.06f }, { 0.70f, 0.94f, 0.40f, 0.08f },
-                { 0.80f, 1.00f, 0.24f, 0.02f },
-            };
-            var b = new Builder();
-            b.subs.Add(new List<int>());
-            for (int t = 0; t < tiers.GetLength(0); t++)
-            {
-                float y0 = tiers[t, 0] * H, y1 = tiers[t, 1] * H, r = tiers[t, 2] * R;
-                Vector3 sway = new Vector3(tiers[t, 3] * R, 0f, tiers[t, 3] * R * 0.5f);
-                Vector3 axis = new Vector3(0f, y0, 0f) + sway;
-                int apex = b.Add(new Vector3(0f, y1, 0f) + sway * 1.6f, new Vector2(0.5f, 1f));
-                int bottom = b.Add(axis, new Vector2(0.5f, 0f));
-                int first = b.v.Count;
-                for (int s = 0; s < Seg; s++)
-                {
-                    float a = s * 2f * Mathf.PI / Seg + t * 0.37f;
-                    float wob = 1f + 0.12f * Mathf.Sin(3f * a + t);
-                    b.Add(axis + new Vector3(Mathf.Sin(a), 0f, Mathf.Cos(a)) * r * wob, new Vector2(s / (float)Seg, 0f));
-                }
-                for (int s = 0; s < Seg; s++)
-                {
-                    int p = first + s, q = first + (s + 1) % Seg;
-                    Vector3 mid = (b.v[p] + b.v[q]) * 0.5f;
-                    Vector3 outward = new Vector3(mid.x - axis.x, 0f, mid.z - axis.z).normalized + Vector3.up * 0.3f;
-                    b.Tri(apex, p, q, outward);
-                    b.Tri(bottom, q, p, Vector3.down);
-                }
-            }
-            // the trunk
-            const int TSeg = 8;
-            float tr = 0.12f, th = 0.12f * H;
-            int tFirst = b.v.Count;
-            for (int k = 0; k < 2; k++)
-                for (int s = 0; s < TSeg; s++)
-                {
-                    float a = s * 2f * Mathf.PI / TSeg;
-                    b.Add(new Vector3(Mathf.Sin(a) * tr * (k == 0 ? 1.3f : 1f), k * th - 0.2f, Mathf.Cos(a) * tr), new Vector2(s / (float)TSeg, k));
-                }
-            for (int s = 0; s < TSeg; s++)
-            {
-                int a = tFirst + s, a2 = tFirst + (s + 1) % TSeg, c = a + TSeg, c2 = a2 + TSeg;
-                Vector3 outward = (b.v[a] + b.v[a2]); outward.y = 0f;
-                b.Tri(a, c, c2, outward, 1);
-                b.Tri(a, c2, a2, outward, 1);
-            }
-            return b.Build("SN_Cypress");
-        }
-
-        /// <summary>A low ring of dark hills at hillRingRadiusFraction x R round the hill, seen from inside.</summary>
+        /// <summary>
+        /// The ring of far hills round the rest of the horizon, hillRingRadiusFraction x R from the hill's centre, seen
+        /// from inside: SN_FarHills.png (the painted horizon's own hills; their silhouette is the texture's alpha) repeated
+        /// eight times round it, mirrored. Three rows: the strip's top at hillRingMaxPitch, its foot at hillRingMinPitch
+        /// (v 150/256 of the texture's 256 rows), and the ring's bottom far below. Behind the painted horizon it sinks by
+        /// (hillRingMaxPitch - hillRingUnderHorizonPitch), out of sight; over the horizon's faded ends it rises back.
+        /// </summary>
         public static Mesh HillRing(SN_Layout l, float skyRadius)
         {
-            const int Seg = 180;
-            float R0 = skyRadius * l.hillRingRadiusFraction, bottom = -0.4f * R0;
+            const int Seg = 180, Copies = 8;
+            const float StripV = 1f - 150f / 256f;
+            float R0 = l.HillRingRadius(skyRadius), bottom = -0.4f * R0;
             var b = new Builder();
             for (int s = 0; s <= Seg; s++)
             {
                 float a = s * 2f * Mathf.PI / Seg;
-                float n = 0.5f + 0.25f * Mathf.Sin(3f * a + 0.6f) + 0.15f * Mathf.Sin(7f * a + 1.9f) + 0.1f * Mathf.Sin(13f * a + 0.3f);
-                float pitch = Mathf.Lerp(l.hillRingMinPitch, l.hillRingMaxPitch, Mathf.Clamp01(n));
-                float top = l.eyeHeight + R0 * Mathf.Tan(pitch * Mathf.Deg2Rad);
+                float sink = (l.hillRingMaxPitch - l.hillRingUnderHorizonPitch) * HorizonCover(l, a * Mathf.Rad2Deg);
+                float top = l.eyeHeight + R0 * Mathf.Tan((l.hillRingMaxPitch - sink) * Mathf.Deg2Rad);
+                float foot = l.eyeHeight + R0 * Mathf.Tan((l.hillRingMinPitch - sink) * Mathf.Deg2Rad);
                 Vector3 dir = new Vector3(Mathf.Sin(a), 0f, Mathf.Cos(a));
-                b.Add(dir * R0 + Vector3.up * top, new Vector2(s / (float)Seg, 1f));
-                b.Add(dir * R0 + Vector3.up * bottom, new Vector2(s / (float)Seg, 0f));
+                float u = s / (float)Seg * Copies;
+                b.Add(dir * R0 + Vector3.up * top, new Vector2(u, 1f));
+                b.Add(dir * R0 + Vector3.up * foot, new Vector2(u, StripV));
+                b.Add(dir * R0 + Vector3.up * bottom, new Vector2(u, 0f));
             }
             for (int s = 0; s < Seg; s++)
-            {
-                int t0 = s * 2, b0 = t0 + 1, t1 = t0 + 2, b1 = t0 + 3;
-                Vector3 inward = -(b.v[t0] + b.v[t1]); inward.y = 0f;
-                b.Tri(t0, t1, b1, inward);
-                b.Tri(t0, b1, b0, inward);
-            }
+                for (int r = 0; r < 2; r++)
+                {
+                    int t0 = s * 3 + r, b0 = t0 + 1, t1 = t0 + 3, b1 = t0 + 4;
+                    Vector3 inward = -(b.v[t0] + b.v[t1]); inward.y = 0f;
+                    b.Tri(t0, t1, b1, inward);
+                    b.Tri(t0, b1, b0, inward);
+                }
             return b.Build("SN_HillRing");
         }
 
@@ -234,8 +193,196 @@ namespace InnerFrame.StarryNight.EditorTools
             return b.Build("SN_Village");
         }
 
+        /// <summary>How far the far hills sink at this yaw: 1 well inside the painted horizon, 0 from where its ends start
+        /// to fade and outward (so the hills are already up wherever the horizon is see-through), ramping over one fade.</summary>
+        public static float HorizonCover(SN_Layout l, float yaw)
+        {
+            float d = Mathf.DeltaAngle(0f, yaw - (l.HorizonYawMin + l.HorizonYawMax) * 0.5f);
+            float half = l.horizonWidthDeg * 0.5f, fade = Mathf.Max(l.horizonEndFadeDeg, 0.01f);
+            return Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((half - fade - Mathf.Abs(d)) / fade));
+        }
+
+        /// <summary>The painted horizon's geometry, seen from the seat eye: the strip's radius and its top and bottom
+        /// heights (relative to the eye), so its angular width / height keeps the band's aspect.</summary>
+        public static void HorizonFrame(SN_Layout l, float skyRadius, out float radius, out float top, out float bottom)
+        {
+            radius = l.HillRingRadius(skyRadius) - l.horizonInset;
+            float arc = radius * l.horizonWidthDeg * Mathf.Deg2Rad;
+            top = radius * Mathf.Tan(l.horizonTopPitch * Mathf.Deg2Rad);
+            bottom = top - arc / l.horizonAspect;
+        }
+
+        /// <summary>The painted horizon: a cylindrical strip centred on the seat eye, horizonWidthDeg wide with the spire at
+        /// horizonSpireYaw; its ends fade (vertex alpha) over horizonEndFadeDeg. Faces the seat.</summary>
+        public static Mesh Horizon(SN_Layout l, float skyRadius)
+        {
+            const int Seg = 64;
+            HorizonFrame(l, skyRadius, out float radius, out float top, out float bottom);
+            Vector3 eye = l.SeatEye;
+            var b = new Builder();
+            for (int s = 0; s <= Seg; s++)
+            {
+                float u = s / (float)Seg;
+                float yaw = l.HorizonYawMin + u * l.horizonWidthDeg;
+                float fade = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(Mathf.Min(yaw - l.HorizonYawMin, l.HorizonYawMax - yaw) / l.horizonEndFadeDeg));
+                Vector3 dir = new Vector3(Mathf.Sin(yaw * Mathf.Deg2Rad), 0f, Mathf.Cos(yaw * Mathf.Deg2Rad));
+                b.Add(eye + dir * radius + Vector3.up * top, new Vector2(u, 1f), new Color(1f, 1f, 1f, fade));
+                b.Add(eye + dir * radius + Vector3.up * bottom, new Vector2(u, 0f), new Color(1f, 1f, 1f, fade));
+            }
+            for (int s = 0; s < Seg; s++)
+            {
+                int t0 = s * 2, b0 = t0 + 1, t1 = t0 + 2, b1 = t0 + 3;
+                Vector3 inward = eye - (b.v[t0] + b.v[t1]) * 0.5f; inward.y = 0f;
+                b.Tri(t0, t1, b1, inward);
+                b.Tri(t0, b1, b0, inward);
+            }
+            return b.Build("SN_Horizon");
+        }
+
+        /// <summary>A point on the painted horizon from its (u, v from the top), moved `inset` metres toward the seat.</summary>
+        public static Vector3 OnHorizon(SN_Layout l, float skyRadius, float u, float vFromTop, float inset)
+        {
+            HorizonFrame(l, skyRadius, out float radius, out float top, out float bottom);
+            float yaw = (l.HorizonYawMin + u * l.horizonWidthDeg) * Mathf.Deg2Rad;
+            Vector3 dir = new Vector3(Mathf.Sin(yaw), 0f, Mathf.Cos(yaw));
+            return l.SeatEye + dir * (radius - inset) + Vector3.up * Mathf.Lerp(top, bottom, vFromTop);
+        }
+
+        /// <summary>A few soft glow sprites over the painted village's brightest windows (villageGlowSprites), facing the seat.</summary>
+        public static Mesh VillageGlow(SN_Layout l, float skyRadius)
+        {
+            var b = new Builder();
+            Vector3 eye = l.SeatEye;
+            foreach (var g in l.villageGlowSprites)
+            {
+                Vector3 c = OnHorizon(l, skyRadius, g.x, g.y, 1.5f);
+                Vector3 f = (c - eye).normalized, right = Vector3.Cross(Vector3.up, f).normalized, up = Vector3.Cross(f, right);
+                float s = (c - eye).magnitude * Mathf.Tan(l.villageGlowSpriteDeg * 0.5f * Mathf.Deg2Rad) * Mathf.Lerp(0.6f, 1f, g.z / 0.522f);
+                var col = new Color(1f, 1f, 1f, Mathf.Clamp01(0.35f + g.z));
+                int a = b.Add(c + (-right - up) * s, new Vector2(0, 0), col);
+                int bb = b.Add(c + (right - up) * s, new Vector2(1, 0), col);
+                int cc = b.Add(c + (right + up) * s, new Vector2(1, 1), col);
+                int d = b.Add(c + (-right + up) * s, new Vector2(0, 1), col);
+                b.Tri(a, bb, cc, -f);
+                b.Tri(a, cc, d, -f);
+            }
+            return b.Build("SN_VillageGlow");
+        }
+
+        /// <summary>One mist layer: a flat annulus round the hill (y = 0 at mistInnerRadius, rising mistRise per metre
+        /// outward), UVs in world metres / mistTileMetres, alpha fading in from the inner edge and out at the outer one.</summary>
+        public static Mesh MistLayer(SN_Layout l)
+        {
+            const int Seg = 72, Rings = 8;
+            var b = new Builder();
+            for (int i = 0; i <= Rings; i++)
+            {
+                float t = i / (float)Rings;
+                float r = Mathf.Lerp(l.mistInnerRadius, l.mistOuterRadius, t * t);   // denser rings near the hill
+                float a = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((r - l.mistInnerRadius) / 4f)) * Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((l.mistOuterRadius - r) / (0.35f * l.mistOuterRadius)));
+                for (int s = 0; s < Seg; s++)
+                {
+                    float ang = s * 2f * Mathf.PI / Seg;
+                    var p = new Vector3(Mathf.Sin(ang) * r, (r - l.mistInnerRadius) * l.mistRise, Mathf.Cos(ang) * r);
+                    b.Add(p, new Vector2(p.x, p.z) / l.mistTileMetres, new Color(1f, 1f, 1f, a));
+                }
+            }
+            for (int i = 0; i < Rings; i++)
+                for (int s = 0; s < Seg; s++)
+                {
+                    int a = i * Seg + s, a2 = i * Seg + (s + 1) % Seg, c = a + Seg, c2 = a2 + Seg;
+                    b.Tri(a, c, c2, Vector3.up);
+                    b.Tri(a, c2, a2, Vector3.up);
+                }
+            return b.Build("SN_MistLayer");
+        }
+
+        [System.Serializable] class FlowerAtlas { public Clump[] clumps; }
+        [System.Serializable] class Clump { public float[] uv_min, uv_max; public float aspect_w_over_h; }
+
         /// <summary>
-        /// The swirl mask, in the sky panel's UV space (u: yaw -panelYaw..+panelYaw; v: pitch panelPitchMin..Max, row 0 at
+        /// The flowers: flowerClusters crossed-card clusters (two quads at right angles, a clump from SN_Flowers.png's
+        /// atlas each, flowers_atlas.json), placed with a fixed seed: denser round the rock, the lantern and the path's
+        /// edges; none on the path, the seat, the rock or Vincent's spot. Normals point up so both faces light alike.
+        /// </summary>
+        public static Mesh Flowers(SN_Layout l, string atlasJson)
+        {
+            var atlas = JsonUtility.FromJson<FlowerAtlas>(atlasJson);
+            var rnd = new System.Random(l.flowerSeed);
+            float R() => (float)rnd.NextDouble();
+            var line = PathLine(l);
+            var b = new Builder();
+            int placed = 0, tries = 0;
+            var spots = new List<Vector2>();
+            while (placed < l.flowerClusters && tries < 20000)
+            {
+                tries++;
+                float ang = R() * 2f * Mathf.PI, rad = Mathf.Sqrt(R()) * l.flowerAreaRadius;
+                var q = new Vector2(Mathf.Sin(ang) * rad, Mathf.Cos(ang) * rad);
+                float dPath = DistanceToLine(line, q);
+                float dRock = Mathf.Max(Mathf.Abs(q.x) - l.rockFootprint.x * 0.5f, Mathf.Abs(q.y) - l.rockFootprint.y * 0.5f);
+                float dLantern = (q - new Vector2(l.lantern.x, l.lantern.z)).magnitude;
+                float dSeat = (q - new Vector2(l.playerSeat.x, l.playerSeat.z)).magnitude;
+                float dVincent = (q - new Vector2(l.vincentStand.x, l.vincentStand.z)).magnitude;
+                float dStart = (q - new Vector2(l.playerStart.x, l.playerStart.z)).magnitude;
+                if (dPath < l.pathWidth * 0.5f + 0.12f || dRock < 0.06f || dLantern < 0.22f || dSeat < 0.75f || dVincent < 0.45f || dStart < 0.8f) continue;
+                bool tooClose = false;
+                foreach (var o in spots) if ((o - q).sqrMagnitude < 0.3f * 0.3f) { tooClose = true; break; }
+                if (tooClose) continue;
+                // denser near the rock, the lantern and the path's edges; sparse elsewhere
+                float near = Mathf.Max(Mathf.Max(Bump(dRock, 0.06f, 0.6f), Bump(dLantern, 0.22f, 0.9f)), Bump(dPath - l.pathWidth * 0.5f, 0.12f, 0.6f));
+                if (R() > 0.12f + 0.88f * near) continue;
+                spots.Add(q);
+                placed++;
+                var clump = atlas.clumps[rnd.Next(atlas.clumps.Length)];
+                float w = Mathf.Lerp(l.flowerWidth.x, l.flowerWidth.y, R()), h = w / clump.aspect_w_over_h;
+                float yaw = R() * 180f;
+                var tint = Color.Lerp(new Color(0.85f, 0.88f, 0.92f, 1f), Color.white, R());
+                Vector3 baseP = new Vector3(q.x, l.GroundHeight(q.x, q.y) - 0.02f, q.y);
+                for (int k = 0; k < 2; k++)
+                {
+                    Vector3 side = Quaternion.Euler(0f, yaw + 90f * k, 0f) * Vector3.right * (w * 0.5f);
+                    int a = b.Add(baseP - side, new Vector2(clump.uv_min[0], clump.uv_min[1]), tint);
+                    int c = b.Add(baseP + side, new Vector2(clump.uv_max[0], clump.uv_min[1]), tint);
+                    int d = b.Add(baseP + side + Vector3.up * h, new Vector2(clump.uv_max[0], clump.uv_max[1]), tint);
+                    int e = b.Add(baseP - side + Vector3.up * h, new Vector2(clump.uv_min[0], clump.uv_max[1]), tint);
+                    for (int n = 0; n < 4; n++) b.normals.Add(Vector3.up);
+                    Vector3 facing = Vector3.Cross(side, Vector3.up);
+                    b.Tri(a, c, d, facing);
+                    b.Tri(a, d, e, facing);
+                }
+            }
+            if (placed < l.flowerClusters) Debug.LogWarning($"[SN Setup] Flowers: placed {placed} of {l.flowerClusters}");
+            return b.Build("SN_Flowers");
+        }
+
+        static float Bump(float d, float from, float width) => 1f - Mathf.Clamp01((d - from) / width);
+
+        static List<Vector2> PathLine(SN_Layout l)
+        {
+            var pts = l.pathPoints;
+            var line = new List<Vector2>();
+            for (int i = 0; i < pts.Length - 1; i++)
+                for (int k = 0; k < 10; k++)
+                    line.Add(CatmullRom(pts[Mathf.Max(i - 1, 0)], pts[i], pts[i + 1], pts[Mathf.Min(i + 2, pts.Length - 1)], k / 10f));
+            line.Add(pts[pts.Length - 1]);
+            return line;
+        }
+
+        static float DistanceToLine(List<Vector2> line, Vector2 q)
+        {
+            float best = float.MaxValue;
+            for (int i = 0; i < line.Count - 1; i++)
+            {
+                Vector2 a = line[i], ab = line[i + 1] - a;
+                float t = Mathf.Clamp01(Vector2.Dot(q - a, ab) / Mathf.Max(ab.sqrMagnitude, 1e-6f));
+                best = Mathf.Min(best, (a + ab * t - q).magnitude);
+            }
+            return best;
+        }
+
+        /// <summary>
+        /// The swirl mask, in the sky panel's UV space (u: yaw panelYawCentre -+ panelYaw; v: pitch panelPitchMin..Max, row 0 at
         /// the bottom): G = 1 inside the band round the guide path (soft edge, half-width swirlBandHalfWidth degrees),
         /// R = the position along the path (0..1, as SN_Guide counts it); both 0 outside the band.
         /// </summary>
@@ -264,7 +411,7 @@ namespace InnerFrame.StarryNight.EditorTools
                 float cosP = Mathf.Cos(pitch * Mathf.Deg2Rad);
                 for (int x = 0; x < width; x++)
                 {
-                    float yaw = Mathf.Lerp(-l.panelYaw, l.panelYaw, (x + 0.5f) / width);
+                    float yaw = Mathf.Lerp(l.panelYawCentre - l.panelYaw, l.panelYawCentre + l.panelYaw, (x + 0.5f) / width);
                     float best = float.MaxValue, bestParam = 0f;
                     for (int i = 0; i < curve.Count - 1; i++)
                     {

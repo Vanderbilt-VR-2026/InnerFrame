@@ -1,9 +1,12 @@
 // The Starry Night's sky dome: an inverted sphere round the hill, drawn behind everything (Background queue, no depth
-// write). Unlit, URP, single-pass instanced stereo safe. A night gradient (optionally a night texture); the painting
-// (_PaintTex) mapped cylindrically onto the front panel (yaw -_PanelYaw..+_PanelYaw round +Z, pitch _PanelPitchMin..
-// _PanelPitchMax) with soft edges; _Paint reveals it outside the swirl band; the band (_SwirlMask: R = position along the
-// wind's path 0..1, G = inside the band, black outside) is revealed along the path by _SwirlProgress; _Dawn blends to a
-// dawn gradient, deep blue overhead to pale yellow-green at the horizon.
+// write). Unlit, URP, single-pass instanced stereo safe. Directions are taken from the seat's eye (_SeatEye), so the
+// mapping below is exact from there. The night: _NightTex round the whole dome (u = (yaw + 90) / 180 with the texture's
+// Mirror wrap: a mirrored repeat in yaw, the mirror lines at the sides; v = pitch from _NightPitchMin to the zenith),
+// over a gradient (_NightTexAmount blends them). The painting (_PaintTex) is mapped cylindrically onto a panel centred
+// on _PanelYawCentre (yaw _PanelYawCentre +- _PanelYaw, pitch _PanelPitchMin.._PanelPitchMax), with soft edges; _Paint
+// reveals it outside the swirl band; the band (_SwirlMask, in the panel's UV: R = position along the wind's path 0..1,
+// G = inside the band, black outside) is revealed along the path by _SwirlProgress; _Dawn blends to a dawn gradient,
+// deep blue overhead to pale yellow-green at the horizon.
 Shader "InnerFrame/StarryNight/Sky"
 {
     Properties
@@ -11,17 +14,20 @@ Shader "InnerFrame/StarryNight/Sky"
         _NightTop ("Night, overhead", Color) = (0.03, 0.07, 0.2, 1)
         _NightHorizon ("Night, at the horizon", Color) = (0.09, 0.19, 0.4, 1)
         _Below ("Below the horizon", Color) = (0.05, 0.08, 0.17, 1)
-        _NightTex ("Night texture (optional, equirectangular)", 2D) = "black" {}
-        _NightTexAmount ("Night texture amount", Range(0, 1)) = 0
+        _NightTex ("Night texture (mirrored in yaw)", 2D) = "black" {}
+        _NightTexAmount ("Night texture amount", Range(0, 1)) = 1
+        _NightPitchMin ("Night texture's bottom edge (degrees)", Float) = -10
         _PaintTex ("Painted sky", 2D) = "black" {}
         _Paint ("Paint (outside the swirl band)", Range(0, 1)) = 0
         _SwirlMask ("Swirl mask (R position, G band)", 2D) = "black" {}
         _SwirlProgress ("Swirl progress", Range(0, 1)) = 0
         _SwirlEdge ("Swirl leading edge", Range(0.005, 0.2)) = 0.04
+        _PanelYawCentre ("Panel centre (yaw, degrees)", Float) = 0
         _PanelYaw ("Panel half-width (degrees)", Float) = 80
         _PanelPitchMin ("Panel bottom (degrees)", Float) = -5
         _PanelPitchMax ("Panel top (degrees)", Float) = 70
         _PanelSoft ("Panel soft edge (degrees)", Float) = 8
+        _SeatEye ("Seat eye (world)", Vector) = (0, 1.28, 0, 0)
         _Dawn ("Dawn", Range(0, 1)) = 0
         _DawnTop ("Dawn, overhead", Color) = (0.13, 0.27, 0.56, 1)
         _DawnHorizon ("Dawn, at the horizon", Color) = (0.85, 0.88, 0.64, 1)
@@ -49,9 +55,9 @@ Shader "InnerFrame/StarryNight/Sky"
 
             CBUFFER_START(UnityPerMaterial)
                 half4 _NightTop, _NightHorizon, _Below, _DawnTop, _DawnHorizon;
-                float4 _NightTex_ST, _PaintTex_ST, _SwirlMask_ST;
+                float4 _NightTex_ST, _PaintTex_ST, _SwirlMask_ST, _SeatEye;
                 half _NightTexAmount, _Paint, _SwirlProgress, _SwirlEdge, _Dawn, _DawnKeep;
-                float _PanelYaw, _PanelPitchMin, _PanelPitchMax, _PanelSoft;
+                float _NightPitchMin, _PanelYawCentre, _PanelYaw, _PanelPitchMin, _PanelPitchMax, _PanelSoft;
             CBUFFER_END
 
             struct Attributes
@@ -63,7 +69,7 @@ Shader "InnerFrame/StarryNight/Sky"
             struct Varyings
             {
                 float4 positionCS : SV_POSITION;
-                float3 dirOS : TEXCOORD0;
+                float3 dirWS : TEXCOORD0;
                 UNITY_VERTEX_OUTPUT_STEREO
             };
 
@@ -72,27 +78,30 @@ Shader "InnerFrame/StarryNight/Sky"
                 Varyings o;
                 UNITY_SETUP_INSTANCE_ID(v);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
-                o.positionCS = TransformObjectToHClip(v.positionOS.xyz);
-                o.dirOS = v.positionOS.xyz;   // the dome is centred on the hill and never rotated
+                float3 positionWS = TransformObjectToWorld(v.positionOS.xyz);
+                o.positionCS = TransformWorldToHClip(positionWS);
+                o.dirWS = positionWS - _SeatEye.xyz;   // seen from the seat
                 return o;
             }
 
             half4 frag(Varyings i) : SV_Target
             {
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
-                float3 d = normalize(i.dirOS);
+                float3 d = normalize(i.dirWS);
                 float yaw = degrees(atan2(d.x, d.z));
                 float pitch = degrees(asin(clamp(d.y, -1.0, 1.0)));
 
                 // the night
                 float up = saturate(d.y);
                 half3 night = lerp(_NightHorizon.rgb, _NightTop.rgb, pow(up, 0.55));
-                float2 eq = float2(yaw / 360.0 + 0.5, pitch / 180.0 + 0.5);
-                night = lerp(night, SAMPLE_TEXTURE2D_LOD(_NightTex, sampler_NightTex, eq, 0).rgb, _NightTexAmount);
+                float2 nuv = float2((yaw + 90.0) / 180.0, saturate((pitch - _NightPitchMin) / (90.0 - _NightPitchMin)));
+                night = lerp(night, SAMPLE_TEXTURE2D_LOD(_NightTex, sampler_NightTex, nuv, 0).rgb, _NightTexAmount);
                 night = lerp(night, _Below.rgb, saturate(-d.y * 4.0));
 
-                // the painting on the front panel
-                float2 uv = float2((yaw + _PanelYaw) / (2.0 * _PanelYaw), (pitch - _PanelPitchMin) / (_PanelPitchMax - _PanelPitchMin));
+                // the painting on its panel
+                float dyaw = yaw - _PanelYawCentre;
+                dyaw -= 360.0 * floor((dyaw + 180.0) / 360.0);
+                float2 uv = float2((dyaw + _PanelYaw) / (2.0 * _PanelYaw), (pitch - _PanelPitchMin) / (_PanelPitchMax - _PanelPitchMin));
                 float2 soft = float2(_PanelSoft / (2.0 * _PanelYaw), _PanelSoft / (_PanelPitchMax - _PanelPitchMin));
                 float edge = smoothstep(0.0, soft.x, uv.x) * smoothstep(0.0, soft.x, 1.0 - uv.x)
                            * smoothstep(0.0, soft.y, uv.y) * smoothstep(0.0, soft.y, 1.0 - uv.y);

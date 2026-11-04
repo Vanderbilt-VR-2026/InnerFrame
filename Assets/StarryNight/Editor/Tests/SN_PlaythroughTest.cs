@@ -129,7 +129,16 @@ namespace InnerFrame.StarryNight.EditorTools
             Step(w, L.sketchHoldSeconds + 0.3f);
             Check(w.game.LetterFound, "sketchbook held up toward the valley for 1.5 s -> letter found (L10)");
             w.game.sketchbook.ReleaseFallback();
-            Step(w, 5f);
+            // the letter is a side event: once L10 is over, the Stars hint is still shown and the idle repeat still fires
+            for (int guard = 0; w.game.voice.Busy && guard < 600; guard++) Step(w, Dt);
+            Check(w.game.State == SN_State.Stars && w.game.ui.hint.Line == SN_Game.HintFor(SN_State.Stars),
+                $"letter during Stars: after L10 the hint is the Stars hint (\"{w.game.ui.hint.Line}\")");
+            var repeated = new List<string>();
+            Action<string, float> onRepeat = (id, d) => repeated.Add(id);
+            w.game.voice.LineStarted += onRepeat;
+            Step(w, L.idleRepeatSeconds + 2f);
+            w.game.voice.LineStarted -= onRepeat;
+            Check(repeated.Contains("L05"), "after the letter, nothing for 25 s -> he repeats L05 (still naming N2)");
             WakeByName(w, "N2");
             Check(w.game.NamedProgress == 2, "N2 woken -> Vincent names N3 (L06)");
             Step(w, 4.5f);
@@ -228,8 +237,7 @@ namespace InnerFrame.StarryNight.EditorTools
         static void LanternBeforeSitting()
         {
             var w = NewWorld("E lantern down before sitting");
-            WalkTo(w, new Vector3(-0.8f, 0f, -1.8f));   // round the left of the rock, away from the player seat
-            WalkTo(w, new Vector3(-0.4f, 0f, 1.3f));
+            WalkTo(w, new Vector3(1.35f, 0f, -0.4f));   // beside the lantern, outside the player seat
             Check(w.game.State == SN_State.Sit && Vector2.Distance(new Vector2(w.head.position.x, w.head.position.z), new Vector2(w.L.playerSeat.x, w.L.playerSeat.z)) > w.L.playerSeatRadius,
                 "near the lantern, not in the seat: Sit");
             LookAt(w, w.game.lantern.transform.position);
@@ -274,7 +282,9 @@ namespace InnerFrame.StarryNight.EditorTools
 
         static void OnState(SN_State s, float t)
         {
-            W($"  t={t,6:F1}  [SN] {s}  (hint: \"{(current != null ? SN_Game.HintFor(s) : "")}\")");
+            // the hint each state sets; a side event (the letter) sets none: the one already shown stays
+            string hint = SN_Game.HintFor(s) ?? (current != null && current.game.ui != null ? "unchanged: " + current.game.ui.hint.Line : "");
+            W($"  t={t,6:F1}  [SN] {s}  (hint: \"{hint}\")");
         }
 
         static void ToStars(World w)

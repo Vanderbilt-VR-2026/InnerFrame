@@ -6,17 +6,22 @@ namespace InnerFrame.StarryNight
     /// <summary>
     /// The world-space canvas that holds the dialogue box and the hint, following the head lazily with XRI's LazyFollow.
     /// LazyFollow follows a gaze anchor this script keeps at the head, turned to the head's yaw and its pitch clamped to
-    /// PitchMin..PitchMax with no roll; the canvas sits Distance ahead of it and BelowGaze lower, stays upright facing the
+    /// PitchMin..PitchMax with no roll; the canvas sits Distance ahead of it and belowGaze degrees lower (SN_Layout.uiBelowGaze,
+    /// set by SN_Bootstrap), stays upright facing the
     /// head, and only moves once the gaze is FollowAfterDegrees away, easing over about half a second. Drawn on top of the
     /// world (UI/Default with unity_GUIZTestMode = Always, set on its material by SN_Setup). Sizes are world metres.
     /// </summary>
     public class SN_UIRoot : MonoBehaviour
     {
-        public const float Distance = 1.6f, BelowGaze = 15f, PitchMin = -30f, PitchMax = 45f;
+        public const float Distance = 1.6f, PitchMin = -30f, PitchMax = 45f;
         public const float FollowAfterDegrees = 20f, EaseSpeed = 6f, TurnThresholdDegrees = 3f;
 
-        /// <summary>Where the canvas sits in the gaze anchor's space.</summary>
-        public static Vector3 Offset => new Vector3(0f, -Distance * Mathf.Sin(BelowGaze * Mathf.Deg2Rad), Distance * Mathf.Cos(BelowGaze * Mathf.Deg2Rad));
+        /// <summary>Degrees below the gaze (SN_Layout.uiBelowGaze; SN_Bootstrap sets it before Init).</summary>
+        public float belowGaze = 22f;
+
+        /// <summary>Where the canvas sits in the gaze anchor's space, for a given angle below the gaze.</summary>
+        public static Vector3 OffsetFor(float belowGaze) => new Vector3(0f, -Distance * Mathf.Sin(belowGaze * Mathf.Deg2Rad), Distance * Mathf.Cos(belowGaze * Mathf.Deg2Rad));
+        public Vector3 Offset => OffsetFor(belowGaze);
         /// <summary>How far the follow point moves when the gaze turns FollowAfterDegrees.</summary>
         public static float FollowAfterMetres => 2f * Distance * Mathf.Sin(FollowAfterDegrees * 0.5f * Mathf.Deg2Rad);
 

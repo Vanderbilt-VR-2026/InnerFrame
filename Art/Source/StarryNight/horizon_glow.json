@@ -1,0 +1,29 @@
+{
+ "source": "horizon.png",
+ "band_rows_in_source": [
+  377,
+  652
+ ],
+ "band_aspect": 5.585,
+ "spire_tip_uv_in_band": [
+  0.6807,
+  0.1782
+ ],
+ "glow_clusters": [
+  {
+   "u": 0.6813,
+   "v_from_top": 0.6091,
+   "strength": 0.522
+  },
+  {
+   "u": 0.7256,
+   "v_from_top": 0.8236,
+   "strength": 0.243
+  },
+  {
+   "u": 0.5889,
+   "v_from_top": 0.7836,
+   "strength": 0.2
+  }
+ ]
+}

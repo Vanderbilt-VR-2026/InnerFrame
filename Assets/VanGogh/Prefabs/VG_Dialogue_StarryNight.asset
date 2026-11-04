@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: VG_Dialogue_StarryNight
   m_EditorClassIdentifier: Assembly-CSharp::VG_DialogueSettings
   distance: 1.6
-  belowGaze: 15
+  belowGaze: 22
   deadZone: 20
   lowestGaze: -30
   highestGaze: 45

@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4d0ce1e54cb594671a93f47f5c68c647, type: 3}
+  m_Name: SN_Lines
+  m_EditorClassIdentifier: Assembly-CSharp::InnerFrame.StarryNight.SN_Lines
+  lines:
+  - id: L01
+    text: Ah, a visitor. Sit with me. The night is just beginning.
+    clip: {fileID: 8300000, guid: 2755512f0fa284b769650ddca460e480, type: 3}
+  - id: L02
+    text: Too much light. Let the stars come.
+    clip: {fileID: 8300000, guid: ad9630325096248e49fdb0c507232f00, type: 3}
+  - id: L03
+    text: There. Now they can find us.
+    clip: {fileID: 8300000, guid: da692fee856c4406ab0bb108cc6b380e, type: 3}
+  - id: L04
+    text: Wake that one for me, above the hills.
+    clip: {fileID: 8300000, guid: 5886b66c28bb14433b95dfe5bd9e9708, type: 3}
+  - id: L05
+    text: Now the one over the church.
+    clip: {fileID: 8300000, guid: bacd378459fd5484bb93a3b870f2a269, type: 3}
+  - id: L06
+    text: And the brightest, just right of the cypress. Do you see it?
+    clip: {fileID: 8300000, guid: 04ca095415aaf42e5b76e0bdf5d548ab, type: 3}
+  - id: L07
+    text: Do you feel the wind? Follow it across the sky.
+    clip: {fileID: 8300000, guid: 2760da9c6303a4dd7ab606092036b3d3, type: 3}
+  - id: L08
+    text: Yes. That is how it moves, when you look long enough.
+    clip: {fileID: 8300000, guid: 580f81d137f0146b0873bf796f120a2d, type: 3}
+  - id: L09
+    text: The morning star is always the last to go. This page is for you.
+    clip: {fileID: 8300000, guid: ed704e4dea27c46e99f151648fa90573, type: 3}
+  - id: L10
+    text: You found my sketch. The hills are right. The sky is not, yet.
+    clip: {fileID: 8300000, guid: 3ee5b270a31254b8e8b0ada896b2597c, type: 3}

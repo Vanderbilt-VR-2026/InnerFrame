@@ -3,11 +3,17 @@ using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEngine.UI;
 
+/// <summary>Box: his words in a dialogue box low in your view, with a hint above it. Sign: the wooden sign over his head.</summary>
+public enum VG_CaptionStyle { Box, Sign }
+
 /// <summary>
-/// Vincent's storybook captions (Cici's concept, 2026-10-27): his words on the wooden sign Cici made with Tripo, baked
-/// flat into a picture (Art/Source/VanGogh/Caption/bake_sign.py), one sentence at a time in time with his voice; and
-/// hints such as "Hold B to ask Vincent" on a small pill. Both turn to face the player's head. SpeechToProxy says what
-/// to show; the sprites and the font come from Resources/VG_Caption, made by VanGoghAssetSetup.
+/// Vincent's captions, one sentence at a time in time with his voice. Box style (the default; Cici's concepts V1-V3,
+/// 2026-11-04): his words in a dark dialogue box with his name on a tab, and a hint above it with the next step, both low
+/// in your view and following your head lazily (VG_FollowGroup, VG_DialogueBox, VG_Hint), drawn over the room. Sign
+/// style (2026-10-27): his words on the wooden sign Cici made with Tripo, baked flat into a picture
+/// (Art/Source/VanGogh/Caption/bake_sign.py), and hints such as "Hold B to ask Vincent" on a small pill, both over his
+/// head and turning to face you. SpeechToProxy says what to show, MirrorScene where you are with the mirror; the sprites
+/// and the font come from Resources/VG_Caption, made by VanGoghAssetSetup.
 /// Sizes are world metres whatever the owner's scale; all of them are guesses until tried on a Quest.
 /// </summary>
 public class VanGoghCaption : MonoBehaviour
@@ -38,12 +44,17 @@ public class VanGoghCaption : MonoBehaviour
     static readonly Color Ink = new Color32(0x40, 0x21, 0x0C, 0xFF), PillText = new Color32(0xE3, 0xC9, 0xA7, 0xFF),
         ButtonLetter = new Color32(0x55, 0x36, 0x1C, 0xFF);   // sampled from the concept
     static readonly Regex SentenceEnd = new Regex(@"(?<=[.!?…])\s+");
+    const float HintWithin = 4f;                   // Box: the hint shows while the player is this close (world metres)
+    const string BedroomTitle = "The Yellow House";   // Box: the hint's title in PaintedBedroom, a placeholder; none in the Gallery
 
     [Tooltip("Set by VanGoghAssetSetup.")] public Sprite signUnlit, signLit, parchment, pill, button;
     [Tooltip("The softly lit bake of the sign (B); off: the unlit one (A).")] public bool lit = true;
     [Tooltip("Set by VanGoghAssetSetup.")] public Font font;
+    [Tooltip("Box: the dialogue box and hint in your view. Sign: the wooden sign and pill over his head.")]
+    public VG_CaptionStyle style = VG_CaptionStyle.Box;
+    [Tooltip("Box style; set by VanGoghAssetSetup.")] public Sprite box, nameTab, hintPlate, star, starRing;
 
-    struct Page { public string text; public int size; public float start, end; }
+    struct Page { public string text; public int size, lines; public float start, end; }
 
     readonly TextGenerator fitter = new TextGenerator();
     readonly List<Page> pages = new List<Page>();
@@ -56,6 +67,14 @@ public class VanGoghCaption : MonoBehaviour
     int page = -1, front;          // the page shown; which label shows it
     float wordsLeft, shown, swapLeft;   // seconds his words still show (infinite while he speaks); since Words(); of the cross-fade
     bool pillShown;
+    Color textColour = Ink;
+    // Box style
+    VG_FollowGroup follow;
+    VG_DialogueBox dialogue;
+    VG_Hint boxHint;
+    MirrorScene mirror;
+    Material onTop;
+    string stateHint, idleHint, idleKey;
 
     /// <summary>Adds a caption to `owner`. Above the anchor (owner space) it stands on it, as over Vincent's head;
     /// below, it hangs from it, as under the portrait's frame.</summary>
@@ -87,13 +106,19 @@ public class VanGoghCaption : MonoBehaviour
         }
         shown = 0f; page = -1; swapLeft = 0f;
         Turn(0);
-        labels[front].color = Ink;   // the first page shows at once
+        labels[front].color = textColour;   // the first page shows at once
         labels[1 - front].gameObject.SetActive(false);
     }
 
     /// <summary>A hint on the pill, with `buttonKey` in a circle on its left; `null` hides the pill.</summary>
     public void Hint(string text, string buttonKey = null)
     {
+        if (style == VG_CaptionStyle.Box)   // shown in BoxHint, after any state and the mirror's step
+        {
+            stateHint = buttonKey == null && !string.IsNullOrEmpty(text) ? text : null;
+            if (buttonKey != null) { idleHint = text; idleKey = buttonKey; }
+            return;
+        }
         pillShown = !string.IsNullOrEmpty(text);
         if (!pillShown) return;
         hint.text = text;
@@ -113,6 +138,7 @@ public class VanGoghCaption : MonoBehaviour
         canvas.renderMode = RenderMode.WorldSpace;
         var talker = GetComponentInParent<SpeechToProxy>();
         voice = talker != null ? talker.voice : null;
+        if (style == VG_CaptionStyle.Box) { BuildBox(); return; }
         float u = UnitsPerMetre, imageWidth = SignWidth / SignRect.width * u;
         wordsPanel = Panel("Words", null, 0f, out wordsGroup);
         wordsPanel.sizeDelta = new Vector2(imageWidth, imageWidth / ImageAspect);
@@ -140,11 +166,38 @@ public class VanGoghCaption : MonoBehaviour
         hint = Label(pillPanel, Size(PillCap), PillText);
     }
 
+    void BuildBox()
+    {
+        follow = new GameObject("Follow", typeof(RectTransform)).AddComponent<VG_FollowGroup>();
+        follow.transform.SetParent(transform, false);
+        onTop = new Material(Canvas.GetDefaultCanvasMaterial());
+        onTop.SetInt("unity_GUIZTestMode", (int)UnityEngine.Rendering.CompareFunction.Always);   // nothing in the room cuts through it
+        dialogue = VG_DialogueBox.Make(follow.transform, "Vincent", font, box, nameTab, starRing, star, onTop);
+        boxHint = VG_Hint.Make(follow.transform, VG_DialogueBox.Above, font, hintPlate, star, button, onTop);
+        labels = dialogue.Labels;
+        textColour = VG_DialogueBox.Cream;
+        textArea = new Vector2(dialogue.TextWidth, 0f);
+        wordsGroup = Hidden(dialogue.gameObject);
+        pillGroup = Hidden(boxHint.gameObject);
+        mirror = GetComponentInParent<MirrorScene>();
+    }
+
+    static CanvasGroup Hidden(GameObject panel)
+    {
+        var group = panel.AddComponent<CanvasGroup>();
+        group.alpha = 0f;
+        panel.SetActive(false);
+        return group;
+    }
+
+    void OnDestroy() { if (onTop != null) Destroy(onTop); }
+
     void Place(Vector3 anchor)
     {
         Build();
         transform.localPosition = anchor;
         transform.localScale = Vector3.one / (UnitsPerMetre * transform.parent.lossyScale.x);
+        if (style == VG_CaptionStyle.Box) return;   // it follows your view instead
         float u = UnitsPerMetre;
         if (anchor.y >= 0f)   // over his head: the pill, then the sign standing above it
         {
@@ -177,20 +230,41 @@ public class VanGoghCaption : MonoBehaviour
             {
                 swapLeft -= dt;
                 float a = 1f - Mathf.Clamp01(swapLeft / PageFade);
-                labels[front].color = new Color(Ink.r, Ink.g, Ink.b, a);
-                labels[1 - front].color = new Color(Ink.r, Ink.g, Ink.b, 1f - a);
-                if (swapLeft <= 0f) labels[1 - front].gameObject.SetActive(false);
+                labels[front].color = new Color(textColour.r, textColour.g, textColour.b, a);
+                labels[1 - front].color = new Color(textColour.r, textColour.g, textColour.b, 1f - a);
+                if (swapLeft <= 0f) { labels[1 - front].gameObject.SetActive(false); if (dialogue != null) dialogue.Lines(pages[page].lines); }
             }
         }
+        if (style == VG_CaptionStyle.Box) BoxHint();
         Fade(wordsGroup, wordsLeft > 0f, dt);
         Fade(pillGroup, pillShown, dt);
+        if (follow != null) follow.enabled = wordsGroup.gameObject.activeSelf || pillGroup.gameObject.activeSelf;   // appears in place
     }
 
-    // Face the player's head; world up stays up.
+    // Box style: shown near its owner (Vincent, the portrait). The line: his state ("Listening…"), else the mirror's
+    // next step, else how to ask him, with the button in its circle.
+    void BoxHint()
+    {
+        var eye = Camera.main;
+        pillShown = eye != null && Vector3.Distance(eye.transform.position, transform.parent.position) <= HintWithin;
+        string title = gameObject.scene.name == "PaintedBedroom" ? BedroomTitle : "";
+        string line = stateHint ?? MirrorHint(mirror != null ? mirror.Now : VG_MirrorStep.None);
+        int at = line == null && idleHint != null ? idleHint.IndexOf($" {idleKey} ") : -1;
+        if (at >= 0) boxHint.Show(title, idleHint.Substring(0, at), idleKey, idleHint.Substring(at + idleKey.Length + 2));
+        else boxHint.Show(title, line ?? idleHint);
+    }
+
+    static string MirrorHint(VG_MirrorStep step) =>
+        step == VG_MirrorStep.Asked ? "Take the mirror off the wall"
+        : step == VG_MirrorStep.HeldOutside ? "Hold the mirror up to Vincent"
+        : step == VG_MirrorStep.HeldInside ? "Let go: the mirror stays here"
+        : step == VG_MirrorStep.FinishedAway ? "Hang the mirror back on the wall" : null;
+
+    // Sign style: face the player's head; world up stays up.
     void LateUpdate()
     {
         var eye = Camera.main;
-        if (eye == null) return;
+        if (eye == null || style == VG_CaptionStyle.Box) return;
         Vector3 away = transform.position - eye.transform.position;   // a canvas reads looking along its forward
         if (away.sqrMagnitude > 1e-4f) transform.rotation = Quaternion.LookRotation(away, Vector3.up);
     }
@@ -209,8 +283,11 @@ public class VanGoghCaption : MonoBehaviour
         labels[front].gameObject.SetActive(true);
         labels[front].fontSize = pages[to].size;
         labels[front].text = pages[to].text;
-        labels[front].color = new Color(Ink.r, Ink.g, Ink.b, 0f);
+        labels[front].color = new Color(textColour.r, textColour.g, textColour.b, 0f);
         swapLeft = PageFade;
+        if (dialogue == null) return;
+        dialogue.More = to < pages.Count - 1;
+        dialogue.Lines(Mathf.Max(pages[to].lines, page > 0 && to > 0 ? pages[to - 1].lines : 0));   // the page fading out fits too
     }
 
     // Sentences, after . ! ? or … and a space; one shorter than ShortPage words joins the next.
@@ -228,18 +305,21 @@ public class VanGoghCaption : MonoBehaviour
         return list;
     }
 
-    // A sentence becomes a page at the largest size, down to the minimum, that keeps it to two lines; then a third line
-    // at the size that fits the panel; then it splits at the comma (or the space) nearest its middle.
+    // Sign: a sentence becomes a page at the largest size, down to the minimum, that keeps it to two lines; then a third
+    // line at the size that fits the panel. Box: one size, up to three lines. Then it splits at the comma (or the space)
+    // nearest its middle.
     void Fit(string sentence)
     {
-        int size = Size(CapHeight), least = Size(MinCapHeight);
-        while (size > least && Lines(size, sentence) > MaxLines) size -= 2;
-        if (Lines(size, sentence) <= MaxLines) { pages.Add(new Page { text = sentence, size = size }); return; }
-        int third = Mathf.FloorToInt(textArea.y / MostLines / LinePerEm);   // the font size whose three lines fill the panel
-        if (Lines(third, sentence) <= MostLines) { pages.Add(new Page { text = sentence, size = third }); return; }
+        bool inBox = style == VG_CaptionStyle.Box;
+        int size = inBox ? VG_UI.FontSize(VG_DialogueBox.Cap) : Size(CapHeight), least = inBox ? size : Size(MinCapHeight);
+        int most = inBox ? VG_DialogueBox.MostLines : MaxLines;
+        while (size > least && Lines(size, sentence) > most) size -= 2;
+        if (Lines(size, sentence) <= most) { pages.Add(new Page { text = sentence, size = size, lines = Lines(size, sentence) }); return; }
+        int third = inBox ? size : Mathf.FloorToInt(textArea.y / MostLines / LinePerEm);   // the font size whose three lines fill the panel
+        if (!inBox && Lines(third, sentence) <= MostLines) { pages.Add(new Page { text = sentence, size = third, lines = MostLines }); return; }
         int at = Nearest(sentence, ", ");
         if (at < 0) at = Nearest(sentence, " ");
-        if (at < 0) { pages.Add(new Page { text = sentence, size = third }); return; }
+        if (at < 0) { pages.Add(new Page { text = sentence, size = third, lines = Lines(third, sentence) }); return; }
         Fit(sentence.Substring(0, at + 1).TrimEnd());
         Fit(sentence.Substring(at + 1).TrimStart());
     }

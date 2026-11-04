@@ -31,7 +31,38 @@ October 1888, text-to-speech), and his answer plays from the portrait.
     unchanged. The scripts take the exported GLB as their argument; the licence of these two models for the public repo
     is not yet confirmed (see `docs/ASSETS.md`).
 - Why B and not A: A is already bound to XRI's Jump on the right hand.
-- **Captions** (storybook style, from Cici's concept): `Scripts/VanGoghCaption.cs`, made by `SpeechToProxy`.
+- **Captions:** `Scripts/VanGoghCaption.cs`, made by `SpeechToProxy`, in one of two styles, chosen by the `style` field
+  on `Resources/VG_Caption` (the asset tool sets **Box**; switch back to **Sign** with that one field).
+- **Box style** (the default, from Cici's concepts V1–V3, 2026-11-04; after the 11/03 playtest found the sign and the
+  pill too easy to miss and VR text too small):
+  - His words sit in a dark dialogue box low in your view: night blue at 88 % with a 4 mm chrome-yellow border, his
+    name on a tab centred on that border at the left (a star in a thin circle, then *Vincent*; opaque, drawn over the
+    border), the words in cream, left-aligned, 3.2 cm capitals, up to three lines. The words start one capital height
+    below the tab (the top padding is computed from the tab's size). A small star in its bottom-right corner pulses
+    while more pages follow.
+  - Just above its left end, a hint: a small star, the title (*The Yellow House* in the Painted Bedroom, a placeholder;
+    none at the Gallery portrait), and one instruction line on a clean, softly edged plate, 2 cm above the tab. The
+    plate is the box's night blue at "70 %" as the concept composites it (in sRGB); the project blends in linear space,
+    where that takes 85 % (`plate_alpha` in the sprite script), else it reads grey over light things. The line
+    shows, first, his state (*Listening…*, *Vincent is thinking…*, *Vincent can't hear you right now*, or who else is
+    asking); else the mirror's next step (*Take the mirror off the wall*, *Hold the mirror up to Vincent*, *Let go: the
+    mirror stays here*, *Hang the mirror back on the wall*, from `MirrorScene.Now`); else *Hold (B) to ask Vincent*
+    with the B in its circle (T in the Editor).
+  - The hint shows within 4 m of Vincent or the portrait; the box whenever he speaks. Both fade over 0.2 s.
+  - Both hang 1.3 m ahead of your eyes, 15° below your gaze (`VG_FollowGroup`). They stay put until your gaze is 20°
+    away, then ease after it (98 % in 0.5 s); they follow pitch between −30° and +45° of gaze and stay upright. When they
+    appear they're already in place. Sizes are world metres: 0.95 m wide is about 40° at 1.3 m whatever the rig's scale.
+  - They are drawn over the room (a UI material with `unity_GUIZTestMode` = Always), so the easel or the chair never cut
+    through them. Something nearer than 1.3 m (the easel, his palette, the mirror you hold) is still drawn behind them:
+    judge on the Quest whether that feels wrong.
+  - Pages, timing and fades are the same rules as the sign's (below), at one size: a sentence that needs more than three
+    lines splits at the comma nearest its middle.
+  - Code: `Scripts/UI/` (`VG_FollowGroup`, `VG_DialogueBox`, `VG_Hint`, `VG_UI`). They know nothing about Vincent or the
+    mirror, so they can move to a shared folder; `VanGoghCaption` tells them what to show.
+  - Sprites: `VG_Box.png`, `VG_NameTab.png`, `VG_HintPlate.png` (9-slice, 64 px borders), `VG_Star.png`,
+    `VG_StarRing.png`, drawn by `Art/Source/VanGogh/make_box_sprites.py` (Pillow); the asset tool imports them (borders,
+    mipmaps, max 1024). The key circle is the sign's `VG_Caption_Button.png`.
+- **Sign style** (2026-10-27, storybook style, from Cici's concept):
   - His words, scripted lines and AI answers alike, appear on the wooden sign Cici made with Tripo, baked flat into a
     picture (`Art/Source/VanGogh/Caption/bake_sign.py` renders its front twice: `VG_Sign_A.png` unlit, `VG_Sign_B.png`
     softly lit, the default; `sign_rect.json` says where its parchment panel is). The sign is a fixed 1.00 m wide, so his
@@ -254,7 +285,9 @@ On the desktop the mirror counts as held once it has left the wall, not at the c
    - that the outlines read against the blue walls, and don't shimmer;
    - that letting go near him parks it beside the canvas (it shouldn't drift or jitter), and far away hangs it back;
    - that B works while he paints;
-   - that his words show in full, and whether the caption's size and sharpness feel right.
+   - that his words show in full, and whether the dialogue box's size and sharpness feel right (text, border, plate);
+   - that the box and hint follow your head calmly (no swimming while you look around a little), and how it feels when
+     the easel or the mirror is nearer than the box but drawn behind it.
 
 ## Vincent feels alive (Painted Bedroom)
 

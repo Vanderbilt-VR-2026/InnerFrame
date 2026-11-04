@@ -33,6 +33,8 @@ public static class VanGoghAssetSetup
     const string SignUnlit = CaptionUI + "VG_Sign_A.png", SignLit = CaptionUI + "VG_Sign_B.png";   // from Art/Source/VanGogh/Caption/bake_sign.py
     // the 9-slice borders drawn by make_caption_sprites.py (PARCHMENT_BORDER, PILL_H / 2)
     const int ParchmentBorderPixels = 96, PillBorderPixels = 64;
+    // the dialogue box's sprites, from Art/Source/VanGogh/make_box_sprites.py (SLICE)
+    const int BoxBorderPixels = 64;
     const string OutlineMaterial = CaptionUI + "VG_Outline.mat";   // the mirror's outlines (VG_MirrorOutline)
     static readonly Color Chrome = new Color32(0xE9, 0xC1, 0x4A, 0xFF);
     const float VincentHeight = 1.70f;
@@ -105,7 +107,7 @@ public static class VanGoghAssetSetup
         return AssetDatabase.LoadAssetAtPath<Sprite>(path);
     }
 
-    // Resources/VG_Caption: VanGoghCaption with its sprites and font; it builds the panels itself at runtime.
+    // Resources/VG_Caption: VanGoghCaption with its sprites and font, in Box style; it builds the panels itself at runtime.
     static void BuildCaption()
     {
         var root = new GameObject("VG_Caption", typeof(RectTransform));
@@ -117,6 +119,12 @@ public static class VanGoghAssetSetup
         caption.pill = ImportSprite(CaptionUI + "VG_Caption_Pill.png", PillBorderPixels);
         caption.button = ImportSprite(CaptionUI + "VG_Caption_Button.png", 0);
         caption.font = AssetDatabase.LoadAssetAtPath<Font>(CaptionFont);
+        caption.style = VG_CaptionStyle.Box;
+        caption.box = ImportSprite(CaptionUI + "VG_Box.png", BoxBorderPixels);
+        caption.nameTab = ImportSprite(CaptionUI + "VG_NameTab.png", BoxBorderPixels);
+        caption.hintPlate = ImportSprite(CaptionUI + "VG_HintPlate.png", BoxBorderPixels);
+        caption.star = ImportSprite(CaptionUI + "VG_Star.png", 0);
+        caption.starRing = ImportSprite(CaptionUI + "VG_StarRing.png", 0);
         PrefabUtility.SaveAsPrefabAsset(root, CaptionPrefab);
         Object.DestroyImmediate(root);
     }

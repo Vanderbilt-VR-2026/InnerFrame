@@ -40,6 +40,8 @@ namespace InnerFrame.StarryNight
         public SN_Lantern lantern;
         public SN_Grabbable lanternGrab, sketchbook, page;
         public Transform vincent;
+        [Tooltip("Vincent v2's body (look, point, talk, stand): stepped here, after the voice and the box.")]
+        public SN_VincentDriver vincentDriver;
         public SN_Voice voice;
         [Tooltip("The shared dialogue box and hint (VG_DialogueUI, the StarryNight settings); stepped here, not by itself.")]
         public VG_DialogueUI ui;
@@ -102,7 +104,8 @@ namespace InnerFrame.StarryNight
             if (lantern.IsDown && !lanternDown) OnLanternDown();
 
             // walking up, sitting down
-            if (State == SN_State.Arrive && Flat(hp - vincent.position) <= layout.arriveDistance) { voice.Say("L01"); Enter(SN_State.Sit); }
+            // within arriveDistance of where he stood until step 3 (vincentStand): seated on the rock, he greets you at the same place
+            if (State == SN_State.Arrive && Flat(hp - layout.vincentStand) <= layout.arriveDistance) { voice.Say("L01"); Enter(SN_State.Sit); }
             if (State == SN_State.Sit && Flat(hp - layout.playerSeat) <= layout.playerSeatRadius) { voice.Say("L02"); Enter(SN_State.Lantern); }
 
             // the stars: any visible star can be woken; the named ones move the story on only in order
@@ -179,6 +182,7 @@ namespace InnerFrame.StarryNight
             if (beam != null) beam.Step(dt);
             voice.Step(dt);
             if (ui != null) ui.Step(dt);   // pages and fades (its autoStep is off: the game's clock drives it)
+            if (vincentDriver != null) vincentDriver.Step(dt, head);   // his body follows the words and the story
         }
 
         void OnLanternDown()

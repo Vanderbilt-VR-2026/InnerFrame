@@ -1,4 +1,4 @@
-# The Starry Night (step 4b: the look pass)
+# The Starry Night (step 3: Vincent v2)
 
 Owner: Cici (Sprint 4). A small hilltop above Saint-Rémy at night. Vincent sits by a rock with a lantern and his
 sketchbook; one cypress; a village far below; a huge sky. **The sky is the game:** it starts as a real night and turns
@@ -7,7 +7,7 @@ early is accepted.
 
 Step 2 made it playable with placeholders; step 4 (2026-11-04) is the first art pass: the gameplay, states, timings and
 lines are unchanged; the seat moved, the sky was re-aimed from it, and most placeholders were replaced by name (see
-"What is made of what" below). Vincent is still the standing placeholder.
+"What is made of what" below).
 
 Step 4b (2026-11-04, after #135) changed two things, again with the gameplay, states, timings and lines unchanged:
 - **The shared dialogue box.** Vincent's words and the hint now use `VG_DialogueUI`, as in every scene (see Controls).
@@ -26,6 +26,12 @@ budget, the bushes, the clouds, the props and the far ridge. It found two of the
 the most transparent renderers was 36, not 35 (the guide and the beam during the wind; the lantern's two flame quads are
 now one mesh), and the far ridge was only held under the painted strip over its faded ends, measured from the hill's
 centre (now from the seat eye, and 12° past the ends too).
+
+Step 3 (2026-11-04, after the checks): **Vincent v2**, Mixamo's rig of Cici's Tripo model, sits on the rock, talks
+while his words are in the box, looks at you, at the star he names, at the wind's next dot and at the morning star,
+points his charcoal at each named star, and stands up at dawn (see "Vincent"). The rock is raised to his clip's seat;
+the page and the sketchbook moved round him; the charcoal is in his hand. The gameplay, states, timings and lines are
+unchanged: the playthrough's log is byte-identical.
 
 ## Open and play
 
@@ -116,9 +122,9 @@ NetworkPlayer in the scene, the rig not moved (`Editor/Tests/SN_PlayCheck.cs`).
 |---|---|---|
 | The seat | `SN_PlayerSeat` (0.45, 0, −0.9): Vincent's seat 41.6° to the left, 1.20 m away; the cypress 35.5° left, 4.05 m; the lantern on the grass 0.53 m from the seat, valley side | `SN_Layout` |
 | Cypress | Tripo model, 9,401 triangles, 7 m tall, 1.6 m at its widest (no decimation) | `make_tripo.py` |
-| Rock | Tripo model scaled ×1.457 so its top's area-weighted mean is 0.26 m (1.46 × 0.82 × 0.31 m), with a MeshCollider of its own shape | `make_tripo.py` |
+| Rock | Tripo model scaled ×1.457 across (its top's area-weighted mean 0.26 m), raised ×1.19 in height for Vincent's seat (`SN_Layout.rockHeightScale`): 1.46 × 0.82 × 0.37 m, its top's mean 0.31 m; a MeshCollider of its own shape | `make_tripo.py`, `SN_Layout` |
 | Lantern | base, iron frame, glass (transparent), cap, handle, a wick key that turns as it dims; 628 triangles; the flame two crossed quads in one mesh (`SN_FlameCross`) | `make_props.py`, `SN_MeshGen` |
-| Sketchbook, page, charcoal | the sketchbook open to 120° on one cover, the sketch on its page; a torn page with the sketch; a stick of charcoal by Vincent's seat (all grabbable; each on the rock where its footprint is flat). The page lies 0.73 m from the seat (the look pass); the sketchbook stays 0.96 m away: at its yaw no spot on the rock within 0.75 m is flat enough | `make_props.py`, `sketch-page.png` |
+| Sketchbook, page, charcoal | the sketchbook open to 120° on one cover, the sketch on its page; a torn page with the sketch (both grabbable, on the raised rock, clear of Vincent; placed where physics leaves them asleep and tilted 10° or less): the page 0.73 m from the seat (tilted 8°), the sketchbook at the rock's right end, 0.78 m (no spot within 0.75 m rests; its old spot is under Vincent now); the stick of charcoal in Vincent's right hand (its model only: no physics, not grabbable) | `make_props.py`, `sketch-page.png`, `SN_Layout` |
 | The sky | the night (`sky-night.png`) round the whole dome, mirrored in yaw, from the start; the painting (`sky-painted.png`) on a panel centred at yaw +28°, 112.5° × 75° (pitch −8° to 67°), seen from the seat | `make_textures.py`, `SN_Sky.shader` |
 | The wind's path | Cici's red line along the swirl, 24 points, the 3 at its outer end dropped (inside the panel's soft edge): 21 points from (−14°, 40°) up to 54° and into the swirl's centre at (23°, 31°); the swirl band 8° either side | `make_path.py`, `SN_Layout.guidePath` |
 | Stars | the 12 story stars with painted halos (N3's 5° across, 2.5° clear right of the cypress; the others 3.5°); 150 small stars that twinkle (a third, faint, before the lantern) and 25 medium ones whose halos grow as stars are woken and as the sky is painted: one mesh and one draw call each; a painted moon | `SN_Sky`, `make_textures.py` |
@@ -130,11 +136,13 @@ NetworkPlayer in the scene, the rig not moved (`Editor/Tests/SN_PlayCheck.cs`).
 | Light | a cool blue moonlight (0.55) and the lantern's warm point light (6, range 6.5 m), neither casting shadows (one additional light: within the Mobile quality level's limit); a flat ambient #283355 | `SN_Layout` |
 | Colour grading (off by default) | `SN_Layout.colourGrading`: on, `SN_Bootstrap` adds a global Volume with `SN_Grading.asset` (Color Adjustments: post exposure 0.35, contrast 14, saturation 20, a warm filter) and turns post-processing on for the scene's camera at runtime (the rig prefab is not changed). Off by default until its cost is measured on a Quest | `SN_Setup` (the profile), `SN_Bootstrap` |
 | Dialogue box and hint | the shared `VG_DialogueUI` with `VG_Dialogue_StarryNight` (above) | `Assets/VanGogh` (VanGoghAssetSetup) |
-| Still placeholder | Vincent (the static model, standing past the rock's left end at his Bedroom scale; `SN_VincentSeat` marks where the seated Vincent goes), Vincent's lines (macOS `say`, voice Daniel) | |
+| Vincent | Vincent v2: Cici's Tripo model (10,619 triangles, one 2048² texture), rigged by Mixamo (33 bones, 28 skinned; mitten hands), 1.70 m, sitting on the rock (his root at (−0.17, 0, 0.19), facing the valley); SittingIdle, SittingTalking, SitToStand, BreathingIdle; look and point by Humanoid IK (`SN_VincentDriver`); see "Vincent" | `Models/Vincent` (Mixamo files, unchanged), `make_vincent_texture.py`, `SN_Setup` |
+| Still placeholder | Vincent's lines (macOS `say`, voice Daniel) | |
 
 ## Checks
 
-One command runs every check: the playthrough test, the dialogue box check, the layout check, then the Play-mode check.
+One command runs every check: the playthrough test, the dialogue box check, the layout check, the Vincent check, then the
+Play-mode check.
 It prints one line per check (`[SN Checks] <check>: PASS|FAIL (n passed, m failed); log …`) and a last `[SN Checks] PASS`
 or `FAIL` line, and writes them to `SN_checks_summary.txt` beside the logs.
 
@@ -166,6 +174,20 @@ the code that placed it; each line gives the measured value and the limit, and a
 Positive controls (each must FAIL, on a copy): a bush moved onto the path, a cloud raised 3 m, the page dropped 0.9 m from
 the seat.
 
+The Vincent check (`Editor/Tests/SN_VincentCheck.cs`; Tools > InnerFrame > Starry Night > Run Vincent Check, or
+`-executeMethod InnerFrame.StarryNight.EditorTools.SN_VincentCheck.RunBatch -snLog <file>`) steps his Animator by hand in
+edit mode and measures his bones and his baked skin:
+1. the avatar valid and human; his bind-pose height 1.70 m ± 1 cm;
+2. sitting (SittingIdle 12 frames, SittingTalking 60): no thigh or buttock vertex more than 1.5 cm inside the rock, no gap
+   over 1.5 cm under the hips, the soles within 3 cm of the ground, no lower-leg or foot vertex inside the rock;
+3. Talking on whenever the box speaks, off 1 s after it stops;
+4. 1 s after each look target changes, his head within 15° of it (more for the sketch, looked at with weight 0.6), or, for
+   a target past `vincentLookMaxYaw` (you, about 150° round), turned to that limit;
+5. the charcoal's axis within 10° of N1, N2 and N3 during their lines (positive control: N2 during N1's line fails);
+6. each loop drifts under 1 cm in 20 s; no hip jump over 2 cm at any transition (against the clips' own motion);
+7. after SitToStand: no leg vertex inside the rock, no bush vertex inside him, 0.6 m or more from the player's seat, the
+   soles on the ground (± 3 cm).
+
 ## Headset checklist (team playtest, Thu 11/05)
 
 Install the APK (ask Cici), sit on the floor beside the rock when the hint says so, and note for each: fine, or what's wrong.
@@ -173,12 +195,61 @@ Install the APK (ask Cici), sit on the floor beside the rock when the hint says 
    top edge), 1.6 m away, and moves only once you look more than 20° away: does it follow comfortably, and does it ever
    cover the village or the swirl you're tracing?
 2. **Aiming:** the aim assist is 4°. Can you wake each star he names on the first or second try? Too generous?
-3. **Reach from the seat:** can you take the page (0.73 m from the seat) and the sketchbook (0.96 m) without getting up?
+3. **Reach from the seat:** can you take the page (0.73 m from the seat) and the sketchbook (0.78 m, at the rock's right
+   end) without getting up?
 4. **The halos:** do the woken stars' halos read as painted, and is the morning star (N3) easy to tell from the cypress?
 5. **The mist and the clouds:** does the hill float in a sea of mist and cloud round the rim? Anything flat, doubled or
    popping at the far ridge?
-6. **Frame rate:** watch it through the whole scene with the colour grading off (the default), then once more with
-   `SN_Layout.colourGrading` on (rebuild the APK): 160,500 triangles and 35 transparent renderers at the most.
+6. **Vincent:** does he sit on the rock (no floating, no sinking)? When he speaks, does he turn toward you, and is his
+   head turned far enough (he can turn about 100° of the 150° round to you)? Does the charcoal read as pointing at the
+   star he names (watch N1 over the church and N3 right of the cypress)? Any tearing or creasing at the shoulders,
+   elbows, hips, the jacket's tails, or the neck when he looks back at you? At dawn, does he stand up cleanly in front of
+   the rock?
+7. **Frame rate:** watch it through the whole scene with the colour grading off (the default), then once more with
+   `SN_Layout.colourGrading` on (rebuild the APK): about 161,100 triangles (his 10,619, one skinned mesh) and 35
+   transparent renderers at the most.
+
+## Vincent
+
+What drives him (`SN_VincentDriver` on his Animator's GameObject, stepped by `SN_Game` after the voice and the box;
+every number in `SN_Layout`, the `vincent*` fields):
+- **The controller** (`Prefabs/SN_Vincent.controller`, built by the tool): SittingIdle (the default) and SittingTalking
+  on the bool `Talking` (0.3 s fades); the trigger `Stand` from either into SitToStand (0.25 s), then Standing
+  (BreathingIdle) at its end (0.25 s); the IK pass on. `Talking` follows the box's `IsSpeaking` with a 0.6 s hold, so a
+  pause between sentences doesn't flick him back. `Stand` fires once, when Dawn begins (10 s after L08); root motion is
+  on from then (SitToStand's step forward: 0.30 m).
+- **The look** (Humanoid look-at IK: body 0.15, head 0.8, eyes 0, clamp 0.5; the weight ramps over 0.5 s; the look
+  follows its target as a yaw and a pitch in his frame, about 0.35 s):
+  - Arrive: a point 0.5 m in front of his hips, at weight 0.6, as if sketching;
+  - from L01 through the lantern: your head (the head the box follows);
+  - while he names a star (L04 N1, L05 N2, L06 N3): that star until it's woken, then you;
+  - L10 (the sketch): you; Wind: the guide's next dot; Dawn: the morning star (N3), from L09 you; Done: you.
+  - You sit about 150° round behind his right shoulder. Past about 115° Unity's clamp blends the look out and his head
+    swings back, so the look's yaw is kept within `vincentLookMaxYaw` (100°): he turns his head as far as the clamp lets
+    him toward you, not fully round.
+- **The pointing** (right-hand IK, then the wrist turned so the charcoal points): from the start of each naming line until
+  1 s after it ends or the star is woken, whichever is first; the hand 0.85 of his arm's length from the shoulder toward
+  the star, the elbow hinted out and down; the weight up over 0.4 s, down over 0.5 s. The named stars are 22° (N1), 6°
+  (N2) and 25° (N3) from his facing (a star past 110° would get weight 0.5). His hands are mittens (no index finger), so
+  the charcoal points: in his right hand, its tip out past the fingers (`charcoalInHand`).
+- **The seat rule:** the seat is built to match the clip, not the clip squashed to the seat. At 1.70 m his sitting
+  clips' seat (the lowest thigh or buttock point) is 0.316 m; the rock is raised (×1.19 in height, its width and depth
+  as before) so its surface under his hips is there: 0.8 cm in at the deepest, 0.6 cm gap at the worst, over 72 sitting
+  frames. His root is his centre of mass, the hips 0.12 m behind it. At the art pass's flattest spot (−0.17, 0.12) the
+  seat fit but his shins and feet were inside the rock's front, so his root is at (−0.17, 0.19), facing the valley (yaw 0).
+- **The import** (by the tool): Humanoid, scaled ×1.7008 (the files are in centimetres; Tripo's model is 0.9995 m); the
+  avatar is made from BreathingIdle's skeleton and copied to the character and the other clips, because the character
+  file's own rest pose has the hips' offset along Z (Tripo's Z-up model through Mixamo), and an avatar made from it
+  retargets every clip wrongly. No materials from the FBX (Mixamo's has Metallic 1): `SN_VincentV2.mat` is ours (URP
+  Lit, metallic 0); the texture is copied out of the FBX at 2048² by `make_vincent_texture.py` (no `.fbm` folder).
+- **Skinning:** his `SkinnedMeshRenderer.quality` is Bone4. Under the Mobile quality level (skin weights 2) in the Editor,
+  Auto and Bone4 render the same, and Bone2 differs, so Bone4 changes nothing here; whether the Quest build applies the
+  quality level's 2 is for the headset test. `QualitySettings` is a team setting and is unchanged.
+- **Arrive** is still measured from where the placeholder stood (`SN_Layout.vincentStand`), so the walk-up triggers his
+  greeting at the same place as before; the bushes keep clear of that spot as before.
+- Batch-mode renders (for reports) draw his skin as last skinned, without that frame's IK: draw a `BakeMesh` copy instead.
+
+## Tests
 
 ## Tests
 
@@ -202,9 +273,11 @@ Install the APK (ask Cici), sit on the floor beside the rock when the hint says 
 4. The wind: is the dotted line visible against the night, and does following it feel like painting?
 5. The lantern: grab it by the handle, pull the trigger; does the hill go dark enough for the stars to read?
 6. Sitting: does the seat zone (0.6 m) catch you when you sit down on the floor beside the rock?
-7. Frame rate through the whole scene, especially with the painted sky, the mist layers, the clouds and the bushes
-   (35 transparent renderers at the most, about 160,500 triangles; then once more with `SN_Layout.colourGrading` on).
+7. Frame rate through the whole scene, especially with the painted sky, the mist layers, the clouds, the bushes and
+   Vincent (35 transparent renderers at the most, about 161,100 triangles, one skinned mesh; then once more with
+   `SN_Layout.colourGrading` on).
 8. The art pass: from the seat, do the cypress, Vincent and the valley sit where the concept (G2) has them? Is N3 easy to
-   tell from the cypress? Can you reach the page (0.73 m from the seat) and the sketchbook (0.96 m) without getting up?
+   tell from the cypress? Can you reach the page (0.73 m from the seat) and the sketchbook (0.78 m) without getting up?
 9. The look pass: does the hilltop read lush and the hill float in a sea of cloud? Do the bushes near the seat stay out
    of the way? Does the far ridge read as one line all round, with no doubled hills where the painted strip ends?
+10. Vincent (step 3): see item 6 of the headset checklist above.

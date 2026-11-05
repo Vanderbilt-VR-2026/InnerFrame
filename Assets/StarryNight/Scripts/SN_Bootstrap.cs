@@ -9,7 +9,7 @@ namespace InnerFrame.StarryNight
 {
     /// <summary>
     /// The only thing in StarryNight.unity besides the player rig: at runtime it spawns the hilltop, the rock, the
-    /// cypress, the lantern, the sketchbook, the page, the charcoal, Vincent, the sky and the beam from the prefabs in
+    /// cypress, the lantern, the sketchbook, the page, Vincent (his charcoal in his hand), the sky and the beam from the prefabs in
     /// Assets/StarryNight/Prefabs, and the shared dialogue box (Assets/VanGogh/Prefabs/VG_DialogueUI.prefab with the
     /// VG_Dialogue_StarryNight settings), places them from SN_Layout, and starts SN_Game.
     /// Editor fallback (no XR device): the mouse aims, Space is the trigger, G grabs or releases the nearest grabbable
@@ -122,10 +122,10 @@ namespace InnerFrame.StarryNight
             var village = hill.transform.Find("Village");   // the blockout's window dots: off unless SN_Layout.villageDots
             if (village != null) village.gameObject.SetActive(layout.villageDots);
 
-            var rock = Instantiate(rockPrefab, World);       // SN_Rock.fbx at its own size (make_tripo.py), base on the ground
+            var rock = Instantiate(rockPrefab, World);       // SN_Rock.fbx (make_tripo.py), base on the ground, raised for Vincent's seat
             rock.name = "SN_Rock";
             rock.transform.SetPositionAndRotation(new Vector3(0f, -layout.rockBuried, 0f), Quaternion.identity);
-            rock.transform.localScale = Vector3.one;
+            rock.transform.localScale = new Vector3(1f, layout.rockHeightScale, 1f);
 
             var cypress = Instantiate(cypressPrefab, World);
             cypress.name = "SN_Cypress";
@@ -145,21 +145,27 @@ namespace InnerFrame.StarryNight
             pageGo.name = "SN_Page";
             pageGo.transform.SetPositionAndRotation(layout.page, Quaternion.Euler(0f, -10f, 0f));
 
-            if (charcoalPrefab != null)
-            {
-                var stick = Instantiate(charcoalPrefab, World);
-                stick.name = "SN_Charcoal";
-                stick.transform.SetPositionAndRotation(layout.charcoal, Quaternion.Euler(0f, layout.charcoalYaw, 0f));
-            }
-
+            // Vincent v2 on the rock (step 3); his charcoal in his right hand, physics off (only the stick's model)
             var vincent = Instantiate(vincentPrefab, World);
             vincent.name = "SN_Vincent";
-            vincent.transform.SetPositionAndRotation(layout.OnGround(layout.vincentStand), Quaternion.identity);   // faces +Z
-            vincent.transform.localScale = Vector3.one * layout.vincentScale;
+            vincent.transform.SetPositionAndRotation(layout.OnGround(layout.vincentSeat), Quaternion.Euler(0f, layout.vincentYaw, 0f));
+            vincent.transform.localScale = Vector3.one;
+            var driver = vincent.GetComponentInChildren<SN_VincentDriver>(true);
+            if (driver != null)
+            {
+                driver.layout = layout;
+                driver.Init();
+                var stickModel = charcoalPrefab != null ? charcoalPrefab.transform.Find("Model") : null;
+                if (stickModel != null && driver.RightHand != null)
+                {
+                    var stick = Instantiate(stickModel.gameObject, driver.RightHand);
+                    stick.name = "SN_Charcoal";
+                    stick.transform.SetLocalPositionAndRotation(layout.charcoalInHand, Quaternion.Euler(layout.charcoalInHandEuler));
+                    stick.transform.localScale = Vector3.one;
+                    driver.charcoal = stick.transform;
+                }
+            }
 
-            var vincentSeat = new GameObject("SN_VincentSeat").transform;   // where the rigged, seated Vincent will go
-            vincentSeat.SetParent(World, false);
-            vincentSeat.SetPositionAndRotation(layout.vincentSeat, Quaternion.identity);
             var playerSeat = new GameObject("SN_PlayerSeat").transform;
             playerSeat.SetParent(World, false);
             playerSeat.position = layout.playerSeat;
@@ -193,6 +199,8 @@ namespace InnerFrame.StarryNight
             game.sketchbook = book.GetComponent<SN_Grabbable>();
             game.page = pageGo.GetComponent<SN_Grabbable>();
             game.vincent = vincent.transform;
+            game.vincentDriver = driver;
+            if (driver != null) { driver.game = game; voice.LineStarted += driver.OnLine; }
             game.voice = voice;
             game.ui = ui;
             game.beam = beam;

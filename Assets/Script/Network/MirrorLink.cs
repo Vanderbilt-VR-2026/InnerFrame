@@ -46,6 +46,16 @@ public class MirrorLink : NetworkBehaviour
     float copyPainted;
     bool copyIntroDone;
 
+    // Following another player's mirror: the pose arrives once per network tick, so ease toward it every
+    // frame instead of jumping (about 50 ms behind, instead of visible steps). Far jumps snap.
+    const float FollowSharpness = 20f;   // per second
+    const float SnapDistance = 1f;       // metres
+    bool easing;
+    Vector3 easedPosition;
+    Quaternion easedRotation;
+    Rigidbody mirrorBody;                // its Rigidbody interpolation is off while following (it would fight the easing)
+    RigidbodyInterpolation mirrorInterpolation;
+
     // Written in Update/LateUpdate, sent in FixedUpdateNetwork (Fusion's tick).
     bool outHolding, outPainting, outIntroDone, outDeciding;
     Vector3 outPosition;
@@ -96,9 +106,17 @@ public class MirrorLink : NetworkBehaviour
         if (!mine && holder != null)
         {
             // until their first pose arrives, leave ours where it is
-            if (holder.MirrorPosition != Vector3.zero) scene.FollowPose(holder.MirrorPosition, holder.MirrorRotation);
+            if (holder.MirrorPosition != Vector3.zero)
+            {
+                scene.FollowPose(Eased(holder.MirrorPosition, holder.MirrorRotation), easedRotation);
+                if (mirrorBody == null && scene.Mirror.TryGetComponent(out mirrorBody))
+                {
+                    mirrorInterpolation = mirrorBody.interpolation;
+                    mirrorBody.interpolation = RigidbodyInterpolation.None;
+                }
+            }
         }
-        else scene.StopFollowing();
+        else StopEasing();
         scene.HeldByOther = !mine && holder != null;
 
         bool anyone = mine || holder != null;
@@ -130,6 +148,29 @@ public class MirrorLink : NetworkBehaviour
         }
     }
 
+    void StopEasing()
+    {
+        if (scene != null) scene.StopFollowing();
+        easing = false;
+        if (mirrorBody != null) { mirrorBody.interpolation = mirrorInterpolation; mirrorBody = null; }
+    }
+
+    // Moves easedPosition/easedRotation toward the latest pose from the network; returns easedPosition.
+    Vector3 Eased(Vector3 target, Quaternion targetRotation)
+    {
+        if (!easing || Vector3.Distance(easedPosition, target) > SnapDistance)
+        {
+            easedPosition = target;
+            easedRotation = targetRotation;
+            easing = true;
+            return easedPosition;
+        }
+        float t = 1f - Mathf.Exp(-FollowSharpness * Time.deltaTime);
+        easedPosition = Vector3.Lerp(easedPosition, target, t);
+        easedRotation = Quaternion.Slerp(easedRotation, targetRotation, t);
+        return easedPosition;
+    }
+
     // After MirrorScene.Update has decided this frame's step.
     void LateUpdate()
     {
@@ -149,7 +190,7 @@ public class MirrorLink : NetworkBehaviour
         if (scene == null) return;
         scene.Follow = false;
         scene.HeldByOther = false;
-        scene.StopFollowing();
+        StopEasing();
     }
 
     bool FindScene()
@@ -165,6 +206,8 @@ public class MirrorLink : NetworkBehaviour
         wasAnyoneHolding = false;
         lastDecider = null;
         haveCopy = false;
+        easing = false;
+        mirrorBody = null;   // a new scene's mirror: its own Rigidbody
         return scene != null;
     }
 

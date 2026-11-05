@@ -13,6 +13,9 @@ using UnityEngine.SceneManagement;
 /// The proxy answers with JSON; his voice (audio_url) then plays from this object's AudioSource, and its text shows
 /// in his caption (VanGoghCaption), as his scripted lines do.
 /// The models and any key stay on the proxy, never in the app. This object's forward faces the visitor.
+///
+/// Convai instead, when ConvaiDirectSettings is Ready: the same recording goes straight to Convai's web API
+/// (getResponse) from the headset, with no proxy, and his voice comes back in the same reply. No Convai SDK.
 /// </summary>
 public class SpeechToProxy : MonoBehaviour
 {
@@ -113,6 +116,9 @@ public class SpeechToProxy : MonoBehaviour
         if (voice == null) voice = GetComponentInChildren<AudioSource>();
         caption = VanGoghCaption.Make(transform, labelOffset);
         SetState(State.Idle);
+        string why = ConvaiDirectSettings.WhyNotReady();
+        Debug.Log(why == null ? $"[VanGogh] {name}: talking through Convai's web API"
+                              : $"[VanGogh] {name}: talking through the AI proxy ({why})");
     }
 
     void OnEnable() => talk?.Enable();
@@ -202,6 +208,7 @@ public class SpeechToProxy : MonoBehaviour
     /// </summary>
     public IEnumerator Ask(byte[] wav)
     {
+        if (ConvaiDirectSettings.Ready) { yield return AskConvai(wav); yield break; }
         SetState(State.Waiting);
         double released = Time.realtimeSinceStartupAsDouble;
         var settings = AIProxySettings.Current;
@@ -240,6 +247,109 @@ public class SpeechToProxy : MonoBehaviour
         Debug.Log($"[VanGogh] release->response {Ms(released, responded)} ms, release->audio start {Ms(released, playing)} ms; " +
                   $"server stt {t.stt} llm {t.llm} tts {t.tts} ms; heard \"{answer.transcript}\"; said \"{answer.reply}\"");
     }
+
+    // ---- Convai's web API (ConvaiDirectSettings): https://docs.convai.com, Interaction API, character/getResponse ----
+
+    static string convaiSession = "-1";   // "-1" starts a conversation; Convai's reply gives the ID to keep it going
+
+    [Serializable] class ConvaiReply { public string text, audio, sessionID; }
+
+    IEnumerator AskConvai(byte[] wav)
+    {
+        SetState(State.Waiting);
+        double released = Time.realtimeSinceStartupAsDouble;
+        var settings = ConvaiDirectSettings.Current;
+
+        var form = new WWWForm();
+        form.AddField("charID", settings.characterId.Trim());
+        form.AddField("sessionID", convaiSession);
+        form.AddField("voiceResponse", "True");
+        form.AddField("sample_rate", SampleRate.ToString());
+        form.AddBinaryData("file", wav, "speech.wav", "audio/wav");
+
+        string json;
+        using (var req = UnityWebRequest.Post(ConvaiDirectSettings.Endpoint, form))
+        {
+            req.timeout = TimeoutSeconds;
+            req.SetRequestHeader("CONVAI-API-KEY", ConvaiDirectSettings.ApiKey);
+            yield return req.SendWebRequest();
+            json = req.downloadHandler?.text;
+            if (req.result != UnityWebRequest.Result.Success)
+            {
+                SetState(State.Error);
+                Debug.LogWarning($"[VanGogh] Convai: {req.responseCode} {req.error} {Shorten(json)}");
+                yield break;
+            }
+        }
+        double responded = Time.realtimeSinceStartupAsDouble;
+
+        ConvaiReply answer = null;
+        try { answer = JsonUtility.FromJson<ConvaiReply>(json); }
+        catch (ArgumentException) { }
+        if (answer == null || string.IsNullOrWhiteSpace(answer.text) || answer.text.StartsWith("process_failure"))
+        {
+            SetState(State.Error);
+            Debug.LogWarning($"[VanGogh] Convai gave no answer: {Shorten(json)}");
+            yield break;
+        }
+        if (!string.IsNullOrEmpty(answer.sessionID)) convaiSession = answer.sessionID;
+
+        var match = System.Text.RegularExpressions.Regex.Match(json, "\"sample_rate\"\\s*:\\s*\"?(\\d+)");
+        int rate = match.Success ? int.Parse(match.Groups[1].Value) : 22050;
+        AudioClip clip = null;
+        if (!string.IsNullOrEmpty(answer.audio))
+        {
+            try { clip = ConvaiAudioClip(Convert.FromBase64String(answer.audio), rate); }
+            catch (FormatException) { Debug.LogWarning("[VanGogh] Convai: its audio wasn't base64"); }
+        }
+        if (clip == null)   // no voice: show his words for as long as they'd take, as SayRemote does
+            clip = AudioClip.Create("silence", Mathf.CeilToInt(Mathf.Max(2f, 0.06f * answer.text.Length) * 22050), 1, 22050, false);
+
+        string reply = answer.text.Trim();
+        LastReply = reply;
+        Say(clip, reply);
+        Answered?.Invoke("", reply, "");   // shared Vincent: his words for the room (Convai doesn't return what was asked)
+        Debug.Log($"[VanGogh] Convai: release->answer {Ms(released, responded)} ms, {clip.length:F1} s of voice; said \"{reply}\"");
+    }
+
+    // Convai's voice: a WAV file (RIFF), or raw 16-bit mono PCM at the reply's sample_rate.
+    static AudioClip ConvaiAudioClip(byte[] bytes, int rate)
+    {
+        int channels = 1, bits = 16, dataStart = 0, dataLength = bytes.Length;
+        if (bytes.Length > 44 && bytes[0] == 'R' && bytes[1] == 'I' && bytes[2] == 'F' && bytes[3] == 'F')
+        {
+            dataStart = -1;
+            for (int i = 12; i + 8 <= bytes.Length;)
+            {
+                string id = System.Text.Encoding.ASCII.GetString(bytes, i, 4);
+                int size = BitConverter.ToInt32(bytes, i + 4);
+                if (id == "fmt ")
+                {
+                    channels = BitConverter.ToInt16(bytes, i + 10);
+                    rate = BitConverter.ToInt32(bytes, i + 12);
+                    bits = BitConverter.ToInt16(bytes, i + 22);
+                }
+                else if (id == "data")
+                {
+                    dataStart = i + 8;
+                    dataLength = Mathf.Min(size, bytes.Length - dataStart);   // some writers leave size 0 or too big
+                    if (size <= 0) dataLength = bytes.Length - dataStart;
+                    break;
+                }
+                i += 8 + size + (size & 1);
+            }
+            if (dataStart < 0) return null;
+        }
+        if (bits != 16 || channels < 1 || rate <= 0) { Debug.LogWarning($"[VanGogh] Convai audio: {bits}-bit, {channels} ch, {rate} Hz not supported"); return null; }
+        int samples = dataLength / 2;
+        var data = new float[samples];
+        for (int i = 0; i < samples; i++) data[i] = BitConverter.ToInt16(bytes, dataStart + i * 2) / 32768f;
+        var clip = AudioClip.Create("Convai reply", samples / channels, channels, rate, false);
+        clip.SetData(data, 0);
+        return clip;
+    }
+
+    static string Shorten(string s) => string.IsNullOrEmpty(s) ? "" : s.Length > 300 ? s.Substring(0, 300) + "…" : s;
 
     static void Prepare(UnityWebRequest req, AIProxySettings settings)
     {

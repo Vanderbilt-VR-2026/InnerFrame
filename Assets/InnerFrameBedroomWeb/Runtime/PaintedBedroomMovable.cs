@@ -85,6 +85,14 @@ namespace InnerFrame.PaintedBedroom
             grab.throwOnDetach = true;
             grab.throwVelocityScale = 1.5f * lightness;
             grab.throwAngularVelocityScale = lightness;
+
+            // The walls, floor and ceiling are thin mesh surfaces. Discrete detection only checks where the
+            // object ends up each physics step, so a hand pulled behind a wall drags the object straight
+            // through it. Continuous detection checks the path.
+            // Not ContinuousSpeculative: it grows each contact check with the object's speed, and a pillow pulled
+            // fast against the bed's 12,000-triangle mesh collider then took ~45 ms of physics a frame, with
+            // freezes of over a second (NetworkSoloFeelTest). ContinuousDynamic sweeps the path instead: no freeze.
+            rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
         }
 
         void OnEnable() { if (!All.Contains(this)) All.Add(this); }

@@ -15,7 +15,7 @@ namespace InnerFrame.Entrance
         {
             Beat = -1;
             instance = null;
-            SceneFader.BeforeSceneChange = PlayIfNeeded;
+            // Bedroom entry uses the normal scene fade. Animation runs only in EntranceMenu.
         }
 
         static IEnumerator PlayIfNeeded(string destination)

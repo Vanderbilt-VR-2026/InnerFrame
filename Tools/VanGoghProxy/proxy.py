@@ -18,7 +18,7 @@ import wave
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, File, Request, UploadFile
+from fastapi import FastAPI, File, Form, Request, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from starlette.exceptions import HTTPException
@@ -46,6 +46,7 @@ PERSONA = (HERE / PERSONA_FILE).read_text(encoding="utf-8").strip()
 DIDNT_CATCH = "Sorry, I didn't quite catch that. Could you say it again?"
 NOT_SURE = "I'm not sure I understand you, my friend. Ask me about this room, or about my painting."
 KEEP_AUDIO_FILES = 20
+MAX_SAY_CHARS = 1200  # the app sends at most this much (VincentLink.MaxChars)
 
 # Guards for D16's rule (nothing after October 1888). The question list catches what visitors are likely to
 # ask about his later life; the reply list catches what the model volunteers. Both are v0 until Rowling's
@@ -184,6 +185,8 @@ async def http_error(request, exc):
 
 @app.exception_handler(RequestValidationError)
 async def bad_request(request, exc):
+    if request.url.path.endswith("/say"):
+        return error(422, "send the words as the form field 'text'")
     return error(422, "send the recording as a WAV file in the multipart field 'audio'")
 
 
@@ -207,6 +210,22 @@ def listen(npc: str, audio: UploadFile = File(...)):
 def talk(npc: str, audio: UploadFile = File(...)):
     transcript, text, audio_id, ms = answer_recording(npc, audio, with_voice=True)
     return {"transcript": transcript, "reply": text, "audio_url": f"/audio/{audio_id}.wav", "timings_ms": ms}
+
+
+@app.post("/npc/{npc}/say")
+def say(npc: str, text: str = Form(...)):
+    """Speaks words that are already written: another player's answer, when this headset can't fetch that player's
+    audio (each Mac runs its own proxy, so the audio_url only exists on the asker's). Same voice, so it sounds the same."""
+    text = text.strip()
+    if not text:
+        return error(422, "send the words as the form field 'text'")
+    if len(text) > MAX_SAY_CHARS:
+        return error(413, f"text is longer than {MAX_SAY_CHARS} characters")
+    t0 = time.perf_counter()
+    audio_id = speak(text)
+    tts = round((time.perf_counter() - t0) * 1000)
+    log.info("npc=%s say=%r tts=%d", npc, text, tts)
+    return {"audio_url": f"/audio/{audio_id}.wav", "timings_ms": {"tts": tts}}
 
 
 @app.get("/audio/{audio_id}.wav")

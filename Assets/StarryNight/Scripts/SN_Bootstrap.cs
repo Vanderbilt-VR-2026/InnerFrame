@@ -51,6 +51,8 @@ namespace InnerFrame.StarryNight
                 Game.Input = xrInput = new SN_InputXR(FindAnyObjectByType<XROrigin>());
             Game.ui.Snap();   // in place at once; it follows the main camera from here
             if (layout.colourGrading) GradeCamera(Camera.main);
+            // the way back: at Done, once the morning star has faded, the player menu opens with "Back to Gallery"
+            gameObject.AddComponent<SN_GalleryReturn>().openAfterSeconds = layout.morningStarFadeSeconds + 2f;
             Game.Begin();
         }
 

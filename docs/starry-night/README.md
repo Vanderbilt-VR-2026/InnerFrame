@@ -33,6 +33,10 @@ points his charcoal at each named star, and stands up at dawn (see "Vincent"). T
 the page and the sketchbook moved round him; the charcoal is in his hand. The gameplay, states, timings and lines are
 unchanged: the playthrough's log is byte-identical.
 
+In the Gallery (2026-11-05): **The Starry Night hangs on the Gallery's east wall** and is entered the way the Bedroom is,
+from its pedestal; the player menu brings you back, and at Done it opens by itself (see "In the Gallery"). The scene is in
+the build list now, after the existing scenes; the Gallery still starts the game.
+
 ## Open and play
 
 - Scene: `Assets/StarryNight/Scenes/StarryNight.unity`. It holds only the player rig (the Starter Assets
@@ -50,8 +54,35 @@ unchanged: the playthrough's log is byte-identical.
     `Blender --background --factory-startup --python …`):
     one FBX per object in `Assets/StarryNight/Models` (the team's export settings; the exporter's timestamp and ids are
     pinned in `sn_blender.py`, so the FBX bytes repeat; the `.blend` files kept beside the scripts do not).
-- The scene is not in the build list (`EditorBuildSettings` unchanged). To try it on a Quest, add it to your build
-  profile locally, or build it alone (Android build profile, not a Meta Quest one).
+- The scene is in the build list (`EditorBuildSettings`, enabled, after the existing scenes; the Gallery still starts the
+  game), because the Gallery's way in loads it by name. Build with the Android build profile, not a Meta Quest one.
+
+## In the Gallery: the way in and the way back
+
+- **Where:** the east wall's north half (spot A of the 11/04 proposal): the painting's centre at (−4.9, 2.0, −3.6),
+  facing into the room, The Bedroom's size (3.0 m wide, 2.376 m tall at the image's own ratio, bottom edge 0.81 m up) in
+  The Bedroom's frame, The Bedroom's pedestal on the viewer's right at (−3.5, 0, −1.57). Read from the entrance: the
+  portrait, The Bedroom, its pedestal, then The Starry Night on the right-hand wall.
+- **The way in:** The Bedroom's own mechanism. The invisible button on the pedestal (a 0.4 m box) has an XR Simple
+  Interactable whose Select Entered calls `SceneChangeButton.Activate` (target `StarryNight`, 1 s): point at the pedestal
+  (or touch it) and press **grip**; in the Editor without a headset, put the dot on the pedestal and press **E**. One
+  second to black, then The Starry Night starts at the path's foot, as when opened directly. Nothing in
+  `SceneChangeButton`, `SceneFader` or the menu changed.
+- **The way back:** any time, the player menu (left Menu button, or M) → **Back to Gallery**, as from the Bedroom. At
+  Done ("The night is painted"), `SN_GalleryReturn` opens that menu by itself 10 s later (the morning star's 8 s fade,
+  then 2 s); X closes it and you can stay. You land at the Gallery's start (0, 0, 6), facing The Bedroom.
+- **Two players:** each enters alone; the other stays in the Gallery's room. If both enter, each plays their own solo
+  night (the temporary measure above). A shared night is a team decision and a change in `NetworkSession`.
+- **Made by** Tools > InnerFrame > Starry Night > **Add to Gallery** (`Editor/SN_GallerySetup.cs`): the image's import,
+  `Gallery/SN_GalleryPainting.mat`, `Gallery/SN_GalleryEntrance.prefab` (the frame and pedestal are Gallery.fbx's own
+  meshes and materials, by reference, at The Bedroom's offsets from its wall, read from `Gallery.unity`), one instance in
+  `Gallery.unity` (its last root; extra copies removed, drift reverted) and the build-list entry. Running it twice changes
+  nothing. Batch: `-executeMethod InnerFrame.StarryNight.EditorTools.SN_GallerySetup.RunBatch -quit`.
+- **The image:** `Art/Source/StarryNight/make_gallery_painting.py` (`/usr/bin/python3 -I`, Pillow) makes the 2048 × 1622
+  JPEG from Commons' full-size Google Art Project file (44,567 × 35,291; Cici's download, kept in
+  `refs/3-starry-night/gallery/`; decoded at 1/8, never whole); same input, same bytes. It is imported at 2048 × 2048
+  (power of two, to larger) with mipmaps, ASTC 6×6 on Android: Unity 6000.3 leaves a non-power-of-two texture with
+  mipmaps uncompressed (RGBA32, ~17 MB), and without mipmaps the painting would shimmer from across the room.
 
 ## The story
 
@@ -141,8 +172,8 @@ NetworkPlayer in the scene, the rig not moved (`Editor/Tests/SN_PlayCheck.cs`).
 
 ## Checks
 
-One command runs every check: the playthrough test, the dialogue box check, the layout check, the Vincent check, then the
-Play-mode check.
+One command runs every check: the playthrough test, the dialogue box check, the layout check, the Vincent check and the
+Gallery entrance check, then the Play-mode check and the Gallery way in and back (Play mode, one after the other).
 It prints one line per check (`[SN Checks] <check>: PASS|FAIL (n passed, m failed); log …`) and a last `[SN Checks] PASS`
 or `FAIL` line, and writes them to `SN_checks_summary.txt` beside the logs.
 
@@ -156,7 +187,36 @@ or `FAIL` line, and writes them to `SN_checks_summary.txt` beside the logs.
      -executeMethod InnerFrame.StarryNight.SN_Checks.RunAll -snLogDir Logs/SN_checks -logFile Logs/SN_checks.log
    ```
 
-   With `-quit` the edit-mode checks run and the Play-mode check is skipped (the summary says so).
+   With `-quit` the edit-mode checks run and the two Play-mode checks are skipped (the summary says so).
+
+The Gallery entrance check (`Editor/Tests/SN_GalleryCheck.cs`, edit mode;
+`-executeMethod InnerFrame.StarryNight.EditorTools.SN_GalleryCheck.RunBatch -snLog <file> -quit`) opens `Gallery.unity`:
+1. one entrance, at its spot, no overrides beyond its pose and name, appended as the last root;
+2. one interactable and one collider per part; the button's one persistent call (`SceneChangeButton.Activate`, target
+   `StarryNight`, 1 s, a 0.4 m box, not a trigger);
+3. in the room: the painting's centre and size, the frame on the wall's face, the pedestal on the floor, the button on
+   its top, no Gallery collider crossing the frame or the pedestal (physics), the gap to the nearest bench (0.42 m);
+4. the same offsets, meshes, materials and button settings as The Bedroom's (in the same scene);
+5. the build list (enabled, after the Gallery, not first); the image (2048 × 1622, imported 2048 × 2048, ASTC 6×6 on
+   Android) and its material (URP Unlit, white);
+6. `SN_GallerySetup` run again changes nothing (the files' hashes are equal); with the entrance moved in memory it puts it
+   back and saves `Gallery.unity` byte for byte as it was.
+Controls that must fail: a button aimed at PaintedBedroom, no persistent call, a second entrance, the entrance moved
+0.5 m, a build list without StarryNight or with it off, a pedestal-sized box on Bench_03.
+
+The Gallery way in and back (`Editor/Tests/SN_GalleryPlayCheck.cs`, Play mode, Editor without a headset, **offline**: on
+each scene's first frame it notes the join NetworkSession was starting, then stops it before it connects;
+`-executeMethod InnerFrame.StarryNight.EditorTools.SN_GalleryPlayCheck.RunBatch -snLog <file>`, without `-quit`):
+1. StarryNight opened directly: the world's fingerprint (SN_World's objects, renderers, triangles, names);
+2. the Gallery as the game starts; the desktop dot on the button from 1.2 m in front of the pedestal; the press → a fade
+   to black → StarryNight by name: one scene, one XR Origin, one desktop rig, one camera, one audio listener, no runner
+   (`[SN] Solo for now`), Arrive, the dialogue box at 1.6 m, and the same world and light as opened directly; at 9 s still
+   no runner;
+3. back from anywhere (the menu): the Gallery's start (0, 0, 6) yaw 180, one rig, one listener, the portrait once, one
+   entrance, NetworkSession starting the Gallery's join (for `InnerFrame_Gallery`) with no runner left;
+4. in again; Done: the menu still shut 9 s later, open by 11.5 s with "Back to Gallery"; Back → the same landing.
+Controls that must fail: the dot turned away, one extra object in SN_World, StarryNight loaded additively over the
+Gallery (two scenes, rigs, cameras, listeners), Back with the menu's home set to PaintedBedroom.
 
 The layout check (`Editor/Tests/SN_LayoutCheck.cs`, also alone: Tools > InnerFrame > Starry Night > Run Layout Check, or
 `-executeMethod InnerFrame.StarryNight.EditorTools.SN_LayoutCheck.RunBatch -snLog <file>`) measures what was built, not
@@ -264,6 +324,7 @@ every number in `SN_Layout`, the `vincent*` fields):
   0.6 s (72 Hz); the beam's render queue is below the UI's.
 - `SN_PlayCheck.RunBatch` (batch, without `-quit`): the Play-mode check of the temporary network measure above, and that
   the dialogue UI shows the first hint at the settings' distance from the camera.
+- `SN_GalleryCheck.RunBatch` and `SN_GalleryPlayCheck.RunBatch`: the Gallery's way in and back (see "Checks").
 
 ## Requested hardware tests (Quest)
 
@@ -281,3 +342,10 @@ every number in `SN_Layout`, the `vincent*` fields):
 9. The look pass: does the hilltop read lush and the hill float in a sea of cloud? Do the bushes near the seat stay out
    of the way? Does the far ridge read as one line all round, with no doubled hills where the painted strip ends?
 10. Vincent (step 3): see item 6 of the headset checklist above.
+11. The Gallery: does The Starry Night on the east wall read as part of the gallery (size, frame, light), and is its
+    pedestal easy to find and press (grip, pointing or touching)? The fade in, the start on the path, and Back to
+    Gallery from the menu, any time and at Done (the menu opens by itself 10 s after "The night is painted").
+12. Online (not covered by the Editor check, which stays offline): two headsets in the Gallery; one enters The Starry
+    Night: does the other see their avatar leave, and does the first rejoin `InnerFrame_Gallery` on the way back
+    (`[NetworkSession] Joined InnerFrame_Gallery`)? With the other player already in the room, the returning one is moved
+    0.7 m sideways from the start (`NetworkSession.ShiftRig`): is that comfortable?

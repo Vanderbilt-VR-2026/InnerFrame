@@ -139,3 +139,8 @@ node_modules/
 /Assets/Photon/PhotonVoice-Documentation.*
 # Photon Voice's Icons folder: the macOS "Icon?" rule above also matches it
 !/Assets/Photon/PhotonVoice/Icons/
+
+# Convai API key, read by ConvaiDirectSettings: the repo is public, so each machine keeps it locally
+# (one line; see docs/convai/README.md). Builds include it.
+/Assets/VanGogh/Resources/ConvaiApiKey.txt
+/Assets/VanGogh/Resources/ConvaiApiKey.txt.meta

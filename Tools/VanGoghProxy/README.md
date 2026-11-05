@@ -68,6 +68,7 @@ Settings (environment variables):
 |---|---|
 | `POST /npc/{npc}/listen`, multipart field `audio` (WAV) | `200 text/plain; charset=utf-8`: Vincent's reply |
 | `POST /npc/{npc}/talk`, multipart field `audio` (WAV) | `200 application/json`: `{"transcript", "reply", "audio_url": "/audio/<id>.wav", "timings_ms": {"stt", "llm", "tts"}}` |
+| `POST /npc/{npc}/say`, form field `text` (at most 1200 characters) | `200 application/json`: `{"audio_url": "/audio/<id>.wav", "timings_ms": {"tts"}}`: the words spoken in Vincent's voice. Shared Vincent uses it when another player's answer came from a different proxy (one Mac per headset) |
 | `GET /audio/{id}.wav` | `200 audio/wav`: 16-bit mono 22050 Hz, plain 44-byte header |
 
 Errors are non-200 with `{"error": "..."}`. Every `{npc}` answers as Vincent for

@@ -171,11 +171,16 @@ in the Painted Bedroom.
 - A player who takes over carries on from where the canvas was; a player who joins mid-portrait sees it as it is.
 - His scripted lines wait while anyone is asking him, and never play over your own question.
 
-**Everyone must reach the same proxy**, because each headset plays his answers from it (`audio_url`):
+**Every headset needs a proxy it can reach**, either the asker's or its own:
 
 - **Quest + Editor on one Mac:** the USB setup above already does it: the Quest's `localhost:8000` is the Mac.
-- **Several headsets:** the Wi-Fi setup above on one Mac, with every headset's AI Proxy Settings pointing at it.
-- A headset that can't reach it still shows his words, timed as if he spoke them, and logs a warning.
+- **One Mac per headset** (each Quest on its own Mac by USB, each Mac running the proxy): works too. The answer's
+  voice file only exists on the asker's proxy, so every other headset asks its own proxy to speak the same words
+  (`POST /npc/vincent/say`), in the same `say` voice. They hear him about a second later than the asker. Every Mac
+  needs a proxy from this version or later; an older one answers 404 and that headset shows only his words.
+- **Several headsets, one Mac:** the Wi-Fi setup above, with every headset's AI Proxy Settings pointing at it. Everyone
+  plays the asker's file, with no extra delay.
+- A headset that can't reach any proxy still shows his words, timed as if he spoke them, and logs a warning.
 - His scripted mirror lines are recorded clips in the app, so they need no proxy.
 
 **Code** (both on each player's avatar; both avatar builders add them):

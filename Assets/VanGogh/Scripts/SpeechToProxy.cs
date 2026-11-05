@@ -22,6 +22,7 @@ public class SpeechToProxy : MonoBehaviour
     const int SampleRate = 16000;
     const int TimeoutSeconds = 30;
     const string TalkPath = "/npc/vincent/talk";
+    const string SayPath = "/npc/vincent/say";   // shared Vincent: speak another player's answer here
     const float ErrorSeconds = 3f;   // "can't hear you" shows this long, then the idle hint again
 
     [Tooltip("Where his voice plays from.")]
@@ -57,8 +58,10 @@ public class SpeechToProxy : MonoBehaviour
     }
     string blockedBy;
 
-    /// <summary>Plays an answer another player got: his voice from the same proxy (audio_url), and his words. If this
-    /// headset can't reach that proxy, the words still show, timed as if he spoke them.</summary>
+    /// <summary>Plays an answer another player got: his voice (audio_url, from the asker's proxy if this headset uses
+    /// the same one) and his words. With a proxy of its own (one Mac per headset), that file isn't there, so this
+    /// headset's proxy speaks the same words (POST /npc/vincent/say), in the same voice. If no proxy answers at all,
+    /// the words still show, timed as if he spoke them.</summary>
     public void SayRemote(string asker, string transcript, string reply, string audioUrl)
     {
         if (state == State.Recording || state == State.Waiting) return;   // never cut into our own question
@@ -68,15 +71,53 @@ public class SpeechToProxy : MonoBehaviour
     IEnumerator PlayRemote(string asker, string transcript, string reply, string audioUrl)
     {
         var settings = AIProxySettings.Current;
+        string server = settings.serverUrl.TrimEnd('/');
         AudioClip clip = null;
+        bool reachable = true;   // false once a request gets no answer at all: no point asking that proxy again
         if (!string.IsNullOrEmpty(audioUrl))
-            using (var req = UnityWebRequestMultimedia.GetAudioClip(settings.serverUrl.TrimEnd('/') + audioUrl, AudioType.WAV))
+            using (var req = UnityWebRequestMultimedia.GetAudioClip(server + audioUrl, AudioType.WAV))
             {
                 Prepare(req, settings);
                 yield return req.SendWebRequest();
                 if (req.result == UnityWebRequest.Result.Success) clip = DownloadHandlerAudioClip.GetContent(req);
-                else Debug.LogWarning($"[VanGogh] {asker}'s answer: {req.url}: {req.responseCode} {req.error}; showing his words only");
+                else
+                {
+                    reachable = req.result != UnityWebRequest.Result.ConnectionError;
+                    Debug.Log($"[VanGogh] {asker}'s answer: {req.url}: {req.responseCode} {req.error}" +
+                              (reachable ? "; asking this proxy to speak his words" : ""));
+                }
             }
+
+        // Two Macs, two proxies: the asker's audio is only on theirs, so this one speaks the same words.
+        if (clip == null && reachable && state != State.Recording && state != State.Waiting)
+        {
+            string spokenUrl = null;
+            var form = new WWWForm();
+            form.AddField("text", reply);
+            using (var req = UnityWebRequest.Post(server + SayPath, form))
+            {
+                Prepare(req, settings);
+                yield return req.SendWebRequest();
+                if (req.result == UnityWebRequest.Result.Success)
+                {
+                    try { spokenUrl = JsonUtility.FromJson<SayReply>(req.downloadHandler.text)?.audio_url; }
+                    catch (ArgumentException) { }   // not JSON: an older proxy without /say
+                }
+                if (string.IsNullOrEmpty(spokenUrl))
+                    Debug.LogWarning($"[VanGogh] {req.url}: {req.responseCode} {req.error}; showing his words only " +
+                                     "(a 404 here means this proxy is older than /say: pull and restart it)");
+            }
+            if (!string.IsNullOrEmpty(spokenUrl))
+                using (var req = UnityWebRequestMultimedia.GetAudioClip(server + spokenUrl, AudioType.WAV))
+                {
+                    Prepare(req, settings);
+                    yield return req.SendWebRequest();
+                    if (req.result == UnityWebRequest.Result.Success) clip = DownloadHandlerAudioClip.GetContent(req);
+                    else Debug.LogWarning($"[VanGogh] {req.url}: {req.responseCode} {req.error}; showing his words only");
+                }
+        }
+        else if (clip == null)
+            Debug.LogWarning($"[VanGogh] {asker}'s answer: can't reach {server}; showing his words only");
         if (state == State.Recording || state == State.Waiting) yield break;
         if (clip == null)   // silence as long as his words would take, so the caption pages through them
             clip = AudioClip.Create("silence", Mathf.CeilToInt(Mathf.Max(2f, 0.06f * reply.Length) * 22050), 1, 22050, false);
@@ -100,6 +141,7 @@ public class SpeechToProxy : MonoBehaviour
 
     [Serializable] class Timings { public int stt, llm, tts; }
     [Serializable] class TalkReply { public string transcript, reply, audio_url; public Timings timings_ms; }
+    [Serializable] class SayReply { public string audio_url; }
 
     void Awake()
     {

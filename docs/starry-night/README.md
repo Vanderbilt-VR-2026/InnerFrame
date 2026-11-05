@@ -21,6 +21,12 @@ Step 4b (2026-11-04, after #135) changed two things, again with the gameplay, st
   - the beam drawn under the UI;
   - an optional colour grading switch.
 
+Checks (2026-11-04, before step 3): one command runs every check (see "Checks"), and a new layout check measures the
+budget, the bushes, the clouds, the props and the far ridge. It found two of the look pass's numbers wrong, both fixed:
+the most transparent renderers was 36, not 35 (the guide and the beam during the wind; the lantern's two flame quads are
+now one mesh), and the far ridge was only held under the painted strip over its faded ends, measured from the hill's
+centre (now from the seat eye, and 12° past the ends too).
+
 ## Open and play
 
 - Scene: `Assets/StarryNight/Scenes/StarryNight.unity`. It holds only the player rig (the Starter Assets
@@ -111,12 +117,12 @@ NetworkPlayer in the scene, the rig not moved (`Editor/Tests/SN_PlayCheck.cs`).
 | The seat | `SN_PlayerSeat` (0.45, 0, −0.9): Vincent's seat 41.6° to the left, 1.20 m away; the cypress 35.5° left, 4.05 m; the lantern on the grass 0.53 m from the seat, valley side | `SN_Layout` |
 | Cypress | Tripo model, 9,401 triangles, 7 m tall, 1.6 m at its widest (no decimation) | `make_tripo.py` |
 | Rock | Tripo model scaled ×1.457 so its top's area-weighted mean is 0.26 m (1.46 × 0.82 × 0.31 m), with a MeshCollider of its own shape | `make_tripo.py` |
-| Lantern | base, iron frame, glass (transparent), cap, handle, a wick key that turns as it dims; 628 triangles | `make_props.py` |
+| Lantern | base, iron frame, glass (transparent), cap, handle, a wick key that turns as it dims; 628 triangles; the flame two crossed quads in one mesh (`SN_FlameCross`) | `make_props.py`, `SN_MeshGen` |
 | Sketchbook, page, charcoal | the sketchbook open to 120° on one cover, the sketch on its page; a torn page with the sketch; a stick of charcoal by Vincent's seat (all grabbable; each on the rock where its footprint is flat). The page lies 0.73 m from the seat (the look pass); the sketchbook stays 0.96 m away: at its yaw no spot on the rock within 0.75 m is flat enough | `make_props.py`, `sketch-page.png` |
 | The sky | the night (`sky-night.png`) round the whole dome, mirrored in yaw, from the start; the painting (`sky-painted.png`) on a panel centred at yaw +28°, 112.5° × 75° (pitch −8° to 67°), seen from the seat | `make_textures.py`, `SN_Sky.shader` |
 | The wind's path | Cici's red line along the swirl, 24 points, the 3 at its outer end dropped (inside the panel's soft edge): 21 points from (−14°, 40°) up to 54° and into the swirl's centre at (23°, 31°); the swirl band 8° either side | `make_path.py`, `SN_Layout.guidePath` |
 | Stars | the 12 story stars with painted halos (N3's 5° across, 2.5° clear right of the cypress; the others 3.5°); 150 small stars that twinkle (a third, faint, before the lantern) and 25 medium ones whose halos grow as stars are woken and as the sky is painted: one mesh and one draw call each; a painted moon | `SN_Sky`, `make_textures.py` |
-| The valley | the painted horizon (`horizon.png`, keyed): 96° wide, its top 4° above the horizontal, the spire at yaw 6° (the village's direction), the ends fading over 8°; the lit windows glow at night, with three soft glow sprites; round the rest of the horizon one generated, continuous ridge (`SN_MeshGen.HillRing`: a seeded sum of sines, nothing repeated), painted with the strip's own hills (`SN_FarHills.png`, seamless across), sunk out of sight behind the strip and kept 0.6° under the strip's own ridge where they meet (`horizon_ridge.json`); the blockout's window dots are off (`SN_Layout.villageDots`) | `make_textures.py`, `SN_Horizon.shader` |
+| The valley | the painted horizon (`horizon.png`, keyed): 96° wide, its top 4° above the horizontal, the spire at yaw 6° (the village's direction), the ends fading over 8°; the lit windows glow at night, with three soft glow sprites; round the rest of the horizon one generated, continuous ridge (`SN_MeshGen.HillRing`: a seeded sum of sines, nothing repeated), painted with the strip's own hills (`SN_FarHills.png`, seamless across), sunk out of sight behind the strip; seen from the seat eye it stays 0.6° under the strip's own ridge (`horizon_ridge.json`) over the strip's faded ends and 12° past them, then rises back to its own line over the next 12°; the blockout's window dots are off (`SN_Layout.villageDots`) | `make_textures.py`, `SN_Horizon.shader` |
 | Mist | four drifting, near-horizontal noise layers under the hill (the upper ones end nearer, so from the seat they stay under the village) and six soft puffs that face you (10 transparent renderers) | `SN_Mist.shader`, `SN_MeshGen.MistLayer` |
 | Clouds | Cici's Tripo cloud, 25 copies in 5 clusters round the rim, 6–13 m from the centre, scale 0.8–2.5, turned broadside to the hill, half mirrored; seen from the seat every top stays under −12.5° (under the strip's own painted mist); opaque URP Lit with its normals bent up (soft light from above); one combined mesh, one draw | `make_tripo_look.py`, `SN_MeshGen.Clouds`, `SN_Scatter` |
 | Bushes | Cici's two Tripo bushes, 50 + 25 copies (random yaw, scale 0.7–1.3, half mirrored), denser by the rock, the lantern, the path's edges, the cypress's foot and the rim; clear of the path (0.4 m from its centre line), the seat, the rock, the lantern, Vincent, the start and the walls' line; nothing taller than 0.6 m within 1.5 m of the seat; each kind one combined mesh, one draw | `make_tripo_look.py`, `SN_MeshGen.Bushes`, `SN_Scatter` |
@@ -125,6 +131,54 @@ NetworkPlayer in the scene, the rig not moved (`Editor/Tests/SN_PlayCheck.cs`).
 | Colour grading (off by default) | `SN_Layout.colourGrading`: on, `SN_Bootstrap` adds a global Volume with `SN_Grading.asset` (Color Adjustments: post exposure 0.35, contrast 14, saturation 20, a warm filter) and turns post-processing on for the scene's camera at runtime (the rig prefab is not changed). Off by default until its cost is measured on a Quest | `SN_Setup` (the profile), `SN_Bootstrap` |
 | Dialogue box and hint | the shared `VG_DialogueUI` with `VG_Dialogue_StarryNight` (above) | `Assets/VanGogh` (VanGoghAssetSetup) |
 | Still placeholder | Vincent (the static model, standing past the rock's left end at his Bedroom scale; `SN_VincentSeat` marks where the seated Vincent goes), Vincent's lines (macOS `say`, voice Daniel) | |
+
+## Checks
+
+One command runs every check: the playthrough test, the dialogue box check, the layout check, then the Play-mode check.
+It prints one line per check (`[SN Checks] <check>: PASS|FAIL (n passed, m failed); log …`) and a last `[SN Checks] PASS`
+or `FAIL` line, and writes them to `SN_checks_summary.txt` beside the logs.
+
+1. **In the Editor:** Tools > InnerFrame > Starry Night > **Run all checks** (it saves nothing; it asks to save your open
+   scene first, enters Play mode for the last check, then shows the summary).
+2. **From a terminal** (macOS; on Windows, the Unity.exe of the same version), **without `-quit`**, so the Play-mode check
+   can run; exit code 0 only if every check passed:
+
+   ```
+   /Applications/Unity/Hub/Editor/6000.3.23f1/Unity.app/Contents/MacOS/Unity -batchmode -projectPath . \
+     -executeMethod InnerFrame.StarryNight.SN_Checks.RunAll -snLogDir Logs/SN_checks -logFile Logs/SN_checks.log
+   ```
+
+   With `-quit` the edit-mode checks run and the Play-mode check is skipped (the summary says so).
+
+The layout check (`Editor/Tests/SN_LayoutCheck.cs`, also alone: Tools > InnerFrame > Starry Night > Run Layout Check, or
+`-executeMethod InnerFrame.StarryNight.EditorTools.SN_LayoutCheck.RunBatch -snLog <file>`) measures what was built, not
+the code that placed it; each line gives the measured value and the limit, and a FAIL names the object:
+1. triangles in `SN_World` at most 250,000, at the start and at the most (sampled through a scripted playthrough);
+2. transparent renderers at most 35 at the most, the mist's at most 10; renderers × materials reported;
+3. the bushes, from their vertices above the ground: 0.4 m from the path's centre line, 0.6 m from the player's seat,
+   0.2 m from the rock's footprint, 0.3 m from the lantern; nothing taller than 0.6 m within 1.5 m of the seat; no copy
+   across the walls' line (`SN_Layout.bushClear*`, `openView*`);
+4. the clouds: every vertex 6 m or more from the centre; seen from the seat eye, the highest at −12.5° or lower;
+5. the props after 5 s of physics (in a preview scene with its own physics, so the project's physics settings are not
+   touched): the page within 0.75 m of the seat, asleep on `SN_Rock`, tilted 10° or less; the sketchbook's rest reported;
+6. the far ridge 0.6° under the painted strip's ridge over the strip's faded ends and 12° past them, seen from the seat eye.
+
+Positive controls (each must FAIL, on a copy): a bush moved onto the path, a cloud raised 3 m, the page dropped 0.9 m from
+the seat.
+
+## Headset checklist (team playtest, Thu 11/05)
+
+Install the APK (ask Cici), sit on the floor beside the rock when the hint says so, and note for each: fine, or what's wrong.
+1. **Text and the box:** can you read Vincent's line without leaning in? The box sits 22° below your gaze (measured to its
+   top edge), 1.6 m away, and moves only once you look more than 20° away: does it follow comfortably, and does it ever
+   cover the village or the swirl you're tracing?
+2. **Aiming:** the aim assist is 4°. Can you wake each star he names on the first or second try? Too generous?
+3. **Reach from the seat:** can you take the page (0.73 m from the seat) and the sketchbook (0.96 m) without getting up?
+4. **The halos:** do the woken stars' halos read as painted, and is the morning star (N3) easy to tell from the cypress?
+5. **The mist and the clouds:** does the hill float in a sea of mist and cloud round the rim? Anything flat, doubled or
+   popping at the far ridge?
+6. **Frame rate:** watch it through the whole scene with the colour grading off (the default), then once more with
+   `SN_Layout.colourGrading` on (rebuild the APK): 160,500 triangles and 35 transparent renderers at the most.
 
 ## Tests
 

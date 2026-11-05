@@ -568,6 +568,7 @@ namespace InnerFrame.StarryNight.EditorTools
             SaveMesh(SN_MeshGen.Horizon(l, R), "SN_Horizon");
             SaveMesh(SN_MeshGen.VillageGlow(l, R), "SN_VillageGlow");
             SaveMesh(SN_MeshGen.MistLayer(l), "SN_MistLayer");
+            SaveMesh(SN_MeshGen.FlameCross(0.045f, 0.09f), "SN_FlameCross");
             // the bushes and the clouds (their placements go into the hilltop prefab); the flowers fill between the bushes
             var bushA = ModelMeshNode("SN_BushA"); var bushB = ModelMeshNode("SN_BushB"); var cloud = ModelMeshNode("SN_CloudA");
             bushAPlaces.Clear(); bushBPlaces.Clear();
@@ -813,8 +814,8 @@ namespace InnerFrame.StarryNight.EditorTools
                 var flame = Child(root, "Flame");
                 flame.transform.localPosition = flameAt;
                 flame.transform.localScale = Vector3.one;
-                Shape(flame, "FlameA", Builtin("Quad.fbx"), M("SN_Flame"), Vector3.zero, new Vector3(0.045f, 0.09f, 1f));
-                Shape(flame, "FlameB", Builtin("Quad.fbx"), M("SN_Flame"), Vector3.zero, new Vector3(0.045f, 0.09f, 1f), new Vector3(0f, 90f, 0f));
+                RemoveChildren(flame, "FlameA", "FlameB");   // the two crossed quads are one mesh now: one transparent renderer
+                Shape(flame, "FlameCross", MeshAsset("SN_FlameCross"), M("SN_Flame"), Vector3.zero, Vector3.one);
                 var box = Comp<BoxCollider>(root);
                 box.center = new Vector3(0f, 0.16f, 0f); box.size = new Vector3(0.15f, 0.32f, 0.15f);
                 Grabbable(root, 1.2f, Part(model, "GrabPoint"), new Vector3(0.16f, -0.22f, 0.42f));

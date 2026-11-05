@@ -125,7 +125,7 @@ namespace InnerFrame.StarryNight
         [Tooltip("The far hills' paint (SN_FarHills.png) runs (max - min) degrees down from the ridge; behind the painted horizon the ridge sinks by (max - under), out of sight. The ridge's own height: ridgeMinPitch..ridgeMaxPitch.")]
         public float hillRingMinPitch = -6f, hillRingMaxPitch = 4f;
         public float hillRingUnderHorizonPitch = -9f;
-        [Tooltip("The look pass: the far hills' ridge, one generated, non-repeating silhouette round the horizon (pitch from the hill's centre at eye height): between these, from this seed; within the painted strip's span it sinks out of sight; where they meet it stays ridgeJunctionMargin under the strip's own ridge (horizon_ridge.json).")]
+        [Tooltip("The look pass: the far hills' ridge, one generated, non-repeating silhouette round the horizon (pitch from the hill's centre at eye height): between these, from this seed; within the painted strip's span it sinks out of sight; over the strip's faded ends and ridgeJunctionDeg beyond, seen from the seat eye, it stays ridgeJunctionMargin under the strip's own ridge (horizon_ridge.json; past the ends, the end's), then rises back over the next ridgeJunctionDeg.")]
         public float ridgeMinPitch = -1.2f, ridgeMaxPitch = 2.4f;
         public int ridgeSeed = 1853;
         public float ridgeJunctionMargin = 0.6f, ridgeJunctionDeg = 12f;

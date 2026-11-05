@@ -139,9 +139,10 @@ namespace InnerFrame.StarryNight.EditorTools
         /// The far hills round the horizon (the look pass), hillRingRadiusFraction x R from the hill's centre, seen from
         /// inside: one continuous silhouette, generated (a seeded sum of sines round the circle, so it closes on itself
         /// and nothing repeats), between ridgeMinPitch and ridgeMaxPitch. Within the painted strip's span it sinks out of
-        /// sight behind the strip (HorizonCover); over the strip's faded ends and ridgeJunctionDeg beyond, it stays
-        /// ridgeJunctionMargin under the strip's own ridge (horizon_ridge.json), so as the strip fades the ring shows
-        /// below it, never a second ridge above. Painted with SN_FarHills.png (the strip's hills without a silhouette,
+        /// sight behind the strip (HorizonCover); over the strip's faded ends and ridgeJunctionDeg beyond, seen from the
+        /// seat eye, it stays ridgeJunctionMargin under the strip's own ridge (horizon_ridge.json; beyond the ends, the end
+        /// column's), so as the strip fades the ring shows below it, never a second ridge above; over the next
+        /// ridgeJunctionDeg it rises back to its own line. Painted with SN_FarHills.png (the strip's hills without a silhouette,
         /// seamless across, mirrored every ridgeTileDeg; its seam is behind the strip). Three rows: the ridge, the hills'
         /// foot 10 degrees lower, and the ring's bottom far below.
         /// </summary>
@@ -155,18 +156,27 @@ namespace InnerFrame.StarryNight.EditorTools
             var ridge = RidgeProfile(l, Seg);
             var b = new Builder();
             float outMin = 99f, outMax = -99f, junctionWorst = 99f;
+            Vector3 eye = l.SeatEye;
             for (int s = 0; s <= Seg; s++)
             {
                 float yaw = start + s * 360f / Seg;
                 float p = ridge[s % Seg];
-                float w = JunctionWeight(l, yaw);
+                // the painted strip is centred on the seat eye, so where it is (its yaw, its ridge) is read from there:
+                // the ring's point seen from the seat eye, at horizontal distance d
+                float a0 = yaw * Mathf.Deg2Rad;
+                Vector2 rel = new Vector2(Mathf.Sin(a0) * R0 - eye.x, Mathf.Cos(a0) * R0 - eye.z);
+                float yawEye = Mathf.Atan2(rel.x, rel.y) * Mathf.Rad2Deg, d = rel.magnitude;
+                float w = JunctionWeight(l, yawEye);
                 if (w > 0f)
                 {
-                    float limit = StripRidgePitch(l, skyRadius, stripRidgeV, yaw) - l.ridgeJunctionMargin;
+                    // ridgeJunctionMargin under the strip's ridge as seen from the seat eye, as a pitch from the ring's centre
+                    float limitEye = StripRidgePitch(l, skyRadius, stripRidgeV, yawEye) - l.ridgeJunctionMargin;
+                    float limit = Mathf.Atan(d / R0 * Mathf.Tan(limitEye * Mathf.Deg2Rad)) * Mathf.Rad2Deg;
                     p = Mathf.Lerp(p, Mathf.Min(p, limit), w);
-                    if (w >= 1f && HorizonCover(l, yaw) <= 0f) junctionWorst = Mathf.Min(junctionWorst, StripRidgePitch(l, skyRadius, stripRidgeV, yaw) - p);
+                    if (w >= 1f && HorizonCover(l, yawEye) <= 0f)
+                        junctionWorst = Mathf.Min(junctionWorst, StripRidgePitch(l, skyRadius, stripRidgeV, yawEye) - Mathf.Atan(R0 / d * Mathf.Tan(p * Mathf.Deg2Rad)) * Mathf.Rad2Deg);
                 }
-                float cover = HorizonCover(l, yaw);
+                float cover = HorizonCover(l, yawEye);
                 if (cover <= 0f && w <= 0f) { outMin = Mathf.Min(outMin, p); outMax = Mathf.Max(outMax, p); }
                 p -= sinkBy * cover;
                 // behind the strip the hills' paint closes up to its haze (from above, no dark band shows under the strip)
@@ -189,8 +199,8 @@ namespace InnerFrame.StarryNight.EditorTools
                     b.Tri(t0, t1, b1, inward);
                     b.Tri(t0, b1, b0, inward);
                 }
-            report?.AppendLine($"[SN Setup] Far hills: one ridge round the horizon (seed {l.ridgeSeed}); outside the strip it runs {outMin:F2}..{outMax:F2} deg; " +
-                               $"over the strip's faded ends it stays at least {junctionWorst:F2} deg under the strip's own ridge");
+            report?.AppendLine($"[SN Setup] Far hills: one ridge round the horizon (seed {l.ridgeSeed}); away from the strip it runs {outMin:F2}..{outMax:F2} deg; " +
+                               $"over the strip's faded ends and {l.ridgeJunctionDeg} deg beyond, seen from the seat eye, it stays at least {junctionWorst:F2} deg under the strip's own ridge (held at its ends)");
             return b.Build("SN_HillRing");
         }
 
@@ -213,11 +223,12 @@ namespace InnerFrame.StarryNight.EditorTools
             return raw;
         }
 
-        /// <summary>1 over the strip's faded ends (and anywhere inside its span), falling to 0 at ridgeJunctionDeg outside them.</summary>
+        /// <summary>1 over the strip's faded ends (and anywhere inside its span) and ridgeJunctionDeg beyond them (seat-eye
+        /// yaw), then falling to 0 over the next ridgeJunctionDeg.</summary>
         static float JunctionWeight(SN_Layout l, float yaw)
         {
             float d = Mathf.DeltaAngle((l.HorizonYawMin + l.HorizonYawMax) * 0.5f, yaw);
-            float outside = Mathf.Abs(d) - l.horizonWidthDeg * 0.5f;   // degrees past the strip's end (negative inside)
+            float outside = Mathf.Abs(d) - l.horizonWidthDeg * 0.5f - l.ridgeJunctionDeg;   // degrees past the held zone (negative inside)
             return 1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(outside / Mathf.Max(l.ridgeJunctionDeg, 0.01f)));
         }
 
@@ -231,6 +242,25 @@ namespace InnerFrame.StarryNight.EditorTools
             float v = Mathf.Lerp(ridgeV[i], ridgeV[i + 1], x - i);
             HorizonFrame(l, skyRadius, out float radius, out float top, out float bottom);
             return Mathf.Atan2(Mathf.Lerp(top, bottom, v), radius) * Mathf.Rad2Deg;
+        }
+
+        /// <summary>The lantern's flame: two crossed quads (width x height, centred; the second turned 90 degrees about y,
+        /// as the builtin Quad would be), one mesh, so one transparent renderer instead of two. White vertex colours.</summary>
+        public static Mesh FlameCross(float width, float height)
+        {
+            var b = new Builder();
+            foreach (var right in new[] { Vector3.right, Quaternion.Euler(0f, 90f, 0f) * Vector3.right })
+            {
+                Vector3 facing = Vector3.Cross(Vector3.up, right);   // the builtin Quad faces -z for right = +x
+                int v0 = b.Add(-right * width * 0.5f - Vector3.up * height * 0.5f, new Vector2(0f, 0f), Color.white);
+                int v1 = b.Add(right * width * 0.5f - Vector3.up * height * 0.5f, new Vector2(1f, 0f), Color.white);
+                int v2 = b.Add(right * width * 0.5f + Vector3.up * height * 0.5f, new Vector2(1f, 1f), Color.white);
+                int v3 = b.Add(-right * width * 0.5f + Vector3.up * height * 0.5f, new Vector2(0f, 1f), Color.white);
+                b.Tri(v0, v3, v2, facing);
+                b.Tri(v0, v2, v1, facing);
+                for (int k = 0; k < 4; k++) b.normals.Add(facing);
+            }
+            return b.Build("SN_FlameCross");
         }
 
         /// <summary>The village's lit windows: small quads facing the seat, round (villageYaw, villagePitch) from it.</summary>
@@ -573,7 +603,8 @@ namespace InnerFrame.StarryNight.EditorTools
 
         static float Bump(float d, float from, float width) => 1f - Mathf.Clamp01((d - from) / width);
 
-        static List<Vector2> PathLine(SN_Layout l)
+        /// <summary>The path's centre line: a Catmull-Rom through pathPoints, 10 points per segment (the path mesh follows it).</summary>
+        public static List<Vector2> PathLine(SN_Layout l)
         {
             var pts = l.pathPoints;
             var line = new List<Vector2>();

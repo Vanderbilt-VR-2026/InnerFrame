@@ -12,7 +12,8 @@ namespace InnerFrame.StarryNight.EditorTools
     /// NetworkSession is connected, where the rig is against SN_Layout's player start, and the dialogue UI (the hint the
     /// game set; the follow group at the settings' distance from the camera). Exit code 0 when there is no runner, no
     /// NetworkPlayer, no connection, the rig is still at the start and the UI is in place.
-    /// Batch only: -executeMethod InnerFrame.StarryNight.EditorTools.SN_PlayCheck.RunBatch (without -quit).
+    /// Batch: -executeMethod InnerFrame.StarryNight.EditorTools.SN_PlayCheck.RunBatch (without -quit); or as the last step of
+    /// SN_Checks.RunAll (Tools > InnerFrame > Starry Night > Run all checks).
     /// Entering Play mode reloads the domain, so the state lives in SessionState.
     /// </summary>
     [InitializeOnLoad]
@@ -30,7 +31,11 @@ namespace InnerFrame.StarryNight.EditorTools
             if (SessionState.GetBool(Active, false)) EditorApplication.update += Tick;
         }
 
-        public static void RunBatch()
+        public static void RunBatch() => Begin();
+
+        /// <summary>Opens the scene and enters Play mode; the check runs from EditorApplication.update (also chained from
+        /// SN_Checks.RunAll, which then gets the result instead of the Editor exiting).</summary>
+        public static void Begin()
         {
             SessionState.SetBool(Active, true);
             SessionState.SetFloat(Began, (float)EditorApplication.timeSinceStartup);
@@ -100,6 +105,7 @@ namespace InnerFrame.StarryNight.EditorTools
             EditorApplication.update -= Tick;
             SessionState.SetBool(Active, false);
             Debug.Log($"[SN PlayCheck] {why}");
+            if (SN_Checks.TakePlayResult(ok, why)) return;   // chained from Run all checks: it reports and exits
             EditorApplication.Exit(ok ? 0 : 3);
         }
 

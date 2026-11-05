@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using UnityEditor;
+using UnityEditor.Animations;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -25,7 +26,8 @@ namespace InnerFrame.StarryNight.EditorTools
     /// the shared VG_DialogueUI (Assets/VanGogh/Prefabs, made by VanGoghAssetSetup) with its StarryNight settings; this
     /// tool only points SN_Bootstrap at them (and, once, moved SN_Layout's uiBelowGaze into those settings).
     /// Sources outside Unity: Art/Source/StarryNight (make_sprites.py, make_textures.py, make_path.py, make_tripo.py,
-    /// make_props.py, make_lines.sh, lines.txt; flowers_atlas.json is read here).
+    /// make_props.py, make_vincent_texture.py, make_lines.sh, lines.txt; flowers_atlas.json is read here). Vincent v2 (step 3):
+    /// Mixamo's files in Models/Vincent, imported, his material, controller and prefab built here.
     /// </summary>
     public static class SN_Setup
     {
@@ -39,8 +41,11 @@ namespace InnerFrame.StarryNight.EditorTools
         const string MaskPath = Tex + "/SN_SwirlMask.png";
         const string XrOriginPrefab = "Assets/Samples/XR Interaction Toolkit/3.3.2/Starter Assets/Prefabs/XR Origin (XR Rig).prefab";
         const string XrOriginName = "XR Origin (XR Rig)";
-        const string VincentModel = "Assets/VanGogh/Art/Vincent/VG_Vincent.fbx";
-        const string VincentMaterial = "Assets/VanGogh/Art/M_Vincent.mat";
+        /// <summary>Vincent v2 (step 3): Mixamo's rig of Cici's Tripo model and four of its clips, copied unchanged.</summary>
+        public const string VincentDir = Models + "/Vincent", VincentFbx = VincentDir + "/VincentV2.fbx";
+        public static readonly string[] VincentClips = { "SittingIdle", "SittingTalking", "SitToStand", "BreathingIdle" };
+        static string VincentClipPath(string clip) => $"{VincentDir}/VincentV2@{clip}.fbx";
+        public const string VincentControllerPath = Prefabs + "/SN_Vincent.controller";
         const string DialoguePrefab = "Assets/VanGogh/Prefabs/VG_DialogueUI.prefab";
         const string DialogueSettingsPath = "Assets/VanGogh/Prefabs/VG_Dialogue_StarryNight.asset";
         const float RayDistance = 2f;          // XRRigSettings.RayDistance (the Gallery's and the Bedroom's)
@@ -75,9 +80,11 @@ namespace InnerFrame.StarryNight.EditorTools
                 if (AssetDatabase.LoadMainAssetAtPath(path) != null) { AssetDatabase.DeleteAsset(path); Debug.Log("[SN Setup] Removed the placeholder " + path); }
             ImportTextures(layout);
             ImportModels();
+            ImportVincent(layout);
             var lines = BuildLines();
             BuildMaterials(layout);
             BuildMeshes(layout);
+            vincentController = BuildVincentController(layout);
             BuildPrefabs(layout);
             BuildGrading(layout);
             BuildScene(layout, lines);
@@ -114,7 +121,28 @@ namespace InnerFrame.StarryNight.EditorTools
                 LogNewFields(layout);
                 CopyDefaults(layout, LookPassFields, 4, "the look pass");
             }
+            if (layout.version < 5)
+            {
+                LogNewFields(layout);
+                LogRemovedFields(StepThreeRemoved, "step 3: the placeholder's scale and mouth; the charcoal is in his hand now");
+                CopyDefaults(layout, StepThreeFields, 5, "step 3: Vincent v2 on the raised rock");
+            }
             return layout;
+        }
+
+        /// <summary>The existing fields step 3 (version 5) changed; its new fields come with their defaults (logged).</summary>
+        static readonly string[] StepThreeFields = { "vincentSeat", "sketchbook", "page" };
+        /// <summary>The fields step 3 removed (read from the asset's text, logged; the asset drops them when saved).</summary>
+        static readonly string[] StepThreeRemoved = { "vincentScale", "vincentMouth", "charcoal", "charcoalYaw" };
+
+        static void LogRemovedFields(string[] names, string why)
+        {
+            string text = File.ReadAllText(Path.GetFullPath(LayoutPath));
+            foreach (var n in names)
+            {
+                var m = Regex.Match(text, @"^  " + Regex.Escape(n) + @":\s*(.*)$", RegexOptions.Multiline);
+                if (m.Success) Debug.Log($"[SN Setup] Layout {n}: {m.Groups[1].Value.Trim()} -> (removed: {why})");
+            }
         }
 
         /// <summary>The existing fields the look pass (version 4) changed; its new fields come with their defaults (logged).</summary>
@@ -258,12 +286,14 @@ namespace InnerFrame.StarryNight.EditorTools
                 });
             // opaque colour maps (mipmapped, tiled where they repeat)
             foreach (var (n, max, repeat) in new[] { ("SN_Grass", 1024, true), ("SN_Sketch", 1024, false), ("SN_Cypress_BaseColor", 1024, false), ("SN_Rock_BaseColor", 1024, false),
-                                                     ("SN_BushA_BaseColor", 1024, false), ("SN_BushB_BaseColor", 1024, false), ("SN_CloudA_BaseColor", 1024, false) })
+                                                     ("SN_BushA_BaseColor", 1024, false), ("SN_BushB_BaseColor", 1024, false), ("SN_CloudA_BaseColor", 1024, false),
+                                                     ("SN_VincentV2_BaseColor", 2048, false) })
                 Texture($"{Tex}/{n}.png", i =>
                 {
                     i.textureType = TextureImporterType.Default; i.sRGBTexture = true; i.mipmapEnabled = true; i.alphaSource = TextureImporterAlphaSource.None;
                     i.wrapMode = repeat ? TextureWrapMode.Repeat : TextureWrapMode.Clamp; i.filterMode = FilterMode.Trilinear; i.anisoLevel = repeat ? 4 : 1;
                     i.maxTextureSize = max; i.textureCompression = TextureImporterCompression.Compressed;
+                    if (n == "SN_VincentV2_BaseColor") Override(i, "Android", TextureImporterFormat.ASTC_6x6, max);   // make_vincent_texture.py: 2048, out of his FBX
                 });
             // alpha-clipped cards: keep their coverage in the small mips
             foreach (var (n, max, wrapV) in new[] { ("SN_Flowers", 2048, TextureWrapMode.Clamp), ("SN_PathDirt", 1024, TextureWrapMode.Repeat) })
@@ -321,6 +351,92 @@ namespace InnerFrame.StarryNight.EditorTools
                 m.materialImportMode = ModelImporterMaterialImportMode.None;
                 if (EditorJsonUtility.ToJson(m) != before) m.SaveAndReimport();
             }
+        }
+
+        /// <summary>
+        /// Vincent v2 (step 3). Mixamo's files, copied unchanged: the character (VincentV2.fbx, "FBX for Unity", with skin)
+        /// and four clips (without skin). All Humanoid, at one scale: the character's bind-pose height is
+        /// SN_Layout.vincentHeight (measured from his mesh; the factor rounded to 4 places, so a second run keeps it).
+        /// The avatar is made from BreathingIdle's skeleton (its own rest: standing, Y up), and the character and the other
+        /// clips copy it: the character file's own rest has the hips' offset along Z (Tripo's Z-up model through Mixamo; the
+        /// mesh's bind pose is upright), and an avatar made from it retargets every clip wrongly (bones metres off).
+        /// The character: no materials (SN_VincentV2.mat is ours), no animation, Read/Write off. The loops (SittingIdle,
+        /// SittingTalking, BreathingIdle) loop and bake rotation, height and XZ into the pose, so he never drifts; SitToStand
+        /// bakes rotation and height and keeps XZ as root motion (its step forward moves him). XZ is based on the centre of
+        /// mass in all four, so a fade from one to the next keeps the body where it was; height and rotation on the original.
+        /// </summary>
+        static void ImportVincent(SN_Layout l)
+        {
+            var m = AssetImporter.GetAtPath(VincentFbx) as ModelImporter;
+            if (m == null) { Debug.LogError($"[SN Setup] Missing {VincentFbx}: copy refs/vincent-mixamo/vincent-rigged.fbx there (see docs/starry-night/README.md)."); return; }
+            // the scale, from the character's bind-pose height at the current factor
+            float h = VincentBindHeight(), s0 = m.globalScale;
+            float scale = h > 0f ? (float)Math.Round(s0 * l.vincentHeight / h, 4) : s0;
+            if (h > 0f && Mathf.Abs(scale - s0) > 1e-5f) Debug.Log($"[SN Setup] VincentV2: bind-pose height {h:F4} m at scale {s0}; scale -> {scale} (file unit scale {m.fileScale}) for {l.vincentHeight} m");
+            void Common(ModelImporter i)
+            {
+                i.importCameras = i.importLights = i.addCollider = i.importBlendShapes = i.importVisibility = false;
+                i.materialImportMode = ModelImporterMaterialImportMode.None;
+                i.isReadable = false;
+                i.useFileScale = true;
+                i.globalScale = scale;
+                i.animationType = ModelImporterAnimationType.Human;
+            }
+            // the avatar: from BreathingIdle
+            string avatarFile = VincentClipPath(AvatarClip);
+            var a = AssetImporter.GetAtPath(avatarFile) as ModelImporter;
+            if (a == null) { Debug.LogError($"[SN Setup] Missing {avatarFile}: copy refs/vincent-mixamo/vincent@{AvatarClip}.fbx there."); return; }
+            ClipSettings(a, AvatarClip, i => { Common(i); i.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel; });
+            var avatar = AssetDatabase.LoadAllAssetsAtPath(avatarFile).OfType<Avatar>().FirstOrDefault();
+            if (avatar == null || !avatar.isValid || !avatar.isHuman) { Debug.LogError($"[SN Setup] Vincent's avatar ({avatarFile}) is {(avatar == null ? "missing" : $"valid {avatar.isValid}, human {avatar.isHuman}")}"); return; }
+            string before = EditorJsonUtility.ToJson(m);
+            Common(m);
+            m.importAnimation = false;
+            m.meshCompression = ModelImporterMeshCompression.Off;   // a skinned body: no quantised vertices
+            m.optimizeGameObjects = false;                         // the hand and head bones are needed (the charcoal, the voice)
+            m.avatarSetup = ModelImporterAvatarSetup.CopyFromOther;
+            m.sourceAvatar = avatar;
+            m.skinWeights = ModelImporterSkinWeights.Standard;     // 4 per vertex; the quality level caps it at runtime
+            if (EditorJsonUtility.ToJson(m) != before) m.SaveAndReimport();
+            foreach (var clip in VincentClips)
+            {
+                if (clip == AvatarClip) continue;
+                var c = AssetImporter.GetAtPath(VincentClipPath(clip)) as ModelImporter;
+                if (c == null) { Debug.LogError($"[SN Setup] Missing {VincentClipPath(clip)}: copy refs/vincent-mixamo/vincent@{clip}.fbx there."); continue; }
+                ClipSettings(c, clip, i => { Common(i); i.avatarSetup = ModelImporterAvatarSetup.CopyFromOther; i.sourceAvatar = avatar; });
+            }
+        }
+
+        /// <summary>The clip whose skeleton the avatar is made from (standing, Y up).</summary>
+        public const string AvatarClip = "BreathingIdle";
+
+        static void ClipSettings(ModelImporter c, string clip, Action<ModelImporter> setup)
+        {
+            string was = EditorJsonUtility.ToJson(c);
+            setup(c);
+            c.importAnimation = true;
+            c.resampleCurves = true;
+            c.animationCompression = ModelImporterAnimationCompression.Optimal;
+            bool loop = clip != "SitToStand";
+            var take = (c.clipAnimations != null && c.clipAnimations.Length > 0 ? c.clipAnimations : c.defaultClipAnimations).First();
+            take.name = clip;
+            take.loopTime = loop; take.loopPose = loop;
+            take.lockRootRotation = true; take.keepOriginalOrientation = true;
+            take.lockRootHeightY = true; take.keepOriginalPositionY = true; take.heightFromFeet = false;
+            take.lockRootPositionXZ = loop; take.keepOriginalPositionXZ = false;
+            take.cycleOffset = 0f; take.mirror = false;
+            c.clipAnimations = new[] { take };
+            if (EditorJsonUtility.ToJson(c) != was) c.SaveAndReimport();
+        }
+
+        /// <summary>VincentV2's bind-pose height (its mesh's vertical extent, in the model's metres), or -1.</summary>
+        public static float VincentBindHeight()
+        {
+            var model = AssetDatabase.LoadAssetAtPath<GameObject>(VincentFbx);
+            var smr = model != null ? model.GetComponentInChildren<SkinnedMeshRenderer>(true) : null;
+            if (smr == null || smr.sharedMesh == null) return -1f;
+            var b = smr.sharedMesh.bounds;   // the bind pose, in the renderer's space
+            return b.size.y * smr.transform.lossyScale.y;
         }
 
         static GameObject ModelAsset(string name) => Load<GameObject>($"{Models}/{name}.fbx");
@@ -479,6 +595,7 @@ namespace InnerFrame.StarryNight.EditorTools
             Lit("SN_Sketchbook", Hex("6B4A2E"), 0.2f);
             Lit("SN_Sketch", Color.white, 0f, "SN_Sketch");
             Lit("SN_Charcoal", Hex("111112"), 0.08f);
+            Lit("SN_VincentV2", Color.white, 0.05f, "SN_VincentV2_BaseColor");   // ours: Mixamo's FBX gives Metallic 1 (dark, mirror-like)
             Mat("SN_HillRing", "InnerFrame/StarryNight/Horizon", m =>   // the far hills: drawn before the painted horizon
             {
                 m.SetTexture("_BaseMap", Load<Texture2D>($"{Tex}/SN_FarHills.png"));
@@ -568,6 +685,7 @@ namespace InnerFrame.StarryNight.EditorTools
             SaveMesh(SN_MeshGen.Horizon(l, R), "SN_Horizon");
             SaveMesh(SN_MeshGen.VillageGlow(l, R), "SN_VillageGlow");
             SaveMesh(SN_MeshGen.MistLayer(l), "SN_MistLayer");
+            SaveMesh(SN_MeshGen.FlameCross(0.045f, 0.09f), "SN_FlameCross");
             // the bushes and the clouds (their placements go into the hilltop prefab); the flowers fill between the bushes
             var bushA = ModelMeshNode("SN_BushA"); var bushB = ModelMeshNode("SN_BushB"); var cloud = ModelMeshNode("SN_CloudA");
             bushAPlaces.Clear(); bushBPlaces.Clear();
@@ -620,6 +738,54 @@ namespace InnerFrame.StarryNight.EditorTools
         }
 
         static Mesh MeshAsset(string name) => Load<Mesh>($"{Meshes}/{name}.asset");
+
+        static AnimatorController vincentController;
+
+        static Avatar VincentAvatar() => AssetDatabase.LoadAllAssetsAtPath(VincentClipPath(AvatarClip)).OfType<Avatar>().First();
+        static AnimationClip VincentClip(string clip) =>
+            AssetDatabase.LoadAllAssetsAtPath(VincentClipPath(clip)).OfType<AnimationClip>().FirstOrDefault(a => a.name == clip) ?? throw new Exception($"[SN Setup] No clip {clip} in {VincentClipPath(clip)}");
+
+        /// <summary>
+        /// SN_Vincent.controller: SittingIdle (default) and SittingTalking on the bool Talking (SN_Layout.vincentTalkFadeSeconds
+        /// each way); the trigger Stand from either into SitToStand; at its end into Standing (BreathingIdle); fades of
+        /// vincentStandFadeSeconds. IK pass on (look and point). Found and updated in place on a second run, never re-created.
+        /// </summary>
+        static AnimatorController BuildVincentController(SN_Layout l)
+        {
+            var c = AssetDatabase.LoadAssetAtPath<AnimatorController>(VincentControllerPath);
+            if (c == null) c = AnimatorController.CreateAnimatorControllerAtPath(VincentControllerPath);
+            if (!c.parameters.Any(p => p.name == "Talking")) c.AddParameter("Talking", AnimatorControllerParameterType.Bool);
+            if (!c.parameters.Any(p => p.name == "Stand")) c.AddParameter("Stand", AnimatorControllerParameterType.Trigger);
+            var layers = c.layers;
+            if (!layers[0].iKPass) { layers[0].iKPass = true; c.layers = layers; }
+            var sm = c.layers[0].stateMachine;
+            AnimatorState St(string name, Motion m, Vector3 pos)
+            {
+                var st = sm.states.Select(x => x.state).FirstOrDefault(x => x.name == name) ?? sm.AddState(name, pos);
+                st.motion = m; st.writeDefaultValues = true; st.iKOnFeet = false; st.speed = 1f;
+                return st;
+            }
+            var idle = St("SittingIdle", VincentClip("SittingIdle"), new Vector3(300f, 0f, 0f));
+            var talk = St("SittingTalking", VincentClip("SittingTalking"), new Vector3(300f, 120f, 0f));
+            var stand = St("SitToStand", VincentClip("SitToStand"), new Vector3(600f, 60f, 0f));
+            var standing = St("Standing", VincentClip("BreathingIdle"), new Vector3(900f, 60f, 0f));
+            if (sm.defaultState != idle) sm.defaultState = idle;
+            void T(AnimatorState from, AnimatorState to, float duration, float exitTime, AnimatorConditionMode mode, string param)
+            {
+                var t = from.transitions.FirstOrDefault(x => x.destinationState == to) ?? from.AddTransition(to);
+                t.hasExitTime = exitTime > 0f; t.exitTime = exitTime > 0f ? exitTime : 0.75f;
+                t.hasFixedDuration = true; t.duration = duration; t.offset = 0f;
+                t.interruptionSource = TransitionInterruptionSource.None; t.orderedInterruption = true;
+                t.conditions = param == null ? new AnimatorCondition[0] : new[] { new AnimatorCondition { mode = mode, parameter = param, threshold = 0f } };
+            }
+            T(idle, talk, l.vincentTalkFadeSeconds, 0f, AnimatorConditionMode.If, "Talking");
+            T(talk, idle, l.vincentTalkFadeSeconds, 0f, AnimatorConditionMode.IfNot, "Talking");
+            T(idle, stand, l.vincentStandFadeSeconds, 0f, AnimatorConditionMode.If, "Stand");
+            T(talk, stand, l.vincentStandFadeSeconds, 0f, AnimatorConditionMode.If, "Stand");
+            T(stand, standing, l.vincentStandFadeSeconds, 1f - l.vincentStandFadeSeconds / VincentClip("SitToStand").length, AnimatorConditionMode.If, null);
+            EditorUtility.SetDirty(c);
+            return c;
+        }
 
         // ---------------------------------------------------------------------------------------------- prefab helpers
 
@@ -813,8 +979,8 @@ namespace InnerFrame.StarryNight.EditorTools
                 var flame = Child(root, "Flame");
                 flame.transform.localPosition = flameAt;
                 flame.transform.localScale = Vector3.one;
-                Shape(flame, "FlameA", Builtin("Quad.fbx"), M("SN_Flame"), Vector3.zero, new Vector3(0.045f, 0.09f, 1f));
-                Shape(flame, "FlameB", Builtin("Quad.fbx"), M("SN_Flame"), Vector3.zero, new Vector3(0.045f, 0.09f, 1f), new Vector3(0f, 90f, 0f));
+                RemoveChildren(flame, "FlameA", "FlameB");   // the two crossed quads are one mesh now: one transparent renderer
+                Shape(flame, "FlameCross", MeshAsset("SN_FlameCross"), M("SN_Flame"), Vector3.zero, Vector3.one);
                 var box = Comp<BoxCollider>(root);
                 box.center = new Vector3(0f, 0.16f, 0f); box.size = new Vector3(0.15f, 0.32f, 0.15f);
                 Grabbable(root, 1.2f, Part(model, "GrabPoint"), new Vector3(0.16f, -0.22f, 0.42f));
@@ -855,26 +1021,33 @@ namespace InnerFrame.StarryNight.EditorTools
                 Grabbable(root, 0.02f, Part(model, "GrabPoint"), new Vector3(0.05f, -0.12f, 0.32f));
             });
 
-            Prefab("SN_Vincent", root =>
+            Prefab("SN_Vincent", root =>   // Vincent v2 (step 3): Mixamo's rig of the Tripo model, the controller, the driver, his voice at his head
             {
-                var cap = Comp<CapsuleCollider>(root);
-                cap.center = new Vector3(0f, 0.85f, 0f); cap.height = 1.7f; cap.radius = 0.3f;   // in the model's metres (1.70 m tall)
-                var figure = Child(root, "Figure");
-                var model = figure.transform.Find("VG_Vincent")?.gameObject;
-                if (model == null)
-                {
-                    model = (GameObject)PrefabUtility.InstantiatePrefab(Load<GameObject>(VincentModel), figure.transform);
-                    model.name = "VG_Vincent";
-                }
-                var skin = Load<Material>(VincentMaterial);
-                foreach (var r in model.GetComponentsInChildren<Renderer>(true)) r.sharedMaterial = skin;
-                var voiceGo = Child(figure, "Voice");
-                voiceGo.transform.localPosition = new Vector3(0f, l.vincentMouth, 0.08f);
+                Remove<CapsuleCollider>(root);   // the standing placeholder's; seated on the rock he has none (the rock is solid)
+                Remove<VincentAlive>(root);      // the placeholder's breathing and turning: the clips and the look IK do that now
+                RemoveChildren(root, "Figure");  // the placeholder (Assets/VanGogh/Art/Vincent/VG_Vincent.fbx): no longer used here
+                var t = root.transform.Find("Model");
+                var model = t != null ? t.gameObject : (GameObject)PrefabUtility.InstantiatePrefab(Load<GameObject>(VincentFbx), root.transform);
+                model.name = "Model";
+                model.transform.localPosition = Vector3.zero; model.transform.localRotation = Quaternion.identity; model.transform.localScale = Vector3.one;
+                var smr = model.GetComponentInChildren<SkinnedMeshRenderer>(true);
+                smr.sharedMaterial = M("SN_VincentV2");
+                smr.quality = SkinQuality.Bone4;   // asks for 4 bones; the Mobile quality level's skin weights cap it (QualitySettings, a team setting)
+                smr.shadowCastingMode = ShadowCastingMode.Off;
+                smr.updateWhenOffscreen = false;
+                var anim = Comp<Animator>(model);
+                anim.avatar = VincentAvatar();
+                anim.runtimeAnimatorController = vincentController;
+                anim.applyRootMotion = false;   // the driver turns it on for SitToStand
+                anim.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+                var driver = Comp<SN_VincentDriver>(model);
+                driver.charcoalAxis = Vector3.right;   // SN_Charcoal.fbx's long axis (make_props.py)
+                var headBone = model.GetComponentsInChildren<Transform>(true).First(x => x.name == "mixamorig:Head");
+                var voiceGo = Child(headBone.gameObject, "Voice");
+                voiceGo.transform.localPosition = l.vincentMouthInHead; voiceGo.transform.localRotation = Quaternion.identity; voiceGo.transform.localScale = Vector3.one;
                 var source = voiceGo.GetComponent<AudioSource>();
                 if (source == null) source = VanGoghSpawner.AddVoice(voiceGo);   // the same 3D voice settings as his Bedroom self
-                var voice = Comp<SN_Voice>(voiceGo);
-                voice.source = source;
-                Comp<VincentAlive>(root).alive = true;   // breathes and turns a little toward you (no MirrorScene needed)
+                Comp<SN_Voice>(voiceGo).source = source;
             });
 
             Prefab("SN_Sky", root =>

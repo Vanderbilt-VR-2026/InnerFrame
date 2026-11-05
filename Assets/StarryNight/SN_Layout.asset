@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5dadae0b1232c4c3d9d053a29573bbf8, type: 3}
   m_Name: SN_Layout
   m_EditorClassIdentifier: Assembly-CSharp::InnerFrame.StarryNight.SN_Layout
-  version: 4
+  version: 5
   rigScale: 0.8
   eyeHeight: 1.28
   playerStart: {x: 2.4, y: 0, z: -4}
@@ -21,15 +21,15 @@ MonoBehaviour:
   rockFootprint: {x: 1.456, y: 0.816}
   rockTop: 0.26
   rockBuried: 0
-  vincentSeat: {x: -0.35, y: 0.26, z: 0}
+  rockHeightScale: 1.19
+  vincentSeat: {x: -0.17, y: 0, z: 0.19}
+  vincentYaw: 0
+  vincentHeight: 1.7
+  vincentMouthInHead: {x: 0, y: 0.07, z: 0.1}
   vincentStand: {x: -0.8, y: 0, z: 0.5}
-  vincentScale: 0.82580656
-  vincentMouth: 1.55
   lantern: {x: 0.85, y: 0, z: -0.55}
-  sketchbook: {x: -0.07, y: 0.285, z: -0.09}
-  page: {x: 0.22, y: 0.296, z: -0.21}
-  charcoal: {x: -0.1, y: 0.288, z: 0.12}
-  charcoalYaw: 70
+  sketchbook: {x: 0.54, y: 0.378, z: -0.12}
+  page: {x: 0.24, y: 0.355, z: -0.2}
   sketchbookSize: {x: 0.3, y: 0.02, z: 0.22}
   pageSize: {x: 0.21, y: 0.297}
   cypressBase: {x: -1.9, y: 0, z: 2.4}
@@ -290,6 +290,26 @@ MonoBehaviour:
   swirlMaskHeight: 256
   guideDotsPerSegment: 3
   guideDotDeg: 0.7
+  charcoalInHand: {x: 0, y: 0.125, z: 0.012}
+  charcoalInHandEuler: {x: 0, y: 0, z: 90}
+  vincentTalkHoldSeconds: 0.6
+  vincentTalkFadeSeconds: 0.3
+  vincentStandFadeSeconds: 0.25
+  vincentLookBodyWeight: 0.15
+  vincentLookHeadWeight: 0.8
+  vincentLookEyesWeight: 0
+  vincentLookClamp: 0.5
+  vincentLookFollowSeconds: 0.35
+  vincentLookWeightSeconds: 0.5
+  vincentLookMaxYaw: 100
+  vincentSketchLookDistance: 0.5
+  vincentSketchLookWeight: 0.6
+  vincentPointReach: 0.85
+  vincentPointInSeconds: 0.4
+  vincentPointOutSeconds: 0.5
+  vincentPointAfterLineSeconds: 1
+  vincentPointMaxAngle: 110
+  vincentPointFarWeight: 0.5
   arriveDistance: 3
   aimAssistDeg: 4
   windToleranceDeg: 6

@@ -21,7 +21,8 @@ namespace InnerFrame.StarryNight
     /// scale (a standing eye at about 1.28 m). Blockout values from the step-2 prompt; the art pass (step 4,
     /// 2026-11-04) moved the seat and re-aimed the sky from it (version 2); the shared dialogue box (version 3) took
     /// over uiBelowGaze (now VG_Dialogue_StarryNight.belowGaze); the look pass (version 4) added the Tripo bushes and
-    /// clouds, a fuller mist, warmer light, one far horizon line and the colour grading switch. SN_Setup brings an older
+    /// clouds, a fuller mist, warmer light, one far horizon line and the colour grading switch; step 3 (version 5) seated
+    /// Vincent v2 on the raised rock, his charcoal in his hand, and moved the props round him. SN_Setup brings an older
     /// asset up once, step by step, and logs every value it changes. SN_Setup builds meshes from some of them (the hill, the path, the far hills, the
     /// horizon, the mist, the flowers, the swirl mask): change those, then run Tools > InnerFrame > Starry Night > Build again.
     /// </summary>
@@ -29,8 +30,8 @@ namespace InnerFrame.StarryNight
     public class SN_Layout : ScriptableObject
     {
         /// <summary>2: the art pass's values; 3: the dialogue box moved to VG_DialogueUI (uiBelowGaze went to its
-        /// settings); 4: the look pass. An asset below it is brought up to it once by SN_Setup.</summary>
-        public const int CurrentVersion = 4;
+        /// settings); 4: the look pass; 5: step 3, Vincent v2 on the rock. An asset below it is brought up to it once by SN_Setup.</summary>
+        public const int CurrentVersion = 5;
 
         [Tooltip("0: the blockout's values. SN_Setup brings an older asset up to CurrentVersion once, step by step.")]
         public int version;
@@ -45,23 +46,30 @@ namespace InnerFrame.StarryNight
         [Header("The rock, Vincent, his things (y absolute; the ground is 0 around the rock)")]
         [Tooltip("SN_Rock.fbx's footprint (x, z), as built by Art/Source/StarryNight/make_tripo.py; keeps the flowers off it.")]
         public Vector2 rockFootprint = new Vector2(1.456f, 0.816f);
-        [Tooltip("The area-weighted mean height of the rock's upward-facing top (make_tripo.py scales it to this).")]
-        public float rockTop = 0.26f;                 // Vincent's Mixamo seat at his project scale (0.185 m x 1.404)
+        [Tooltip("The area-weighted mean height of SN_Rock.fbx's upward-facing top (make_tripo.py scales it to this); rockHeightScale raises it.")]
+        public float rockTop = 0.26f;
         [Tooltip("How far the rock model is sunk into the ground (its lowest point is at 0 in the model).")]
         public float rockBuried = 0f;
-        public Vector3 vincentSeat = new Vector3(-0.35f, 0.26f, 0f); // anchor for the rigged, seated Vincent (later step)
-        public Vector3 vincentStand = new Vector3(-0.80f, 0f, 0.50f); // the standing placeholder, past the rock's left end
-        public float vincentScale = 1.60f * 0.8f / 1.55f;            // VanGoghSpawner.cs:32 VincentScale (0.826): 1.40 m
-        public float vincentMouth = 1.55f;            // in the model's own metres (VanGoghAssetSetup.MouthHeight)
+        [Tooltip("Step 3: the rock's vertical scale (its width and depth stay make_tripo.py's x1.457), so its surface under Vincent's hips is at his sitting clip's seat (SittingIdle, SittingTalking: 0.316 m at 1.70 m), within 1.5 cm.")]
+        public float rockHeightScale = 1.19f;
+        [Tooltip("Step 3: Vincent v2's root on the ground (x, height above the ground, z): his clips' root is his centre of mass, so his hips sit 0.12 m behind it. Moved from the art pass's flattest spot (-0.17, 0.12) to where his shins and feet clear the rock's front.")]
+        public Vector3 vincentSeat = new Vector3(-0.17f, 0f, 0.19f);
+        [Tooltip("His yaw (0: facing +Z, the valley, as the placeholder did).")]
+        public float vincentYaw = 0f;
+        [Tooltip("Vincent v2's bind-pose height: SN_Setup scales VincentV2.fbx (and its clips) on import to it.")]
+        public float vincentHeight = 1.70f;
+        [Tooltip("His voice (AudioSource) at his mouth: in his head bone's space.")]
+        public Vector3 vincentMouthInHead = new Vector3(0f, 0.07f, 0.1f);
+        [Tooltip("Where the standing placeholder stood (until step 3). Still the centre of the Arrive zone (arriveDistance) and of the bushes' keep-out, so neither moved when he sat down on the rock.")]
+        public Vector3 vincentStand = new Vector3(-0.80f, 0f, 0.50f);
         public Vector3 lantern = new Vector3(0.85f, 0f, -0.55f);     // on the grass by the seat, valley side (y above the ground)
-        // on the rock (each dropped from about 1 cm above it, so it settles): the nearest spots to the blockout's where
-        // the whole footprint is over the Tripo rock and the rock under it varies by 2.5 cm or less (the page: 4 cm)
-        // (the look pass: the page moved within reach of the seat, 0.73 m; no spot that flat within 0.75 m for the
-        // sketchbook at its yaw, so it stays)
-        public Vector3 sketchbook = new Vector3(-0.07f, 0.285f, -0.09f);
-        public Vector3 page = new Vector3(0.22f, 0.296f, -0.21f);
-        public Vector3 charcoal = new Vector3(-0.10f, 0.288f, 0.12f); // by Vincent's seat
-        public float charcoalYaw = 70f;
+        // on the rock (each dropped from about 1 cm above it, so it settles): spots where the whole footprint is over the
+        // rock, the rock under it varies by 2.5 cm or less (the page: 4 cm), clear of Vincent (step 3: the raised rock;
+        // the page first within 0.75 m of the player's seat, then the sketchbook if a spot is free)
+        // (step 3, settled by physics: the page asleep on the rock, tilted 8 deg, 0.73 m from the seat; no spot for the
+        // sketchbook within 0.75 m, the nearest that rests is at the rock's right end, 0.78 m; its old spot is under him now)
+        public Vector3 sketchbook = new Vector3(0.54f, 0.378f, -0.12f);
+        public Vector3 page = new Vector3(0.24f, 0.355f, -0.20f);
         public Vector3 sketchbookSize = new Vector3(0.30f, 0.02f, 0.22f);
         public Vector2 pageSize = new Vector2(0.21f, 0.297f);
 
@@ -125,7 +133,7 @@ namespace InnerFrame.StarryNight
         [Tooltip("The far hills' paint (SN_FarHills.png) runs (max - min) degrees down from the ridge; behind the painted horizon the ridge sinks by (max - under), out of sight. The ridge's own height: ridgeMinPitch..ridgeMaxPitch.")]
         public float hillRingMinPitch = -6f, hillRingMaxPitch = 4f;
         public float hillRingUnderHorizonPitch = -9f;
-        [Tooltip("The look pass: the far hills' ridge, one generated, non-repeating silhouette round the horizon (pitch from the hill's centre at eye height): between these, from this seed; within the painted strip's span it sinks out of sight; where they meet it stays ridgeJunctionMargin under the strip's own ridge (horizon_ridge.json).")]
+        [Tooltip("The look pass: the far hills' ridge, one generated, non-repeating silhouette round the horizon (pitch from the hill's centre at eye height): between these, from this seed; within the painted strip's span it sinks out of sight; over the strip's faded ends and ridgeJunctionDeg beyond, seen from the seat eye, it stays ridgeJunctionMargin under the strip's own ridge (horizon_ridge.json; past the ends, the end's), then rises back over the next ridgeJunctionDeg.")]
         public float ridgeMinPitch = -1.2f, ridgeMaxPitch = 2.4f;
         public int ridgeSeed = 1853;
         public float ridgeJunctionMargin = 0.6f, ridgeJunctionDeg = 12f;
@@ -245,6 +253,24 @@ namespace InnerFrame.StarryNight
         public int swirlMaskWidth = 512, swirlMaskHeight = 256;
         public int guideDotsPerSegment = 3;
         public float guideDotDeg = 0.7f;
+
+        [Header("Vincent v2: how he moves (step 3; SN_VincentDriver)")]
+        [Tooltip("His charcoal in his right hand: its position and rotation in the hand bone's space (its long axis along the fingers, the tip out past them).")]
+        public Vector3 charcoalInHand = new Vector3(0f, 0.125f, 0.012f), charcoalInHandEuler = new Vector3(0f, 0f, 90f);
+        [Tooltip("Talking (SittingTalking) follows the dialogue box's IsSpeaking, held this long after it, so a pause between sentences doesn't flick him back.")]
+        public float vincentTalkHoldSeconds = 0.6f;
+        [Tooltip("The controller's fades: sitting <-> talking; into and out of SitToStand.")]
+        public float vincentTalkFadeSeconds = 0.3f, vincentStandFadeSeconds = 0.25f;
+        [Tooltip("Look-at IK: body, head and eyes weights, the clamp (0.5: half the range), how fast the look follows its target, how fast its weight ramps.")]
+        public float vincentLookBodyWeight = 0.15f, vincentLookHeadWeight = 0.8f, vincentLookEyesWeight = 0f, vincentLookClamp = 0.5f;
+        public float vincentLookFollowSeconds = 0.35f, vincentLookWeightSeconds = 0.5f;
+        [Tooltip("The look's yaw from his facing is kept within this: past about 115 degrees Unity's look-at clamp (vincentLookClamp 0.5) blends the look out and his head turns back. You sit behind his right shoulder, about 150 degrees round, so he turns his head this far toward you (110 still faded out in one SittingIdle pose).")]
+        public float vincentLookMaxYaw = 100f;
+        [Tooltip("Arrive: he looks at a point this far in front of his hips, at this weight, as if sketching.")]
+        public float vincentSketchLookDistance = 0.5f, vincentSketchLookWeight = 0.6f;
+        [Tooltip("Pointing: the right hand this fraction of his arm's length from the shoulder toward the star; the weight up and down over these; held this long after the naming line; a star more than vincentPointMaxAngle from his facing gets vincentPointFarWeight.")]
+        public float vincentPointReach = 0.85f, vincentPointInSeconds = 0.4f, vincentPointOutSeconds = 0.5f, vincentPointAfterLineSeconds = 1f;
+        public float vincentPointMaxAngle = 110f, vincentPointFarWeight = 0.5f;
 
         [Header("Gameplay")]
         public float arriveDistance = 3f;             // from Vincent, horizontal

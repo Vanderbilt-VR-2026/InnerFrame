@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using Fusion;
 using Unity.XR.CoreUtils;
 using UnityEngine;
@@ -30,6 +31,12 @@ public class NetworkSession : MonoBehaviour
     bool joining;
     float nextRetry;
 
+    // The scene's own NetworkObjects (shared grabbables), as the scene loaded them. When a connection ends,
+    // Fusion destroys the scene objects it was syncing (NetworkObjectProviderDefault.DestroySceneObject), so
+    // rejoining in place would leave the room empty of them: the scene is reloaded first instead.
+    readonly List<NetworkObject> sceneObjects = new List<NetworkObject>();
+    string sceneObjectsScene;
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Bootstrap()
     {
@@ -43,6 +50,7 @@ public class NetworkSession : MonoBehaviour
     {
         Instance = this;
         SceneManager.sceneLoaded += OnSceneLoaded;
+        RememberSceneObjects(SceneManager.GetActiveScene());
         StartCoroutine(Join(SceneManager.GetActiveScene().name));
     }
 
@@ -56,6 +64,7 @@ public class NetworkSession : MonoBehaviour
     {
         if (mode != LoadSceneMode.Single) return;
         StopAllCoroutines();
+        RememberSceneObjects(scene);
         StartCoroutine(Join(scene.name));
     }
 
@@ -75,6 +84,16 @@ public class NetworkSession : MonoBehaviour
         joining = true;
         yield return Leave();
         yield return null;   // let the scene pick its rig first (the Editor's desktop rig swaps in on load)
+
+        // The last connection took the scene's shared objects with it: reload the scene to get them back.
+        // OnSceneLoaded then joins again, with the objects in place.
+        if (SceneObjectsDestroyed(out int gone))
+        {
+            Debug.Log($"[NetworkSession] {gone} shared object(s) were removed when the connection ended; reloading {sceneObjectsScene}");
+            joining = false;
+            SceneManager.LoadScene(sceneObjectsScene);
+            yield break;
+        }
 
         if (!FindPlayerRig(out var rig, out var eyes)) { joining = false; yield break; } // not a scene people walk around in
         // the rig's own scene: with several scenes open in the Editor, the active one may be an Untitled one
@@ -160,6 +179,22 @@ public class NetworkSession : MonoBehaviour
     {
         var prefab = Resources.Load<NetworkObject>(PlayerPrefabPath + "_" + sceneName);
         return prefab != null ? prefab : Resources.Load<NetworkObject>(PlayerPrefabPath);
+    }
+
+    void RememberSceneObjects(Scene scene)
+    {
+        sceneObjects.Clear();
+        sceneObjectsScene = scene.name;
+        foreach (var o in FindObjectsByType<NetworkObject>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            if (o.gameObject.scene == scene) sceneObjects.Add(o);
+    }
+
+    bool SceneObjectsDestroyed(out int gone)
+    {
+        gone = 0;
+        if (sceneObjectsScene != SceneManager.GetActiveScene().name) return false;
+        foreach (var o in sceneObjects) if (o == null) gone++;   // Unity's null: destroyed
+        return gone > 0;
     }
 
     /// <summary>Disconnects from the current room. SceneFader waits on this before changing scene.</summary>

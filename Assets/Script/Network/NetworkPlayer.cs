@@ -75,7 +75,7 @@ public class NetworkPlayer : NetworkBehaviour
     }
 
     // Same colour for the same player on every screen, spread around the colour wheel.
-    static Color PlayerColor(int playerId) =>
+    public static Color PlayerColor(int playerId) =>
         Color.HSVToRGB(Mathf.Repeat(playerId * 0.618f, 1f), 0.6f, 0.95f);
 
     void Tint(Color c)

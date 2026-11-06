@@ -43,10 +43,10 @@ namespace InnerFrame.Entrance
         protected override void OnPopulateMesh(VertexHelper vh)
         {
             vh.Clear(); var r=rectTransform.rect;
-            Ring(vh,r,15,6,new Color(1f,.57f,.015f,.10f));
-            Ring(vh,r,9,4,new Color(1f,.68f,.04f,.23f));
-            Ring(vh,r,5,3,new Color(1f,.82f,.14f,.70f));
-            Ring(vh,r,2,2,new Color(1f,.95f,.45f,1f));
+            Ring(vh,r,52,32,new Color(1f,.68f,.05f,.30f));
+            Ring(vh,r,32,19,new Color(1f,.77f,.10f,.58f));
+            Ring(vh,r,19,9,new Color(1f,.87f,.18f,.94f));
+            Ring(vh,r,9,0,new Color(1f,.98f,.58f,1f));
         }
         static void Ring(VertexHelper vh,Rect r,float outer,float inner,Color tint)
         {

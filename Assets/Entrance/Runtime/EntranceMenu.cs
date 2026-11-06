@@ -4,6 +4,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using UnityEngine.Video;
 using UnityEngine.XR.Interaction.Toolkit.UI;
 #if UNITY_EDITOR
 using UnityEngine.InputSystem;
@@ -21,7 +22,10 @@ namespace InnerFrame.Entrance
         Canvas canvas;
         RawImage backdrop;
         RawImage transition;
+        RawImage galleryGold;
         Texture2D goldGradient;
+        VideoPlayer interludePlayer;
+        RenderTexture interludeBuffer;
         RectTransform root;
         readonly List<GameObject> controls = new List<GameObject>();
         readonly List<EntranceHoverFeedback> cardBorders = new List<EntranceHoverFeedback>();
@@ -32,6 +36,7 @@ namespace InnerFrame.Entrance
         bool hasRole;
         string code = "";
         bool busy;
+        bool skipIntro;
         Camera eyes;
         GraphicRaycaster uiRaycaster;
         TMP_FontAsset brushFont;
@@ -39,6 +44,7 @@ namespace InnerFrame.Entrance
         public bool Ready { get; private set; }
         public int CurrentPage { get; private set; }
         public int IntroBeat { get; private set; } = -1;
+        public bool VanGoghInterludePlaying { get; private set; }
         public Camera ViewingCamera => eyes;
         public string EnteredCode => code;
 #if UNITY_EDITOR
@@ -159,6 +165,15 @@ namespace InnerFrame.Entrance
             transition = veil.GetComponent<RawImage>();
             transition.raycastTarget = false;
             transition.color = Color.clear;
+            var gold = new GameObject("Full screen Gallery gold", typeof(RectTransform), typeof(RawImage));
+            gold.transform.SetParent(root, false);
+            var goldRect = (RectTransform)gold.transform;
+            goldRect.sizeDelta = new Vector2(W * 3f, H * 3f);
+            galleryGold = gold.GetComponent<RawImage>();
+            galleryGold.raycastTarget = false;
+            galleryGold.texture = GoldGradient();
+            galleryGold.color = Color.clear;
+            gold.SetActive(false);
         }
 
         void AddFrameBar(string label, Vector2 position, Vector2 size)
@@ -240,7 +255,8 @@ namespace InnerFrame.Entrance
             var feedback=image.gameObject.AddComponent<EntranceHoverFeedback>();
             feedback.Configure(button,groupRect,frameImage.GetComponent<Image>());
             cardBorders.Add(feedback);
-            Sign(caption,x,-260,290,100,()=>SelectRole(choice),40);
+            var nameSign=Sign(caption,x,-260,290,100,()=>SelectRole(choice),40);
+            cardBorders.Add(nameSign.GetComponent<EntranceHoverFeedback>());
         }
 
         void SelectRole(VisitorRole choice)
@@ -256,7 +272,7 @@ namespace InnerFrame.Entrance
         {
             for (int i=0;i<cardBorders.Count;i++)
             {
-                cardBorders[i].SetChosen(hasRole && (int)role == i);
+                cardBorders[i].SetChosen(hasRole && (int)role == i/2);
             }
         }
 
@@ -281,7 +297,7 @@ namespace InnerFrame.Entrance
                 case 1:
                     Sign("Choose Who You'll Be",0,395,860,110,() => {},66);
                     Card("Boy",boy,VisitorRole.Boy,-285);
-                    Card("Lady in Red",lady,VisitorRole.LadyInRed,285);
+                    Card("Girl",lady,VisitorRole.LadyInRed,285);
                     RefreshCards();
                     Sign("Back",-470,-422,270,100,() => Show(0),47);
                     storyButton = Sign("Enter the Story",350,-422,540,100,() => Show(2),50);
@@ -350,21 +366,27 @@ namespace InnerFrame.Entrance
         IEnumerator Intro()
         {
             busy=true;
+            skipIntro=false;
             Ready=false;
             Clear();
+            var skip=AddImage("Skip intro sign",sign,640,-435,170,66,true);
+            Text(skip,"Skip",34);
+            var skipButton=skip.gameObject.AddComponent<Button>();
+            skipButton.onClick.AddListener(()=>skipIntro=true);
+            skip.gameObject.AddComponent<EntranceHoverFeedback>().Configure(skipButton,skip,skip.GetComponent<Image>());
             var images=new[]{squarePlate,door,repaint};
             var durations=new[]{2.5f,2.5f,2.2f};
             var starts=new[]{1.03f,1.03f,1.09f};
             var ends=new[]{1.10f,1.13f,1.03f};
             var originalPosition=root.anchoredPosition3D;
             var originalScale=backdrop.rectTransform.localScale;
-            for (int i=0;i<images.Length;i++)
+            for (int i=0;i<images.Length && !skipIntro;i++)
             {
                 if (i == 0) SetPainting(images[i]);
                 else
                 {
                     transition.texture=images[i];
-                    for (float fade=0;fade<.375f;fade+=Time.unscaledDeltaTime)
+                    for (float fade=0;fade<.375f && !skipIntro;fade+=Time.unscaledDeltaTime)
                     {
                         transition.color=new Color(1f,1f,1f,Mathf.Clamp01(fade/.375f));
                         yield return null;
@@ -372,8 +394,9 @@ namespace InnerFrame.Entrance
                     SetPainting(images[i]);
                     transition.color=Color.clear;
                 }
+                if(skipIntro) break;
                 IntroBeat=i;
-                for (float t=0;t<durations[i];t+=.125f)
+                for (float t=0;t<durations[i] && !skipIntro;t+=.125f)
                 {
                     // The Canvas is in world units; jitter the image in UI
                     // pixels, never move the whole painting by three metres.
@@ -385,76 +408,37 @@ namespace InnerFrame.Entrance
             root.anchoredPosition3D=originalPosition;
             backdrop.rectTransform.anchoredPosition=Vector2.zero;
             backdrop.rectTransform.localScale=originalScale;
-            // Gold masks the load without moving the player's headset.
-            transition.texture=GoldGradient();
-            for (float fade=0;fade<.6f;fade+=Time.unscaledDeltaTime)
-            {
-                transition.color=new Color(1f,1f,1f,Mathf.Clamp01(fade/.6f));
-                yield return null;
-            }
-            transition.color=Color.white;
+            // C4 finishes before the painted Van Gogh title. The following
+            // landing animation dissolves directly over its final video frame.
             IntroBeat=3;
-            // Capture follows the same real scene handoff as ordinary play.
-            yield return new WaitForSecondsRealtime(.25f);
-            ShowLand(false);
+            if (!skipIntro) yield return PlayVanGoghInterlude();
+            Clear();
+            if (skipIntro)
+            {
+                EndVanGoghInterlude();
+                transition.texture=GoldGradient();
+                transition.color=Color.white;
+                yield return EnterGallery();
+            }
+            else yield return PaintingPreview();
         }
 
-        RectTransform LandRect(string name, float x,float y,float w,float h)
-        {
-            var go=new GameObject(name,typeof(RectTransform));
-            go.transform.SetParent(root,false);
-            var r=(RectTransform)go.transform;
-            r.anchoredPosition=new Vector2(x,y); r.sizeDelta=new Vector2(w,h);
-            controls.Add(go); return r;
-        }
-        void LandText(string name,string content,float y,float size,float height)
-        {
-            var t=Text(LandRect(name,0,y,1400,height),content,size);
-            t.color=new Color(.14f,.08f,.015f);
-        }
-        void LandButton(string label,float x,float y,float w,System.Action action)
-        {
-            var r=LandRect(label+" sign",x,y,w,76);
-            var image=r.gameObject.AddComponent<Image>();
-            image.color=new Color(1f,.94f,.73f);
-            var outline=r.gameObject.AddComponent<Outline>();
-            outline.effectColor=new Color(.51f,.32f,.07f); outline.effectDistance=new Vector2(2,2);
-            Text(r,label,29).color=new Color(.14f,.08f,.015f);
-            var b=r.gameObject.AddComponent<Button>(); b.targetGraphic=image;
-            b.onClick.AddListener(()=>{if(!busy)action();});
-            r.gameObject.AddComponent<EntranceHoverFeedback>().Configure(b,r,image);
-        }
-        void ShowLand(bool bedroom)
-        {
-            Clear(); busy=false; Ready=true; CurrentPage=bedroom?6:5;
-            transition.color=Color.clear;
-            backdrop.rectTransform.localScale=Vector3.one;
-            backdrop.rectTransform.anchoredPosition=Vector2.zero;
-            SetPainting(GoldGradient());
-            LandText("Land heading",bedroom?"The 3D Bedroom fades in here":"The 3D gallery fades in here",130,65,150);
-            LandText("Land description",bedroom?
-                "The same three beats work for any painting: swap the picture and the room.":
-                "In the headset the gold light fades straight into the Unity gallery. You chose "+
-                (role==VisitorRole.Boy?"the boy":"the lady in red")+", room "+code+".",0,29,145);
-            LandButton("Back to the menu",-150,-115,300,()=>{IntroBeat=-1;Show(0);});
-            LandButton(bedroom?"Replay":"Replay the intro",160,-115,280,()=>StartCoroutine(bedroom?PaintingPreview():Intro()));
-            if(!bedroom) LandButton("Then: enter The Bedroom",0,-215,430,()=>StartCoroutine(PaintingPreview()));
-            else LandButton("Enter Gallery",0,-215,430,()=>StartCoroutine(EnterGallery()));
-        }
         IEnumerator EnterGallery()
         {
             const string target = "Assets/Scenes/Gallery.unity";
-            if (busy) yield break;
-            var status = Text(LandRect("Gallery loading status",0,-330,1300,90),"Loading Gallery...",28);
-            status.color = new Color(.14f,.08f,.015f);
             if (!Application.CanStreamedLevelBeLoaded(target))
             {
-                status.text = "Gallery is unavailable. Enable Assets/Scenes/Gallery.unity in Build Profiles.";
                 Debug.LogError("[Entrance] Cannot load " + target + ": scene is not enabled in Build Profiles.",this);
+                if(galleryGold!=null) galleryGold.gameObject.SetActive(false);
                 yield break;
             }
             var fader = SceneFader.Instance;
-            if (fader.IsTransitioning) { status.text="A scene transition is already running."; yield break; }
+            if (fader.IsTransitioning) yield break;
+            if(galleryGold!=null)
+            {
+                galleryGold.gameObject.SetActive(true);
+                galleryGold.color=Color.white;
+            }
             busy = true;
             Ready = false;
             fader.FadeToScene(target,1.2f,GoldGradient());
@@ -465,9 +449,8 @@ namespace InnerFrame.Entrance
             {
                 busy=false;
                 Ready=true;
-                if (status != null) status.text = string.IsNullOrEmpty(fader.LastFailure)
-                    ? "Gallery transition ended. Check Console if the scene did not change."
-                    : "Could not enter Gallery. Check Console and try again.";
+                if(galleryGold!=null) galleryGold.gameObject.SetActive(false);
+                Debug.LogError("[Entrance] Gallery transition ended without loading Gallery: " + fader.LastFailure,this);
             }
         }
 
@@ -485,14 +468,88 @@ namespace InnerFrame.Entrance
                 transition.texture=frames[i];
                 for(float t=0;t<.375f;t+=Time.unscaledDeltaTime)
                 { transition.color=new Color(1,1,1,t/.375f); yield return null; }
-                SetPainting(frames[i]); transition.color=Color.clear; IntroBeat=4+i;
+                SetPainting(frames[i]); transition.color=Color.clear;
+                if(i==0) EndVanGoghInterlude();
+                IntroBeat=4+i;
                 for(float t=0;t<durations[i];t+=.125f)
                 { backdrop.rectTransform.localScale=Vector3.one*Mathf.Lerp(start[i],end[i],t/durations[i]); yield return new WaitForSecondsRealtime(.125f); }
             }
             transition.texture=GoldGradient(); IntroBeat=7;
+            if(galleryGold!=null) galleryGold.gameObject.SetActive(true);
             for(float t=0;t<2.2f;t+=Time.unscaledDeltaTime)
-            { float v=Mathf.FloorToInt(t*8)%4<2?1f:.9f; transition.color=new Color(v,v,v,Mathf.Clamp01(t/.6f)); yield return null; }
-            ShowLand(true);
+            { float v=Mathf.FloorToInt(t*8)%4<2?1f:.9f; galleryGold.color=new Color(v,v,v,Mathf.Clamp01(t/.6f)); yield return null; }
+            busy=false;
+            yield return EnterGallery();
+        }
+
+        IEnumerator PlayVanGoghInterlude()
+        {
+            var clip=Resources.Load<VideoClip>("Entrance/VanGoghHandwriting");
+            if(clip==null)
+            {
+                Debug.LogError("[Entrance] Van Gogh interlude video missing from Entrance Resources.",this);
+                yield break;
+            }
+            var buffer=new RenderTexture(1280,720,0,RenderTextureFormat.ARGB32);
+            buffer.Create();
+            var player=gameObject.AddComponent<VideoPlayer>();
+            player.playOnAwake=false;
+            player.isLooping=false;
+            player.audioOutputMode=VideoAudioOutputMode.None;
+            player.source=VideoSource.VideoClip;
+            player.clip=clip;
+            player.renderMode=VideoRenderMode.RenderTexture;
+            player.targetTexture=buffer;
+            player.Prepare();
+            float wait=0f;
+            while(!player.isPrepared && wait<8f && !skipIntro)
+            { wait+=Time.unscaledDeltaTime; yield return null; }
+            if(player.isPrepared && !skipIntro)
+            {
+                transition.texture=buffer;
+                transition.color=Color.white;
+                player.Play();
+                VanGoghInterludePlaying=true;
+                float elapsed=0f;
+                while(!skipIntro && elapsed<clip.length+.5f && (player.isPlaying || elapsed<.3f))
+                { elapsed+=Time.unscaledDeltaTime; yield return null; }
+            }
+            else if(!skipIntro) Debug.LogError("[Entrance] Van Gogh video could not prepare.",this);
+            VanGoghInterludePlaying=false;
+            if (player.isPrepared && !skipIntro)
+            {
+                // Hold the final painted frame behind the dissolve into the landing.
+                player.Pause();
+                backdrop.texture=buffer;
+                interludePlayer=player;
+                interludeBuffer=buffer;
+                transition.color=Color.clear;
+                transition.texture=null;
+            }
+            else
+            {
+                player.Stop();
+                player.targetTexture=null;
+                Destroy(player);
+                buffer.Release(); Destroy(buffer);
+            }
+        }
+
+        void EndVanGoghInterlude()
+        {
+            if(interludePlayer!=null)
+            {
+                interludePlayer.Stop();
+                interludePlayer.targetTexture=null;
+                Destroy(interludePlayer);
+                interludePlayer=null;
+            }
+            if(interludeBuffer!=null)
+            {
+                interludeBuffer.Release();
+                Destroy(interludeBuffer);
+                interludeBuffer=null;
+            }
         }
 
         Texture2D GoldGradient()

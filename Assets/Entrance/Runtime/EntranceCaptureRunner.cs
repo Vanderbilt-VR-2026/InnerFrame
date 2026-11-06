@@ -85,7 +85,7 @@ namespace InnerFrame.Entrance
             menu.ReviewClick("Boy portrait");
             if(EntranceChoice.Role!=VisitorRole.Boy) throw new InvalidOperationException("Boy selection did not persist.");
             yield return Shot("03-M2-Boy-Selected");
-            menu.ReviewClick("Lady in Red portrait");
+            menu.ReviewClick("Girl portrait");
             if(EntranceChoice.Role!=VisitorRole.LadyInRed) throw new InvalidOperationException("Lady selection did not persist.");
             yield return Shot("04-M2-Lady-Selected");
             menu.ReviewClick("Enter the Story sign");

@@ -1,0 +1,11 @@
+# Vincent's lines for the mirror scene: an id, then the text (the caption shows the same text).
+# From Cici's design proposal, section 4; Rowling may rewrite them under #75. After a change, run make_mirror_lines.sh
+# and Tools > InnerFrame > Van Gogh > Rebuild assets.
+greet Ah, come in! Mind the paint, it's still wet. Welcome to the yellow house.
+explain I'm painting myself. I have no money for models, so I bought a good mirror and work from my own head.
+ask Would you help me? Take the mirror from the wall, there by the towel, and hold it up for me.
+grab Yes, that one. Now hold it up beside my canvas, facing me.
+stage1 If I can manage the colour of my own head, I'll be able to paint the heads of other fellows and women too.
+stage2 Now the colour. Hold still, my friend, this is the hard part.
+back Bring the mirror back, my friend. I can't paint my face without it.
+done There, it's done. Thank you, my friend. Hang the mirror back for me; Gauguin will want to look at himself too.

@@ -1,0 +1,349 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5dadae0b1232c4c3d9d053a29573bbf8, type: 3}
+  m_Name: SN_Layout
+  m_EditorClassIdentifier: Assembly-CSharp::InnerFrame.StarryNight.SN_Layout
+  version: 5
+  rigScale: 0.8
+  eyeHeight: 1.28
+  playerStart: {x: 2.4, y: 0, z: -4}
+  playerSeat: {x: 0.45, y: 0, z: -0.9}
+  playerSeatRadius: 0.6
+  rockFootprint: {x: 1.456, y: 0.816}
+  rockTop: 0.26
+  rockBuried: 0
+  rockHeightScale: 1.19
+  vincentSeat: {x: -0.17, y: 0, z: 0.19}
+  vincentYaw: 0
+  vincentHeight: 1.7
+  vincentMouthInHead: {x: 0, y: 0.07, z: 0.1}
+  vincentStand: {x: -0.8, y: 0, z: 0.5}
+  lantern: {x: 0.85, y: 0, z: -0.55}
+  sketchbook: {x: 0.54, y: 0.378, z: -0.12}
+  page: {x: 0.24, y: 0.355, z: -0.2}
+  sketchbookSize: {x: 0.3, y: 0.02, z: 0.22}
+  pageSize: {x: 0.21, y: 0.297}
+  cypressBase: {x: -1.9, y: 0, z: 2.4}
+  cypressHeight: 7
+  cypressWidth: 1.6
+  hillFlatRadius: 1.2
+  hillEdgeRadius: 5.5
+  hillDrop: 1
+  hillSlopePower: 1.3
+  hillOuterRadius: 7.5
+  hillFall: 3
+  skirtRadius: 10
+  hillNoise: 0.06
+  edgeColliderRadius: 5.65
+  edgeColliderHeight: 1
+  edgeColliderCount: 32
+  pathPoints:
+  - {x: 2.4, y: -4}
+  - {x: 2.55, y: -3}
+  - {x: 2.1, y: -2.15}
+  - {x: 1.5, y: -1.55}
+  - {x: 0.95, y: -1.15}
+  - {x: 0.45, y: -0.9}
+  pathWidth: 0.6
+  grassTileMetres: 1.6
+  pathTileMetres: 2.4
+  bushSeed: 1888
+  bushACount: 50
+  bushBCount: 25
+  bushScale: {x: 0.7, y: 1.3}
+  bushClearPath: 0.4
+  bushClearSeat: 0.6
+  bushClearRock: 0.2
+  bushClearLantern: 0.3
+  bushClearVincent: 0.45
+  bushClearStart: 0.8
+  bushClearCypress: 0.3
+  bushClearWalls: 0.05
+  openViewRadius: 1.5
+  openViewHeight: 0.6
+  bushAreaRadius: 6.6
+  bushSlopeFollow: 0.6
+  bushNormalBend: 0.5
+  bushATint: {r: 1, g: 1.1, b: 0.78, a: 1}
+  bushBTint: {r: 1.05, g: 1.12, b: 0.85, a: 1}
+  grassTint: {r: 1.32, g: 1.24, b: 0.6, a: 1}
+  pathTint: {r: 1.18, g: 1.02, b: 0.8, a: 1}
+  flowerClusters: 80
+  flowerSeed: 1890
+  flowerWidth: {x: 0.3, y: 0.46}
+  flowerAreaRadius: 5.2
+  hillRingRadiusFraction: 0.6
+  hillRingMinPitch: -6
+  hillRingMaxPitch: 4
+  hillRingUnderHorizonPitch: -9
+  ridgeMinPitch: -1.2
+  ridgeMaxPitch: 2.4
+  ridgeSeed: 1853
+  ridgeJunctionMargin: 0.6
+  ridgeJunctionDeg: 12
+  ridgeTileDeg: 90
+  horizonWidthDeg: 96
+  horizonTopPitch: 4
+  horizonInset: 2.5
+  horizonAspect: 5.585
+  horizonSpireYaw: 6.1
+  horizonSpireU: 0.6807
+  horizonEndFadeDeg: 8
+  horizonNight: {r: 0.62, g: 0.66, b: 0.8, a: 1}
+  horizonDawn: {r: 0.92, g: 0.92, b: 0.96, a: 1}
+  horizonGlowColour: {r: 1, g: 0.72, b: 0.32, a: 1}
+  horizonGlow: 0.9
+  villageGlowSprites:
+  - {x: 0.6813, y: 0.6091, z: 0.522}
+  - {x: 0.7256, y: 0.8236, z: 0.243}
+  - {x: 0.5889, y: 0.7836, z: 0.2}
+  villageGlowSpriteDeg: 4.5
+  villageDots: 0
+  villageYaw: 6.15
+  villagePitch: -6.4
+  villageDistance: 85
+  villageSpreadYaw: 5
+  villageSpreadPitch: 1.2
+  villageLights: 36
+  villageLightSize: 0.6
+  mistLayerHeights:
+  - -1.9
+  - -2.5
+  - -3.3
+  - -4.3
+  mistLayerScale:
+  - 0.62
+  - 0.85
+  - 1
+  - 1.15
+  mistInnerRadius: 5.6
+  mistOuterRadius: 22
+  mistRise: 0
+  mistTileMetres: 12
+  mistDrift:
+  - {x: 0.0035, y: -0.0015}
+  - {x: 0.004, y: 0.0012}
+  - {x: -0.0028, y: 0.002}
+  - {x: 0.0018, y: -0.0026}
+  mistColour: {r: 0.54, g: 0.61, b: 0.88, a: 0.39}
+  mistPuffs: 6
+  mistPuffRadius: 8.6
+  mistPuffY: -2.2
+  mistPuffSpreadYaw: 140
+  mistPuffSize: {x: 6.5, y: 2.6}
+  cloudSeed: 1853
+  cloudCount: 25
+  cloudScale: {x: 0.8, y: 2.5}
+  cloudInnerRadius: 6.3
+  cloudOuterRadius: 11
+  cloudClearRadius: 6
+  cloudTopMaxPitch: -12.5
+  cloudTopMaxY: -0.6
+  cloudClusters: 5
+  cloudFaceJitterDeg: 35
+  cloudTint: {r: 1.1, g: 1.12, b: 1.22, a: 1}
+  cloudNormalBend: 1.6
+  skyRadiusMax: 150
+  skyRadiusFarClipFraction: 0.8
+  starDistanceFraction: 0.9
+  panelYawCentre: 28
+  panelYaw: 56.25
+  panelPitchMin: -8
+  panelPitchMax: 67
+  panelEdgeSoft: 8
+  starCoreDeg: 1.3
+  starHaloDeg: 3.5
+  moonYaw: 55
+  moonPitch: 49.5
+  moonDeg: 13
+  morningStarRightOfCypress: 10.5
+  morningStarPitch: 32
+  stars:
+  - name: N1
+    yaw: 22
+    pitch: 16
+    size: 1.1
+    haloDeg: 0
+    visibleAtStart: 0
+    named: 1
+  - name: N2
+    yaw: 6
+    pitch: 24
+    size: 1.1
+    haloDeg: 0
+    visibleAtStart: 0
+    named: 2
+  - name: N3
+    yaw: -33
+    pitch: 32
+    size: 1.8
+    haloDeg: 5
+    visibleAtStart: 1
+    named: 3
+  - name: S1
+    yaw: -60
+    pitch: 22
+    size: 1
+    haloDeg: 0
+    visibleAtStart: 0
+    named: 0
+  - name: S2
+    yaw: -52
+    pitch: 58
+    size: 1.2
+    haloDeg: 0
+    visibleAtStart: 1
+    named: 0
+  - name: S3
+    yaw: -26.5
+    pitch: 15.5
+    size: 0.8
+    haloDeg: 0
+    visibleAtStart: 0
+    named: 0
+  - name: S4
+    yaw: -18
+    pitch: 55
+    size: 1
+    haloDeg: 0
+    visibleAtStart: 0
+    named: 0
+  - name: S5
+    yaw: -4
+    pitch: 64
+    size: 0.8
+    haloDeg: 0
+    visibleAtStart: 0
+    named: 0
+  - name: S6
+    yaw: 15
+    pitch: 59
+    size: 1
+    haloDeg: 0
+    visibleAtStart: 0
+    named: 0
+  - name: S7
+    yaw: 31
+    pitch: 27
+    size: 0.9
+    haloDeg: 0
+    visibleAtStart: 0
+    named: 0
+  - name: S8
+    yaw: 62
+    pitch: 24
+    size: 1.2
+    haloDeg: 0
+    visibleAtStart: 1
+    named: 0
+  - name: S9
+    yaw: 70
+    pitch: 60
+    size: 0.9
+    haloDeg: 0
+    visibleAtStart: 0
+    named: 0
+  smallStars: 150
+  smallStarDeg: {x: 0.15, y: 0.35}
+  smallEarlyShare: 0.33
+  earlyAlpha: 0.35
+  twinkle: 0.45
+  mediumStars: 25
+  mediumStarDeg: {x: 0.4, y: 0.6}
+  mediumHaloSmallDeg: 1.2
+  mediumHaloFullDeg: 2.6
+  fieldMinPitch: 6
+  starFieldSeed: 1889
+  guidePath:
+  - {x: -13.97, y: 39.86}
+  - {x: -8.59, y: 40.45}
+  - {x: -3.76, y: 42.33}
+  - {x: 0.81, y: 44.85}
+  - {x: 5.22, y: 47.77}
+  - {x: 9.77, y: 50.34}
+  - {x: 14.53, y: 52.4}
+  - {x: 19.57, y: 53.78}
+  - {x: 25.01, y: 54.22}
+  - {x: 30.29, y: 53.41}
+  - {x: 35.07, y: 51.4}
+  - {x: 39.32, y: 48.11}
+  - {x: 42.22, y: 43.7}
+  - {x: 43.39, y: 38.57}
+  - {x: 41.82, y: 33.61}
+  - {x: 37.47, y: 30.78}
+  - {x: 32.57, y: 32.37}
+  - {x: 33.94, y: 36.44}
+  - {x: 29.18, y: 38.33}
+  - {x: 24.78, y: 35.62}
+  - {x: 23.16, y: 30.86}
+  swirlBandHalfWidth: 8
+  swirlMaskWidth: 512
+  swirlMaskHeight: 256
+  guideDotsPerSegment: 3
+  guideDotDeg: 0.7
+  charcoalInHand: {x: 0, y: 0.125, z: 0.012}
+  charcoalInHandEuler: {x: 0, y: 0, z: 90}
+  vincentTalkHoldSeconds: 0.6
+  vincentTalkFadeSeconds: 0.3
+  vincentStandFadeSeconds: 0.25
+  vincentLookBodyWeight: 0.15
+  vincentLookHeadWeight: 0.8
+  vincentLookEyesWeight: 0
+  vincentLookClamp: 0.5
+  vincentLookFollowSeconds: 0.35
+  vincentLookWeightSeconds: 0.5
+  vincentLookMaxYaw: 100
+  vincentSketchLookDistance: 0.5
+  vincentSketchLookWeight: 0.6
+  vincentPointReach: 0.85
+  vincentPointInSeconds: 0.4
+  vincentPointOutSeconds: 0.5
+  vincentPointAfterLineSeconds: 1
+  vincentPointMaxAngle: 110
+  vincentPointFarWeight: 0.5
+  arriveDistance: 3
+  aimAssistDeg: 4
+  windToleranceDeg: 6
+  lanternDimSeconds: 1.5
+  lanternDimTo: 0.08
+  starsFadeInSeconds: 2.5
+  starBloomSeconds: 0.8
+  paintToHalfSeconds: 3
+  paintToFullSeconds: 4
+  dawnDelaySeconds: 10
+  dawnSeconds: 20
+  morningStarFadeSeconds: 8
+  idleRepeatSeconds: 25
+  sketchMaxDistance: 0.6
+  sketchMaxViewAngle: 25
+  sketchValleyYaw: 60
+  sketchHoldSeconds: 1.5
+  editorGrabReach: 1.5
+  beamLength: 45
+  ambient: {r: 0.15686275, g: 0.2, b: 0.33333334, a: 1}
+  moonLight: {r: 0.5254902, g: 0.65882355, b: 0.9254902, a: 1}
+  moonLightIntensity: 0.55
+  lanternLight: {r: 1, g: 0.65882355, b: 0.28235295, a: 1}
+  lanternIntensity: 6
+  lanternRange: 6.5
+  fog: {r: 0.08627451, g: 0.14901961, b: 0.29803923, a: 1}
+  fogStart: 25
+  fogEnd: 220
+  dawnAmbient: {r: 0.3529412, g: 0.4, b: 0.50980395, a: 1}
+  dawnFog: {r: 0.6039216, g: 0.6509804, b: 0.72156864, a: 1}
+  hillRingNight: {r: 0.56, g: 0.6, b: 0.74, a: 1}
+  hillRingDawn: {r: 0.84, g: 0.85, b: 0.9, a: 1}
+  colourGrading: 0
+  gradingPostExposure: 0.35
+  gradingContrast: 14
+  gradingSaturation: 20
+  gradingFilter: {r: 1, g: 0.97, b: 0.92, a: 1}

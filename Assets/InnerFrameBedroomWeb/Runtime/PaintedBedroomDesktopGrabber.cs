@@ -123,6 +123,7 @@ namespace InnerFrame.PaintedBedroom
 
         void Grab(PaintedBedroomMovable m, float distance)
         {
+            m.Claim();
             held = m;
             holdDistance = Mathf.Max(distance, minDistance);
             spin = 0f;
@@ -178,6 +179,7 @@ namespace InnerFrame.PaintedBedroom
         {
             var rs = m.GetComponentsInChildren<Renderer>();
             if (rs.Length == 0) return;
+            m.Claim();
             Bounds b = rs[0].bounds;
             foreach (var r in rs) b.Encapsulate(r.bounds);
             inspected = m;

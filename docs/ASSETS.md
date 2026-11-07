@@ -123,3 +123,8 @@ sample, re-import it from Package Manager instead of editing it here.
 | `Assets/Samples` | The folder Package Manager creates for imported samples | Unity | n/a | See the rows below |
 | `Assets/Samples/XR Interaction Toolkit` | Starter Assets; Hands Interaction Demo | `com.unity.xr.interaction.toolkit` | 3.3.2 | [Unity Companion License](http://www.unity3d.com/legal/licenses/Unity_Companion_License). The package's *Third Party Notices.md* lists Apache-2.0 components (gesture code from Google's ARCore Unity SDK). |
 | `Assets/Samples/XR Hands` | HandVisualizer | `com.unity.xr.hands` | 1.9.0 | [Unity Package Distribution License](https://unity3d.com/legal/licenses/Unity_Package_Distribution_License). The package's *Third Party Notices.md* lists Apache-2.0 components (Khronos OpenXR-SDK-Source). |
+
+| Entrance B soundtrack and UI sounds | Original InnerFrame score and click, GeneralUser GS instrument samples https://www.schristiancollins.com/generaluser.php | Original composition and bundled GeneralUser GS music-production license at `Assets/Entrance/Resources/Entrance/Audio/Soundfont-LICENSE.txt` |
+| Entrance handwriting Foley | Stephan / PDSounds, https://commons.wikimedia.org/wiki/File:Writing_with_inkpen.ogg | Public domain, edited to lettering timing |
+
+| `Assets/Entrance` | Entrance paintings, character portraits, UI wood art, intro video, original B soundtrack, UI audio, shaders, scene and scripts | InnerFrame opening artwork supplied by project team and described in `docs/entrance/README.md`; original score with licensed GeneralUser GS instrument samples; public-domain handwriting Foley credited above |

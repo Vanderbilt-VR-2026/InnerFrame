@@ -12,6 +12,7 @@ Code: `Assets/Script/Network/`.
 | `DesktopTestRig` | Editor only. Without a headset, replaces a scene's XR Origin with a W A S D + mouse player, so the Editor can walk around and count as a player (see "Testing with one headset"). |
 | `NetworkPlayer` | The avatar. Copies your headset and controllers onto it; your own copy is hidden. |
 | `NetworkGrabbable` | Makes a grab object shared (see below). |
+| `StarryNightLink` | On each avatar: shares The Starry Night's progress and its lantern, sketchbook and page (`docs/starry-night/README.md` → Two players). |
 | `Editor/NetworkPlayerPrefabBuilder` | Builds `Resources/NetworkPlayer.prefab`. Menu: **InnerFrame → Multiplayer → Rebuild Network Player Prefab**. |
 | `Editor/PaintedAvatarBuilder` | Builds the Painted Bedroom's avatar, `Resources/NetworkPlayer_PaintedBedroom.prefab`, and its textures, materials and meshes in `PaintedAvatar/`. Menu: **InnerFrame → Multiplayer → Rebuild Painted Bedroom Avatar**. |
 | `Editor/NetworkGrabbableMenu` | Makes many objects shared at once (see below). |
@@ -180,6 +181,13 @@ sample) driving the Editor player.
 
 Talking to Vincent and the Painted Bedroom's mirror scene are shared: see `docs/vangogh/README.md` →
 Shared Vincent (`VincentLink`, `MirrorLink` on each avatar).
+
+## The Starry Night
+
+Same setup as the other scenes: `NetworkSession` joins `InnerFrame_StarryNight` by itself. Its objects are spawned at
+runtime, so instead of `NetworkGrabbable` the scene is shared by `StarryNightLink` on each avatar, the same pattern as
+`MirrorLink`: each player writes its own avatar's state, everyone reads it. See `docs/starry-night/README.md` → Two
+players.
 
 ## Not synced (yet)
 

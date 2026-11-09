@@ -42,7 +42,6 @@ namespace InnerFrame.StarryNight
 
         void Start()
         {
-            LeaveNetworkSession();
             CheckRigs();
 #if UNITY_EDITOR
             if (!XRSettings.isDeviceActive) Game.Input = new SN_InputEditor();
@@ -63,21 +62,9 @@ namespace InnerFrame.StarryNight
             if (!XRSettings.isDeviceActive) EditorKeys();
         }
 
-        /// <summary>
-        /// TEMPORARY (2026-11-04, blockout only; see docs/starry-night/README.md). NetworkSession
-        /// (Assets/Script/Network/NetworkSession.cs, Sonya's file) joins a Photon Fusion room in every scene with an
-        /// XR Origin and has no opt-out yet; this scene is solo for now. So, before its join gets past its first frame,
-        /// the session is told to stop and leave. It stays alive, so the next scene joins its room as usual.
-        /// Replace this with an opt-out in NetworkSession; don't change that file from here.
-        /// </summary>
-        static void LeaveNetworkSession()
-        {
-            var session = NetworkSession.Instance;
-            if (session == null) return;
-            session.StopAllCoroutines();
-            session.StartCoroutine(session.Leave());
-            Debug.Log("[SN] Solo for now: left the network session (temporary, until NetworkSession has an opt-out).");
-        }
+        // Multiplayer: nothing to do here. As in the Gallery and the Bedroom, NetworkSession joins this scene's room
+        // (InnerFrame_StarryNight) by itself and spawns the avatar; StarryNightLink on each avatar shares the night
+        // (SN_Game.ShareRoom) and the lantern, sketchbook and page. See docs/starry-night/README.md, "Two players".
 
         /// <summary>True while NetworkSession has a runner (for the Play-mode check).</summary>
         public static bool NetworkConnected => NetworkSession.Instance != null && NetworkSession.Instance.Runner != null;
@@ -253,6 +240,7 @@ namespace InnerFrame.StarryNight
                     float best = layout.editorGrabReach;
                     foreach (var g in FindObjectsByType<SN_Grabbable>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
                     {
+                        if (g.Following) continue;   // another player has it
                         float d = Vector3.Distance(g.transform.position, cam.transform.position);
                         if (d <= best) { best = d; nearest = g; }
                     }

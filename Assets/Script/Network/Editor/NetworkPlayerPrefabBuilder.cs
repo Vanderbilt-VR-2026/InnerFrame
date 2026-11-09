@@ -42,6 +42,7 @@ public static class NetworkPlayerPrefabBuilder
         NetworkPlayerVoiceBuilder.AddTo(root, player.head); // voice chat (Assets/Script/Voice)
         root.AddComponent<VincentLink>(); // shared Vincent: questions and answers for the room
         root.AddComponent<MirrorLink>(); // shared mirror scene (Painted Bedroom, #77)
+        root.AddComponent<StarryNightLink>(); // shared night: progress, lantern, sketchbook, page (The Starry Night)
 
         PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
     }

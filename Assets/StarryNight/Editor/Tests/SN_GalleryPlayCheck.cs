@@ -21,7 +21,7 @@ using G = InnerFrame.StarryNight.EditorTools.SN_GallerySetup;
 namespace InnerFrame.StarryNight.EditorTools
 {
     /// <summary>
-    /// Added by SN_GalleryPlayCheck to every scene it loads except StarryNight (which leaves the session itself): on its first
+    /// Added by SN_GalleryPlayCheck to every scene it loads (StarryNight too: it joins its own room now, as the Gallery does): on its first
     /// frame it notes what NetworkSession's join for this scene was about to do, then stops it before it connects. The check
     /// runs offline: it never joins a Photon room.
     /// </summary>
@@ -41,10 +41,10 @@ namespace InnerFrame.StarryNight.EditorTools
     ///  1. StarryNight opened directly: after 3 s, the world's fingerprint (SN_World's objects, renderers, triangles, names).
     ///  2. The Gallery, as the game starts: the desktop rig stands 1.2 m in front of the new pedestal and its dot (the XR ray)
     ///     is on the button; a select from that ray (what E or a controller's grip does) -> SceneFader's fade to black ->
-    ///     StarryNight by name. Then: one XR Origin, one desktop rig, one camera, one audio listener, no NetworkRunner (solo
-    ///     as before: "[SN] Solo for now"), Arrive, the dialogue box at its distance, no extra-rig warning, and the same world
+    ///     StarryNight by name. Then: one XR Origin, one desktop rig, one camera, one audio listener, NetworkSession starting
+    ///     StarryNight's own join (stopped here before it connects) and no NetworkRunner left, Arrive, the dialogue box at its distance, no extra-rig warning, and the same world
     ///     as when opened directly (so the edit-mode playthrough and Vincent checks hold for the scene loaded this way); at
-    ///     9 s still no runner. The way back from anywhere: the menu's "Back to Gallery" -> the Gallery's start (0, 0, 6),
+    ///     9 s still no runner (nothing rejoins). The way back from anywhere: the menu's "Back to Gallery" -> the Gallery's start (0, 0, 6),
     ///     yaw 180, one rig, one listener, the portrait once, NetworkSession starting the Gallery's join (stopped here before
     ///     it connects). In again; at Done (SN_Game's own Done, entered here) the menu stays shut for 9 s, then opens by
     ///     itself with "Back to Gallery"; Back -> the same landing. Controls that must fail: StarryNight loaded additively
@@ -86,7 +86,7 @@ namespace InnerFrame.StarryNight.EditorTools
             Application.logMessageReceived += (msg, stack, type) => logs.Add((EditorApplication.timeSinceStartup, type, msg, stack));
             SceneManager.sceneLoaded += (scene, mode) =>
             {
-                if (SessionState.GetString(Phase, "") != "gallery" || scene.name == "StarryNight") return;
+                if (SessionState.GetString(Phase, "") != "gallery") return;
                 var go = new GameObject("SN_GalleryCheckOffline");
                 SceneManager.MoveGameObjectToScene(go, scene);
                 go.AddComponent<SN_GalleryCheckOffline>();
@@ -210,7 +210,7 @@ namespace InnerFrame.StarryNight.EditorTools
                     waitUntil = sceneSince + 9.0;
                     break;
                 case 4:
-                    Check(NoRunner(), $"9 s in: still solo ({Net()})");
+                    Check(NoRunner(), $"9 s in: still no runner, nothing rejoined ({Net()})");
                     MenuBack(toggle: true);
                     waitScene = "Gallery";
                     break;
@@ -288,8 +288,8 @@ namespace InnerFrame.StarryNight.EditorTools
             Check(maxFade > 0.99f, $"the way in faded to black first (SceneFader's sphere reached alpha {maxFade:F2})");
             var rig = RigErrors();
             Check(rig.Count == 0, $"one scene, one XR Origin, one desktop rig, one camera, one audio listener ({Counts()}) {Errs(rig)}");
-            bool solo = logs.Any(l => l.t >= sceneSince - 0.5 && l.msg.StartsWith("[SN] Solo for now"));
-            Check(NoRunner() && solo, $"solo as before: '[SN] Solo for now' logged {solo}; {Net()}");
+            bool joined = net.scene == "StarryNight" && net.t >= sceneSince - 0.5 && net.joining && net.rigScene == "StarryNight";
+            Check(NoRunner() && joined, $"NetworkSession set out to join StarryNight's own room, as in the Gallery (stopped before it connects): {Net()}");
             bool warned = logs.Any(l => l.type == LogType.Warning && l.msg.Contains("active XR Origins"));
             Check(!warned, "SN_Bootstrap saw no extra rig");
             var game = Object.FindAnyObjectByType<SN_Game>();

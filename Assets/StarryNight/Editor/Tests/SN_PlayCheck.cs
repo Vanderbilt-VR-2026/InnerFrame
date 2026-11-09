@@ -7,11 +7,12 @@ using UnityEngine;
 namespace InnerFrame.StarryNight.EditorTools
 {
     /// <summary>
-    /// Play-mode check of SN_Bootstrap's temporary network measure: opens StarryNight.unity, enters Play mode for
-    /// CheckSeconds, then logs "[SN PlayCheck]" lines: network runners and NetworkPlayers in the scene, whether
-    /// NetworkSession is connected, where the rig is against SN_Layout's player start, and the dialogue UI (the hint the
-    /// game set; the follow group at the settings' distance from the camera). Exit code 0 when there is no runner, no
-    /// NetworkPlayer, no connection, the rig is still at the start and the UI is in place.
+    /// Play-mode check, offline: opens StarryNight.unity, enters Play mode for CheckSeconds, then logs "[SN PlayCheck]"
+    /// lines: whether NetworkSession set out to join this scene's room (InnerFrame_StarryNight, as in the Gallery and the
+    /// Bedroom; noted on the first frame, then stopped before it connects, so the check never joins a Photon room), network
+    /// runners and NetworkPlayers left in the scene, where the rig is against SN_Layout's player start, and the dialogue UI
+    /// (the hint the game set; the follow group at the settings' distance from the camera). Exit code 0 when the join was
+    /// headed for this scene's room, no runner or NetworkPlayer is left, the rig is still at the start and the UI is in place.
     /// Batch: -executeMethod InnerFrame.StarryNight.EditorTools.SN_PlayCheck.RunBatch (without -quit); or as the last step of
     /// SN_Checks.RunAll (Tools > InnerFrame > Starry Night > Run all checks).
     /// Entering Play mode reloads the domain, so the state lives in SessionState.
@@ -25,6 +26,8 @@ namespace InnerFrame.StarryNight.EditorTools
         const float DesktopRigTolerance = 0.10f; // DesktopTestRig's CharacterController settles on the slope; ShiftRig would move 0.7 m
         static double playStart = -1, nextSample;
         static Vector3 firstRigPos;
+        static bool joinNoted;
+        static string joinRigScene;
 
         static SN_PlayCheck()
         {
@@ -57,6 +60,7 @@ namespace InnerFrame.StarryNight.EditorTools
                 var c = Camera.main;
                 firstRigPos = c != null ? c.transform.root.position : Vector3.positiveInfinity;
                 Debug.Log($"[SN PlayCheck] in Play mode; active rig '{(c != null ? c.transform.root.name : "none")}' at {firstRigPos:F3} on the first frame");
+                NoteAndStopJoin();
             }
             if (now >= nextSample)
             {
@@ -96,14 +100,28 @@ namespace InnerFrame.StarryNight.EditorTools
             Debug.Log($"[SN PlayCheck] active rig moved {moved:F3} m between its first frame and now (ShiftRig would move it {0.7f:F1} m sideways)");
             // The XR Origin is the rig and must sit exactly at the start. The Editor's DesktopTestRig settles once when its
             // CharacterController is created on the slope (before any network code can run), then must not move.
-            bool ok = runners == 0 && players == 0 && !connected && originOff < OriginTolerance && firstOff < DesktopRigTolerance && moved < OriginTolerance && uiOk;
+            Debug.Log($"[SN PlayCheck] network: NetworkSession set out to join on the first frame {joinNoted}, its rig in {joinRigScene ?? "none"} " +
+                      $"(room {NetworkSession.RoomPrefix}{joinRigScene}); stopped there (offline check)");
+            bool joinOk = joinNoted && joinRigScene == "StarryNight";
+            bool ok = joinOk && runners == 0 && players == 0 && !connected && originOff < OriginTolerance && firstOff < DesktopRigTolerance && moved < OriginTolerance && uiOk;
             Finish(ok, ok ? "PASS" : "FAIL");
+        }
+
+        // NetworkSession's join for this scene, on the first frame: note where it was headed, then stop it before it connects.
+        static void NoteAndStopJoin()
+        {
+            var s = NetworkSession.Instance;
+            var joining = typeof(NetworkSession).GetField("joining", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            joinNoted = s != null && joining != null && (bool)joining.GetValue(s);
+            joinRigScene = NetworkSession.FindPlayerRig(out var rig, out _) ? rig.gameObject.scene.name : null;
+            if (s != null) { s.StopAllCoroutines(); s.StartCoroutine(s.Leave()); }
         }
 
         static void Finish(bool ok, string why)
         {
             EditorApplication.update -= Tick;
             SessionState.SetBool(Active, false);
+            playStart = -1; joinNoted = false; joinRigScene = null;
             Debug.Log($"[SN PlayCheck] {why}");
             if (SN_Checks.TakePlayResult(ok, why)) return;   // chained from Run all checks: it reports and exits
             EditorApplication.Exit(ok ? 0 : 3);

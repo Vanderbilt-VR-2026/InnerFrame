@@ -16,9 +16,11 @@ namespace InnerFrame.Gallery.EditorTools
     /// What it writes, each only when it differs:
     ///   - the props' import settings (no materials or animation from the FBX; textures with mipmaps, ASTC 6x6 on Android);
     ///   - GP_&lt;Name&gt;.mat: URP Lit with the base colour, GPU instancing on; leaves, petals and panes render both faces;
+    ///     the lantern's panes glow (GP_Lantern_Emission.jpg, warm);
     ///   - GalleryDecor.prefab: every prop at its spot below. Plinths and lantern chains are Unity's cube and cylinder with
     ///     Gallery.fbx's own Mat_Bench and Mat_Metal. Only the plinths and plant pots have colliders (boxes), so nobody
-    ///     walks through them; the frame corners and lanterns have none;
+    ///     walks through them; the frame corners and lanterns have none. Each lantern holds a warm realtime point light
+    ///     without shadows (Mobile_RPAsset: per-pixel additional lights, at most 4 per object, no additional-light shadows);
     ///   - Gallery.unity: exactly one GalleryDecor instance at the origin, as the root just before SN_GalleryEntrance (whose
     ///     own check wants it last); the scene is saved only if something changed.
     /// Running it twice changes nothing. Batch: -executeMethod InnerFrame.Gallery.EditorTools.GalleryDecorSetup.RunBatch -quit
@@ -48,6 +50,11 @@ namespace InnerFrame.Gallery.EditorTools
         public const float CeilingY = 6f, LanternTopY = 3.5f, ChainRadius = 0.012f;
         static readonly Vector3 PotBox = new Vector3(0.6f, 0.55f, 0.6f);   // a plant's collider, round its pot
 
+        // The lanterns' light: about 2700 K (a candle-warm lamp), from the middle of the lantern's body
+        public static readonly Color LampColour = new Color(1f, 0.70f, 0.42f);
+        public const float LampIntensity = 4f, LampRange = 9f, LampDrop = 0.33f;   // drop: below the ring's top
+        public static readonly Color GlowColour = new Color(1f, 0.62f, 0.3f) * 1.1f;   // HDR: amber panes, a little brighter than lit
+
         // spot (floor), yaw (the prop's front, +Z, turned this much about Y)
         public static readonly (string name, Vector3 at, float yaw)[] Statues = { ("Statue_West", new Vector3(4.1f, 0f, -3.6f), -90f) };
         public static readonly (string name, Vector3 at, float yaw)[] Plants =
@@ -62,8 +69,10 @@ namespace InnerFrame.Gallery.EditorTools
         };
         public static readonly (string name, Vector3 at, float yaw)[] Lanterns =
         {
-            ("Lantern_1", new Vector3(2.4f, 0f, 4f), 0f), ("Lantern_2", new Vector3(-2.4f, 0f, 4f), 0f),
-            ("Lantern_3", new Vector3(2.4f, 0f, 0.5f), 30f), ("Lantern_4", new Vector3(-2.4f, 0f, 0.5f), 30f),
+            // pairs over the aisle, the second just south of the skylight (z -6..-3) so the light reaches the north wall;
+            // x = 2.4 keeps them outside The Bedroom's frame (x +-1.68) as seen from the spawn point
+            ("Lantern_1", new Vector3(2.4f, 0f, 3.5f), 0f), ("Lantern_2", new Vector3(-2.4f, 0f, 3.5f), 0f),
+            ("Lantern_3", new Vector3(2.4f, 0f, -1.5f), 30f), ("Lantern_4", new Vector3(-2.4f, 0f, -1.5f), 30f),
         };
         // a frame's centre on its front face, its yaw (facing into the room), half its outer width and height
         public static readonly (string name, Vector3 centre, float yaw, float hw, float hh)[] Frames =
@@ -75,6 +84,8 @@ namespace InnerFrame.Gallery.EditorTools
         static string Fbx(string n) => $"{Folder}/GP_{n}.fbx";
         static string Tex(string n) => $"{Folder}/GP_{n}_BaseColor.jpg";
         static string Mat(string n) => $"{Folder}/GP_{n}.mat";
+        static string Emission(string n) => $"{Folder}/GP_{n}_Emission.jpg";
+        static readonly string[] Glowing = { "Lantern" };
 
         [MenuItem("Tools/InnerFrame/Gallery/Add Decor")]
         public static void Run()
@@ -102,7 +113,8 @@ namespace InnerFrame.Gallery.EditorTools
         public static List<string> Apply()
         {
             var changes = new List<string>();
-            foreach (var p in Props) { ImportModel(p.name, changes); ImportTexture(p.name, p.tex, changes); }
+            foreach (var p in Props) { ImportModel(p.name, changes); ImportTexture(Tex(p.name), p.tex, changes); }
+            foreach (var n in Glowing) ImportTexture(Emission(n), Props.First(p => p.name == n).tex, changes);
             var mats = Props.ToDictionary(p => p.name, p => MakeMaterial(p.name, p.smooth, p.twoSided, changes));
             var prefab = MakePrefab(mats, changes);
             var scene = EditorSceneManager.OpenScene(GalleryPath, OpenSceneMode.Single);
@@ -128,9 +140,9 @@ namespace InnerFrame.Gallery.EditorTools
             if (dirty) { mi.SaveAndReimport(); changes.Add($"{Fbx(n)}: import settings"); }
         }
 
-        static void ImportTexture(string n, int size, List<string> changes)
+        static void ImportTexture(string path, int size, List<string> changes)
         {
-            var ti = AssetImporter.GetAtPath(Tex(n)) as TextureImporter ?? throw new Exception($"{Tag} {Tex(n)} missing: run make_tripo_props.py");
+            var ti = AssetImporter.GetAtPath(path) as TextureImporter ?? throw new Exception($"{Tag} {path} missing: run make_tripo_props.py");
             bool dirty = false;
             if (ti.textureType != TextureImporterType.Default) { ti.textureType = TextureImporterType.Default; dirty = true; }
             if (!ti.sRGBTexture) { ti.sRGBTexture = true; dirty = true; }
@@ -142,7 +154,7 @@ namespace InnerFrame.Gallery.EditorTools
                 android.overridden = true; android.format = TextureImporterFormat.ASTC_6x6; android.maxTextureSize = size;
                 ti.SetPlatformTextureSettings(android); dirty = true;
             }
-            if (dirty) { ti.SaveAndReimport(); changes.Add($"{Tex(n)}: import settings"); }
+            if (dirty) { ti.SaveAndReimport(); changes.Add($"{path}: import settings"); }
         }
 
         static Material MakeMaterial(string n, float smooth, bool twoSided, List<string> changes)
@@ -162,9 +174,22 @@ namespace InnerFrame.Gallery.EditorTools
             if (!Mathf.Approximately(mat.GetFloat("_Cull"), cull)) { mat.SetFloat("_Cull", cull); why.Add("render face"); }
             if (mat.doubleSidedGI != twoSided) { mat.doubleSidedGI = twoSided; why.Add("double-sided GI"); }
             if (!mat.enableInstancing) { mat.enableInstancing = true; why.Add("instancing"); }
+            if (Glowing.Contains(n))
+            {
+                var em = AssetDatabase.LoadAssetAtPath<Texture2D>(Emission(n));
+                if (mat.GetTexture("_EmissionMap") != em) { mat.SetTexture("_EmissionMap", em); why.Add("emission map"); }
+                if (mat.GetColor("_EmissionColor") != GlowColour) { mat.SetColor("_EmissionColor", GlowColour); why.Add("emission colour"); }
+                // Read from the saved file: in the editor, reading a property can clear this keyword on the loaded copy
+                // (seen in 6000.3.23f1), so it is set again before every save below.
+                if (!System.IO.File.ReadAllText(Mat(n)).Contains("- _EMISSION")) why.Add("emission on");
+                mat.SetKeyword(new UnityEngine.Rendering.LocalKeyword(shader, "_EMISSION"), true);
+                if (mat.globalIlluminationFlags != MaterialGlobalIlluminationFlags.None)
+                { mat.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None; why.Add("no baked emission"); }
+            }
             if (created || why.Count > 0)
             {
                 EditorUtility.SetDirty(mat);
+                AssetDatabase.SaveAssetIfDirty(mat);   // now: a later scene load can drop an unsaved keyword
                 changes.Add($"{Mat(n)}: {(created ? "created" : string.Join(", ", why))}");
             }
             return mat;
@@ -236,6 +261,16 @@ namespace InnerFrame.Gallery.EditorTools
                 float chain = CeilingY - LanternTopY;   // Unity's cylinder is 2 m tall, 1 m across
                 Primitive("Cylinder.fbx", metal, g, "Chain", new Vector3(0f, LanternTopY + chain / 2, 0f), new Vector3(ChainRadius * 2, chain / 2, ChainRadius * 2), false);
                 Model("Lantern", mats["Lantern"], g, "GP_Lantern", new Vector3(0f, LanternTopY, 0f), Quaternion.identity, one);
+                var lamp = new GameObject("Lamp");
+                lamp.transform.SetParent(g, false);
+                lamp.transform.localPosition = new Vector3(0f, LanternTopY - LampDrop, 0f);
+                var light = lamp.AddComponent<Light>();
+                light.type = LightType.Point;
+                light.color = LampColour;
+                light.intensity = LampIntensity;
+                light.range = LampRange;
+                light.shadows = LightShadows.None;
+                light.lightmapBakeType = LightmapBakeType.Realtime;
             }
             // GP_FrameCorner's origin is its outer top corner on the viewer's left, at its back; mirrored for the other three
             foreach (var (name, centre, yaw, hw, hh) in Frames)
@@ -256,6 +291,8 @@ namespace InnerFrame.Gallery.EditorTools
                 sb.Append($"{AnimationUtility.CalculateTransformPath(t, go.transform)} {t.localPosition:F4} {t.localRotation.eulerAngles:F2} {t.localScale:F4}");
                 var mf = t.GetComponent<MeshFilter>(); if (mf) sb.Append($" mesh={mf.sharedMesh?.name}");
                 var mr = t.GetComponent<MeshRenderer>(); if (mr) sb.Append($" mat={string.Join(",", mr.sharedMaterials.Select(m => m ? m.name : "null"))}");
+                var l = t.GetComponent<Light>();
+                if (l) sb.Append($" light={l.type}/{l.color}/{l.intensity:F3}/{l.range:F3}/{l.shadows}/{l.lightmapBakeType}");
                 foreach (var c in t.GetComponents<Collider>())
                     sb.Append(c is BoxCollider b ? $" box={b.center:F3}/{b.size:F3}" : $" {c.GetType().Name}");
                 sb.Append('\n');

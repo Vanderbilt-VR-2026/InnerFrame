@@ -11,6 +11,7 @@ since Tripo made it 0.42 deep for 0.93 wide), collapse-decimate it to its triang
 centre (the frame corner's at its outer corner), and write
     Assets/Art/Gallery/Props/GP_<Name>.fbx            (mesh only, no embedded textures or materials)
     Assets/Art/Gallery/Props/GP_<Name>_BaseColor.jpg  (the base colour, downsized)
+    Assets/Art/Gallery/Props/GP_Lantern_Emission.jpg  (the lantern only: its panes lit, its brass black; see GLOW)
 and tripo_props.json here (what was measured). The materials, prefabs and placement in Gallery.unity are made in Unity by
 Assets/Art/Gallery/Editor/GalleryDecorSetup.cs.
 
@@ -38,6 +39,25 @@ PROPS = {
     "Lantern":     ("gallery-lantern.glb",      0.60, None, 2000, 1024, "top"),
     "FrameCorner": ("gallery-frame-corner.glb", 0.32, 0.04, 1200, 1024, "corner"),
 }
+
+
+# The lantern's emission map: its base colour where the panes are, black on the brass. The texture's green channel splits
+# them (brass 0.2-0.45, amber panes 0.5-0.7, measured on GP_Lantern_BaseColor.jpg); the mask ramps over GLOW's range.
+GLOW = {"Lantern": (0.47, 0.57)}
+
+
+def glow(base, name, scene):
+    import numpy as np
+    lo, hi = GLOW[name]
+    w, h = base.size
+    px = np.array(base.pixels[:], dtype=np.float32).reshape(-1, 4)
+    t = np.clip((px[:, 1] - lo) / (hi - lo), 0.0, 1.0)
+    mask = t * t * (3 - 2 * t)                       # smoothstep
+    out = px.copy()
+    out[:, :3] *= mask[:, None]
+    img = bpy.data.images.new(f"GP_{name}_Emission", w, h)
+    img.pixels = out.ravel()
+    img.save_render(os.path.join(OUT, f"GP_{name}_Emission.jpg"), scene=scene)
 
 
 def clear():
@@ -125,6 +145,8 @@ def build(name, src, height, depth, budget, tex_size, origin):
     scene.render.image_settings.file_format = "JPEG"
     scene.render.image_settings.quality = 90
     out_img.save_render(tex_path, scene=scene)
+    if name in GLOW:
+        glow(out_img, name, scene)
 
     for slot in obj.material_slots:   # the FBX carries one material name only; Unity assigns its own
         slot.material.name = f"GP_{name}"

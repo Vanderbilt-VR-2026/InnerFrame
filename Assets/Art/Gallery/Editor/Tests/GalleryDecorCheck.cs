@@ -66,6 +66,17 @@ namespace InnerFrame.Gallery.EditorTools.Tests
             int tris = decor.GetComponentsInChildren<MeshFilter>(true).Sum(m => m.sharedMesh.triangles.Length / 3);
             Check(tris < 50000, $"the decor draws {tris} triangles (under 50,000)");
 
+            // the lanterns' lights: one per lantern, warm, realtime, no shadows, and no more than URP's 4 per object anywhere
+            var lights = decor.GetComponentsInChildren<Light>(true);
+            Check(lights.Length == G.Lanterns.Length, $"{lights.Length} lamp lights, one per lantern ({G.Lanterns.Length})");
+            foreach (var l in lights)
+                Check(l.type == LightType.Point && l.shadows == LightShadows.None && l.lightmapBakeType == LightmapBakeType.Realtime && l.color.r > l.color.b,
+                    $"{PathOf(l.transform, decor.transform)}: a warm realtime point light without shadows ({l.color}, {l.intensity}, range {l.range})");
+            int sceneLights = roots.SelectMany(r => r.GetComponentsInChildren<Light>(true)).Count(l => l.type != LightType.Directional);
+            Check(sceneLights <= 4, $"{sceneLights} point/spot lights in the scene, within Mobile_RPAsset's 4 per object");
+            var lantern = AssetDatabase.LoadAssetAtPath<Material>("Assets/Art/Gallery/Props/GP_Lantern.mat");
+            Check(lantern != null && lantern.IsKeywordEnabled("_EMISSION") && lantern.GetTexture("_EmissionMap") != null, "the lantern material glows (emission on, with its map)");
+
             // inside the room and on the floor
             foreach (var r in decor.GetComponentsInChildren<Renderer>(true))
             {

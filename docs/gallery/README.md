@@ -25,8 +25,16 @@ wall, entrance). Visitors spawn at (0, 0, 6) facing north.
 | Marble statue on a 0.6 m plinth | 1 | West side, across from The Starry Night, facing it (4.1, −3.6) |
 | Potted plant | 4 | The room's four corners, 0.9 m from both walls |
 | Hydrangeas on a 0.9 m plinth | 2 | West of The Bedroom (2.5, −6.4); east wall between the benches (−4.45, 2) |
-| Hanging lantern on a chain | 4 | Over the aisle, x = ±2.4, z = 4 and 0.5, bottom 2.9 m up |
+| Hanging lantern on a chain, with a warm light | 4 | Over the aisle, x = ±2.4, z = 3.5 and −1.5, bottom 2.9 m up |
 | Carved frame corner | 8 | The four corners of both paintings' frames |
+
+### Lamp light
+
+Each lantern holds a warm (about 2700 K) realtime point light: intensity 4, range 9 m, no shadows. Its amber panes glow
+through an emission map (`GP_Lantern_Emission.jpg`, made by `make_tripo_props.py` from the base colour: the panes kept,
+the brass black). The Quest's render asset (`Mobile_RPAsset`) draws up to 4 extra per-pixel lights per object and no
+extra-light shadows, so four lamps fit with no settings change. Add a fifth light anywhere in the Gallery and some objects
+will drop one; `GalleryDecorCheck` fails if the scene has more than 4.
 
 About 45,000 triangles in total. Only the plinths and the plant pots have colliders (boxes), so you can't walk through
 them; the lanterns and frame corners have none. Nothing covers the spawn point's view of The Bedroom.
@@ -57,4 +65,5 @@ Blender --background --factory-startup --python Art/Source/Gallery/make_tripo_pr
 - Walk round the statue and both vase plinths: you stop at them and don't pass through.
 - The corners of both frames: the ornaments sit on the frame, with no flicker (z-fighting) against it.
 - The plant leaves, hydrangea petals and lantern panes look solid from every side (they render both faces).
-- Frame rate stays steady while you look down the length of the room.
+- The lamps: the walls and ceiling round each lantern look warm, the panes glow amber, and nothing flickers as you walk under them.
+- Frame rate stays steady while you look down the length of the room (four realtime lights are new here).

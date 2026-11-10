@@ -127,6 +127,11 @@ namespace InnerFrame.StarryNight.EditorTools
                 LogRemovedFields(StepThreeRemoved, "step 3: the placeholder's scale and mouth; the charcoal is in his hand now");
                 CopyDefaults(layout, StepThreeFields, 5, "step 3: Vincent v2 on the raised rock");
             }
+            if (layout.version < 6)
+            {
+                LogNewFields(layout);
+                CopyDefaults(layout, new string[0], 6, "2026-11-09: the rock's keep-off rim");
+            }
             return layout;
         }
 
@@ -686,6 +691,8 @@ namespace InnerFrame.StarryNight.EditorTools
             SaveMesh(SN_MeshGen.VillageGlow(l, R), "SN_VillageGlow");
             SaveMesh(SN_MeshGen.MistLayer(l), "SN_MistLayer");
             SaveMesh(SN_MeshGen.FlameCross(0.045f, 0.09f), "SN_FlameCross");
+            var rock = ModelMeshNode("SN_Rock");
+            SaveMesh(SN_MeshGen.RockRim(l, rock.mesh, rock.node), "SN_RockRim");
             // the bushes and the clouds (their placements go into the hilltop prefab); the flowers fill between the bushes
             var bushA = ModelMeshNode("SN_BushA"); var bushB = ModelMeshNode("SN_BushB"); var cloud = ModelMeshNode("SN_CloudA");
             bushAPlaces.Clear(); bushBPlaces.Clear();
@@ -897,6 +904,14 @@ namespace InnerFrame.StarryNight.EditorTools
                 Shape(root, "Horizon", MeshAsset("SN_Horizon"), M("SN_Horizon"), Vector3.zero, Vector3.one);
                 Shape(root, "VillageGlow", MeshAsset("SN_VillageGlow"), M("SN_VillageGlow"), Vector3.zero, Vector3.one);
                 Shape(root, "Village", MeshAsset("SN_Village"), M("SN_Village"), Vector3.zero, Vector3.one);   // off unless SN_Layout.villageDots
+
+                // the rock's keep-off rim (version 6): no renderer; the props ignore it (SN_Bootstrap -> SN_Grabbable.IgnoreAlways)
+                var rim = Child(root, "RockRim");
+                rim.transform.localPosition = Vector3.zero; rim.transform.localRotation = Quaternion.identity; rim.transform.localScale = Vector3.one;
+                rim.layer = LayerMask.NameToLayer("Ignore Raycast");
+                var rimCollider = Comp<MeshCollider>(rim);
+                rimCollider.sharedMesh = MeshAsset("SN_RockRim");
+                rimCollider.convex = true;
 
                 var walls = Child(root, "EdgeWalls");
                 for (int i = 0; i < l.edgeColliderCount; i++)

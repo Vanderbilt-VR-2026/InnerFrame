@@ -22,7 +22,8 @@ namespace InnerFrame.StarryNight
     /// 2026-11-04) moved the seat and re-aimed the sky from it (version 2); the shared dialogue box (version 3) took
     /// over uiBelowGaze (now VG_Dialogue_StarryNight.belowGaze); the look pass (version 4) added the Tripo bushes and
     /// clouds, a fuller mist, warmer light, one far horizon line and the colour grading switch; step 3 (version 5) seated
-    /// Vincent v2 on the raised rock, his charcoal in his hand, and moved the props round him. SN_Setup brings an older
+    /// Vincent v2 on the raised rock, his charcoal in his hand, and moved the props round him; version 6 (2026-11-09) added
+    /// the rock's keep-off rim. SN_Setup brings an older
     /// asset up once, step by step, and logs every value it changes. SN_Setup builds meshes from some of them (the hill, the path, the far hills, the
     /// horizon, the mist, the flowers, the swirl mask): change those, then run Tools > InnerFrame > Starry Night > Build again.
     /// </summary>
@@ -30,8 +31,9 @@ namespace InnerFrame.StarryNight
     public class SN_Layout : ScriptableObject
     {
         /// <summary>2: the art pass's values; 3: the dialogue box moved to VG_DialogueUI (uiBelowGaze went to its
-        /// settings); 4: the look pass; 5: step 3, Vincent v2 on the rock. An asset below it is brought up to it once by SN_Setup.</summary>
-        public const int CurrentVersion = 5;
+        /// settings); 4: the look pass; 5: step 3, Vincent v2 on the rock; 6: the rock's keep-off rim. An asset below it is
+        /// brought up to it once by SN_Setup.</summary>
+        public const int CurrentVersion = 6;
 
         [Tooltip("0: the blockout's values. SN_Setup brings an older asset up to CurrentVersion once, step by step.")]
         public int version;
@@ -63,6 +65,8 @@ namespace InnerFrame.StarryNight
         [Tooltip("Where the standing placeholder stood (until step 3). Still the centre of the Arrive zone (arriveDistance) and of the bushes' keep-out, so neither moved when he sat down on the rock.")]
         public Vector3 vincentStand = new Vector3(-0.80f, 0f, 0.50f);
         public Vector3 lantern = new Vector3(0.85f, 0f, -0.55f);     // on the grass by the seat, valley side (y above the ground)
+        [Tooltip("Version 6: an invisible convex wall round the rock (SN_Hilltop/RockRim, layer Ignore Raycast), so the rig's CharacterController can't step onto the rock (measured 2026-11-09: it climbs walls up to 0.55 m and stops at 0.60 m; its step offset, 0.5, is not scaled with the 0.8 rig): its top this high above the ground, pushed out this far from the rock's outline seen from above, its bottom this far under the ground. The props pass through it (SN_Grabbable.IgnoreAlways); XRI's rays and ground check leave Ignore Raycast out.")]
+        public float rockRimHeight = 1.0f, rockRimMargin = 0.03f, rockRimBelow = 0.3f;
         // on the rock (each dropped from about 1 cm above it, so it settles): spots where the whole footprint is over the
         // rock, the rock under it varies by 2.5 cm or less (the page: 4 cm), clear of Vincent (step 3: the raised rock;
         // the page first within 0.75 m of the player's seat, then the sketchbook if a spot is free)

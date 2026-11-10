@@ -43,6 +43,10 @@ namespace InnerFrame.StarryNight
         void Start()
         {
             CheckRigs();
+            // the props never lift the rig: it climbs anything up to about 0.55 m (measured 2026-11-09: its CharacterController's
+            // step offset, 0.5, is not scaled with the 0.8 rig); also the Editor's desktop rig
+            var controllers = FindObjectsByType<CharacterController>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (var g in Game.Shareables) if (g != null) g.IgnoreAlways(controllers);
 #if UNITY_EDITOR
             if (!XRSettings.isDeviceActive) Game.Input = new SN_InputEditor();
             else
@@ -183,6 +187,12 @@ namespace InnerFrame.StarryNight
             voice.ui = ui;
             ui.Voice = voice.source;    // the pages keep the voice's own time while it plays the line's clip
             PrewarmFont(ui);
+
+            // the props pass through the rock's keep-off rim (it is only there to keep the rig off the rock)
+            var rimT = hill.transform.Find("RockRim");
+            var rim = rimT != null ? rimT.GetComponent<Collider>() : null;
+            if (rim != null)
+                foreach (var g in new[] { lanternGo, book, pageGo }) g.GetComponent<SN_Grabbable>().IgnoreAlways(new[] { rim });
 
             var game = World.gameObject.AddComponent<SN_Game>();
             game.layout = layout;

@@ -12,8 +12,8 @@ namespace InnerFrame.StarryNight
 {
     /// <summary>
     /// Every check of The Starry Night in one go: the playthrough test, the dialogue box check, the layout check, the
-    /// Vincent check and the Gallery entrance check (edit mode), then the Play-mode check, the props' spawn check and the
-    /// Gallery way in and back (Play mode, one after the other). One summary line per check; in batchmode the exit code is 0 only if all passed.
+    /// Vincent check and the Gallery entrance check (edit mode), then the Play-mode check, the props' spawn check, the rig
+    /// check and the Gallery way in and back (Play mode, one after the other). One summary line per check; in batchmode the exit code is 0 only if all passed.
     /// Menu: Tools > InnerFrame > Starry Night > Run all checks. Batch (without -quit, so the Play-mode checks can run):
     ///   Unity -batchmode -projectPath . -executeMethod InnerFrame.StarryNight.SN_Checks.RunAll [-snLogDir &lt;dir&gt;]
     /// With -quit the Play-mode checks can't run: they are skipped and the summary says so. Logs: Logs/SN_checks/ (or -snLogDir).
@@ -39,6 +39,7 @@ namespace InnerFrame.StarryNight
         {
             ("play mode", SN_PlayCheck.Begin),
             ("props at their spots", SN_SpawnCheck.Begin),
+            ("the rig and the props", SN_RigCheck.Begin),
             ("gallery way in and back", SN_GalleryPlayCheck.Begin),
         };
 

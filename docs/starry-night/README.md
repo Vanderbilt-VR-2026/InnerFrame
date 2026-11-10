@@ -173,6 +173,7 @@ avatars appear, but the night isn't shared.
 | The seat | `SN_PlayerSeat` (0.45, 0, −0.9): Vincent's seat 41.6° to the left, 1.20 m away; the cypress 35.5° left, 4.05 m; the lantern on the grass 0.53 m from the seat, valley side | `SN_Layout` |
 | Cypress | Tripo model, 9,401 triangles, 7 m tall, 1.6 m at its widest (no decimation) | `make_tripo.py` |
 | Rock | Tripo model scaled ×1.457 across (its top's area-weighted mean 0.26 m), raised ×1.19 in height for Vincent's seat (`SN_Layout.rockHeightScale`): 1.46 × 0.82 × 0.37 m, its top's mean 0.31 m; a MeshCollider of its own shape | `make_tripo.py`, `SN_Layout` |
+| The rock's keep-off rim (2026-11-09) | an invisible convex prism round the rock (`SN_Hilltop/RockRim`, layer Ignore Raycast, no renderer): its outline seen from above pushed out 3 cm, 1.0 m above the ground (`SN_Layout.rockRim*`). The rig's CharacterController climbs walls up to 0.55 m (measured: its step offset, 0.5, is not scaled with the 0.8 rig), so without it the rig stepped onto the rock from the seat (camera +0.17 m), slid and dropped off. The props pass through it (`SN_Grabbable.IgnoreAlways`); XRI's rays and ground check leave Ignore Raycast out; Vincent has no collider | `SN_MeshGen.RockRim`, `SN_Setup` |
 | Lantern | base, iron frame, glass (transparent), cap, handle, a wick key that turns as it dims; 628 triangles; the flame two crossed quads in one mesh (`SN_FlameCross`) | `make_props.py`, `SN_MeshGen` |
 | Sketchbook, page, charcoal | the sketchbook open to 120° on one cover, the sketch on its page; a torn page with the sketch (both grabbable, on the raised rock, clear of Vincent; placed where physics leaves them asleep and tilted 10° or less): the page 0.73 m from the seat (tilted 8°), the sketchbook at the rock's right end, 0.78 m (no spot within 0.75 m rests; its old spot is under Vincent now); the stick of charcoal in Vincent's right hand (its model only: no physics, not grabbable) | `make_props.py`, `sketch-page.png`, `SN_Layout` |
 | The sky | the night (`sky-night.png`) round the whole dome, mirrored in yaw, from the start; the painting (`sky-painted.png`) on a panel centred at yaw +28°, 112.5° × 75° (pitch −8° to 67°), seen from the seat | `make_textures.py`, `SN_Sky.shader` |
@@ -192,8 +193,8 @@ avatars appear, but the night isn't shared.
 ## Checks
 
 One command runs every check: the playthrough test, the dialogue box check, the layout check, the Vincent check and the
-Gallery entrance check, then the Play-mode check, the props' spawn check and the Gallery way in and back (Play mode, one
-after the other).
+Gallery entrance check, then the Play-mode check, the props' spawn check, the rig check and the Gallery way in and back
+(Play mode, one after the other).
 It prints one line per check (`[SN Checks] <check>: PASS|FAIL (n passed, m failed); log …`) and a last `[SN Checks] PASS`
 or `FAIL` line, and writes them to `SN_checks_summary.txt` beside the logs.
 
@@ -253,6 +254,23 @@ right after `Instantiate` keeps the prefab's pose (the world origin, inside the 
 the sketchbook and the charcoal; the Play-mode checks measured the rig, the network, the UI and `SN_World`'s counts and
 names, not where the props are.
 
+The rig check (`Editor/Tests/SN_RigCheck.cs`, Play mode, offline, **the scene's own XR Origin** with its TrackedPoseDrivers
+and XRInputModalityManager off: the head and the right hand are set by the check, the lantern is selected by the rig's
+own right Near-Far Interactor and the rig walks through its own DynamicMoveProvider, at 72 frames a second;
+`-executeMethod InnerFrame.StarryNight.EditorTools.SN_RigCheck.RunBatch -snLog <file>`, without `-quit`). Each with a
+control that must fail:
+1. holding the lantern close and walking 2 m downhill, the rig follows the ground as with nothing held (within 2 cm) and
+   doesn't drop when the hand moves out (control: its box forced solid while held: 0.40 m apart, a 0.43 m drop). While
+   held, the props' colliders are triggers: XRI's GravityProvider decides "grounded" by a sphere cast down from the head,
+   which a solid lantern held under the head stops;
+2. walking into the lantern on the grass, the camera steps no more than without it and the CharacterController never hits
+   it (control: the `Physics.IgnoreCollision` pair removed: a 0.27 m camera step);
+3. the rim: from the seat toward Vincent the rig stays on the ground (control: the rim off: 0.26 m up the rock); the
+   straight way from the player start to the seat is clear; seated at the seat, still and leaning toward Vincent, the
+   rig isn't moved and the head stays within the seat's 0.6 m; pushing the stick toward the rock, it doesn't climb it;
+4. the props pass through the rim: the page shown at dawn and the sketchbook rest on their spots (control: a page copy
+   that doesn't ignore the rim is pushed 0.54 m off); Vincent has no collider or Rigidbody.
+
 The layout check (`Editor/Tests/SN_LayoutCheck.cs`, also alone: Tools > InnerFrame > Starry Night > Run Layout Check, or
 `-executeMethod InnerFrame.StarryNight.EditorTools.SN_LayoutCheck.RunBatch -snLog <file>`) measures what was built, not
 the code that placed it; each line gives the measured value and the limit, and a FAIL names the object:
@@ -264,9 +282,12 @@ the code that placed it; each line gives the measured value and the limit, and a
 4. the clouds: every vertex 6 m or more from the centre; seen from the seat eye, the highest at −12.5° or lower;
 5. the props after 5 s of physics (in a preview scene with its own physics, so the project's physics settings are not
    touched): the page within 0.75 m of the seat, asleep on `SN_Rock`, tilted 10° or less; the sketchbook's rest reported;
-6. the far ridge 0.6° under the painted strip's ridge over the strip's faded ends and 12° past them, seen from the seat eye.
+6. the far ridge 0.6° under the painted strip's ridge over the strip's faded ends and 12° past them, seen from the seat eye;
+7. the rock's rim: convex, no renderer, on Ignore Raycast; its top at least 0.75 m above the ground all round (the rig
+   climbs walls up to 0.55 m); at least 0.25 m from the seat and from the straight line from the player start to the
+   seat; every prop set to ignore it.
 
-Positive controls (each must FAIL, on a copy): a bush moved onto the path, a cloud raised 3 m, the page dropped 0.9 m from
+Positive controls (each must FAIL, on a copy): the rim's top lowered to 0.3 m, a bush moved onto the path, a cloud raised 3 m, the page dropped 0.9 m from
 the seat.
 
 The Vincent check (`Editor/Tests/SN_VincentCheck.cs`; Tools > InnerFrame > Starry Night > Run Vincent Check, or

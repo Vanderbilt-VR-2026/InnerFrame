@@ -246,6 +246,71 @@ namespace InnerFrame.StarryNight.EditorTools
 
         /// <summary>The lantern's flame: two crossed quads (width x height, centred; the second turned 90 degrees about y,
         /// as the builtin Quad would be), one mesh, so one transparent renderer instead of two. White vertex colours.</summary>
+        /// <summary>
+        /// The rock's keep-off rim (SN_Layout version 6): a vertical prism round the rock's outline seen from above (the
+        /// convex hull of its vertices, placed as SN_Bootstrap places the rock, pushed out by rockRimMargin), from
+        /// rockRimBelow under the lowest ground along it to rockRimHeight above the highest. Convex (for a convex
+        /// MeshCollider); world space (the hilltop sits at the origin).
+        /// </summary>
+        public static Mesh RockRim(SN_Layout l, Mesh rock, Matrix4x4 node)
+        {
+            var place = Matrix4x4.TRS(new Vector3(0f, -l.rockBuried, 0f), Quaternion.identity, new Vector3(1f, l.rockHeightScale, 1f)) * node;
+            var pts = rock.vertices.Select(v => { var w = place.MultiplyPoint3x4(v); return new Vector2(w.x, w.z); }).ToList();
+            var hull = RockRimOutline(pts, l.rockRimMargin);
+            float lo = float.MaxValue, hi = float.MinValue;
+            foreach (var q in hull) { float g = l.GroundHeight(q.x, q.y); lo = Mathf.Min(lo, g); hi = Mathf.Max(hi, g); }
+            float yBottom = lo - l.rockRimBelow, yTop = hi + l.rockRimHeight;
+            var b = new Builder();
+            int n = hull.Count;
+            var centre = new Vector3(hull.Average(q => q.x), 0f, hull.Average(q => q.y));
+            for (int i = 0; i < n; i++) { b.Add(new Vector3(hull[i].x, yBottom, hull[i].y), Vector2.zero); b.Add(new Vector3(hull[i].x, yTop, hull[i].y), Vector2.zero); }
+            for (int i = 0; i < n; i++)
+            {
+                int j = (i + 1) % n;
+                Vector3 mid = (b.v[2 * i] + b.v[2 * j]) * 0.5f, outward = mid - centre; outward.y = 0f;
+                b.Tri(2 * i, 2 * j, 2 * j + 1, outward);
+                b.Tri(2 * i, 2 * j + 1, 2 * i + 1, outward);
+            }
+            for (int i = 1; i + 1 < n; i++)
+            {
+                b.Tri(1, 2 * i + 1, 2 * i + 3, Vector3.up);
+                b.Tri(0, 2 * i, 2 * i + 2, Vector3.down);
+            }
+            return b.Build("SN_RockRim");
+        }
+
+        /// <summary>The convex hull of `pts` (counter-clockwise seen from above), corners closer than 3 cm merged, pushed out by
+        /// `margin` (each edge moves out by exactly `margin`).</summary>
+        public static List<Vector2> RockRimOutline(List<Vector2> pts, float margin)
+        {
+            var p = pts.Distinct().OrderBy(q => q.x).ThenBy(q => q.y).ToList();
+            float Cross(Vector2 o, Vector2 a, Vector2 c) => (a.x - o.x) * (c.y - o.y) - (a.y - o.y) * (c.x - o.x);
+            var h = new List<Vector2>();
+            for (int pass = 0; pass < 2; pass++)
+            {
+                int start = h.Count;
+                foreach (var q in pass == 0 ? p : Enumerable.Reverse(p))
+                {
+                    while (h.Count >= start + 2 && Cross(h[h.Count - 2], h[h.Count - 1], q) <= 0f) h.RemoveAt(h.Count - 1);
+                    h.Add(q);
+                }
+                h.RemoveAt(h.Count - 1);
+            }
+            var merged = new List<Vector2>();
+            foreach (var q in h) if (merged.Count == 0 || (q - merged[merged.Count - 1]).magnitude >= 0.03f) merged.Add(q);
+            if (merged.Count > 3 && (merged[0] - merged[merged.Count - 1]).magnitude < 0.03f) merged.RemoveAt(merged.Count - 1);
+            var outline = new List<Vector2>();
+            int n = merged.Count;
+            for (int i = 0; i < n; i++)
+            {
+                Vector2 a = merged[(i + n - 1) % n], c = merged[i], d = merged[(i + 1) % n];
+                Vector2 n1 = new Vector2(c.y - a.y, a.x - c.x).normalized, n2 = new Vector2(d.y - c.y, c.x - d.x).normalized;   // outward (counter-clockwise)
+                Vector2 bis = (n1 + n2).normalized;
+                outline.Add(c + bis * (margin / Mathf.Max(0.2f, Vector2.Dot(bis, n1))));
+            }
+            return outline;
+        }
+
         public static Mesh FlameCross(float width, float height)
         {
             var b = new Builder();

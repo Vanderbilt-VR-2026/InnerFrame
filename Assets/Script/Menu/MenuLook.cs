@@ -69,9 +69,115 @@ public static class MenuLook
         }
     }
 
+    /// <summary>A controller button, drawn as an icon (the fonts have no glyphs for them).</summary>
+    public enum Icon { Menu, Grip }
+
+    /// <summary>Tokens for IconLine: "Hold {grip} to move it".</summary>
+    public const string MenuToken = "{menu}", GripToken = "{grip}";
+
+    const float Ghost = 0.5f;    // the controller's opacity around the solid grip button
+    static Sprite grip;
+
+    /// <summary>The grip button as a white mask (tint it): a controller seen from the side, faded, leaning back with its
+    /// tracking ring on top, and the grip button on the handle's front solid with a clear gap around it, the way
+    /// controller diagrams highlight one button. Made once in code, 64 px.</summary>
+    public static Sprite GripSprite
+    {
+        get
+        {
+            if (grip != null) return grip;
+            const int size = 64;
+            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false) { name = "MenuLook Grip", wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
+            var pixels = new Color32[size * size];
+            Vector2 buttonTop = new Vector2(23f, 33f), buttonBottom = new Vector2(20f, 17f);
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    var p = new Vector2(x + 0.5f, y + 0.5f);   // signed distances below, in pixels
+                    float body = Mathf.Min(Capsule(p, new Vector2(37f, 44f), new Vector2(27f, 8f), 10f),
+                        Mathf.Abs((p - new Vector2(41f, 50f)).magnitude - 10f) - 3.2f);
+                    float button = Capsule(p, buttonTop, buttonBottom, 4.2f);
+                    float around = Capsule(p, buttonTop, buttonBottom, 6.8f);
+                    float alpha = Mathf.Max(Ghost * Cover(body) * (1f - Cover(around)), Cover(button));
+                    pixels[y * size + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(255f * alpha));
+                }
+            texture.SetPixels32(pixels);
+            texture.Apply(false, true);
+            grip = Sprite.Create(texture, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f);
+            grip.name = "MenuLook Grip";
+            return grip;
+        }
+    }
+
+    static float Cover(float distance) => Mathf.Clamp01(0.5f - distance);
+
+    static float Capsule(Vector2 p, Vector2 a, Vector2 b, float r)
+    {
+        var ab = b - a;
+        float t = Mathf.Clamp01(Vector2.Dot(p - a, ab) / ab.sqrMagnitude);
+        return (p - (a + ab * t)).magnitude - r;
+    }
+
+    /// <summary>A button's icon, `size` metres square, centred at `at` (metres, VG_UI layout units).</summary>
+    public static GameObject DrawIcon(Transform parent, Icon icon, Vector2 at, float size, Color colour)
+    {
+        if (icon == Icon.Menu) return MenuGlyph(parent, at, size * 0.62f, colour);
+        var image = VG_UI.Picture("Grip Icon", parent, GripSprite, new Vector2(0.5f, 0.5f), at, Vector2.one * size, 0f, null);
+        image.color = colour;
+        return image.gameObject;
+    }
+
+    /// <summary>A button as the hints show one: the light button circle with the icon in it, `size` metres across.
+    /// Without the circle sprite, the icon alone in chrome yellow.</summary>
+    public static RectTransform KeyIcon(Transform parent, Icon icon, Vector2 at, float size)
+    {
+        if (KeySprite == null) return (RectTransform)DrawIcon(parent, icon, at, size, Star).transform;
+        var circle = VG_UI.Picture("Key " + icon, parent, KeySprite, new Vector2(0.5f, 0.5f), at, Vector2.one * size, 0f, null);
+        DrawIcon(circle.transform, icon, Vector2.zero, size * 0.82f, KeyLetter);
+        return circle.rectTransform;
+    }
+
+    /// <summary>One centred line of text with buttons in it, as icons: "Hold {grip} on the top bar to move  ·  {menu}
+    /// to close". Its centre sits at `at` (metres). Its root's sizeDelta is its size (canvas units).</summary>
+    public static RectTransform IconLine(string name, Transform parent, string text, float cap, Color colour, Vector2 at)
+    {
+        var root = VG_UI.Rect(name, parent, new Vector2(0.5f, 0.5f), at);
+        float key = cap * 2.8f, gap = cap * 0.45f;   // the circle: a bit taller than the words, so the icon reads
+        var parts = new System.Collections.Generic.List<(RectTransform rect, float width, bool isText)>();
+        int i = 0;
+        while (i < text.Length)
+        {
+            int menu = text.IndexOf(MenuToken, i, System.StringComparison.Ordinal);
+            int gripAt = text.IndexOf(GripToken, i, System.StringComparison.Ordinal);
+            int next = menu < 0 ? gripAt : gripAt < 0 ? menu : Mathf.Min(menu, gripAt);
+            string words = (next < 0 ? text.Substring(i) : text.Substring(i, next - i)).Trim();
+            if (words.Length > 0)
+            {
+                var label = VG_UI.Label("Words", root, Font, cap, colour, new Vector2(0f, 0.5f), TextAnchor.MiddleLeft, null);
+                label.text = words;
+                parts.Add((label.rectTransform, label.preferredWidth / VG_UI.UnitsPerMetre, true));
+            }
+            if (next < 0) break;
+            bool isMenu = next == menu;
+            parts.Add((KeyIcon(root, isMenu ? Icon.Menu : Icon.Grip, Vector2.zero, key), key, false));
+            i = next + (isMenu ? MenuToken.Length : GripToken.Length);
+        }
+        float total = gap * Mathf.Max(0, parts.Count - 1);
+        foreach (var part in parts) total += part.width;
+        float x = -total / 2f;
+        foreach (var part in parts)
+        {
+            if (part.isText) VG_UI.Fit(part.rect.GetComponent<UnityEngine.UI.Text>(), new Vector2(x, 0f));
+            else part.rect.anchoredPosition = new Vector2(x + part.width / 2f, 0f) * VG_UI.UnitsPerMetre;
+            x += part.width + gap;
+        }
+        root.sizeDelta = new Vector2(total, key) * VG_UI.UnitsPerMetre;
+        return root;
+    }
+
     /// <summary>The Menu button's ≡ as three bars, `size` metres square, centred at `at` (metres, VG_UI layout units).
     /// Drawn, not typed: Libre Baskerville and the built-in font have no ≡.</summary>
-    public static void MenuGlyph(Transform parent, Vector2 at, float size, Color colour)
+    public static GameObject MenuGlyph(Transform parent, Vector2 at, float size, Color colour)
     {
         var root = VG_UI.Rect("Menu Glyph", parent, new Vector2(0.5f, 0.5f), at);
         float bar = size * 0.16f;
@@ -82,5 +188,6 @@ public static class MenuLook
             image.color = colour;
             image.raycastTarget = false;
         }
+        return root.gameObject;
     }
 }

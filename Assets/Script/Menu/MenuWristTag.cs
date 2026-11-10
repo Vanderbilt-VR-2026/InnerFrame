@@ -90,11 +90,7 @@ public class MenuWristTag : MonoBehaviour
         plate.transform.SetAsFirstSibling();
         VG_UI.Fit(label, new Vector2(left + Pad + KeySize + Gap, 0f));
 
-        var key = MenuLook.KeySprite != null
-            ? VG_UI.Picture("Key", root, MenuLook.KeySprite, new Vector2(0.5f, 0.5f), new Vector2(left + Pad + KeySize / 2f, 0f), Vector2.one * KeySize, 0f, null)
-            : null;
-        MenuLook.MenuGlyph(key != null ? key.transform : root, key != null ? Vector2.zero : new Vector2(left + Pad + KeySize / 2f, 0f),
-            KeySize * 0.5f, key != null ? MenuLook.KeyLetter : MenuLook.Star);
+        MenuLook.KeyIcon(root, MenuLook.Icon.Menu, new Vector2(left + Pad + KeySize / 2f, 0f), KeySize);
         return go;
     }
 

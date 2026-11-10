@@ -1,3 +1,4 @@
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.XR.Interaction.Toolkit;
@@ -15,8 +16,9 @@ using UnityEngine.XR.Interaction.Toolkit.UI;
 public class PlayerMenuPanel : MonoBehaviour
 {
     public const string BackLabel = "Back to Gallery";   // the Starry Night checks and docs use these words
-    public const string GalleryLine = "Walk up to a glowing pedestal and hold grip to step into its painting.";
-    public const string FootLine = "Grip the top bar to move it  ·  Menu button to close";
+    // {grip} and {menu} are drawn as the buttons' icons (MenuLook.IconLine).
+    public const string GalleryLine = "Hold {grip} on a glowing pedestal to step inside";
+    public const string FootLine = "Hold {grip} on the top bar to move  ·  {menu} to close";
 
     const float SpawnDistance = 0.6f;    // metres in front of the eyes: inside the controllers' 2 m ray
     const float SpawnDrop = 0.08f;       // a little below eye level, on the line of sight
@@ -30,7 +32,8 @@ public class PlayerMenuPanel : MonoBehaviour
     Transform cam;
     XRGrabInteractable grab;
     RectTransform canvasRect;
-    Text placeLabel, galleryLine;
+    Text placeLabel;
+    RectTransform galleryLine, footLine;
     Button backButton;
     string backScene;
 
@@ -38,6 +41,10 @@ public class PlayerMenuPanel : MonoBehaviour
     public string ShownBackLabel => backButton != null && backButton.gameObject.activeSelf ? BackLabel : null;
     /// <summary>The "You are in" name now shown (for the checks).</summary>
     public string ShownPlace => placeLabel != null ? placeLabel.text : null;
+    /// <summary>The widths of the lines with button icons, in metres (for the checks).</summary>
+    public float[] IconLineWidths => new[] { galleryLine.sizeDelta.x, footLine.sizeDelta.x }.Select(w => w / VG_UI.UnitsPerMetre).ToArray();
+    /// <summary>The panel's width inside its padding, in metres.</summary>
+    public const float InnerWidth = W - 2f * Pad;
     /// <summary>The panel's size in metres (for the checks).</summary>
     public Vector2 Size => canvasRect != null ? canvasRect.sizeDelta / VG_UI.UnitsPerMetre : Vector2.zero;
 
@@ -102,7 +109,8 @@ public class PlayerMenuPanel : MonoBehaviour
         float smallY = y + SmallCap; y += SmallCap * 2f + 0.006f;
         float nameY = y + NameCap; y += NameCap * 2f + 0.02f;
         float actionY = y + ButtonH / 2f; y += ButtonH + 0.016f;
-        float footY = y + FootCap; y += FootCap * 2f + Pad;
+        float footH = FootCap * 2.8f;   // the row's button icons are taller than its words
+        float footY = y + footH / 2f; y += footH + Pad;
         float h = y;
         canvasRect.sizeDelta = new Vector2(VG_UI.U(W), VG_UI.U(h));
         Vector2 At(float fromTop) => new Vector2(0f, h / 2f - fromTop);
@@ -140,14 +148,10 @@ public class PlayerMenuPanel : MonoBehaviour
         backText.rectTransform.sizeDelta = new Vector2(VG_UI.U(W - 2f * Pad), VG_UI.U(ButtonH));
         backButton.onClick.AddListener(() => { if (!string.IsNullOrEmpty(backScene)) SceneFader.Instance.FadeToScene(backScene); });
 
-        galleryLine = VG_UI.Label("Gallery Line", root, font, LineCap, MenuLook.Text, new Vector2(0.5f, 0.5f), TextAnchor.MiddleCenter, null);
-        galleryLine.horizontalOverflow = HorizontalWrapMode.Wrap;
-        galleryLine.text = GalleryLine;
-        galleryLine.rectTransform.sizeDelta = new Vector2(VG_UI.U(W - 2f * Pad), VG_UI.U(ButtonH));
-        galleryLine.rectTransform.anchoredPosition = At(actionY) * VG_UI.UnitsPerMetre;
+        galleryLine = MenuLook.IconLine("Gallery Line", root, GalleryLine, LineCap, MenuLook.Text, At(actionY));
 
         // ---- how to move and close it ----
-        Centred("Foot", root, font, FootCap, MenuLook.Muted, At(footY), FootLine);
+        footLine = MenuLook.IconLine("Foot", root, FootLine, FootCap, MenuLook.Muted, At(footY));
 
         // ---- drag: added last, so it picks up the top bar's collider ----
         var body = gameObject.AddComponent<Rigidbody>();

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.IO;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -70,6 +71,12 @@ public static class PlayerMenuCheck
         Check(Count<Button>(panel) == 2, $"two buttons (X and Back): {Count<Button>(panel)}");
         Check(panel.GetComponentInChildren<BoxCollider>() != null, "the top bar has a collider to grab");
         Check(Overflowing(panel).Count == 0, $"no label runs past the panel's edge {string.Join(", ", Overflowing(panel))}");
+        var widths = panel.IconLineWidths;
+        Check(widths.All(w => w > 0.05f && w <= PlayerMenuPanel.InnerWidth), $"the lines with button icons fit inside the panel ({string.Join(", ", widths.Select(w => w.ToString("F3")))} of {PlayerMenuPanel.InnerWidth:F2} m)");
+        Check(panel.GetComponentsInChildren<Transform>(true).Count(t => t.name == "Key Grip") == 2 && panel.GetComponentsInChildren<Transform>(true).Count(t => t.name == "Key Menu") == 1,
+            "the panel draws the grip button twice and the Menu button once, as icons");
+        Check(!panel.GetComponentsInChildren<Text>(true).Any(t => t.text.Contains("{") || t.text.Contains("Menu button") || t.text.Contains("grip ")),
+            "no line spells out a button's name or shows a raw token");
         if (shots != null) Shot(camera, Path.Combine(shots, "menu-painting.png"));
 
         panel.ShowInFrontOf(camera.transform, PaintingNames.Gallery, null);
@@ -83,7 +90,20 @@ public static class PlayerMenuCheck
         tag.transform.position = camera.transform.position + Vector3.forward * 0.25f;
         tag.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
         Check(tag.GetComponentInChildren<Text>() != null && tag.GetComponentInChildren<Text>().text == "Menu", "the wrist tag reads 'Menu'");
+        Check(tag.transform.Find("Key Menu") != null, "the wrist tag shows the Menu button's icon");
         if (shots != null) Shot(camera, Path.Combine(shots, "wrist-tag.png"));
+
+        // ---- the button icons, close up ----
+        tag.SetActive(false);
+        var sheet = new GameObject("Icons", typeof(RectTransform));
+        var sheetCanvas = sheet.AddComponent<Canvas>();
+        sheetCanvas.renderMode = RenderMode.WorldSpace;
+        sheet.transform.localScale = Vector3.one / VG_UI.UnitsPerMetre;
+        sheet.transform.SetPositionAndRotation(camera.transform.position + Vector3.forward * 0.3f, Quaternion.identity);
+        MenuLook.KeyIcon(sheet.transform, MenuLook.Icon.Menu, new Vector2(-0.05f, 0f), 0.08f);
+        MenuLook.KeyIcon(sheet.transform, MenuLook.Icon.Grip, new Vector2(0.05f, 0f), 0.08f);
+        Check(MenuLook.GripSprite != null && MenuLook.GripSprite.texture.width == 64, "the grip icon is drawn");
+        if (shots != null) Shot(camera, Path.Combine(shots, "icons.png"));
 
         Debug.Log($"[PlayerMenuCheck] {(failures.Count == 0 ? "ALL PASSED" : failures.Count + " FAILED")}");
     }

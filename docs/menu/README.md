@@ -15,6 +15,11 @@ plate, chrome yellow), in one centred column:
   instead;
 - how to move and close it.
 
+Controller buttons are shown as icons, not named: **≡** for the Menu button,
+and for grip a faded controller with its grip button solid (both drawn in
+code by `MenuLook`, in the hints' button circle). Write a line with
+`{grip}` / `{menu}` in it and `MenuLook.IconLine` draws them.
+
 ## Controls
 
 | Do | How |

@@ -163,6 +163,8 @@ def build(name, src, height, depth, budget, tex_size, origin):
     scene = bpy.context.scene
     scene.render.image_settings.file_format = "JPEG"
     scene.render.image_settings.quality = 90
+    scene.view_settings.view_transform = "Standard"   # save_render applies the view transform: AgX shifted the colours
+    scene.view_settings.look = "None"
     out_img.save_render(tex_path, scene=scene)
     pane, candle = split_glass(obj, name, img) if name in GLASS else (None, None)
 

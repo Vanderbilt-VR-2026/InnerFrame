@@ -92,6 +92,15 @@ namespace InnerFrame.PaintedBedroom
                 part.localPosition *= ratio;
                 part.localScale *= ratio;
             }
+            // The movables' Rigidbodies interpolate: each frame they put the Transform back where the body last was, so
+            // a body that is only given a new Transform jumps back to its old, unscaled place (shrunk, but floating or
+            // in the walls). Move the bodies too.
+            foreach (var body in room.GetComponentsInChildren<Rigidbody>(true))
+            {
+                body.position = body.transform.position;
+                body.rotation = body.transform.rotation;
+            }
+            Physics.SyncTransforms();
             foreach (var m in FindObjectsByType<PaintedBedroomMovable>(FindObjectsInactive.Include, FindObjectsSortMode.None))
                 if (m.gameObject.scene == scene) m.ScaleHome(ratio);
 

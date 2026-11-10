@@ -58,7 +58,11 @@ namespace InnerFrame.PaintedBedroom
 
         void Update()
         {
-            if (next.WasPressedThisFrame())
+            if (next.WasPressedThisFrame() && CanSwitch(out string why) == false)
+            {
+                Show(why);
+            }
+            else if (next.WasPressedThisFrame())
             {
                 index = (index + 1) % Sizes.Length;
                 float newScale = rigScale / Sizes[index];
@@ -72,7 +76,19 @@ namespace InnerFrame.PaintedBedroom
             if (label != null && Time.time > hideAt) label.gameObject.SetActive(false);
         }
 
-        void Show()
+        // Only offline and with nothing held: the size is not shared over the network (the others would still see the
+        // old room and send their poses), and a held object is out of the room's hierarchy, so it would keep its size.
+        static bool CanSwitch(out string why)
+        {
+            var session = NetworkSession.Instance;
+            if (session != null && session.Runner != null && session.Runner.IsRunning) { why = "Room size: offline only"; return false; }
+            foreach (var grab in FindObjectsByType<UnityEngine.XR.Interaction.Toolkit.Interactables.XRGrabInteractable>(FindObjectsSortMode.None))
+                if (grab.isSelected) { why = "Room size: let go first"; return false; }
+            why = null;
+            return true;
+        }
+
+        void Show(string message = null)
         {
             var cam = Camera.main;
             if (cam == null) return;
@@ -87,7 +103,7 @@ namespace InnerFrame.PaintedBedroom
                 label.fontSize = 0.7f;
                 label.color = Color.white;
             }
-            label.text = $"Room size {Sizes[index]:F1}";
+            label.text = message ?? $"Room size {Sizes[index]:F1}";
             label.gameObject.SetActive(true);
             hideAt = Time.time + LabelSeconds;
         }

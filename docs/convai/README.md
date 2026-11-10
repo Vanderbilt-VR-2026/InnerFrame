@@ -43,7 +43,7 @@ players don't see the question.
 Convai's voice for an answer is about 500 KB, too big for the Photon messages
 that share his answers. So only his **words** travel, and **each headset speaks
 them itself**, in the voice of his scripted lines (Piper,
-`en_GB-northern_english_male-medium`). Everyone hears him, not only the player
+`en_US-norman-medium`, int8). Everyone hears him, not only the player
 who asked.
 
 - **Headset Voice** in `ConvaiDirectSettings` (on by default). On: Convai is asked
@@ -85,7 +85,7 @@ who asked.
   Quest timing isn't measured yet; the Console says it:
   `[VanGogh] Convai (streamed): release->first words 2977 ms`.
 - **First run on a Quest:** the voice files are copied out of the APK once (about
-  63 MB, to the app's own storage), because native code can't read inside the APK.
+  65 MB with the speech-to-text, to the app's own storage), because native code can't read inside the APK.
 - **If it fails** (a missing library or file), the Console says
   `[VincentVoice] off: ...`, and he shows his words with no voice, as before.
 - **The library settings** (which platform loads which file) are in their `.meta`
@@ -111,7 +111,7 @@ who asked.
   convai.com matter most: its language model, shorter answers, and features it
   doesn't need (narrative design, knowledge bank, long-term memory).
 - **The proxy isn't streamed:** with Use Convai off, he answers as before.
-- **The app is bigger:** about 63 MB for the voice, 44 MB for the speech-to-text and
+- **The app is bigger:** about 19 MB for the voice, 44 MB for the speech-to-text and
   27 MB for the Android libraries.
 - **The API key ships in the APK.** Fine for team testing. For anything shared more
   widely, move the call to a server (the proxy, hosted online) so the key stays there.

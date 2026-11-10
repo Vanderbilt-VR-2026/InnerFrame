@@ -7,14 +7,14 @@ using UnityEngine;
 
 /// <summary>
 /// Vincent's voice made on this headset (#157): turns his words into speech with Piper's voice
-/// en_GB-northern_english_male-medium, the voice of his scripted lines (Art/Source/Voice/piper_lines.sh), so every
+/// en_US-norman-medium (int8, 19 MB), the voice of his scripted lines (Art/Source/Voice/piper_lines.sh), so every
 /// player hears his Convai answers, not only the one who asked. Only his words travel between players (VincentLink);
 /// his voice is too big for Photon messages.
 ///
 /// Runs the voice with sherpa-onnx 1.13.8 (Assets/Plugins/SherpaOnnx: its C# wrapper and native libraries for Android
 /// arm64, macOS and Windows x64). The voice, its tokens and the English part of espeak-ng's phoneme data are in
 /// Assets/StreamingAssets/VincentVoice. On Android those sit inside the APK, where native code can't open them, so the
-/// first run copies them to Application.persistentDataPath (about 63 MB, once; SherpaFiles.Prepare).
+/// first run copies them to Application.persistentDataPath (about 20 MB, once; SherpaFiles.Prepare).
 ///
 /// The voice loads in the background as soon as a Vincent starts (SpeechToProxy.Start calls Warm), so his first answer
 /// doesn't wait for it. If anything fails (a missing library or file), Enabled turns false, a warning says why, and
@@ -24,10 +24,10 @@ public static class VincentVoice
 {
     public const string ClipName = "Vincent (headset voice)";
     const string Folder = "VincentVoice";
-    const string ModelFile = "en_GB-northern_english_male-medium.onnx";
+    const string ModelFile = "en_US-norman-medium.onnx";
     const string DataFolder = "espeak-ng-data";
     const int Threads = 2;          // the Quest's other cores render and run the game
-    const string Version = "1";     // bump when any file below changes, so headsets copy them again
+    const string Version = "2";     // bump when any file below changes, so headsets copy them again
 
     // Every file the voice needs, relative to StreamingAssets/VincentVoice (Android copies exactly these).
     static readonly string[] Files =

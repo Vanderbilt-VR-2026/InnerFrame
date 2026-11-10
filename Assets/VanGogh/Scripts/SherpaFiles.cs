@@ -22,6 +22,7 @@ public static class SherpaFiles
         string marker = Path.Combine(dir, "copied.txt");
         if (!File.Exists(marker) || File.ReadAllText(marker) != version)
         {
+            if (Directory.Exists(dir)) Directory.Delete(dir, true);   // an older version's files (a replaced voice)
             foreach (var file in files)
             {
                 string to = Path.Combine(dir, file);

@@ -192,7 +192,8 @@ avatars appear, but the night isn't shared.
 ## Checks
 
 One command runs every check: the playthrough test, the dialogue box check, the layout check, the Vincent check and the
-Gallery entrance check, then the Play-mode check and the Gallery way in and back (Play mode, one after the other).
+Gallery entrance check, then the Play-mode check, the props' spawn check and the Gallery way in and back (Play mode, one
+after the other).
 It prints one line per check (`[SN Checks] <check>: PASS|FAIL (n passed, m failed); log …`) and a last `[SN Checks] PASS`
 or `FAIL` line, and writes them to `SN_checks_summary.txt` beside the logs.
 
@@ -236,6 +237,21 @@ each scene's first frame it notes the join NetworkSession was starting, then sto
 4. in again; Done: the menu still shut 9 s later, open by 11.5 s with "Back to Gallery"; Back → the same landing.
 Controls that must fail: the dot turned away, one extra object in SN_World, StarryNight loaded additively over the
 Gallery (two scenes, rigs, cameras, listeners), Back with the menu's home set to PaintedBedroom.
+
+The props' spawn check (`Editor/Tests/SN_SpawnCheck.cs`, Play mode, offline, the scene as `SN_Bootstrap` spawns it;
+`-executeMethod InnerFrame.StarryNight.EditorTools.SN_SpawnCheck.RunBatch -snLog <file>`, without `-quit`):
+1. `SN_World`'s Rigidbodies are exactly the lantern, the sketchbook and the page (the charcoal in his hand is only its model);
+2. over the first 90 frames, on every frame and physics step, and again 2 s in, each within 5 cm of its spawn spot
+   (`SN_Bootstrap.LanternSpawn`, `SketchbookSpawn`, `PageSpawn`; the page is hidden until dawn: its Transform);
+3. the page shown as at dawn rests within 5 cm of its spot 1.5 s later.
+Control (a second Play session, must fail): `SN_Bootstrap.ControlPlaceByTransformOnly`, the props placed through their
+Transform alone, as before 2026-11-09 (the lantern then ends 1.09 m away inside the rock, the sketchbook 0.67 m away).
+Why nothing caught it before: the props' bodies interpolate, and an interpolating body moved only through its Transform
+right after `Instantiate` keeps the prefab's pose (the world origin, inside the rock); `SN_Bootstrap` now places them with
+`SN_Grabbable.Place`, which moves the body too. The layout check settles the props in a preview scene
+(`SN_TestWorld.Settle`: `Physics.SyncTransforms`, then `Simulate`), where nothing interpolates, and measured only the page,
+the sketchbook and the charcoal; the Play-mode checks measured the rig, the network, the UI and `SN_World`'s counts and
+names, not where the props are.
 
 The layout check (`Editor/Tests/SN_LayoutCheck.cs`, also alone: Tools > InnerFrame > Starry Night > Run Layout Check, or
 `-executeMethod InnerFrame.StarryNight.EditorTools.SN_LayoutCheck.RunBatch -snLog <file>`) measures what was built, not

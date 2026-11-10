@@ -120,19 +120,23 @@ namespace InnerFrame.StarryNight
             cypress.name = "SN_Cypress";
             cypress.transform.position = layout.OnGround(layout.cypressBase);
 
+            // the three props with a Rigidbody (the charcoal below is only its model): placed with their bodies (PlaceProp)
             var lanternGo = Instantiate(lanternPrefab, World);
             lanternGo.name = "SN_Lantern";
-            lanternGo.transform.SetPositionAndRotation(layout.OnGround(layout.lantern) + Vector3.up * 0.005f, Quaternion.Euler(0f, -20f, 0f));
+            var lanternAt = LanternSpawn(layout);
+            PlaceProp(lanternGo, lanternAt.position, lanternAt.rotation);
             var lantern = lanternGo.GetComponent<SN_Lantern>();
             lantern.Configure(layout.lanternIntensity, layout.lanternRange, layout.lanternLight);
 
             var book = Instantiate(sketchbookPrefab, World);
             book.name = "SN_Sketchbook";
-            book.transform.SetPositionAndRotation(layout.sketchbook, Quaternion.Euler(0f, 15f, 0f));
+            var bookAt = SketchbookSpawn(layout);
+            PlaceProp(book, bookAt.position, bookAt.rotation);
 
             var pageGo = Instantiate(pagePrefab, World);
             pageGo.name = "SN_Page";
-            pageGo.transform.SetPositionAndRotation(layout.page, Quaternion.Euler(0f, -10f, 0f));
+            var pageAt = PageSpawn(layout);
+            PlaceProp(pageGo, pageAt.position, pageAt.rotation);
 
             // Vincent v2 on the rock (step 3); his charcoal in his right hand, physics off (only the stick's model)
             var vincent = Instantiate(vincentPrefab, World);
@@ -196,6 +200,29 @@ namespace InnerFrame.StarryNight
             Game = game;
             return game;
         }
+
+        /// <summary>Where each prop starts (also read by the checks).</summary>
+        public static Pose LanternSpawn(SN_Layout l) => new Pose(l.OnGround(l.lantern) + Vector3.up * 0.005f, Quaternion.Euler(0f, -20f, 0f));
+        public static Pose SketchbookSpawn(SN_Layout l) => new Pose(l.sketchbook, Quaternion.Euler(0f, 15f, 0f));
+        public static Pose PageSpawn(SN_Layout l) => new Pose(l.page, Quaternion.Euler(0f, -10f, 0f));
+
+        /// <summary>
+        /// Puts a spawned prop at its spot, its Rigidbody included (SN_Grabbable.Place). The props' bodies interpolate
+        /// (SN_Setup.Grabbable), and an interpolating body that is moved only through its Transform right after Instantiate
+        /// keeps the pose it was created with: the prefab's, the world origin, inside the rock. Until 2026-11-09 the
+        /// lantern and the sketchbook started there in Play mode (the page did not: it is hidden in Begin and its body is
+        /// made again, from its Transform, when it is shown at dawn).
+        /// </summary>
+        public static void PlaceProp(GameObject go, Vector3 position, Quaternion rotation)
+        {
+            var g = go.GetComponent<SN_Grabbable>();
+            if (g != null && !ControlPlaceByTransformOnly) g.Place(position, rotation);
+            else go.transform.SetPositionAndRotation(position, rotation);
+        }
+
+        /// <summary>SN_SpawnCheck's control only (Editor/Tests): place the props through their Transform alone, as before
+        /// 2026-11-09; the check must then fail. Never set in the game.</summary>
+        public static bool ControlPlaceByTransformOnly;
 
         /// <summary>Every character the box and the hint will draw, into the font's atlas at once (no rebuild mid-scene).</summary>
         void PrewarmFont(VG_DialogueUI ui)

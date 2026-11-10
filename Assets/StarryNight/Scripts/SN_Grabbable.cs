@@ -78,13 +78,15 @@ namespace InnerFrame.StarryNight
             if (Grab != null) Grab.enabled = true;
         }
 
-        /// <summary>Puts it somewhere at rest (a player joining late sees it where the room left it).</summary>
+        /// <summary>Puts it somewhere at rest (where SN_Bootstrap spawns it; a player joining late sees it where the room left
+        /// it). The Transform and the Rigidbody both: the body interpolates, and a body moved only through its Transform can
+        /// be drawn back to its old pose before physics next reads the Transform.</summary>
         public void Place(Vector3 position, Quaternion rotation)
         {
             transform.SetPositionAndRotation(position, rotation);
-            if (Body.isKinematic) return;
             Body.position = position;
             Body.rotation = rotation;
+            if (Body.isKinematic) return;
             Body.linearVelocity = Vector3.zero;
             Body.angularVelocity = Vector3.zero;
         }

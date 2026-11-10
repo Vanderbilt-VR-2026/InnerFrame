@@ -23,6 +23,7 @@ public static class VanGoghSpawner
 
     // Vincent in PaintedBedroom: on the floor by the left wall, between the front corner and Chair_Front,
     // facing the arrival point (0.04, 0, 0.60). Chosen from a dump of the scene; see the A2 report.
+    // In the room's data units: SpawnVincent multiplies by the room's scale (#144). He himself is sized from the rig, not the room.
     static readonly Vector3 VincentAt = new Vector3(-1.6f, 0f, 0.85f);
     const float VincentTurn = 99f;
     // His eyes are level with the player's, so the two of you look at each other while you talk. The XR rig is
@@ -44,11 +45,12 @@ public static class VanGoghSpawner
     {
         var prefab = Resources.Load<GameObject>("VG_Vincent");
         if (prefab == null) { Debug.LogWarning("[VanGogh] No VG_Vincent prefab in Resources, so Vincent isn't shown."); return null; }
-        var vincent = Object.Instantiate(prefab, VincentAt, Quaternion.Euler(0f, VincentTurn, 0f));
+        var at = VincentAt * InnerFrame.PaintedBedroom.PaintedBedroomPhysicsTable.LoadRoomScale();
+        var vincent = Object.Instantiate(prefab, at, Quaternion.Euler(0f, VincentTurn, 0f));
         vincent.name = "VG_Vincent";
         vincent.transform.localScale = Vector3.one * VincentScale;
         SceneManager.MoveGameObjectToScene(vincent, scene);
-        Debug.Log($"[VanGogh] Vincent at {VincentAt:F2}, turned {VincentTurn} deg, scale {VincentScale}");
+        Debug.Log($"[VanGogh] Vincent at {at:F2}, turned {VincentTurn} deg, scale {VincentScale}");
         return vincent;
     }
 

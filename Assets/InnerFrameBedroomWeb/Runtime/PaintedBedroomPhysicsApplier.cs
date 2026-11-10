@@ -23,6 +23,9 @@ namespace InnerFrame.PaintedBedroom
         struct DesktopBase { public float eyeHeight, height, radius, centerY, stepOffset; }
         readonly Dictionary<PaintedBedroomWalker, DesktopBase> desktopBase = new Dictionary<PaintedBedroomWalker, DesktopBase>();
 
+        const string RoomName = "PaintedBedroom";   // the scene's root object, made by PaintedBedroomImporter
+        float appliedRoomScale = 1f;                // the room's data is 1; so re-applying doesn't compound the scale
+
         [Tooltip("Leave empty to use the table in Resources/ (" + PaintedBedroomPhysicsTable.ResourceName + ").")]
         public PaintedBedroomPhysicsTable table;
 
@@ -63,6 +66,50 @@ namespace InnerFrame.PaintedBedroom
             if (t == table && Application.isPlaying) Apply(false);
         }
 
+        /// <summary>
+        /// Resizes the room about the world origin, where it stands (#144). Each direct child is scaled and moved, and the
+        /// root stays at scale 1: an object that a grab or the network takes out of the hierarchy then has the same size
+        /// in or out of it. The rigs move with the room, so the player arrives at the same spot in it. Runs after every
+        /// PaintedBedroomMovable's Awake, so their remembered places are scaled too. Vincent is placed by VanGoghSpawner.
+        /// </summary>
+        public void SetRoomScale(float roomScale)
+        {
+            float ratio = roomScale / appliedRoomScale;
+            if (Mathf.Approximately(ratio, 1f)) return;
+
+            var scene = gameObject.scene;
+            Transform room = null;
+            foreach (var go in scene.GetRootGameObjects())
+                if (go.name == RoomName) { room = go.transform; break; }
+            if (room == null)
+            {
+                Debug.LogWarning($"[InnerFrame] No {RoomName} root object in {scene.name}: the room keeps its size.", this);
+                return;
+            }
+
+            foreach (Transform part in room)
+            {
+                part.localPosition *= ratio;
+                part.localScale *= ratio;
+            }
+            foreach (var m in FindObjectsByType<PaintedBedroomMovable>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                if (m.gameObject.scene == scene) m.ScaleHome(ratio);
+
+            foreach (var origin in FindObjectsByType<XROrigin>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                if (origin.gameObject.scene == scene) origin.transform.position *= ratio;
+            foreach (var walker in FindObjectsByType<PaintedBedroomWalker>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                if (walker.gameObject.scene != scene) continue;
+                var body = walker.GetComponent<CharacterController>();   // it would overwrite a move made while it is on
+                bool wasOn = body != null && body.enabled;
+                if (wasOn) body.enabled = false;
+                walker.transform.position *= ratio;
+                if (wasOn) body.enabled = true;
+            }
+
+            appliedRoomScale = roomScale;
+        }
+
         /// <param name="warnUnmatched">Log rows that match no object (on start, not on every Inspector edit).</param>
         public void Apply(bool warnUnmatched)
         {
@@ -73,6 +120,8 @@ namespace InnerFrame.PaintedBedroom
                 return;
             }
             var scene = gameObject.scene;
+
+            SetRoomScale(table.roomScale);
 
             // VR rig: scale and controller rays (the far caster of each hand's Near-Far Interactor)
             foreach (var origin in FindObjectsByType<XROrigin>(FindObjectsInactive.Include, FindObjectsSortMode.None))

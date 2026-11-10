@@ -279,6 +279,70 @@ namespace InnerFrame.StarryNight.EditorTools
             return b.Build("SN_RockRim");
         }
 
+        // ---- 2026-11-09: the lantern's post, the blanket ----
+
+        /// <summary>A tube along `a` -> `b` with `sides` sides, its radius going from ra to rb (open ends; a cap on b if capB).</summary>
+        static void Tube(Builder b, Vector3 a, Vector3 c, float ra, float rb, int sides, bool capB)
+        {
+            Vector3 axis = (c - a).normalized, u = Vector3.Cross(axis, Mathf.Abs(axis.y) > 0.9f ? Vector3.forward : Vector3.up).normalized, w = Vector3.Cross(axis, u);
+            int i0 = b.v.Count;
+            for (int i = 0; i < sides; i++)
+            {
+                float t = i * 2f * Mathf.PI / sides;
+                Vector3 dir = u * Mathf.Cos(t) + w * Mathf.Sin(t);
+                b.Add(a + dir * ra, new Vector2(i / (float)sides, 0f)); b.Add(c + dir * rb, new Vector2(i / (float)sides, 1f));
+            }
+            for (int i = 0; i < sides; i++)
+            {
+                int j = (i + 1) % sides;
+                Vector3 mid = (b.v[i0 + 2 * i] + b.v[i0 + 2 * j]) * 0.5f, outward = mid - a; outward -= Vector3.Project(outward, axis);
+                b.Tri(i0 + 2 * i, i0 + 2 * j, i0 + 2 * j + 1, outward);
+                b.Tri(i0 + 2 * i, i0 + 2 * j + 1, i0 + 2 * i + 1, outward);
+            }
+            if (capB) for (int i = 1; i + 1 < sides; i++) b.Tri(i0 + 1, i0 + 2 * i + 1, i0 + 2 * i + 3, axis);
+        }
+
+        /// <summary>The lantern's post (in its own space: the base at the origin, its arm along +Z): a thin tapered iron post
+        /// lanternPostHeight tall, an arm lanternPostSide long 6 cm over the lantern's handle, and a hook down to the handle.</summary>
+        public static Mesh LanternPost(SN_Layout l)
+        {
+            var b = new Builder();
+            float handle = l.lanternHome.y + 0.316f;   // the lantern model's GrabPoint
+            float arm = handle + 0.06f;
+            Tube(b, new Vector3(0f, -0.08f, 0f), new Vector3(0f, l.lanternPostHeight, 0f), 0.016f, 0.011f, 8, true);
+            Tube(b, new Vector3(0f, arm, -0.012f), new Vector3(0f, arm, l.lanternPostSide), 0.007f, 0.006f, 6, true);
+            // the hook: down from the arm's end, then a small curl back toward the post
+            Tube(b, new Vector3(0f, arm, l.lanternPostSide), new Vector3(0f, handle + 0.012f, l.lanternPostSide), 0.005f, 0.005f, 6, false);
+            Tube(b, new Vector3(0f, handle + 0.012f, l.lanternPostSide), new Vector3(0f, handle + 0.002f, l.lanternPostSide - 0.012f), 0.005f, 0.004f, 6, true);
+            // a ball on top of the post
+            Tube(b, new Vector3(0f, l.lanternPostHeight, 0f), new Vector3(0f, l.lanternPostHeight + 0.018f, 0f), 0.014f, 0.004f, 8, true);
+            return b.Build("SN_LanternPost");
+        }
+
+        /// <summary>The seat's blanket (in its own space: centred on the seat, on the ground): size.x across (X) by size.y
+        /// along (Z), a few gentle folds 1-2 cm above the grass; u across (the texture's fringes are at its ends), v along.</summary>
+        public static Mesh Blanket(SN_Layout l)
+        {
+            var b = new Builder();
+            int nx = 12, nz = 8;
+            Vector2 s = l.blanketSize;
+            for (int j = 0; j <= nz; j++)
+                for (int i = 0; i <= nx; i++)
+                {
+                    float u = i / (float)nx, v = j / (float)nz;
+                    float y = 0.012f + 0.006f * Mathf.Sin(u * 7.1f + 0.6f) * Mathf.Sin(v * 3.3f + 1.1f) + 0.004f * Mathf.Sin(v * 9.7f);
+                    b.Add(new Vector3((u - 0.5f) * s.x, y, (v - 0.5f) * s.y), new Vector2(u, v));
+                }
+            for (int j = 0; j < nz; j++)
+                for (int i = 0; i < nx; i++)
+                {
+                    int a = j * (nx + 1) + i;
+                    b.Tri(a, a + 1, a + nx + 2, Vector3.up);
+                    b.Tri(a, a + nx + 2, a + nx + 1, Vector3.up);
+                }
+            return b.Build("SN_Blanket");
+        }
+
         /// <summary>The convex hull of `pts` (counter-clockwise seen from above), corners closer than 3 cm merged, pushed out by
         /// `margin` (each edge moves out by exactly `margin`).</summary>
         public static List<Vector2> RockRimOutline(List<Vector2> pts, float margin)

@@ -2,6 +2,7 @@ using System;
 using Unity.XR.CoreUtils;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.XR.Interaction.Toolkit.Inputs.Haptics;
 
 namespace InnerFrame.StarryNight
 {
@@ -20,6 +21,8 @@ namespace InnerFrame.StarryNight
         void Tick();
         /// <summary>True when the aim comes from the head, not a hand (the beam then starts a little below the view).</summary>
         bool AimsFromHead { get; }
+        /// <summary>A short buzz on that hand's controller (none in the Editor fallback).</summary>
+        void Haptic(int hand, float amplitude, float seconds);
     }
 
     /// <summary>The XR controllers: hand 0 is the left, 1 the right. The trigger is bound like XRI's Activate.</summary>
@@ -29,6 +32,7 @@ namespace InnerFrame.StarryNight
         static readonly string[] TriggerPaths = { "<XRController>{LeftHand}/{TriggerButton}", "<XRController>{RightHand}/{TriggerButton}" };
         readonly InputAction[] triggers = new InputAction[2];
         readonly Transform[] hands = new Transform[2];
+        readonly HapticImpulsePlayer[] haptics = new HapticImpulsePlayer[2];
         readonly XROrigin origin;
 
         public SN_InputXR(XROrigin origin)
@@ -47,7 +51,13 @@ namespace InnerFrame.StarryNight
             if (origin == null) return;
             foreach (var t in origin.GetComponentsInChildren<Transform>(true))
                 for (int i = 0; i < 2; i++)
-                    if (hands[i] == null && t.name == HandNames[i]) hands[i] = t;
+                    if (hands[i] == null && t.name == HandNames[i]) { hands[i] = t; haptics[i] = t.GetComponentInChildren<HapticImpulsePlayer>(true); }
+        }
+
+        /// <summary>XRI's own haptic player on the controller (the Starter rig has one on each).</summary>
+        public void Haptic(int hand, float amplitude, float seconds)
+        {
+            if (hand >= 0 && hand < 2 && haptics[hand] != null) haptics[hand].SendHapticImpulse(amplitude, seconds);
         }
 
         public int HandCount => 2;
@@ -96,6 +106,7 @@ namespace InnerFrame.StarryNight
         public bool TriggerHeld(int hand) => Keyboard.current != null && Keyboard.current.spaceKey.isPressed;
         public bool TriggerUp(int hand) => Keyboard.current != null && Keyboard.current.spaceKey.wasReleasedThisFrame;
         public void Tick() { }
+        public void Haptic(int hand, float amplitude, float seconds) { }
     }
 
     /// <summary>The test driver: a scripted aim and trigger, advanced once per SN_Game step.</summary>
@@ -114,5 +125,8 @@ namespace InnerFrame.StarryNight
         public bool TriggerHeld(int hand) => now;
         public bool TriggerUp(int hand) => !now && before;
         public void Tick() { before = now; now = next; }
+        /// <summary>How many buzzes the game asked for (for the tests).</summary>
+        public int haptics;
+        public void Haptic(int hand, float amplitude, float seconds) => haptics++;
     }
 }

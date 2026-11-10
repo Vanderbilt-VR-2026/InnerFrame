@@ -33,6 +33,19 @@ points his charcoal at each named star, and stands up at dawn (see "Vincent"). T
 the page and the sketchbook moved round him; the charcoal is in his hand. The gameplay, states, timings and lines are
 unchanged: the playthrough's log is byte-identical.
 
+The lantern (2026-11-09, after the 11/05 playtest): **it hangs on a post beside the seat** and is turned down by
+**pointing at it (or touching it) and pulling the trigger**, so the whole scene uses one button; grabbing it is
+optional, and let go it glides back to its hook. It pulses until it's turned down; a ray or a hand on it brightens it
+and gives one buzz. A blanket marks the seat. The hint takes you through one step at a time (2026-11-10): its title is
+the step you are on ("Walk up to Vincent", "Sit beside Vincent", "Dim the lantern", "Wake the stars", "Trace the wind",
+"Dawn", then "Take his page" once the page is there, and at the end the scene's name again), its line says how in one
+short line that fits the box, and a button comes with its finger ("the trigger (index finger)"). Two museum-style cards
+tried on 2026-11-09 were taken out: they felt staged and stayed up the whole scene. Three fixes for the playtest's
+camera and movement glitches, each proven by a check with a control (see "Checks"): the props now start where
+`SN_Layout` puts them (the lantern and the sketchbook had started inside the rock); a held prop no longer floats you
+over a slope and drops you; and the rig no longer steps up onto the lantern or the rock (a keep-off rim round the rock).
+Vincent's lines and the sky, the wind and dawn are unchanged.
+
 In the Gallery (2026-11-05): **The Starry Night hangs on the Gallery's east wall** and is entered the way the Bedroom is,
 from its pedestal; the player menu brings you back, and at Done it opens by itself (see "In the Gallery"). The scene is in
 the build list now, after the existing scenes; the Gallery still starts the game.
@@ -86,16 +99,16 @@ the build list now, after the existing scenes; the Gallery still starts the game
 
 ## The story
 
-| State | What the player does | Vincent | Hint |
+| State | What the player does | Vincent | Hint: title / line |
 |---|---|---|---|
-| Arrive | walks up the path; within 3 m of Vincent | L01 "Ah, a visitor…" | Walk up the path to Vincent |
-| Sit | sits down: the head enters the seat behind the rock's right end, Vincent's seat 42° to the left and 1.2 m away | L02 "Too much light…" | Sit down beside Vincent |
-| Lantern | grabs the lantern (grip) and pulls the trigger: light and flame ease down over 1.5 s, the other stars fade in | L03, then L04 names N1 | Grab the lantern and pull the trigger to turn it down |
-| Stars | points at a star and pulls the trigger (4° aim assist): it blooms. Any star can be woken; N1, N2, N3 move the story only in order | L05 names N2, L06 names N3 | Point at the star he names and pull the trigger |
-| Wind | after N3 the sky starts to paint; a dotted curve appears along the painted swirl (Cici's red line, 21 points): hold the trigger and follow it, point by point (6°) | L07, then L08 at 100 % | Hold the trigger and follow the dotted line |
-| Dawn | 10 s after the wind: the sky pales over 20 s, the stars fade, then a page appears on the rock | L09 | Wait for dawn, then Take the page |
-| Done | grabs the page; the morning star fades last | | The night is painted |
-| Sketchbook (any time after the lantern) | holds his sketchbook up against the view toward the valley for 1.5 s | L10 | (unchanged: the current state's hint stays, and its repeat still fires) |
+| Arrive | walks up the path; within 3 m of Vincent | L01 "Ah, a visitor…" | Walk up to Vincent / Walk up the path to Vincent |
+| Sit | sits down on the blanket: the head enters the seat (0.6 m round it, any height) behind the rock's right end, Vincent's seat 42° to the left and 1.2 m away | L02 "Too much light…" | Sit beside Vincent / Sit on the blanket next to him. |
+| Lantern | points at the lantern on its post (or touches it, or holds it) and pulls the trigger: light and flame ease down over 1.5 s, the other stars fade in | L03, then L04 names N1 | Dim the lantern / Point at it, pull the trigger (index finger). |
+| Stars | points at a star and pulls the trigger (4° aim assist): it blooms. Any star can be woken; N1, N2, N3 move the story only in order | L05 names N2, L06 names N3 | Wake the stars / Point at the star he names, pull the trigger. |
+| Wind | after N3 the sky starts to paint; a dotted curve appears along the painted swirl (Cici's red line, 21 points): hold the trigger and follow it, point by point (6°) | L07, then L08 at 100 % | Trace the wind / Hold the trigger and follow the dots. |
+| Dawn | 10 s after the wind: the sky pales over 20 s, the stars fade, then a page appears on the rock | L09 | Dawn / Wait for dawn; once the page is there, Take his page / Take the page |
+| Done | takes the page; the morning star fades last | | A Night with Vincent / The night is painted |
+| Sketchbook (any time after the lantern) | holds his sketchbook up against the view toward the valley for 1.5 s | L10 | (unchanged: the current state's title and line stay, and its repeat still fires) |
 
 - Early steps are accepted: turning the lantern down before sitting skips Sit; waking N3 first wakes it but N1 must still
   come first for the story.
@@ -106,8 +119,10 @@ the build list now, after the existing scenes; the Gallery still starts the game
 
 ## Controls
 
-**Quest (either hand):** grip grabs (lantern, sketchbook, page); the trigger acts (XRI's Activate, unused anywhere else
-in our gameplay): turn the lantern down while holding it, wake a star, hold to trace the wind. A thin beam shows where you
+**Quest (either hand):** the trigger (index finger) acts (XRI's Activate, unused anywhere else in our gameplay): turn the
+lantern down (that hand's ray within 10° of it and 1.6 m, or the hand within 0.2 m of it, or the lantern held), wake a
+star, hold to trace the wind. The grip (middle finger) picks up (the lantern, optional; the sketchbook; the page); let
+go, the lantern glides back to its hook in 0.4 s. A thin beam shows where you
 point while there are stars to wake or wind to trace (XRI's own rays stop at 2 m). Thumbsticks: the usual move, turn
 and teleport (the hilltop is a teleport area out to 5.5 m; low invisible walls stop you walking off).
 
@@ -117,7 +132,7 @@ and teleport (the hilltop is a teleport area out to 5.5 m; low invisible walls s
 |---|---|
 | W A S D, mouse (click to capture, Esc to free) | walk and look (DesktopTestRig) |
 | mouse | aims (the view's centre while the mouse is captured) |
-| Space | the trigger |
+| Space | the trigger (the lantern: the view's centre on it, within 1.6 m) |
 | G | grab, or release, the nearest grabbable within 1.5 m (held in front of the view) |
 | 1 / 2 | jump to the player start / the player seat |
 
@@ -125,12 +140,14 @@ Vincent's words and the hint use the shared dialogue box, the same as in every s
 (`Assets/VanGogh/Prefabs/VG_DialogueUI.prefab`, spawned by `SN_Bootstrap` like everything else) with this scene's
 settings, `VG_Dialogue_StarryNight.asset`: 1.6 m ahead, its top edge 22° below the gaze (at a level gaze the box spans
 −29° to −22° and the hint's plate −19° to −14°, under the village's lowest windows; looking 25° up the hint's top is at
-10°, under the swirl), 33° wide, 4.0 cm capitals for his line, the hint ("A Night with Vincent" and the state's line) on
-its plate, as in the Bedroom. It moves only once you look more than 20° away and is drawn over the world.
+10°, under the swirl), 33° wide, 4.0 cm capitals for his line, the hint (the step's title and its line, see "The story";
+at Done the scene's name, "A Night with Vincent", the settings' `hintTitle`) on its plate, as in the Bedroom. It moves
+only once you look more than 20° away and is drawn over the world.
 It follows the gaze down to 60° below level (`lowestGaze` −60 since 2026-11-10; at −30 a chair-seated player looking
 down at the lantern had the box and the hint over it). `SN_Voice` keeps
 the line queue (a newer story line drops older ones not yet started) and calls `Say("Vincent", text, clip)` and `Clear`;
-`SN_Game` sets the hint (`SetHint`) and steps the UI each frame. The controller beam draws just before the UI (render
+`SN_Game` sets the hint (`SetHint(SN_Game.TitleFor(state), SN_Game.HintFor(state))`, the shared API as it was) and
+steps the UI each frame. The controller beam draws just before the UI (render
 queue 2999 against its 3000), so the box and the hint always draw over it. To change where the box sits, edit the
 settings asset (the Bedroom has its own).
 
@@ -157,7 +174,10 @@ beside `VincentLink` and `MirrorLink`:
   `NetworkGrabbable` (scene objects only) doesn't fit; they are shared like the bedroom's mirror instead. Whoever moves
   one sends its pose; the other copies follow it and can't be grabbed meanwhile. Two grabs at the same moment: the lower
   player number keeps it. After a let-go the mover keeps sending until its physics has put it down (at most 4 s), and
-  every copy is put exactly there.
+  every copy is put exactly there. The lantern's glide back to its hook is such a let-go: a moving, non-kinematic body
+  (`SN_Grabbable.Settling`), so the mover keeps sending its pose until it is on the hook and kinematic, and every copy
+  follows it there (a copy that stops within 2 cm of the hook is put exactly on it). Turning the lantern down without
+  holding it is the same `SN_Lantern.TurnDown` as holding it, so it is shared as before (`SN_Game.Progress.lanternDown`).
 - **Not shared:** where each player stands, walks and sits (each player's own, through the avatar), and the score's
   attention (each headset logs its own `[SN] score`, which counts the room's stars).
 
@@ -172,11 +192,13 @@ avatars appear, but the night isn't shared.
 
 | Thing | Now | Made by |
 |---|---|---|
-| The seat | `SN_PlayerSeat` (0.45, 0, −0.9): Vincent's seat 41.6° to the left, 1.20 m away; the cypress 35.5° left, 4.05 m; the lantern on the grass 0.53 m from the seat, valley side | `SN_Layout` |
+| The seat | `SN_PlayerSeat` (0.45, 0, −0.9): Vincent's seat 41.6° to the left, 1.20 m away; the cypress 35.5° left, 4.05 m; the lantern on its post 0.45 m from the seat at yaw 25°; marked by the blanket (2026-11-09) | `SN_Layout` |
+| The lantern's home (2026-11-09) | a thin iron post 0.62 m tall, 0.14 m right of the lantern seen from the seat, its arm and hook over the handle; the lantern hangs there kinematic, its handle 0.50 m above the grass, 0.45 m from the seat at yaw 25° (right of the spire); let go anywhere, it glides back (0.4 s). Until it's turned down its light and flame pulse (±15 %, 0.6 Hz); a ray or a hand on it: +30 % and one buzz (0.15, 0.05 s). No collider | `SN_MeshGen.LanternPost`, `SN_Layout.lanternHome`, `lanternPost*`, `lanternPulse*` |
+| The blanket (2026-11-09) | striped wool in the painting's colours, 0.70 × 0.50 m, fringed at its ends, on the grass at the seat; no collider | `make_blanket.py`, `SN_MeshGen.Blanket`, `SN_Layout.blanket*` |
 | Cypress | Tripo model, 9,401 triangles, 7 m tall, 1.6 m at its widest (no decimation) | `make_tripo.py` |
 | Rock | Tripo model scaled ×1.457 across (its top's area-weighted mean 0.26 m), raised ×1.19 in height for Vincent's seat (`SN_Layout.rockHeightScale`): 1.46 × 0.82 × 0.37 m, its top's mean 0.31 m; a MeshCollider of its own shape | `make_tripo.py`, `SN_Layout` |
 | The rock's keep-off rim (2026-11-09) | an invisible convex prism round the rock (`SN_Hilltop/RockRim`, layer Ignore Raycast, no renderer): its outline seen from above pushed out 3 cm, 1.0 m above the ground (`SN_Layout.rockRim*`). The rig's CharacterController climbs walls up to 0.55 m (measured: its step offset, 0.5, is not scaled with the 0.8 rig), so without it the rig stepped onto the rock from the seat (camera +0.17 m), slid and dropped off. The props pass through it (`SN_Grabbable.IgnoreAlways`); XRI's rays and ground check leave Ignore Raycast out; Vincent has no collider | `SN_MeshGen.RockRim`, `SN_Setup` |
-| Lantern | base, iron frame, glass (transparent), cap, handle, a wick key that turns as it dims; 628 triangles; the flame two crossed quads in one mesh (`SN_FlameCross`) | `make_props.py`, `SN_MeshGen` |
+| Lantern | base, iron frame, glass (transparent), cap, handle, a wick key that turns as it dims; 628 triangles; the flame two crossed quads in one mesh (`SN_FlameCross`); its box collider a trigger while held or gliding home, and never in contact with the rig's CharacterController or the rock's rim | `make_props.py`, `SN_MeshGen` |
 | Sketchbook, page, charcoal | the sketchbook open to 120° on one cover, the sketch on its page; a torn page with the sketch (both grabbable, on the raised rock, clear of Vincent; placed where physics leaves them asleep and tilted 10° or less): the page 0.73 m from the seat (tilted 8°), the sketchbook at the rock's right end, 0.78 m (no spot within 0.75 m rests; its old spot is under Vincent now); the stick of charcoal in Vincent's right hand (its model only: no physics, not grabbable) | `make_props.py`, `sketch-page.png`, `SN_Layout` |
 | The sky | the night (`sky-night.png`) round the whole dome, mirrored in yaw, from the start; the painting (`sky-painted.png`) on a panel centred at yaw +28°, 112.5° × 75° (pitch −8° to 67°), seen from the seat | `make_textures.py`, `SN_Sky.shader` |
 | The wind's path | Cici's red line along the swirl, 24 points, the 3 at its outer end dropped (inside the panel's soft edge): 21 points from (−14°, 40°) up to 54° and into the swirl's centre at (23°, 31°); the swirl band 8° either side | `make_path.py`, `SN_Layout.guidePath` |
@@ -211,6 +233,21 @@ or `FAIL` line, and writes them to `SN_checks_summary.txt` beside the logs.
    ```
 
    With `-quit` the edit-mode checks run and the two Play-mode checks are skipped (the summary says so).
+
+The lantern check (`Editor/Tests/SN_LanternCheck.cs`, edit mode; Tools > InnerFrame > Starry Night > Run Lantern Check, or
+`-executeMethod InnerFrame.StarryNight.EditorTools.SN_LanternCheck.RunBatch -snLog <file>`), from a floor-seated eye
+(0.64 m) and a chair-seated one (0.96 m) over the seat:
+1. the lantern's home: its handle 0.50 m above the grass, 0.45 m from the seat at yaw 25° (1 cm, 1°), on its hook,
+   kinematic;
+2. from both seated eyes, the handle within 0.65 m and the lantern within 45° of a gaze at the valley 15° down;
+3. looking at the lantern's centre from both seated eyes (the Lantern step's title and line shown), the dialogue box
+   covers at most 10 % of it, and the hint at most 10 % (15 % from the floor-seated eye: from 0.47 m the lantern is
+   about 40° tall and the hint lies over its base, not its flame; Cici's option A, 2026-11-10);
+4. no bush within 0.10 m of the post or the hanging lantern;
+5. the hints, as in "The story": each state's title and line (Dawn's two); no title or line says "grab"; the Lantern
+   line names the trigger's finger; a line naming the grip would name its finger.
+Controls that must fail: the lantern on its old spot on the grass (2, 3), a bush vertex on the post (4), the old Lantern
+hint and the Stars step under a wrong title (5).
 
 The Gallery entrance check (`Editor/Tests/SN_GalleryCheck.cs`, edit mode;
 `-executeMethod InnerFrame.StarryNight.EditorTools.SN_GalleryCheck.RunBatch -snLog <file> -quit`) opens `Gallery.unity`:
@@ -271,7 +308,10 @@ control that must fail:
    straight way from the player start to the seat is clear; seated at the seat, still and leaning toward Vincent, the
    rig isn't moved and the head stays within the seat's 0.6 m; pushing the stick toward the rock, it doesn't climb it;
 4. the props pass through the rim: the page shown at dawn and the sketchbook rest on their spots (control: a page copy
-   that doesn't ignore the rim is pushed 0.54 m off); Vincent has no collider or Rigidbody.
+   that doesn't ignore the rim is pushed off); Vincent has no collider or Rigidbody;
+5. let go 1.5 m away, the lantern glides back to its hook within 1 s (0.44 s), kinematic and solid again, `Settling` on
+   the way (what `StarryNightLink` keeps sending on) and a trigger (control: `SN_Grabbable.ControlNoReturn`: it stays
+   1.5 m away).
 
 The layout check (`Editor/Tests/SN_LayoutCheck.cs`, also alone: Tools > InnerFrame > Starry Night > Run Layout Check, or
 `-executeMethod InnerFrame.StarryNight.EditorTools.SN_LayoutCheck.RunBatch -snLog <file>`) measures what was built, not
@@ -326,6 +366,16 @@ Install the APK (ask Cici), sit on the floor beside the rock when the hint says 
 7. **Frame rate:** watch it through the whole scene with the colour grading off (the default), then once more with
    `SN_Layout.colourGrading` on (rebuild the APK): about 161,100 triangles (his 10,619, one skinned mesh) and 35
    transparent renderers at the most.
+8. **The lantern (2026-11-09) and the steps (2026-11-10):** from the path, do you notice the blanket? Does the hint's
+   title (the step you are on) and its line tell you what to do next, each time, without anyone explaining? Sitting on the
+   floor, then on a chair, can you see the lantern on its post without searching? Point at it: does it brighten and buzz
+   once? Pull the trigger without grabbing it: does it turn down? Grab it, walk down the
+   path holding it close, let go: no floating or dropping, and does it glide back to its hook? Does the dialogue box or
+   the hint cover the lantern's flame when you look down at it?
+   Walk into the rock from the seat: you should stop at it, never step up onto it.
+9. **Two headsets (2026-11-09):** both in the night. One points at the lantern and turns it down without grabbing it:
+   does it turn down on both headsets at the same moment (and the stars come out on both)? Then one grabs it, carries it
+   away and lets go: does it glide back to its hook on both, and end on the hook on both? Then the other grabs it.
 
 ## Vincent
 
@@ -376,9 +426,15 @@ every number in `SN_Layout`, the `vincent*` fields):
   Arrive to Done through a scripted input, and the negative checks (a trigger 10° from every star wakes nothing; N3 before
   N1 wakes it but doesn't advance; tracing the wind backwards doesn't complete it; the lantern down before sitting skips
   Sit), each with its positive control; and the letter found during Stars: after L10 the Stars hint is still shown and
-  the 25 s repeat still fires.
+  the 25 s repeat still fires. Since 2026-11-09 also the lantern turned down without holding it (F): the trigger aimed 20°
+  off it and from 2.5 m does nothing (the controls), the ray on it brightens it with one buzz, the hand 0.1 m from it
+  (touching) turns it down, and so does the ray from a chair-seated eye; `Progress.lanternDown` is set. Since 2026-11-10
+  the hint's title as drawn, sampled after every step: in each state it is that state's title and only it (Dawn: "Dawn",
+  then "Take his page"; control: a wrong title shown during Done fails); each state's line in the log shows its title
+  and its hint.
 - `SN_UICheck.RunBatch -snLog <file>` (batch): the dialogue box in this scene: every line's pages fit in three lines at
-  full size; where the box and the hint sit from the seat; a 15° head turn leaves it, a 30° turn catches up in under
+  full size; every hint (each state's title and line) fits: its plate no wider than the box (control: a line twice
+  over); where the box and the hint sit from the seat; a 15° head turn leaves it, a 30° turn catches up in under
   0.6 s (72 Hz); the beam's render queue is below the UI's.
 - `SN_PlayCheck.RunBatch` (batch, without `-quit`): the Play-mode check of the temporary network measure above, and that
   the dialogue UI shows the first hint at the settings' distance from the camera.
@@ -390,8 +446,8 @@ every number in `SN_Layout`, the `vincent*` fields):
 2. The UI: does it follow comfortably (not too lazy, not jittery)? Does it hide the village or the swirl you are tracing?
 3. Aiming: can you wake each named star on the first or second try? Is 4° of aim assist too generous?
 4. The wind: is the dotted line visible against the night, and does following it feel like painting?
-5. The lantern: grab it by the handle, pull the trigger; does the hill go dark enough for the stars to read?
-6. Sitting: does the seat zone (0.6 m) catch you when you sit down on the floor beside the rock?
+5. The lantern: point at it on its post and pull the trigger; does the hill go dark enough for the stars to read?
+6. Sitting: does the seat zone (0.6 m) catch you when you sit down on the blanket beside the rock?
 7. Frame rate through the whole scene, especially with the painted sky, the mist layers, the clouds, the bushes and
    Vincent (35 transparent renderers at the most, about 161,100 triangles, one skinned mesh; then once more with
    `SN_Layout.colourGrading` on).

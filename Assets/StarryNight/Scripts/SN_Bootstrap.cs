@@ -22,6 +22,8 @@ namespace InnerFrame.StarryNight
         public SN_Lines lines;
         public GameObject hilltopPrefab, rockPrefab, cypressPrefab, lanternPrefab, sketchbookPrefab, pagePrefab,
             charcoalPrefab, vincentPrefab, skyPrefab, beamPrefab;
+        [Tooltip("2026-11-09: the lantern's post and hook, the seat's blanket.")]
+        public GameObject lanternPostPrefab, blanketPrefab;
         [Tooltip("VG_DialogueUI.prefab: Vincent's words and the hint, as in every scene.")] public GameObject uiPrefab;
         [Tooltip("VG_Dialogue_StarryNight: where the box sits (1.6 m, 22 deg under the gaze) and its sizes.")] public VG_DialogueSettings uiSettings;
         [Tooltip("SN_Grading.asset (Color Adjustments): used only when SN_Layout.colourGrading is on.")] public VolumeProfile grading;
@@ -129,8 +131,26 @@ namespace InnerFrame.StarryNight
             lanternGo.name = "SN_Lantern";
             var lanternAt = LanternSpawn(layout);
             PlaceProp(lanternGo, lanternAt.position, lanternAt.rotation);
+            // on its hook, kinematic; let go, it glides back there (SN_Grabbable)
+            lanternGo.GetComponent<SN_Grabbable>().SetHome(lanternAt, layout.lanternReturnSeconds, place: false);
             var lantern = lanternGo.GetComponent<SN_Lantern>();
             lantern.Configure(layout.lanternIntensity, layout.lanternRange, layout.lanternLight);
+            lantern.ConfigureFinding(layout.lanternPulse, layout.lanternPulseHz, layout.lanternTargetBoost);
+
+            // its post, the seat's blanket (no colliders)
+            if (lanternPostPrefab != null)
+            {
+                var post = Instantiate(lanternPostPrefab, World);
+                post.name = "SN_LanternPost";
+                var at = layout.LanternPostPose;
+                post.transform.SetPositionAndRotation(at.position, at.rotation);
+            }
+            if (blanketPrefab != null)
+            {
+                var blanket = Instantiate(blanketPrefab, World);
+                blanket.name = "SN_Blanket";
+                blanket.transform.SetPositionAndRotation(layout.OnGround(new Vector3(layout.playerSeat.x, 0f, layout.playerSeat.z)), Quaternion.Euler(0f, layout.blanketYaw, 0f));
+            }
 
             var book = Instantiate(sketchbookPrefab, World);
             book.name = "SN_Sketchbook";
@@ -212,7 +232,7 @@ namespace InnerFrame.StarryNight
         }
 
         /// <summary>Where each prop starts (also read by the checks).</summary>
-        public static Pose LanternSpawn(SN_Layout l) => new Pose(l.OnGround(l.lantern) + Vector3.up * 0.005f, Quaternion.Euler(0f, -20f, 0f));
+        public static Pose LanternSpawn(SN_Layout l) => l.LanternHomePose;   // on its hook (version 7; before: on the grass at SN_Layout.lantern)
         public static Pose SketchbookSpawn(SN_Layout l) => new Pose(l.sketchbook, Quaternion.Euler(0f, 15f, 0f));
         public static Pose PageSpawn(SN_Layout l) => new Pose(l.page, Quaternion.Euler(0f, -10f, 0f));
 
@@ -237,8 +257,8 @@ namespace InnerFrame.StarryNight
         /// <summary>Every character the box and the hint will draw, into the font's atlas at once (no rebuild mid-scene).</summary>
         void PrewarmFont(VG_DialogueUI ui)
         {
-            var texts = new System.Collections.Generic.List<string> { SN_Voice.Speaker, ui.settings.hintTitle, SN_Game.TakeThePage, "0123456789.,;:!?'-" };
-            foreach (SN_State s in System.Enum.GetValues(typeof(SN_State))) texts.Add(SN_Game.HintFor(s));
+            var texts = new System.Collections.Generic.List<string> { SN_Voice.Speaker, ui.settings.hintTitle, SN_Game.PageTitle, SN_Game.TakeThePage, "0123456789.,;:!?'-" };
+            foreach (SN_State s in System.Enum.GetValues(typeof(SN_State))) { texts.Add(SN_Game.TitleFor(s)); texts.Add(SN_Game.HintFor(s)); }
             if (lines != null) foreach (var l in lines.lines) texts.Add(l.text);
             ui.Prewarm(texts);
         }

@@ -132,8 +132,22 @@ namespace InnerFrame.StarryNight.EditorTools
                 LogNewFields(layout);
                 CopyDefaults(layout, new string[0], 6, "2026-11-09: the rock's keep-off rim");
             }
+            if (layout.version < 7)
+            {
+                LogNewFields(layout);
+                CopyDefaults(layout, new string[0], 7, "2026-11-09: the lantern's home on a post, the blanket");
+            }
+            if (layout.version < 8)
+            {
+                LogRemovedFields(CardsRemoved, "2026-11-10: the two cards are gone; the hint's title shows the step");
+                CopyDefaults(layout, new string[0], 8, "2026-11-10: no cards");
+            }
             return layout;
         }
+
+        /// <summary>The fields version 8 removed: the two cards an unreleased version 7 had (read from the asset's text,
+        /// logged; the asset drops them when saved).</summary>
+        static readonly string[] CardsRemoved = { "cardLanternAt", "cardLanternSize", "cardLanternFaces", "cardSeatAt", "cardSeatSize", "cardSeatFaces" };
 
         /// <summary>The existing fields step 3 (version 5) changed; its new fields come with their defaults (logged).</summary>
         static readonly string[] StepThreeFields = { "vincentSeat", "sketchbook", "page" };
@@ -320,6 +334,13 @@ namespace InnerFrame.StarryNight.EditorTools
                     if (n == "SN_FarHills") { i.wrapModeU = TextureWrapMode.Repeat; i.wrapModeV = TextureWrapMode.Clamp; }   // round the ring (seamless across)
                     i.maxTextureSize = max; i.textureCompression = TextureImporterCompression.Compressed;
                 });
+            // 2026-11-09: the seat's blanket (make_blanket.py)
+            Texture($"{Tex}/SN_Blanket.png", i =>
+            {
+                i.textureType = TextureImporterType.Default; i.sRGBTexture = true; i.mipmapEnabled = true; i.alphaSource = TextureImporterAlphaSource.None;
+                i.wrapMode = TextureWrapMode.Clamp; i.filterMode = FilterMode.Trilinear; i.anisoLevel = 2;
+                i.maxTextureSize = 1024; i.textureCompression = TextureImporterCompression.Compressed;
+            });
             Texture(MaskPath, i =>
             {
                 i.textureType = TextureImporterType.Default; i.sRGBTexture = false; i.mipmapEnabled = false; i.alphaSource = TextureImporterAlphaSource.None;
@@ -600,7 +621,8 @@ namespace InnerFrame.StarryNight.EditorTools
             Lit("SN_Sketchbook", Hex("6B4A2E"), 0.2f);
             Lit("SN_Sketch", Color.white, 0f, "SN_Sketch");
             Lit("SN_Charcoal", Hex("111112"), 0.08f);
-            Lit("SN_VincentV2", Color.white, 0.05f, "SN_VincentV2_BaseColor");   // ours: Mixamo's FBX gives Metallic 1 (dark, mirror-like)
+            Lit("SN_VincentV2", Color.white, 0.05f, "SN_VincentV2_BaseColor");
+            Lit("SN_Blanket", Color.white, 0.05f, "SN_Blanket");   // ours: Mixamo's FBX gives Metallic 1 (dark, mirror-like)
             Mat("SN_HillRing", "InnerFrame/StarryNight/Horizon", m =>   // the far hills: drawn before the painted horizon
             {
                 m.SetTexture("_BaseMap", Load<Texture2D>($"{Tex}/SN_FarHills.png"));
@@ -693,6 +715,9 @@ namespace InnerFrame.StarryNight.EditorTools
             SaveMesh(SN_MeshGen.FlameCross(0.045f, 0.09f), "SN_FlameCross");
             var rock = ModelMeshNode("SN_Rock");
             SaveMesh(SN_MeshGen.RockRim(l, rock.mesh, rock.node), "SN_RockRim");
+            // 2026-11-09: the lantern's post, the blanket
+            SaveMesh(SN_MeshGen.LanternPost(l), "SN_LanternPost");
+            SaveMesh(SN_MeshGen.Blanket(l), "SN_Blanket");
             // the bushes and the clouds (their placements go into the hilltop prefab); the flowers fill between the bushes
             var bushA = ModelMeshNode("SN_BushA"); var bushB = ModelMeshNode("SN_BushB"); var cloud = ModelMeshNode("SN_CloudA");
             bushAPlaces.Clear(); bushBPlaces.Clear();
@@ -1003,6 +1028,10 @@ namespace InnerFrame.StarryNight.EditorTools
                 lantern.lamp = lamp; lantern.flame = flame.transform; lantern.knob = Part(model, "Knob");
             });
 
+            // 2026-11-09: the lantern's post and hook, the blanket: drawn only (no colliders)
+            Prefab("SN_LanternPost", root => Shape(root, "Post", MeshAsset("SN_LanternPost"), M("SN_LanternIron"), Vector3.zero, Vector3.one));
+            Prefab("SN_Blanket", root => Shape(root, "Blanket", MeshAsset("SN_Blanket"), M("SN_Blanket"), Vector3.zero, Vector3.one));
+
             Prefab("SN_Sketchbook", root =>   // the box becomes the open sketchbook: a box collider under each half
             {
                 RemoveChildren(root, "Cover");
@@ -1127,6 +1156,7 @@ namespace InnerFrame.StarryNight.EditorTools
             b.hilltopPrefab = P("SN_Hilltop"); b.rockPrefab = P("SN_Rock"); b.cypressPrefab = P("SN_Cypress");
             b.lanternPrefab = P("SN_Lantern"); b.sketchbookPrefab = P("SN_Sketchbook"); b.pagePrefab = P("SN_Page"); b.charcoalPrefab = P("SN_Charcoal");
             b.vincentPrefab = P("SN_Vincent"); b.skyPrefab = P("SN_Sky"); b.beamPrefab = P("SN_Beam");
+            b.lanternPostPrefab = P("SN_LanternPost"); b.blanketPrefab = P("SN_Blanket");
             b.uiPrefab = Load<GameObject>(DialoguePrefab); b.uiSettings = Load<VG_DialogueSettings>(DialogueSettingsPath);
             b.grading = AssetDatabase.LoadAssetAtPath<VolumeProfile>(GradingPath);
         }

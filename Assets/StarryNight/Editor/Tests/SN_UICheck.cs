@@ -13,7 +13,8 @@ namespace InnerFrame.StarryNight.EditorTools
 {
     /// <summary>
     /// The Starry Night's dialogue box and hint (the shared VG_DialogueUI with VG_Dialogue_StarryNight), checked in edit
-    /// mode in the scene's own world: every line's pages fit in three lines; where the box and the hint sit from the
+    /// mode in the scene's own world: every line's pages fit in three lines; every hint (each state's title and line,
+    /// 2026-11-10) fits: its plate, one line under its title, no wider than the box; where the box and the hint sit from the
     /// seat (a level gaze and 25 degrees up); the follow (a 15 degree turn doesn't move it, a 30 degree turn catches up
     /// in about half a second, stepped at 72 Hz as the Bedroom's reuse test did); the beam draws before the UI.
     /// Batch: -executeMethod InnerFrame.StarryNight.EditorTools.SN_UICheck.RunBatch -snLog &lt;file&gt; (exit 0 = all passed).
@@ -106,8 +107,32 @@ namespace InnerFrame.StarryNight.EditorTools
             for (int k = 0; k < 2 * Hz; k++) ui.Step(1f / Hz);
             Check(!ui.IsSpeaking, "Clear, then 2 s: the words are gone");
 
+            // ------------------------------------------------------------------ every hint fits (2026-11-10)
+            // VG_Hint sizes its plate to its title and its one line (no wrap), from the box's left edge (VG_DialogueBox.Above):
+            // it fits when the plate is no wider than the box.
+            var hintUi = ui.GetComponentInChildren<VG_Hint>(true);
+            var plate = (RectTransform)hintUi.transform.Find("Plate");
+            float boxWide = ((RectTransform)box.transform.Find("Panel")).sizeDelta.x;
+            float PlateShare(string title, string line) { ui.SetHint(title, line); return plate.sizeDelta.x / boxWide; }
+            var hints = new List<(string name, string title, string line)>();
+            foreach (SN_State st in Enum.GetValues(typeof(SN_State)))
+                if (SN_Game.HintFor(st) != null) hints.Add((st.ToString(), SN_Game.TitleFor(st), SN_Game.HintFor(st)));
+            hints.Add(("Dawn, the page there", SN_Game.PageTitle, SN_Game.TakeThePage));
+            var tooWide = new List<string>();
+            foreach (var (name, title, line) in hints)
+            {
+                float share = PlateShare(title, line);
+                W($"hint {name}: \"{title ?? s.hintTitle}\" | \"{line}\": the plate {F(share * 100f)} % of the box's width ({F(share * s.boxWidth)} of {F(s.boxWidth)} deg)");
+                if (share > 1f + 1e-4f) tooWide.Add($"{name} {F(share * 100f)} %");
+            }
+            Check(tooWide.Count == 0, $"every hint fits: its plate no wider than the box" + (tooWide.Count > 0 ? $" (too wide: {string.Join(", ", tooWide)})" : ""));
+            string twice = SN_Game.HintFor(SN_State.Arrive) + " " + SN_Game.HintFor(SN_State.Arrive);
+            float control = PlateShare(SN_Game.TitleFor(SN_State.Arrive), twice);
+            Check(control > 1f, $"positive control: the Arrive line twice over is {F(control * 100f)} % of the box -> too wide");
+            ui.SetHint(null, null);
+
             // ------------------------------------------------------------------ where it sits, from the seat
-            ui.SetHint(null, SN_Game.HintFor(SN_State.Stars));
+            ui.SetHint(SN_Game.TitleFor(SN_State.Stars), SN_Game.HintFor(SN_State.Stars));
             ui.Say(SN_Voice.Speaker, game.voice.lines.Get("L04").text, game.voice.lines.Get("L04").clip);
             for (int k = 0; k < Hz; k++) ui.Step(1f / Hz);
             var follow = ui.GetComponentInChildren<VG_FollowGroup>(true);

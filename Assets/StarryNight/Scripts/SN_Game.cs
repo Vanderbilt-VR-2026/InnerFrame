@@ -41,21 +41,40 @@ namespace InnerFrame.StarryNight
         /// <summary>Every transition: (state, seconds since Begin). For the portrait deck and anything else that listens.</summary>
         public static event Action<SN_State, float> StateEntered;
 
+        /// <summary>The hint's title: the step the player is on (2026-11-10, one step at a time). Dawn: "Dawn" while the sky
+        /// pales, PageTitle once the page is there. Done: null, the settings' title (VG_Dialogue_StarryNight.hintTitle, "A Night
+        /// with Vincent"), the scene's name back as a closing title.</summary>
+        public static string TitleFor(SN_State s)
+        {
+            switch (s)
+            {
+                case SN_State.Arrive: return "Walk up to Vincent";
+                case SN_State.Sit: return "Sit beside Vincent";
+                case SN_State.Lantern: return "Dim the lantern";
+                case SN_State.Stars: return "Wake the stars";
+                case SN_State.Wind: return "Trace the wind";
+                case SN_State.Dawn: return "Dawn";
+                default: return null;
+            }
+        }
+
+        /// <summary>The hint's line. Never "grab"; a button named comes with its finger (trigger: index finger).</summary>
         public static string HintFor(SN_State s)
         {
             switch (s)
             {
                 case SN_State.Arrive: return "Walk up the path to Vincent";
-                case SN_State.Sit: return "Sit down beside Vincent";
-                case SN_State.Lantern: return "Grab the lantern and pull the trigger to turn it down";
-                case SN_State.Stars: return "Point at the star he names and pull the trigger";
-                case SN_State.Wind: return "Hold the trigger and follow the dotted line";
+                case SN_State.Sit: return "Sit on the blanket next to him.";
+                case SN_State.Lantern: return "Point at it, pull the trigger (index finger).";
+                case SN_State.Stars: return "Point at the star he names, pull the trigger.";
+                case SN_State.Wind: return "Hold the trigger and follow the dots.";
                 case SN_State.Dawn: return "Wait for dawn";
                 case SN_State.Done: return "The night is painted";
                 default: return null;
             }
         }
-        public const string TakeThePage = "Take the page";
+        /// <summary>The hint's title and line once the page is there (still Dawn).</summary>
+        public const string PageTitle = "Take his page", TakeThePage = "Take the page";
 
         [Header("Set by SN_Bootstrap")]
         public SN_Layout layout;
@@ -84,7 +103,8 @@ namespace InnerFrame.StarryNight
         public bool PageShown => pageShown;
         public bool LetterFound => letterFound;
 
-        int namedProgress, windPassed, aimHand = -1;
+        int namedProgress, windPassed, aimHand = -1, lanternTargets;
+        BoxCollider lanternBox;
         bool lanternDown, letterFound, pageShown, waitingForWind, morningStarArmed;
         float sketchTimer, idle, dawnDelay = -1f, dawnT = -1f, guideAlpha, swirlShown;
         float paint, paintFrom, paintTo, paintT = -1f, paintSeconds;
@@ -149,11 +169,20 @@ namespace InnerFrame.StarryNight
             for (int h = 0; h < Input.HandCount; h++) if (Input.TriggerDown(h)) { down = h; break; }
             if (down >= 0) aimHand = down;
 
-            // the lantern: the trigger turns it down while it's held
+            // the lantern (2026-11-09): the trigger turns it down when that hand holds it, points at it or touches it (or, held,
+            // either hand's trigger); until then it calls (a slow pulse), and a ray or a hand on it brightens it and buzzes once
+            bool calling = !lanternDown && !lantern.IsDown && !lantern.Dimming;
+            int targets = 0;
+            if (calling) for (int h = 0; h < Input.HandCount && h < 31; h++) if (LanternTargeted(h)) targets |= 1 << h;
+            for (int h = 0; h < Input.HandCount && h < 31; h++)
+                if ((targets & (1 << h)) != 0 && (lanternTargets & (1 << h)) == 0) Input.Haptic(h, layout.lanternHapticAmplitude, layout.lanternHapticSeconds);
+            lanternTargets = targets;
+            lantern.Calling = calling;
+            lantern.Targeted = calling && (targets != 0 || lanternGrab.IsHeld);
             bool triggerUsed = false;
-            if (down >= 0 && !lantern.IsDown && !lantern.Dimming && lanternGrab.IsHeld)
+            if (down >= 0 && calling && (lanternGrab.IsHeld || (targets & (1 << down)) != 0))
             {
-                lantern.TurnDown(layout.lanternDimTo, layout.lanternDimSeconds);
+                lantern.TurnDown(layout.lanternDimTo, layout.lanternDimSeconds);   // the same call as the room's (ApplyRoom), shared as Progress.lanternDown
                 triggerUsed = true;
             }
             lantern.Step(dt);
@@ -207,7 +236,7 @@ namespace InnerFrame.StarryNight
                     if (page != null) page.gameObject.SetActive(true);
                     voice.Say("L09");
                     morningStarArmed = true;
-                    if (ui != null) ui.SetHint(null, TakeThePage);   // the settings' title, "A Night with Vincent"
+                    if (ui != null) ui.SetHint(PageTitle, TakeThePage);
                 }
             }
             if (morningStarArmed && !voice.Busy)
@@ -273,6 +302,22 @@ namespace InnerFrame.StarryNight
                 if (windPassed == sky.PathLength) WindTraced();
             }
             if (room.letterFound && !letterFound) FindLetter();
+        }
+
+        /// <summary>This hand's ray within lanternAimDeg of the lantern and within lanternAimReach of it, or the hand within
+        /// lanternTouchReach of its box (measured to the box's surface).</summary>
+        public bool LanternTargeted(int hand)
+        {
+            if (lanternGrab == null || !Input.TryGetAim(hand, out var aim)) return false;
+            if (lanternBox == null) lanternBox = lanternGrab.GetComponent<BoxCollider>();
+            if (lanternBox == null) return false;
+            var t = lanternBox.transform;
+            Vector3 centre = t.TransformPoint(lanternBox.center);
+            Vector3 local = t.InverseTransformPoint(aim.origin) - lanternBox.center, half = lanternBox.size * 0.5f;
+            Vector3 nearest = new Vector3(Mathf.Clamp(local.x, -half.x, half.x), Mathf.Clamp(local.y, -half.y, half.y), Mathf.Clamp(local.z, -half.z, half.z));
+            if (Vector3.Distance(t.TransformPoint(lanternBox.center + nearest), aim.origin) <= layout.lanternTouchReach) return true;
+            Vector3 to = centre - aim.origin;
+            return to.magnitude <= layout.lanternAimReach && Vector3.Angle(aim.direction, to) <= layout.lanternAimDeg;
         }
 
         void TryWake(Ray aim)
@@ -402,7 +447,7 @@ namespace InnerFrame.StarryNight
         {
             State = s;
             Raise(s);
-            if (ui != null) ui.SetHint(null, HintFor(s));
+            if (ui != null) ui.SetHint(TitleFor(s), HintFor(s));
         }
 
         void Raise(SN_State s)

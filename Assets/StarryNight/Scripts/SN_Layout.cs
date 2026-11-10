@@ -23,7 +23,9 @@ namespace InnerFrame.StarryNight
     /// over uiBelowGaze (now VG_Dialogue_StarryNight.belowGaze); the look pass (version 4) added the Tripo bushes and
     /// clouds, a fuller mist, warmer light, one far horizon line and the colour grading switch; step 3 (version 5) seated
     /// Vincent v2 on the raised rock, his charcoal in his hand, and moved the props round him; version 6 (2026-11-09) added
-    /// the rock's keep-off rim. SN_Setup brings an older
+    /// the rock's keep-off rim; version 7 (2026-11-09) gave the lantern its home on a post by the seat and the seat's
+    /// blanket; version 8 (2026-11-10) removed the two cards an unreleased version 7 had (the hint's title shows the step now).
+    /// SN_Setup brings an older
     /// asset up once, step by step, and logs every value it changes. SN_Setup builds meshes from some of them (the hill, the path, the far hills, the
     /// horizon, the mist, the flowers, the swirl mask): change those, then run Tools > InnerFrame > Starry Night > Build again.
     /// </summary>
@@ -31,9 +33,9 @@ namespace InnerFrame.StarryNight
     public class SN_Layout : ScriptableObject
     {
         /// <summary>2: the art pass's values; 3: the dialogue box moved to VG_DialogueUI (uiBelowGaze went to its
-        /// settings); 4: the look pass; 5: step 3, Vincent v2 on the rock; 6: the rock's keep-off rim. An asset below it is
-        /// brought up to it once by SN_Setup.</summary>
-        public const int CurrentVersion = 6;
+        /// settings); 4: the look pass; 5: step 3, Vincent v2 on the rock; 6: the rock's keep-off rim; 7: the lantern's home,
+        /// the blanket; 8: the two cards gone. An asset below it is brought up to it once by SN_Setup.</summary>
+        public const int CurrentVersion = 8;
 
         [Tooltip("0: the blockout's values. SN_Setup brings an older asset up to CurrentVersion once, step by step.")]
         public int version;
@@ -64,6 +66,7 @@ namespace InnerFrame.StarryNight
         public Vector3 vincentMouthInHead = new Vector3(0f, 0.07f, 0.1f);
         [Tooltip("Where the standing placeholder stood (until step 3). Still the centre of the Arrive zone (arriveDistance) and of the bushes' keep-out, so neither moved when he sat down on the rock.")]
         public Vector3 vincentStand = new Vector3(-0.80f, 0f, 0.50f);
+        [Tooltip("The art pass's lantern spot on the grass. Since version 7 the lantern starts on its post (lanternHome); this spot still anchors the bushes' keep-out (bushClearLantern), so the bushes didn't move.")]
         public Vector3 lantern = new Vector3(0.85f, 0f, -0.55f);     // on the grass by the seat, valley side (y above the ground)
         [Tooltip("Version 6: an invisible convex wall round the rock (SN_Hilltop/RockRim, layer Ignore Raycast), so the rig's CharacterController can't step onto the rock (measured 2026-11-09: it climbs walls up to 0.55 m and stops at 0.60 m; its step offset, 0.5, is not scaled with the 0.8 rig): its top this high above the ground, pushed out this far from the rock's outline seen from above, its bottom this far under the ground. The props pass through it (SN_Grabbable.IgnoreAlways); XRI's rays and ground check leave Ignore Raycast out.")]
         public float rockRimHeight = 1.0f, rockRimMargin = 0.03f, rockRimBelow = 0.3f;
@@ -276,6 +279,23 @@ namespace InnerFrame.StarryNight
         public float vincentPointReach = 0.85f, vincentPointInSeconds = 0.4f, vincentPointOutSeconds = 0.5f, vincentPointAfterLineSeconds = 1f;
         public float vincentPointMaxAngle = 110f, vincentPointFarWeight = 0.5f;
 
+        [Header("The lantern's home, the blanket (version 7, 2026-11-09)")]
+        [Tooltip("Where the lantern hangs (its base: x, height above the ground, z), kinematic, and where it glides back to when let go: 0.45 m from the seat at yaw 25 (right of the village's spire), its handle (the model's GrabPoint, 0.316 m up) 0.50 m above the grass.")]
+        public Vector3 lanternHome = new Vector3(0.640f, 0.184f, -0.492f);
+        [Tooltip("The lantern's yaw on its hook (its wick key toward the seat).")]
+        public float lanternHomeYaw = -65f;
+        [Tooltip("The post it hangs from: this far to the lantern's right as seen from the seat, this tall above the grass; its arm and hook reach over to the handle.")]
+        public float lanternPostSide = 0.14f, lanternPostHeight = 0.62f;
+        [Tooltip("Seconds the lantern takes to glide back to its hook once let go.")]
+        public float lanternReturnSeconds = 0.4f;
+        [Tooltip("Turning it down without holding it: the trigger of a hand whose ray is within lanternAimDeg of the lantern and within lanternAimReach of it (XRI's far reach at the 0.8 rig), or whose hand is within lanternTouchReach of it.")]
+        public float lanternAimDeg = 10f, lanternAimReach = 1.6f, lanternTouchReach = 0.2f;
+        [Tooltip("Finding it: until it is turned down its light and flame pulse by this much at this rate; with a ray or a hand on it (or held) they are this much brighter, and that controller gives one tick of this strength and length.")]
+        public float lanternPulse = 0.15f, lanternPulseHz = 0.6f, lanternTargetBoost = 0.3f, lanternHapticAmplitude = 0.15f, lanternHapticSeconds = 0.05f;
+        [Tooltip("The blanket that marks the seat (Textures/SN_Blanket.png): its size (across, along) and yaw, centred on playerSeat.")]
+        public Vector2 blanketSize = new Vector2(0.70f, 0.50f);
+        public float blanketYaw = -20f;
+
         [Header("Gameplay")]
         public float arriveDistance = 3f;             // from Vincent, horizontal
         public float aimAssistDeg = 4f;               // a star wakes if the aim is within this
@@ -351,6 +371,22 @@ namespace InnerFrame.StarryNight
 
         /// <summary>A point given as (x, height above the ground, z), on the hill.</summary>
         public Vector3 OnGround(Vector3 p) => new Vector3(p.x, GroundHeight(p.x, p.z) + p.y, p.z);
+
+        /// <summary>The lantern on its hook (version 7): its base on lanternHome, turned lanternHomeYaw.</summary>
+        public Pose LanternHomePose => new Pose(OnGround(lanternHome), Quaternion.Euler(0f, lanternHomeYaw, 0f));
+
+        /// <summary>The lantern's post: lanternPostSide to the lantern's right as seen from the seat, its arm (+Z) reaching back
+        /// over the lantern's handle.</summary>
+        public Pose LanternPostPose
+        {
+            get
+            {
+                Vector2 d = new Vector2(lanternHome.x - playerSeat.x, lanternHome.z - playerSeat.z).normalized;
+                Vector3 right = new Vector3(d.y, 0f, -d.x);
+                Vector3 p = new Vector3(lanternHome.x, 0f, lanternHome.z) + right * lanternPostSide;
+                return new Pose(OnGround(p), Quaternion.LookRotation(-right));
+            }
+        }
 
         /// <summary>The player start's yaw: facing the rock.</summary>
         public float PlayerStartYaw => Mathf.Atan2(-playerStart.x, -playerStart.z) * Mathf.Rad2Deg;

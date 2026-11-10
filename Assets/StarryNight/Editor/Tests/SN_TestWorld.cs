@@ -90,8 +90,7 @@ namespace InnerFrame.StarryNight.EditorTools
             game.lanternGrab.HoldFallback(head);
             Pull(game.lantern.transform.position);
             Step(L.lanternDimSeconds + L.starsFadeInSeconds + 0.6f);
-            game.lanternGrab.ReleaseFallback();
-            game.lantern.transform.SetPositionAndRotation(L.OnGround(L.lantern) + Vector3.up * 0.005f, Quaternion.Euler(0f, -20f, 0f));
+            game.lanternGrab.ReturnHomeNow();   // back on its hook (in Play mode it glides there)
         }
 
         /// <summary>Lets every rigidbody settle (preview worlds only): `steps` x 0.02 s of this world's own physics.</summary>

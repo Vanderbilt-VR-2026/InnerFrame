@@ -184,6 +184,7 @@ namespace InnerFrame.StarryNight.EditorTools
 
         void PlaceLantern(Vector3 groundSpot)
         {
+            lantern.ReturnHomeNow();   // no glide under way
             var rb = lantern.GetComponent<Rigidbody>();
             rb.isKinematic = false;
             lantern.Place(Ground(groundSpot) + Vector3.up * 0.005f, Quaternion.Euler(0f, -20f, 0f));
@@ -309,6 +310,32 @@ namespace InnerFrame.StarryNight.EditorTools
                 Check(game.vincent.GetComponentsInChildren<Collider>(true).Length == 0 && game.vincent.GetComponentsInChildren<Rigidbody>(true).Length == 0,
                     "Vincent has no collider and no Rigidbody: the rim can't touch him (his standing up: the Vincent check)");
             });
+            // 5. let go anywhere, it glides back to its hook; the room's link keeps sending its pose meanwhile (Settling)
+            foreach (var control in new[] { false, true })
+            {
+                string k = control ? "5 control: no glide home (SN_Grabbable.ControlNoReturn)" : "5 let go 1.5 m away";
+                int settlingFrames = 0, triggerFrames = 0; float arrivedAt = -1f, released = 0f;
+                P(k + ": back on the hook", 0.2f, () => { SN_Grabbable.ControlNoReturn = control; lantern.ReturnHomeNow(); });
+                Grab(k);
+                P(k + ": carried away", 0.4f, () => { Stand(L.playerSeat + new Vector3(1.2f, 0f, -0.9f), 0f); handOff = front; selectIn = true; });
+                P(k + ": let go", 1.2f, () => { selectIn = false; released = Time.time; settlingFrames = triggerFrames = 0; arrivedAt = -1f; }, t =>
+                {
+                    if (t > 0.15f && grab.isSelected) nearFar.interactionManager.SelectExit((IXRSelectInteractor)nearFar, (IXRSelectInteractable)grab);
+                    if (lantern.Settling) settlingFrames++;
+                    if (lantern.Returning && lanternBox.isTrigger) triggerFrames++;
+                    if (arrivedAt < 0f && !lantern.Returning && !grab.isSelected && (lantern.transform.position - lantern.Home.position).magnitude < 0.01f && lantern.GetComponent<Rigidbody>().isKinematic) arrivedAt = Time.time - released;
+                }, () =>
+                {
+                    float d = (lantern.transform.position - lantern.Home.position).magnitude;
+                    bool kin = lantern.GetComponent<Rigidbody>().isKinematic;
+                    W($"  {k}: {F(d)} m from its hook 1.2 s after the let-go (arrived {(arrivedAt >= 0f ? F(arrivedAt) + " s" : "never")}), kinematic {kin}, solid again {!lanternBox.isTrigger}; Settling (StarryNightLink keeps sending) on {settlingFrames} frames, a trigger while gliding on {triggerFrames}");
+                    if (!control) Check(arrivedAt >= 0f && arrivedAt <= 1f && d <= 0.01f && kin && !lanternBox.isTrigger && settlingFrames > 0 && triggerFrames > 0,
+                        $"let go 1.5 m from its hook, the lantern glides back: there in {F(arrivedAt)} s (limit 1), {F(d)} m off (limit 0.01), kinematic and solid again; on its way Settling (so the room follows it) and a trigger");
+                    else Check(d > 0.3f, $"control: with no glide it stays {F(d)} m from its hook: fails, as it must");
+                    SN_Grabbable.ControlNoReturn = false;
+                });
+            }
+            P("5 end", 0.05f, () => lantern.ReturnHomeNow());
             P("end", 0.05f, () => Done = true);
         }
 
@@ -354,7 +381,9 @@ namespace InnerFrame.StarryNight.EditorTools
     ///    from the player start to the seat is clear; seated at the seat, still and leaning toward Vincent, the rig isn't
     ///    moved and the head stays within the seat's radius; seated, pushing the stick toward the rock, it doesn't climb it;
     /// 4. the props pass through the rim: the page shown at dawn and the sketchbook rest on their spots (control: a page copy
-    ///    without IgnoreAlways is pushed off); Vincent has no collider or Rigidbody.
+    ///    without IgnoreAlways is pushed off); Vincent has no collider or Rigidbody;
+    /// 5. let go 1.5 m away, the lantern glides back to its hook within 1 s, kinematic and solid again, Settling on its way
+    ///    (what StarryNightLink sends on) and a trigger (control: SN_Grabbable.ControlNoReturn).
     /// Batch: -executeMethod InnerFrame.StarryNight.EditorTools.SN_RigCheck.RunBatch [-snLog &lt;file&gt;] (without -quit).
     /// </summary>
     [InitializeOnLoad]

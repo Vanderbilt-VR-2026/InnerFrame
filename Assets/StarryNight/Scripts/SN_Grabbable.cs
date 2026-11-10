@@ -14,6 +14,9 @@ namespace InnerFrame.StarryNight
     /// level over a slope and dropped when the hand moved. It never collides with the colliders given to IgnoreAlways (the
     /// rig's CharacterControllers, which would otherwise step up onto it: it is 0.32 m tall and the rig climbs anything up to
     /// about 0.55 m; the rock's keep-off rim).
+    /// With a home (SetHome: the lantern's hook, 2026-11-09) it rests there kinematic, and when let go it glides back
+    /// (Returning): a moving, non-kinematic body with trigger colliders and no gravity, so StarryNightLink keeps sending its
+    /// pose while it is Settling and every copy follows it home; there it turns kinematic again.
     /// </summary>
     [RequireComponent(typeof(Rigidbody))]
     public class SN_Grabbable : MonoBehaviour
@@ -27,6 +30,11 @@ namespace InnerFrame.StarryNight
         readonly List<Collider> ignoreAlways = new List<Collider>();
         int ignoredActive = -1;   // which of ignoreAlways were active when the pairs were last set
         bool asTrigger;
+        bool hasHome, returning, wasHeld;
+        Pose home;
+        float returnSeconds = 0.4f, returnT;
+        Vector3 returnFrom;
+        Quaternion returnFromRotation;
         Transform homeParent;
         bool fallbackHeld;
 
@@ -51,9 +59,69 @@ namespace InnerFrame.StarryNight
 
         void OnEnable() { ignoredActive = -1; ApplyIgnores(); }
 
+        // ---- its home (the lantern's hook) ----
+
+        public bool HasHome => hasHome;
+        public Pose Home => home;
+        /// <summary>Let go and on its way home.</summary>
+        public bool Returning => returning;
+
+        /// <summary>SN_RigCheck's control only (Editor/Tests): no glide home after a let-go. Never set in the game.</summary>
+        public static bool ControlNoReturn;
+
+        /// <summary>Its home: it rests there kinematic, and glides back there in `seconds` when let go. `place`: put it there now.</summary>
+        public void SetHome(Pose pose, float seconds, bool place = true)
+        {
+            hasHome = true; home = pose; returnSeconds = Mathf.Max(0.05f, seconds);
+            Body.isKinematic = true;
+            if (place) Place(pose.position, pose.rotation);
+        }
+
+        /// <summary>Straight home, at once (the edit-mode checks, which run no physics).</summary>
+        public void ReturnHomeNow()
+        {
+            if (!hasHome) return;
+            ReleaseFallback();
+            Arrive();
+        }
+
+        void StartReturn()
+        {
+            if (!hasHome || ControlNoReturn) return;
+            returning = true; returnT = 0f;
+            returnFrom = Body.position; returnFromRotation = Body.rotation;
+        }
+
+        void FixedUpdate()
+        {
+            if (!returning) return;
+            if (IsHeld || following) { returning = false; return; }
+            returnT += Time.fixedDeltaTime;
+            float k = Mathf.Clamp01(returnT / returnSeconds), s = k * k * (3f - 2f * k);
+            Body.isKinematic = false;
+            Body.useGravity = false;
+            Body.linearVelocity = (Vector3.Lerp(returnFrom, home.position, s) - Body.position) / Time.fixedDeltaTime;
+            Body.angularVelocity = Vector3.zero;
+            Body.MoveRotation(Quaternion.Slerp(returnFromRotation, home.rotation, s));
+            if (k >= 1f && (Body.position - home.position).sqrMagnitude < 1e-6f) Arrive();
+            else if (returnT > returnSeconds + 1f) Arrive();   // never left hanging
+        }
+
+        void Arrive()
+        {
+            returning = false;
+            if (!Body.isKinematic) { Body.linearVelocity = Vector3.zero; Body.angularVelocity = Vector3.zero; }
+            Body.useGravity = true;
+            Body.isKinematic = true;
+            Place(home.position, home.rotation);
+        }
+
         void Update()
         {
-            bool trigger = IsHeld || following;
+            bool held = IsHeld;
+            if (hasHome && wasHeld && !held && !following) StartReturn();
+            wasHeld = held;
+            bool trigger = held || following || returning;
             if (trigger != asTrigger)
             {
                 asTrigger = trigger;
@@ -112,6 +180,7 @@ namespace InnerFrame.StarryNight
         /// <summary>Another player moves it: follow their pose; nobody can grab this copy meanwhile.</summary>
         public void FollowPose(Vector3 position, Quaternion rotation)
         {
+            returning = false;
             if (!following)
             {
                 following = true;
@@ -127,6 +196,8 @@ namespace InnerFrame.StarryNight
         {
             if (!following) return;
             following = false;
+            // the mover's copy glided home and stopped within a millimetre of it: put this one exactly there
+            if (hasHome && (position - home.position).magnitude < 0.02f) { position = home.position; rotation = home.rotation; }
             Place(position, rotation);
             Body.isKinematic = kinematicBefore;
             if (Grab != null) Grab.enabled = true;

@@ -26,6 +26,9 @@ public class SceneFader : MonoBehaviour
         }
     }
 
+    /// <summary>True from the fade-out until the next scene's fade-in has ended (the arrival hint waits for it).</summary>
+    public static bool IsFading => instance != null && instance.busy;
+
     Renderer sphereRenderer;
     Transform sphere;
     Material mat;

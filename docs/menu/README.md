@@ -47,6 +47,39 @@ menu opens in front of the desktop camera and frees the mouse; mouse-look
 pauses until you close it (WASD still walks). Dragging the panel needs a
 controller (a headset or the XR Interaction Simulator).
 
+## Getting around: into a painting and back (#163)
+
+Two more pieces show players the way in and the way out. Neither needs
+anything added to a scene: both attach themselves when a scene loads.
+Code: `Assets/Script/Wayfinding/`.
+
+- **In the Gallery, every way into a painting** (each `SceneChangeButton`, the
+  invisible box on a pedestal) gets a soft chrome-yellow glow over that box,
+  so players can see what to grip. A hint floats above it with the painting's
+  title and *Hold grip on the pedestal to step inside*. The hint shows while a
+  ray points at the box. Until the player has entered a painting once, it also
+  shows whenever they're within 1.6 m.
+- **On arrival in a painting**, a hint says *You're inside The Bedroom / To go
+  back to the Gallery, press (≡) on your left controller* (*press M* on a
+  desktop). It waits for the fade-in and for any words in the dialogue box to
+  finish (at most 20 s), shows for 10 s, and goes as soon as the menu opens.
+  It shows once per visit, a little under the gaze and above the dialogue
+  box, drawn over the room.
+
+Both use the same hint plate as Vincent's hints (`VG_Hint`). Players read the
+painting names from `PaintingNames`.
+
+| Script | What it does |
+|---|---|
+| `PaintingEntrancePrompt` | The glow and the hint on each way in (Gallery only) |
+| `ArrivalHint` | The one-time "how to go back" hint in every other scene |
+| `WayfindingHint` | A world-space `VG_Hint`, sized in degrees for a viewing distance, with the ≡ drawn as three bars |
+
+Checks: **InnerFrame > Menu > Run Wayfinding Checks** (batch:
+`-executeMethod WayfindingCheck.RunBatch [-wayShots <folder>] -quit`) runs on
+the real Gallery without saving it. With `-wayShots` it renders the Bedroom's
+pedestal and the arrival hint.
+
 ## Scripts
 
 | Script | What it does |
@@ -74,3 +107,7 @@ With `-menuShots` it also renders the panel and the tag to PNGs.
 6. **Back to Gallery** fades you back to the Gallery's start, from the Painted Bedroom and from The Starry Night.
 7. In the Gallery, press ≡: no Back button, a line about the glowing pedestals instead.
 8. Outside the Gallery, look at your left controller: the **(≡) Menu** tag is readable and doesn't block the ray. It's gone in the Gallery.
+9. In the Gallery, walk toward the Bedroom pedestal: its box glows, and from about 1.5 m the hint *The Bedroom / Hold grip…* appears over it. Point at it from further away: the hint appears too.
+10. Grip it: after the fade, *You're inside The Bedroom* names ≡ for about 10 s, and pressing ≡ closes it at once.
+11. Back in the Gallery, walk to the Starry Night pedestal: the hint now waits until you point at it.
+12. In The Starry Night: the arrival hint doesn't overlap Vincent's opening words or the game's hint.

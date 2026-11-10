@@ -60,11 +60,20 @@ namespace InnerFrame.PaintedBedroom
                 var s = child.AddComponent<AudioSource>();
                 s.playOnAwake = false;
                 s.priority = LowPriority;
+                s.dopplerLevel = 0f;   // a voice jumps to each new sound's position: Doppler would hear that as speed and bend the pitch
                 s.rolloffMode = AudioRolloffMode.Logarithmic;   // same falloff as Vincent's voice, so distance treats both alike
                 s.minDistance = 1f;
                 s.maxDistance = 15f;
                 sources[i] = s;
             }
+
+            // every clip now, while the room opens, so the first use of a sound doesn't stall a frame on the Quest
+            foreach (string material in Materials.Values)
+            {
+                Clips(material + "_PickUp");
+                Clips(material + "_Land");
+            }
+            Clips(Footstep);
 
             var unmatched = new HashSet<string>(Materials.Keys);
             foreach (var m in FindObjectsByType<PaintedBedroomMovable>(FindObjectsInactive.Include, FindObjectsSortMode.None))
@@ -96,14 +105,19 @@ namespace InnerFrame.PaintedBedroom
             startedAt[v] = Time.unscaledTime;
         }
 
+        AudioClip[] Clips(string set)
+        {
+            if (clips.TryGetValue(set, out var list)) return list;
+            list = Resources.LoadAll<AudioClip>(ClipRoot + set);
+            clips[set] = list;
+            if (list.Length == 0) Debug.LogWarning($"[InnerFrame] No clips in Resources/{ClipRoot}{set}.", this);
+            foreach (var clip in list) clip.LoadAudioData();
+            return list;
+        }
+
         AudioClip NextClip(string set)
         {
-            if (!clips.TryGetValue(set, out var list))
-            {
-                list = Resources.LoadAll<AudioClip>(ClipRoot + set);
-                clips[set] = list;
-                if (list.Length == 0) Debug.LogWarning($"[InnerFrame] No clips in Resources/{ClipRoot}{set}.", this);
-            }
+            var list = Clips(set);
             if (list.Length == 0) return null;
             int previous = lastClip.TryGetValue(set, out int p) ? p : -1;
             int next = Random.Range(0, list.Length);

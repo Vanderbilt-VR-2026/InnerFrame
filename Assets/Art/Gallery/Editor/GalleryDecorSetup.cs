@@ -88,13 +88,19 @@ namespace InnerFrame.Gallery.EditorTools
         {
             ("Vase_EastWall", new Vector3(-3.0f, 0f, 2.4f), 90f), ("Vase_WestWall", new Vector3(3.0f, 0f, -1.0f), -90f),
         };
-        // Each hangs by its ring from an arm out of the south wall (z 4.5): one over the arch (its moulding tops out at
-        // 2.75 m), one each side of it. Where the ring's top is, and the arm's length back to the wall (+Z).
-        public static readonly (string name, Vector3 at, float arm)[] Lanterns =
+        // Each hangs by its ring from an arm out of a wall: one each side of the arch (south wall, z 4.5), and one on each
+        // side wall at z = 1, just south of The Starry Night's frame (its south edge at z 0.08), so neither hangs in front of
+        // a painting and the light reaches the north end. Where the ring's top is, the arm's length back to the wall, and
+        // the turn that points the arm (the group's +Z) at its wall: 0 south, -90 east (x -3.5), 90 west (x 3.5).
+        // Four lamps: Mobile_RPAsset's limit of per-pixel lights per object.
+        public static readonly (string name, Vector3 at, float arm, float yaw)[] Lanterns =
         {
-            ("Lantern_Arch", new Vector3(0f, 2.72f, 4.26f), 0.24f),
-            ("Lantern_ArchEast", new Vector3(-1.45f, 2.35f, 4.26f), 0.24f), ("Lantern_ArchWest", new Vector3(1.45f, 2.35f, 4.26f), 0.24f),
+            ("Lantern_ArchEast", new Vector3(-1.45f, 2.35f, 4.26f), 0.24f, 0f), ("Lantern_ArchWest", new Vector3(1.45f, 2.35f, 4.26f), 0.24f, 0f),
+            ("Lantern_EastWall", new Vector3(-3.26f, 2.35f, 1.0f), 0.24f, -90f), ("Lantern_WestWall", new Vector3(3.26f, 2.35f, 1.0f), 0.24f, 90f),
         };
+        // The carved corners, larger than their FBX (0.30 x 0.32 m) by this: 0.51 x 0.54 m, over the 0.18 m frame and
+        // about 0.35 m of the painting (1.4x still read small beside a 3 m painting).
+        public const float CornerScale = 1.7f;
         // a frame's centre on its front face, its yaw (facing into the room), half its outer width and height
         public static readonly (string name, Vector3 centre, float yaw, float hw, float hh)[] Frames =
         {
@@ -333,10 +339,10 @@ namespace InnerFrame.Gallery.EditorTools
                 Primitive("Cube.fbx", bench, g, "Plinth", new Vector3(0f, VasePlinthH / 2, 0f), new Vector3(VasePlinthW, VasePlinthH, VasePlinthW), true);
                 Model("Vase", mats["Vase"], g, "GP_Vase", new Vector3(0f, VasePlinthH, 0f), Quaternion.identity, one);
             }
-            foreach (var (name, at, arm) in Lanterns)
+            foreach (var (name, at, arm, yaw) in Lanterns)
             {
                 // the group's origin is the top of the lantern's ring; its +Z runs back to the wall
-                var g = Group(root, name, at, 0f).transform;
+                var g = Group(root, name, at, yaw).transform;
                 float d = BracketRadius * 2;   // Unity's cylinder is 2 m tall, 1 m across, along its Y
                 Primitive("Cylinder.fbx", metal, g, "Hook", new Vector3(0f, BracketRise / 2, 0f), new Vector3(d, BracketRise / 2, d), false);
                 Primitive("Cylinder.fbx", metal, g, "Arm", new Vector3(0f, BracketRise, arm / 2), new Vector3(d, arm / 2, d), false, Quaternion.Euler(90f, 0f, 0f));
@@ -367,7 +373,7 @@ namespace InnerFrame.Gallery.EditorTools
             {
                 var g = Group(root, name, centre, yaw).transform;
                 foreach (var (corner, sx, sy) in new[] { ("TopLeft", 1f, 1f), ("TopRight", -1f, 1f), ("BottomLeft", 1f, -1f), ("BottomRight", -1f, -1f) })
-                    Model("FrameCorner", mats["FrameCorner"], g, $"Corner_{corner}", new Vector3(sx * hw, sy * hh, 0f), Quaternion.identity, new Vector3(sx, sy, 1f));
+                    Model("FrameCorner", mats["FrameCorner"], g, $"Corner_{corner}", new Vector3(sx * hw, sy * hh, 0f), Quaternion.identity, new Vector3(sx * CornerScale, sy * CornerScale, 1f));
             }
             return root.gameObject;
         }

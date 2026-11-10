@@ -78,7 +78,7 @@ namespace InnerFrame.Gallery.EditorTools.Tests
             var glass = AssetDatabase.LoadAssetAtPath<Material>(G.GlassMat);
             Check(glass != null && glass.GetFloat("_Surface") == 1f && glass.GetColor("_BaseColor").a < 0.5f && glass.renderQueue == 3000,
                 $"{G.GlassMat} is transparent glass (alpha {(glass ? glass.GetColor("_BaseColor").a : -1)})");
-            foreach (var (name, _, _) in G.Lanterns)
+            foreach (var (name, _, _, _) in G.Lanterns)
             {
                 var g = decor.transform.Find(name);
                 var panes = g.GetComponentsInChildren<MeshRenderer>(true).Where(r => r.name == G.GlassPart).ToList();
@@ -139,7 +139,8 @@ namespace InnerFrame.Gallery.EditorTools.Tests
                 foreach (Transform c in g)
                 {
                     var local = g.InverseTransformPoint(c.GetComponentInChildren<Renderer>().bounds.center);
-                    bool atCorner = Mathf.Abs(Mathf.Abs(local.x) - (hw - 0.14f)) < 0.06f && Mathf.Abs(Mathf.Abs(local.y) - (hh - 0.15f)) < 0.06f && local.z > 0f;
+                    float s = G.CornerScale;   // the corner's centre sits half its size in from the frame's outer corner (0.30 x 0.32 m at 1x)
+                    bool atCorner = Mathf.Abs(Mathf.Abs(local.x) - (hw - 0.14f * s)) < 0.06f * s && Mathf.Abs(Mathf.Abs(local.y) - (hh - 0.15f * s)) < 0.06f * s && local.z > 0f;
                     Check(atCorner, $"{name}/{c.name}: its centre {local:F3} sits just inside the frame's corner, in front of it");
                 }
             }
@@ -173,7 +174,8 @@ namespace InnerFrame.Gallery.EditorTools.Tests
                 ("3_starrynight", new Vector3(1.6f, EyeY, -0.6f), new Vector3(-3.4f, 1.8f, -1.6f)),
                 ("4_back", new Vector3(0f, EyeY, -3.6f), new Vector3(0f, 1.9f, 4.5f)),
                 ("5_statue", new Vector3(-0.6f, EyeY, 0.9f), new Vector3(1.9f, 1.3f, 2.8f)),
-                ("6_lantern", new Vector3(0.45f, 2.2f, 3.4f), new Vector3(0f, 2.4f, 4.3f)),
+                ("6_lantern", new Vector3(-2.0f, 2.2f, 1.9f), new Vector3(-3.26f, 2.05f, 1.0f)),
+                ("7_frame", new Vector3(0.9f, 2.7f, -3.0f), new Vector3(1.55f, 3.2f, -4.38f)),
             };
             var rt = new RenderTexture(1280, 720, 24);
             cam.targetTexture = rt;

@@ -50,8 +50,8 @@ ChatGPT sheet: 423 × 546 pixels, so it is soft up close; a full-size `door.png`
 | Marble statue on a 0.6 m plinth | 1 | West of the arch (1.9, 2.8), turned to the bench and The Bedroom |
 | Potted plant (0.7×, 0.9 m tall) | 4 | The room's four corners |
 | Hydrangeas on a 0.9 m plinth | 2 | East wall by the arch (−3.0, 2.4); west wall (3.0, −1.0) |
-| Lantern with a lit candle inside, on a wall arm | 3 | Over the arch (its ring at 2.72 m) and each side of it (x = ±1.45, 2.35 m) |
-| Carved frame corner | 8 | The four corners of both paintings' frames |
+| Lantern with a lit candle inside, on a wall arm | 4 | Each side of the arch (x = ±1.45, its ring at 2.35 m), and one on each side wall at z = 1 (just south of The Starry Night's frame, so neither covers a painting) |
+| Carved frame corner, 1.7× (0.51 × 0.54 m) | 8 | The four corners of both paintings' frames. The frames (`Mat_Frame`, shared by The Bedroom, The Starry Night and Vincent's portrait) take the trim's painted wood tinted to the corners' colour, so frame and corners read as one carving |
 
 ### Lamp light
 
@@ -66,7 +66,7 @@ Each lantern is built like The Starry Night's (`SN_Lantern`):
 - **Light:** a warm (about 2700 K) realtime point light 1 cm above the flame: intensity 3, range 6 m, no shadows.
 
 The Quest's render asset (`Mobile_RPAsset`) draws up to 4 extra per-pixel lights per object and no extra-light shadows.
-Three lamps leave one for the table lamp the concept sheet has (below). `GalleryDecorCheck` fails if the scene has more
+Four lamps use all four; the table lamp the concept sheet has (below) would have to replace one. `GalleryDecorCheck` fails if the scene has more
 than 4.
 
 Only the plinths and plant pots (boxes) and the shell (Gallery.fbx's generated mesh colliders) stop you; the lanterns and
@@ -76,7 +76,7 @@ frame corners have none. Nothing covers the spawn point's view of The Bedroom or
 
 | Asset | Where it would go | Tripo prompt idea |
 |---|---|---|
-| Table lamp with a pleated shade | On a side table by the east wall, near The Bedroom (the 4th light) | "a brass table lamp with a pleated cream fabric shade, 19th-century, warm, single object" |
+| Table lamp with a pleated shade | On a side table by the east wall, near The Bedroom (its light would replace one of the four lanterns') | "a brass table lamp with a pleated cream fabric shade, 19th-century, warm, single object" |
 | Small round side table, dark wood | Under the table lamp; another by the east wall for the flowers | "a small round side table in dark walnut, turned legs, Victorian" |
 | Hanging ivy | Spilling from a corner high on the north wall | "a trailing ivy plant, long hanging vines, single object" |
 | Stack of old books | On the bench and the side table | "a small stack of three old leather-bound books" |
@@ -87,7 +87,7 @@ frame corners have none. Nothing covers the spawn point's view of The Bedroom or
 Don't move the props in the scene: the next run of the setup reverts any override. Change the spots in
 `GalleryDecorSetup.cs` (the `Statues`, `Plants`, `Vases`, `Lanterns` and `Frames` tables), then run
 **Tools > InnerFrame > Gallery > Add Decor** and **Tools > InnerFrame > Gallery > Check Decor**. The check also renders
-six views (five from eye height, one close to the arch lantern) to `Logs/GalleryDecor/`.
+seven views (five from eye height, a side-wall lamp and a frame corner close up) to `Logs/GalleryDecor/`.
 
 To change the room itself, edit the parameters at the top of `build_gallery.py`, run it, then Add Decor. If the east
 wall or the north wall moves, move `SN_GallerySetup.RootPosition` and `BedroomWall` with it and run
@@ -112,7 +112,7 @@ Blender --background --factory-startup --python Art/Source/Gallery/make_tripo_pr
 
 - Spawn: The Bedroom and Vincent's portrait are in full view; nothing is in the way.
 - Teleport onto the rug and round the bench; you can't walk through the bench, the plinths, the pots or the door.
-- Look back at the arch: the door fills it, the three lanterns glow, you see each candle through the amber glass.
+- Look back at the arch: the door fills it; the four lanterns glow, you see each candle through the amber glass.
 - The wainscot stops cleanly at both paintings' frames; the frame corners sit on the frames with no flicker.
 - The plant leaves, hydrangea petals and lantern panes look solid from every side.
 - With textures in: no visible seam where the wall, floor, wainscot, wood or fabric repeat.

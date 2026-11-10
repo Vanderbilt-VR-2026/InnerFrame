@@ -17,8 +17,10 @@ namespace InnerFrame.Gallery.EditorTools
     ///   - Assets/Art/Gallery/Materials/Mat_*.mat for every surface in Slots, and Gallery.fbx's remap of each FBX
     ///     material to its .mat. A surface with a ChatGPT texture (Assets/Art/Gallery/Textures/GT_&lt;Name&gt;_BaseColor.jpg,
     ///     made by Art/Source/Gallery/make_textures.py) gets it at its real-world size (Gallery.fbx's UVs are in metres;
-    ///     the rug and the door are mapped once); without one it keeps a plain colour. Mat_Frame, Mat_Metal, Mat_Bench and
-    ///     Mat_Baseboard stay as they are;
+    ///     the rug and the door are mapped once); without one it keeps a plain colour. Mat_Frame (every painting's frame: The
+    ///     Bedroom's, and The Starry Night's and Vincent's portrait's, which share it) takes the trim's painted wood tinted
+    ///     to the carved frame corners' colour (Tints), so the frame and its corners read as one carving. Mat_Metal,
+    ///     Mat_Bench and Mat_Baseboard stay as they are;
     ///   - Gallery.unity: the Rug gets a copy of the Floor's TeleportationArea (Gallery.fbx generates a mesh collider for
     ///     every object, so the rug's would otherwise stop teleports in the middle of the room); the Door keeps its
     ///     generated collider, so nobody walks out through the arch; the XR Origin at Spawn_Point; Slot_Bedroom and
@@ -51,6 +53,13 @@ namespace InnerFrame.Gallery.EditorTools
             ("Mat_BenchWood", Hex("3B2414"), "BenchWood", 0.6f, 0.6f,  0f,    0.35f, false),
             ("Mat_Cushion",   Hex("4A2A1E"), "Cushion",   0.5f, 0.5f,  0f,    0.2f,  false),
             ("Mat_Door",      Hex("4F5A36"), "Door",      0f,   0f,    0f,    0.2f,  true),
+            ("Mat_Frame",     Hex("B0612A"), "Trim",      0.4f, 0.4f,  0f,    0.3f,  false),
+        };
+        // A texture's tint where it isn't white. Mat_Frame: GT_Trim's median colour (linear 0.658, 0.337, 0.159) times this
+        // is GP_FrameCorner_BaseColor's (linear 0.597, 0.136, 0.011; its black gutters left out), measured 2026-11-10.
+        public static readonly Dictionary<string, Color> Tints = new Dictionary<string, Color>
+        {
+            ["Mat_Frame"] = new Color(0.958f, 0.667f, 0.291f),
         };
         public static string TexPath(string name) => $"{Textures}/GT_{name}_BaseColor.jpg";
 
@@ -113,7 +122,7 @@ namespace InnerFrame.Gallery.EditorTools
             if (has) GalleryDecorSetup.ImportTexture(texPath, 2048, changes, repeat: !once);
             var tiling = once ? Vector2.one : new Vector2(1f / s.mu, 1f / s.mv);
             var offset = once ? Vector2.zero : new Vector2(0f, -s.v0 / s.mv);
-            return GalleryDecorSetup.MakeMaterial($"{Materials}/{s.mat}.mat", has ? texPath : null, has ? Color.white : s.plain,
+            return GalleryDecorSetup.MakeMaterial($"{Materials}/{s.mat}.mat", has ? texPath : null, has ? (Tints.TryGetValue(s.mat, out var tint) ? tint : Color.white) : s.plain,
                 s.smooth, s.twoSided, false, changes, tiling, offset);
         }
 

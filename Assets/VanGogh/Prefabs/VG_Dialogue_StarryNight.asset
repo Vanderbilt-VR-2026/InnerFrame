@@ -15,7 +15,7 @@ MonoBehaviour:
   distance: 1.6
   belowGaze: 22
   deadZone: 20
-  lowestGaze: -30
+  lowestGaze: -60
   highestGaze: 45
   easeSeconds: 0.5
   boxWidth: 33.069675

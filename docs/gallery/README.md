@@ -31,14 +31,17 @@ The room is 7 × 9 × 4 m: x from −3.5 (east wall) to 3.5 (west wall), z from 
 |---|---|---|
 | Walls, arch spandrels | 0.2 m thick | `Mat_Wall` (`wall.png`, 2 m per repeat) |
 | Wainscot | 1.0 m panelling on every wall, stopping at the two frames and the arch | `Mat_Wainscot` (`wainscot.png`, 1.5 m per repeat, once upwards) |
-| Wainscot rail, cornice (0.25 m), arch moulding, skylight frame | | `Mat_Trim` (`trim.png`, 0.5 m) |
+| Cornice (0.25 m under the ceiling) | | `Mat_Cornice` (`cornice.png`, a moulding profile mapped once up the band, 0.5 m across) |
+| Wainscot rail (0.06 m) | | `Mat_Rail` (`trim.png`, mapped once up the band) |
+| Arch moulding, skylight frame | | `Mat_Trim` (a plain panel cut from `trim.png`, 0.5 m) |
 | Ceiling, with the 3 × 2.5 m skylight in its middle | | `Mat_Ceiling` (`ceiling.png`, 2 m) |
 | Floor | | `Mat_Floor` (`floor.png`, 2 m) |
 | Arch | 1.6 m wide, round-headed, 2.6 m to the crown; the door fills it at the wall's outer face | door: `Mat_Door` (`door.png`, once) |
 | Bench (`Bench_01`) | 1.6 × 0.55 m, 0.48 m high, centred at z = 1.2: an upholstered top on a walnut frame with turned legs, on the rug, facing The Bedroom (0.5 m clear of where you stand at The Starry Night's pedestal) | `Mat_BenchWood` (`bench_wood.png`, 0.6 m), `Mat_Cushion` (`bench_fabric.png`, 0.5 m) |
 | Rug | 2 × 3 m under the bench, long side towards The Bedroom; you can teleport onto it | `Mat_Rug` (`rug.png`, once) |
 
-Without its texture a surface keeps a plain colour from the concept sheet.
+Without its texture a surface keeps a plain colour from the concept sheet. In so far (2026-11-10): wall, wainscot,
+floor, cornice, rail, trim and rug. Still plain: ceiling, bench wood, bench fabric, door.
 
 ### Decoration (`GalleryDecor.prefab`)
 

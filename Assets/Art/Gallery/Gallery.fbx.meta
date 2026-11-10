@@ -27,6 +27,11 @@ ModelImporter:
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
+      name: Mat_Cornice
+    second: {fileID: 2100000, guid: 56b3be131f9b94cc2bc74aab1330c4d5, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
       name: Mat_Cushion
     second: {fileID: 2100000, guid: a698c90b254304cb3ab6c771d3f41744, type: 2}
   - first:
@@ -49,6 +54,11 @@ ModelImporter:
       assembly: UnityEngine.CoreModule
       name: Mat_Metal
     second: {fileID: 2100000, guid: da3441a04cb4940db9c0a70b10e6daa1, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Mat_Rail
+    second: {fileID: 2100000, guid: cfeed2f59a79140a1a8bfa4ba30e5239, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule

@@ -184,7 +184,7 @@ namespace InnerFrame.Gallery.EditorTools
         /// <summary>URP Lit with a base map, no emission; opaque, or transparent (premultiplied) as SN_Setup's Lit does.
         /// Everything is set every run, exactly as URP's own material validation leaves it, so the file only changes when
         /// a value does.</summary>
-        public static Material MakeMaterial(string path, string texPath, Color colour, float smooth, bool twoSided, bool transparent, List<string> changes, Vector2? tiling = null)
+        public static Material MakeMaterial(string path, string texPath, Color colour, float smooth, bool twoSided, bool transparent, List<string> changes, Vector2? tiling = null, Vector2? offset = null)
         {
             var shader = Shader.Find("Universal Render Pipeline/Lit") ?? throw new Exception($"{Tag} URP Lit shader not found");
             var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(texPath);
@@ -196,7 +196,8 @@ namespace InnerFrame.Gallery.EditorTools
             m.SetTexture("_BaseMap", tex); m.SetTexture("_MainTex", tex);   // URP fills _MainTex from _BaseMap on reload; set both
             var scale = tiling ?? Vector2.one;
             m.SetTextureScale("_BaseMap", scale); m.SetTextureScale("_MainTex", scale);
-            m.SetTextureOffset("_BaseMap", Vector2.zero); m.SetTextureOffset("_MainTex", Vector2.zero);
+            var shift = offset ?? Vector2.zero;
+            m.SetTextureOffset("_BaseMap", shift); m.SetTextureOffset("_MainTex", shift);
             m.SetColor("_BaseColor", colour); m.SetColor("_Color", colour);
             m.SetFloat("_Smoothness", smooth);
             m.SetFloat("_Metallic", 0f);

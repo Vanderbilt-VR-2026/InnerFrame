@@ -33,19 +33,24 @@ namespace InnerFrame.Gallery.EditorTools
 
         static Color Hex(string h) { ColorUtility.TryParseHtmlString("#" + h, out var c); return c; }
 
-        // material, plain colour (no texture), texture name, metres per repeat (0: once across), smoothness, both faces.
-        // Colours from the concept sheet: Pompeian red walls, grey wood wainscot, warm stone trim, honey oak floor.
-        public static readonly (string mat, Color plain, string tex, float metres, float smooth, bool twoSided)[] Slots =
+        // material, plain colour (no texture), texture name; metres per repeat across (u) and up (v), 0 = once across the
+        // object (the rug and the door are UV-mapped 0..1); v0: the height (m) where the image's bottom edge sits, for a
+        // band mapped once up its height (Gallery.fbx's wall UVs are (along the wall, height) in metres); smoothness; both
+        // faces. Colours from the concept sheet: Pompeian red walls, grey wood wainscot, warm stone trim, honey oak floor.
+        // The band heights are build_gallery.py's: cornice 0.25 m under the 4 m ceiling, rail 0.06 m round the 1 m wainscot.
+        public static readonly (string mat, Color plain, string tex, float mu, float mv, float v0, float smooth, bool twoSided)[] Slots =
         {
-            ("Mat_Wall",      Hex("8E2A1F"), "Wall",      2.0f, 0.05f, false),
-            ("Mat_Ceiling",   Hex("A8957E"), "Ceiling",   2.0f, 0.05f, false),
-            ("Mat_Wainscot",  Hex("7C766C"), "Wainscot",  1.5f, 0.15f, false),
-            ("Mat_Trim",      Hex("B49A78"), "Trim",      0.5f, 0.15f, false),
-            ("Mat_Floor",     Hex("9A5A2A"), "Floor",     2.0f, 0.25f, false),
-            ("Mat_Rug",       Hex("7A1E1E"), "Rug",       0f,   0.0f,  false),
-            ("Mat_BenchWood", Hex("3B2414"), "BenchWood", 0.6f, 0.35f, false),
-            ("Mat_Cushion",   Hex("4A2A1E"), "Cushion",   0.5f, 0.2f,  false),
-            ("Mat_Door",      Hex("4F5A36"), "Door",      0f,   0.2f,  true),
+            ("Mat_Wall",      Hex("8E2A1F"), "Wall",      2.0f, 2.0f,  0f,    0.05f, false),
+            ("Mat_Ceiling",   Hex("A8957E"), "Ceiling",   2.0f, 2.0f,  0f,    0.05f, false),
+            ("Mat_Wainscot",  Hex("7C766C"), "Wainscot",  1.5f, 1.0f,  0f,    0.15f, false),
+            ("Mat_Cornice",   Hex("B49A78"), "Cornice",   0.5f, 0.25f, 3.75f, 0.15f, false),
+            ("Mat_Rail",      Hex("B49A78"), "Rail",      0.5f, 0.06f, 0.97f, 0.15f, false),
+            ("Mat_Trim",      Hex("B49A78"), "Trim",      0.5f, 0.5f,  0f,    0.15f, false),
+            ("Mat_Floor",     Hex("9A5A2A"), "Floor",     2.0f, 2.0f,  0f,    0.25f, false),
+            ("Mat_Rug",       Hex("7A1E1E"), "Rug",       0f,   0f,    0f,    0.0f,  false),
+            ("Mat_BenchWood", Hex("3B2414"), "BenchWood", 0.6f, 0.6f,  0f,    0.35f, false),
+            ("Mat_Cushion",   Hex("4A2A1E"), "Cushion",   0.5f, 0.5f,  0f,    0.2f,  false),
+            ("Mat_Door",      Hex("4F5A36"), "Door",      0f,   0f,    0f,    0.2f,  true),
         };
         public static string TexPath(string name) => $"{Textures}/GT_{name}_BaseColor.jpg";
 
@@ -100,14 +105,16 @@ namespace InnerFrame.Gallery.EditorTools
             }
         }
 
-        static Material MakeSurface((string mat, Color plain, string tex, float metres, float smooth, bool twoSided) s, List<string> changes)
+        static Material MakeSurface((string mat, Color plain, string tex, float mu, float mv, float v0, float smooth, bool twoSided) s, List<string> changes)
         {
             string texPath = TexPath(s.tex);
             bool has = File.Exists(texPath);
-            if (has) GalleryDecorSetup.ImportTexture(texPath, 1536, changes, repeat: s.metres > 0f);
-            var tiling = s.metres > 0f ? Vector2.one / s.metres : Vector2.one;
+            bool once = s.mu <= 0f;
+            if (has) GalleryDecorSetup.ImportTexture(texPath, 2048, changes, repeat: !once);
+            var tiling = once ? Vector2.one : new Vector2(1f / s.mu, 1f / s.mv);
+            var offset = once ? Vector2.zero : new Vector2(0f, -s.v0 / s.mv);
             return GalleryDecorSetup.MakeMaterial($"{Materials}/{s.mat}.mat", has ? texPath : null, has ? Color.white : s.plain,
-                s.smooth, s.twoSided, false, changes, tiling);
+                s.smooth, s.twoSided, false, changes, tiling, offset);
         }
 
         static void Remap(Dictionary<string, Material> mats, List<string> changes)

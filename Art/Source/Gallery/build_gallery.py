@@ -79,7 +79,9 @@ COLORS = {  # plain colours, linear RGB (the numbers Blender's colour picker sho
     "Mat_Wall": (0.32, 0.06, 0.04),        # deep Pompeian red
     "Mat_Ceiling": (0.45, 0.38, 0.30),     # warm grey-beige
     "Mat_Wainscot": (0.30, 0.27, 0.23),    # weathered grey wood
-    "Mat_Trim": (0.55, 0.45, 0.33),        # warm stone / pale wood mouldings
+    "Mat_Trim": (0.55, 0.45, 0.33),        # warm stone / pale wood: the arch's moulding, the skylight's frame
+    "Mat_Cornice": (0.55, 0.45, 0.33),     # the same, as a moulding profile mapped once up the cornice
+    "Mat_Rail": (0.55, 0.45, 0.33),        # the same, mapped once up the wainscot's rail
     "Mat_Floor": (0.30, 0.13, 0.05),       # honey oak
     "Mat_Rug": (0.30, 0.05, 0.05),         # red rug
     "Mat_BenchWood": (0.05, 0.025, 0.012), # dark walnut
@@ -344,8 +346,8 @@ def strips(z0, z1, d, cut_frames):
         ("yzx", (y0 + d, y1 - d), (z0, z1), (x0, x0 + d)),
     ]
 make("Wainscot", mat["Mat_Wainscot"], *strips(0, WAINSCOT_H, wd, True))
-make("Wainscot_Rail", mat["Mat_Trim"], *strips(WAINSCOT_H - RAIL_H / 2, WAINSCOT_H + RAIL_H / 2, rd, True))
-make("Cornice", mat["Mat_Trim"], *strips(H - CORNICE_H, H, CORNICE_D, False))
+make("Wainscot_Rail", mat["Mat_Rail"], *strips(WAINSCOT_H - RAIL_H / 2, WAINSCOT_H + RAIL_H / 2, rd, True))
+make("Cornice", mat["Mat_Cornice"], *strips(H - CORNICE_H, H, CORNICE_D, False))
 make("Baseboard", mat["Mat_Baseboard"], *strips(0, BASEBOARD_H, BASEBOARD_D, False))
 
 # Skylight bars: a grid at the top of the skylight opening; the panes are holes.

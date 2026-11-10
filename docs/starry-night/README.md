@@ -219,8 +219,11 @@ avatars appear, but the night isn't shared.
 One command runs every check: the playthrough test, the dialogue box check, the layout check, the Vincent check and the
 Gallery entrance check, then the Play-mode check, the props' spawn check, the rig check and the Gallery way in and back
 (Play mode, one after the other).
-It prints one line per check (`[SN Checks] <check>: PASS|FAIL (n passed, m failed); log …`) and a last `[SN Checks] PASS`
-or `FAIL` line, and writes them to `SN_checks_summary.txt` beside the logs.
+It prints one line per check (`[SN Checks] <check>: PASS|FAIL (n passed, m failed); log …`), then one
+`[SN Checks] SKIP (not a pass): …` line for each thing a check could not test here (2026-11-09: the Gallery way in and
+back's real Photon join, where the checkout has no Photon App Settings), and a last `[SN Checks] PASS` or `FAIL` line
+(a PASS with skips says how many), and writes them to `SN_checks_summary.txt` beside the logs. A skip is not a failure
+(exit code 0) and not a pass.
 
 1. **In the Editor:** Tools > InnerFrame > Starry Night > **Run all checks** (it saves nothing; it asks to save your open
    scene first, enters Play mode for the last check, then shows the summary).
@@ -277,6 +280,10 @@ each scene's first frame it notes the join NetworkSession was starting, then sto
 4. in again; Done: the menu still shut 9 s later, open by 11.5 s with "Back to Gallery"; Back → the same landing.
 Controls that must fail: the dot turned away, one extra object in SN_World, StarryNight loaded additively over the
 Gallery (two scenes, rigs, cameras, listeners), Back with the menu's home set to PaintedBedroom.
+Session 1 joins `InnerFrame_StarryNight` for real only where Photon's App Settings exist
+(`Assets/Photon/Fusion/Resources/PhotonAppSettings.asset`, gitignored: the App ID is a key and the repo is public). In a
+checkout without them (2026-11-09) its join is stopped on its first frame, like session 2's, and the real join is reported
+as `SKIP`: before, Fusion's "Photon Application Settings not found" errors failed the session's "no errors" line.
 
 The props' spawn check (`Editor/Tests/SN_SpawnCheck.cs`, Play mode, offline, the scene as `SN_Bootstrap` spawns it;
 `-executeMethod InnerFrame.StarryNight.EditorTools.SN_SpawnCheck.RunBatch -snLog <file>`, without `-quit`):

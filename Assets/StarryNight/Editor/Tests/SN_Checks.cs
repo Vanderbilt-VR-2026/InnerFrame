@@ -122,9 +122,19 @@ namespace InnerFrame.StarryNight
             PlayMode[SessionState.GetInt(PlayIndex, 0)].begin();
         }
 
+        /// <summary>The checks' logs that may hold SKIP lines (a check that couldn't test something here: not a pass).</summary>
+        static readonly string[] PlayLogs = { "SN_spawncheck.log", "SN_rigcheck.log", "SN_galleryplaycheck.log" };
+
         static void Finish(List<string> lines, bool failed, string dir)
         {
-            lines.Add($"[SN Checks] {(failed ? "FAIL: at least one check failed" : "PASS: every check passed")}");
+            var skips = new List<string>();
+            foreach (var file in EditMode.Select(m => m.file).Concat(PlayLogs))
+            {
+                string path = Path.Combine(dir, file);
+                if (File.Exists(path)) skips.AddRange(File.ReadLines(path).Where(l => l.StartsWith("SKIP")).Select(l => $"{file}: {l.Substring(4).Trim()}"));
+            }
+            foreach (var sk in skips) lines.Add($"[SN Checks] SKIP (not a pass): {sk}");
+            lines.Add($"[SN Checks] {(failed ? "FAIL: at least one check failed" : skips.Count > 0 ? $"PASS: every check that ran passed; {skips.Count} skipped (not a pass, listed above)" : "PASS: every check passed")}");
             foreach (var l in lines) Debug.Log(l);
             File.WriteAllLines(Path.Combine(dir, "SN_checks_summary.txt"), lines);
             if (Application.isBatchMode) { EditorApplication.Exit(failed ? 1 : 0); return; }

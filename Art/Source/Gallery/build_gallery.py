@@ -6,8 +6,14 @@ Run from the repo root (Blender 5.2, no window):
 
 Writes Art/Source/Gallery/gallery.blend and Assets/Art/Gallery/Gallery.fbx.
 Every run deletes the old scene first, so running it twice gives the same result.
+
+2026-11-10: the room shrinks to 7 x 9 x 4 m and follows the team's concept sheet: red walls over a grey wood
+wainscot (dado) with a cap rail, a cornice, a coffered skylight in the middle of the ceiling, an arched entrance
+in the south wall with a closed door in it, and one upholstered bench on a rug in the middle. The surfaces take
+ChatGPT textures (docs/gallery/TEXTURE_PROMPTS.md): walls, floor and wood repeat by the metre (UVs in metres); the
+rug and the door are mapped once, edge to edge.
 """
-from math import cos, radians, sin
+from math import cos, pi, radians, sin
 from pathlib import Path
 
 import bmesh
@@ -15,15 +21,20 @@ import bpy
 
 # ---------------------------------------------------------------------------
 # Parameters. 1 Blender unit = 1 m. North = +Y, East = +X, up = +Z.
-# The entrance is in the south wall; the painting hangs on the north wall.
+# (In Unity: x = -X, z = -Y. The entrance is in the south wall; The Bedroom hangs on the north wall.)
 # ---------------------------------------------------------------------------
-ROOM_LENGTH = 14.0   # inside, south wall to north wall (Y)
-ROOM_WIDTH = 10.0    # inside, west wall to east wall (X)
-ROOM_HEIGHT = 6.0    # inside, floor to ceiling
+ROOM_LENGTH = 9.0    # inside, south wall to north wall (Y)
+ROOM_WIDTH = 7.0     # inside, west wall to east wall (X)
+ROOM_HEIGHT = 4.0    # inside, floor to ceiling
 WALL_T = 0.2         # thickness of the walls and the floor
 CEILING_T = 0.4      # ceiling thickness, which is also the depth of the skylight
 
-ENTRANCE_W, ENTRANCE_H = 2.5, 2.4   # opening in the middle of Wall_South
+# The arched entrance in the middle of Wall_South, closed by a door set at the wall's outer face.
+ARCH_W, ARCH_SPRING = 1.6, 1.8      # opening width; height where the arch starts to curve
+ARCH_R = ARCH_W / 2                 # a round (semicircular) arch: crown at ARCH_SPRING + ARCH_R = 2.6 m
+ARCH_SEGMENTS = 16                  # straight pieces in the curve
+ARCH_TRIM_W, ARCH_TRIM_D = 0.15, 0.05   # the moulding round the opening, and how far it stands out
+DOOR_T = 0.05
 SPAWN_INSET = 1.0                   # how far inside the entrance Spawn_Point stands
 
 # TEAM DECISION: the size and height of the painting the group walks through.
@@ -39,35 +50,50 @@ PEDESTAL_TILT = 20           # degrees the top slopes down toward the viewer
 PEDESTAL_OUT = 1.5           # painting wall to the centre of the pedestal
 PEDESTAL_GAP = 0.1           # frame's right edge to the side of the pedestal
 
-GATHER_DEPTH = 5.0      # clear area in front of the painting (kept free of benches)
-SKYLIGHT_W, SKYLIGHT_D = 4.0, 3.0   # ceiling opening, along X and along Y
-SKYLIGHT_GAP = 1.0      # painting wall to the near edge of the skylight
-SKYLIGHT_PANES = (5, 4)  # gaps between the bars, along X and along Y
+# The Starry Night's frame on the east wall (placed in Unity by SN_GallerySetup, RootPosition z = -1.6, so its
+# centre is at Y = 1.6 here). Only used to leave its gap in the wainscot.
+SN_FRAME_Y = 1.6
+
+GATHER_DEPTH = 3.5      # clear area in front of The Bedroom (kept free of benches)
+SKYLIGHT_W, SKYLIGHT_D = 3.0, 2.5   # ceiling opening, along X and along Y, in the middle of the room
+SKYLIGHT_PANES = (4, 3)  # gaps between the bars, along X and along Y
 BAR = 0.06              # skylight bar width and depth
+SKYLIGHT_TRIM = 0.18    # the moulded frame round the skylight on the ceiling
 
-WINDOWS = 8             # clerestory openings, high on Wall_West
-WINDOW_W, WINDOW_H = 1.45, 0.9
-WINDOW_TOP_GAP = 0.35   # top of the windows to the ceiling
+WAINSCOT_H, WAINSCOT_D = 1.0, 0.025          # panelling from the floor, and how far it stands off the wall
+RAIL_H, RAIL_D = 0.06, 0.045                 # cap rail along the wainscot's top
+CORNICE_H, CORNICE_D = 0.25, 0.12            # band where the walls meet the ceiling
+BASEBOARD_H, BASEBOARD_D = 0.12, 0.04        # in front of the wainscot
 
-BENCH_L, BENCH_D, BENCH_H, BENCH_T = 1.8, 0.5, 0.45, 0.08  # length, depth, height, slab
-BENCH_WALL_GAP = 0.8    # side wall to the back edge of a bench
-BENCHES = [(1, -4.0), (-1, -2.0), (1, 0.0)]  # (1 = east wall, -1 = west wall; Y of centre)
+# One bench on the rug in the middle, facing The Bedroom: an upholstered top on a dark wood frame with turned legs.
+BENCH_L, BENCH_D, BENCH_H = 1.6, 0.55, 0.48
+BENCH_AT = (0.0, -1.2)   # centre; Unity z 1.2
+BENCH_ALONG_ROOM = True  # long side north-south, along the rug: 0.55 m across the room, so the floor in front of
+                         # The Starry Night's pedestal and the walk past it stay clear
+CUSHION_T, APRON_H, LEG_INSET = 0.10, 0.08, 0.07
+LEG_PROFILE = [(0.00, 0.022), (0.03, 0.030), (0.07, 0.020), (0.18, 0.028), (0.24, 0.034), (0.30, 0.034)]   # (z, radius)
+RUG = (2.0, 3.0)        # along X, along Y; centred under the bench
+RUG_T = 0.008
 
-BASEBOARD_H, BASEBOARD_D = 0.1, 0.015
-
-COLORS = {  # plain colours, linear RGB (the numbers Blender's colour picker shows)
-    "Mat_Wall": (0.85, 0.81, 0.73),        # warm off-white
-    "Mat_Floor": (0.22, 0.09, 0.035),      # warm mid-brown wood
-    "Mat_Bench": (0.01, 0.01, 0.01),       # near-black
+COLORS = {  # plain colours, linear RGB (the numbers Blender's colour picker shows); Unity has its own materials
+    "Mat_Wall": (0.32, 0.06, 0.04),        # deep Pompeian red
+    "Mat_Ceiling": (0.45, 0.38, 0.30),     # warm grey-beige
+    "Mat_Wainscot": (0.30, 0.27, 0.23),    # weathered grey wood
+    "Mat_Trim": (0.55, 0.45, 0.33),        # warm stone / pale wood mouldings
+    "Mat_Floor": (0.30, 0.13, 0.05),       # honey oak
+    "Mat_Rug": (0.30, 0.05, 0.05),         # red rug
+    "Mat_BenchWood": (0.05, 0.025, 0.012), # dark walnut
+    "Mat_Cushion": (0.12, 0.06, 0.04),     # dark leather
+    "Mat_Door": (0.10, 0.12, 0.06),        # olive-painted wood
+    "Mat_Bench": (0.01, 0.01, 0.01),       # near-black (the pedestals)
     "Mat_Frame": (0.17, 0.10, 0.025),      # dark gold
-    "Mat_Metal": (0.05, 0.05, 0.05),       # dark grey, skylight bars
+    "Mat_Metal": (0.05, 0.05, 0.05),       # dark grey, skylight bars, door handles
     "Mat_Baseboard": (0.13, 0.05, 0.02),   # dark wood
 }
 
 HERE = Path(__file__).resolve().parent                       # Art/Source/Gallery
 BLEND_PATH = HERE / "gallery.blend"
 FBX_PATH = HERE.parents[2] / "Assets/Art/Gallery/Gallery.fbx"  # parents[2] = repo root
-
 
 def clear_scene():
     """Delete everything a previous run made, so each run starts from empty."""
@@ -162,6 +188,70 @@ def empty(name, location, turn_deg=0, up_deg=0):
     bpy.context.scene.collection.objects.link(obj)
 
 
+def uv_fit(obj):
+    """UVs 0..1 across the object, projected along each face's main axis: for pictures mapped once (rug, door)."""
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    uv = bm.loops.layers.uv.verify()
+    lo = [min(v.co[k] for v in bm.verts) for k in range(3)]
+    hi = [max(v.co[k] for v in bm.verts) for k in range(3)]
+    for face in bm.faces:
+        n = [abs(c) for c in face.normal]
+        a, b = [k for k in range(3) if k != n.index(max(n))]
+        for loop in face.loops:
+            loop[uv].uv = ((loop.vert.co[a] - lo[a]) / (hi[a] - lo[a] or 1), (loop.vert.co[b] - lo[b]) / (hi[b] - lo[b] or 1))
+    bm.to_mesh(obj.data)
+    bm.free()
+
+
+def prism_xz(bm, outline, y_range, fan_from=None):
+    """A flat shape in the XZ plane (points in order round it), made thick along Y. Its faces are triangles fanned
+    from fan_from (a point that sees the whole outline), or from the outline's centre if it is convex."""
+    c = fan_from or (sum(p[0] for p in outline) / len(outline), sum(p[1] for p in outline) / len(outline))
+    for y in y_range:
+        hub = bm.verts.new((c[0], y, c[1]))
+        ring = [bm.verts.new((x, y, z)) for x, z in outline]
+        for i in range(len(ring)):
+            j = (i + 1) % len(ring)
+            if fan_from and (outline[i] == tuple(fan_from) or outline[j] == tuple(fan_from)):
+                continue
+            bm.faces.new([hub, ring[i], ring[j]])
+        if y == y_range[0]:
+            first = ring
+        else:
+            for i in range(len(ring)):
+                j = (i + 1) % len(ring)
+                bm.faces.new([first[i], first[j], ring[j], ring[i]])
+    return bm
+
+
+def arc(cx, cz, r, a0, a1, n):
+    return [(cx + r * cos(a0 + (a1 - a0) * k / n), cz + r * sin(a0 + (a1 - a0) * k / n)) for k in range(n + 1)]
+
+
+def lathe(bm, cx, cy, profile, sides=10):
+    """A turned leg: rings at the profile's heights, joined, with caps."""
+    rings = [[bm.verts.new((cx + r * cos(2 * pi * k / sides), cy + r * sin(2 * pi * k / sides), z)) for k in range(sides)]
+             for z, r in profile]
+    for a, b in zip(rings, rings[1:]):
+        for k in range(sides):
+            bm.faces.new([a[k], a[(k + 1) % sides], b[(k + 1) % sides], b[k]])
+    bm.faces.new(list(reversed(rings[0])))
+    bm.faces.new(rings[-1])
+
+
+def join(name, parts):
+    """Join objects into one mesh object named name (their materials kept as slots), origin at its box centre."""
+    bpy.ops.object.select_all(action="DESELECT")
+    for o in parts:
+        o.select_set(True)
+    bpy.context.view_layer.objects.active = parts[0]
+    bpy.ops.object.join()
+    obj = bpy.context.view_layer.objects.active
+    obj.name = obj.data.name = name
+    return obj
+
+
 clear_scene()
 scene = bpy.context.scene
 scene.unit_settings.system = "METRIC"
@@ -177,25 +267,58 @@ x0, x1 = -ROOM_WIDTH / 2, ROOM_WIDTH / 2     # west, east
 y0, y1 = -ROOM_LENGTH / 2, ROOM_LENGTH / 2   # south (entrance), north (painting)
 H, T = ROOM_HEIGHT, WALL_T
 outer_x, outer_y = (x0 - T, x1 + T), (y0 - T, y1 + T)
+assert BENCH_AT[1] + (BENCH_L if BENCH_ALONG_ROOM else BENCH_D) / 2 <= y1 - GATHER_DEPTH, "bench in the gathering area"
+assert ARCH_SPRING + ARCH_R + ARCH_TRIM_W < H - CORNICE_H, "the arch reaches the cornice"
 
-# The gathering area is the GATHER_DEPTH strip in front of the painting wall.
-assert SKYLIGHT_GAP + SKYLIGHT_D <= GATHER_DEPTH, "skylight must be over the gathering area"
-assert all(yc + BENCH_L / 2 <= y1 - GATHER_DEPTH for _, yc in BENCHES), "bench in gathering area"
-
-# Floor and ceiling. The skylight sits over the gathering area, near the painting.
+# Floor and ceiling; the skylight in the middle of the ceiling, with a moulded frame round it.
 make("Floor", mat["Mat_Floor"], ("xyz", outer_x, outer_y, (-T, 0)))
-sky = (-SKYLIGHT_W / 2, SKYLIGHT_W / 2, y1 - SKYLIGHT_GAP - SKYLIGHT_D, y1 - SKYLIGHT_GAP)
-make("Ceiling", mat["Mat_Wall"], ("xyz", outer_x, outer_y, (H, H + CEILING_T), [sky]))
+sky = (-SKYLIGHT_W / 2, SKYLIGHT_W / 2, -SKYLIGHT_D / 2, SKYLIGHT_D / 2)
+make("Ceiling", mat["Mat_Ceiling"], ("xyz", outer_x, outer_y, (H, H + CEILING_T), [sky]))
+st = SKYLIGHT_TRIM
+make("Skylight_Trim", mat["Mat_Trim"], ("xyz", (sky[0] - st, sky[1] + st), (sky[2] - st, sky[3] + st), (H - 0.06, H), [sky]))
 
-# Walls. East and west run the full outer length so the corners close.
-door = (-ENTRANCE_W / 2, ENTRANCE_W / 2, 0, ENTRANCE_H)
-pitch = ROOM_LENGTH / WINDOWS
-windows = [(y0 + (i + 0.5) * pitch - WINDOW_W / 2, y0 + (i + 0.5) * pitch + WINDOW_W / 2,
-            H - WINDOW_TOP_GAP - WINDOW_H, H - WINDOW_TOP_GAP) for i in range(WINDOWS)]
+# Walls. East and west run the full outer length so the corners close. The south wall has a rectangular opening
+# as tall as the arch's crown; the two spandrels fill its top corners outside the curve.
+crown = ARCH_SPRING + ARCH_R
+door = (-ARCH_W / 2, ARCH_W / 2, 0, crown)
 make("Wall_North", mat["Mat_Wall"], ("xzy", (x0, x1), (0, H), (y1, y1 + T)))  # solid behind the painting
 make("Wall_South", mat["Mat_Wall"], ("xzy", (x0, x1), (0, H), (y0 - T, y0), [door]))
 make("Wall_East", mat["Mat_Wall"], ("yzx", outer_y, (0, H), (x1, x1 + T)))
-make("Wall_West", mat["Mat_Wall"], ("yzx", outer_y, (0, H), (x0 - T, x0), windows))
+make("Wall_West", mat["Mat_Wall"], ("yzx", outer_y, (0, H), (x0 - T, x0)))
+bm = bmesh.new()
+for side in (1, -1):
+    corner = (side * ARCH_R, crown)
+    curve = arc(0, ARCH_SPRING, ARCH_R, 0 if side > 0 else pi, pi / 2, ARCH_SEGMENTS // 2)
+    outline = [corner] + curve if side > 0 else [corner] + curve
+    prism_xz(bm, outline, (y0 - T, y0), fan_from=corner)
+finish("Arch_Spandrels", mat["Mat_Wall"], bm)
+
+# The moulding round the arch, on the room side: two pilasters up to the spring and a band round the curve.
+bm = bmesh.new()
+tw, td = ARCH_TRIM_W, ARCH_TRIM_D
+for side in (1, -1):
+    xa, xb = sorted((side * ARCH_R, side * (ARCH_R + tw)))
+    add_box(bm, "xzy", (xa, xb), (0, ARCH_SPRING), (y0, y0 + td))
+inner = arc(0, ARCH_SPRING, ARCH_R, 0, pi, ARCH_SEGMENTS)
+outer = arc(0, ARCH_SPRING, ARCH_R + tw, 0, pi, ARCH_SEGMENTS)
+fi = [bm.verts.new((x, y0 + td, z)) for x, z in inner]; fo = [bm.verts.new((x, y0 + td, z)) for x, z in outer]
+bi = [bm.verts.new((x, y0, z)) for x, z in inner]; bo = [bm.verts.new((x, y0, z)) for x, z in outer]
+for k in range(ARCH_SEGMENTS):
+    bm.faces.new([fi[k], fo[k], fo[k + 1], fi[k + 1]])      # front
+    bm.faces.new([fo[k], bo[k], bo[k + 1], fo[k + 1]])      # outer edge
+    bm.faces.new([bi[k], fi[k], fi[k + 1], bi[k + 1]])      # inner edge (the soffit's lip)
+finish("Arch_Moulding", mat["Mat_Trim"], bm)
+
+# The door: one slab the shape of the opening, at the wall's outer face, seen down the 0.2 m reveal; its picture is
+# mapped once, edge to edge (uv_fit). Two brass handles on the room side.
+bm = bmesh.new()
+door_outline = [(-ARCH_R, 0.0), (ARCH_R, 0.0)] + arc(0, ARCH_SPRING, ARCH_R, 0, pi, ARCH_SEGMENTS)
+prism_xz(bm, door_outline, (y0 - T, y0 - T + DOOR_T), fan_from=(0.0, ARCH_SPRING))
+finish("Door", mat["Mat_Door"], bm)
+uv_fit(bpy.data.objects["Door"])
+dz, dy = 1.0, y0 - T + DOOR_T
+make("Door_Handles", mat["Mat_Metal"], ("xzy", (-0.14, -0.06), (dz - 0.02, dz + 0.02), (dy, dy + 0.06)),
+     ("xzy", (0.06, 0.14), (dz - 0.02, dz + 0.02), (dy, dy + 0.06)))
 
 # Picture frame around the painting opening, standing FRAME_D off the north wall.
 pz0, pz1 = PAINTING_BOTTOM, PAINTING_BOTTOM + PAINTING_H
@@ -204,6 +327,26 @@ assert pz0 - FRAME_W >= BASEBOARD_H, "frame's bottom rail must clear the baseboa
 make("Frame_Bedroom", mat["Mat_Frame"],
      ("xzy", (-fx, fx), (pz0 - FRAME_W, pz1 + FRAME_W), (y1 - FRAME_D, y1),
       [(-PAINTING_W / 2, PAINTING_W / 2, pz0, pz1)]))
+
+# Wainscot, cap rail, cornice and baseboard: strips on the walls' inside faces. The wainscot and its rail stop at
+# the two paintings' frames (which stand on the wall from 0.62 m) and at the arch's moulding.
+fz = pz0 - FRAME_W                        # frames' bottom edge
+sn = (SN_FRAME_Y - fx, SN_FRAME_Y + fx)   # The Starry Night's frame along the east wall
+gap = ARCH_R + ARCH_TRIM_W                # arch moulding's outer edge
+wd, rd = WAINSCOT_D, RAIL_D
+def strips(z0, z1, d, cut_frames):
+    north = [(-fx, fx, max(z0, fz), z1)] if cut_frames and z1 > fz else []
+    east = [(sn[0], sn[1], max(z0, fz), z1)] if cut_frames and z1 > fz else []
+    return [
+        ("xzy", (x0, x1), (z0, z1), (y1 - d, y1), north),
+        ("xzy", (x0, x1), (z0, z1), (y0, y0 + d), [(-gap, gap, z0, z1)] if z0 < crown + ARCH_TRIM_W else []),
+        ("yzx", (y0 + d, y1 - d), (z0, z1), (x1 - d, x1), east),
+        ("yzx", (y0 + d, y1 - d), (z0, z1), (x0, x0 + d)),
+    ]
+make("Wainscot", mat["Mat_Wainscot"], *strips(0, WAINSCOT_H, wd, True))
+make("Wainscot_Rail", mat["Mat_Trim"], *strips(WAINSCOT_H - RAIL_H / 2, WAINSCOT_H + RAIL_H / 2, rd, True))
+make("Cornice", mat["Mat_Trim"], *strips(H - CORNICE_H, H, CORNICE_D, False))
+make("Baseboard", mat["Mat_Baseboard"], *strips(0, BASEBOARD_H, BASEBOARD_D, False))
 
 # Skylight bars: a grid at the top of the skylight opening; the panes are holes.
 nx, ny = SKYLIGHT_PANES
@@ -215,15 +358,45 @@ panes = [(sky[0] + BAR + i * (pw + BAR), sky[0] + BAR + i * (pw + BAR) + pw,
 make("Skylight_Grid", mat["Mat_Metal"],
      ("xyz", sky[:2], sky[2:], (H + CEILING_T - BAR, H + CEILING_T), panes))
 
-# Benches along the side walls: a seat on two legs, drawn as a U-shaped profile.
-# Each bench's origin is its own centre, so it can be moved on its own in Unity.
-for n, (side, yc) in enumerate(BENCHES, start=1):
-    back = side * (ROOM_WIDTH / 2 - BENCH_WALL_GAP)   # edge nearest the wall
-    ys = (yc - BENCH_L / 2, yc + BENCH_L / 2)
-    under_seat = (ys[0] + BENCH_T, ys[1] - BENCH_T, 0, BENCH_H - BENCH_T)
-    make(f"Bench_{n:02d}", mat["Mat_Bench"],
-         ("yzx", ys, (0, BENCH_H), tuple(sorted((back, back - side * BENCH_D))), [under_seat]),
-         centred=True)
+# The bench (Bench_01): an upholstered top with rounded edges, an apron and four turned legs. Its origin is its own
+# centre, so it can be moved on its own in Unity.
+bx, by = BENCH_AT
+L, D, top = BENCH_L, BENCH_D, BENCH_H
+bpy.ops.mesh.primitive_cube_add(size=1, location=(bx, by, top - CUSHION_T / 2))
+cushion = bpy.context.active_object
+cushion.scale = (L, D, CUSHION_T)
+bpy.ops.object.transform_apply(scale=True)
+bev = cushion.modifiers.new("Bevel", "BEVEL"); bev.width = 0.03; bev.segments = 3
+bpy.ops.object.modifier_apply(modifier=bev.name)
+cushion.data.materials.append(mat["Mat_Cushion"])
+bm = bmesh.new()
+az = top - CUSHION_T
+add_box(bm, "xyz", (bx - L / 2 + 0.03, bx + L / 2 - 0.03), (by - D / 2 + 0.03, by + D / 2 - 0.03), (az - APRON_H, az))
+leg_top = az - APRON_H
+scale = leg_top / LEG_PROFILE[-1][0]
+for sx in (-1, 1):
+    for sy in (-1, 1):
+        lathe(bm, bx + sx * (L / 2 - LEG_INSET), by + sy * (D / 2 - LEG_INSET), [(z * scale, r) for z, r in LEG_PROFILE])
+add_box(bm, "xyz", (bx - L / 2 + LEG_INSET, bx + L / 2 - LEG_INSET), (by - 0.012, by + 0.012), (0.10, 0.125))   # stretcher
+finish("Bench_Frame", mat["Mat_BenchWood"], bm)
+bench = join("Bench_01", [bpy.data.objects["Bench_Frame"], cushion])
+bm = bmesh.new(); bm.from_mesh(bench.data)                       # UVs in metres for the joined bench, then centre it
+uv = bm.loops.layers.uv.verify()
+for face in bm.faces:
+    n = [abs(c) for c in face.normal]
+    a, b = [k for k in range(3) if k != n.index(max(n))]
+    for loop in face.loops:
+        loop[uv].uv = (loop.vert.co[a], loop.vert.co[b])
+bm.to_mesh(bench.data); bm.free()
+bpy.ops.object.origin_set(type="ORIGIN_GEOMETRY", center="BOUNDS")
+if BENCH_ALONG_ROOM:   # built along X; turned about its own centre, then the turn applied, so the object has none
+    bench.rotation_euler = (0, 0, radians(90))
+    bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
+
+# The rug under the bench: a thin slab whose picture is mapped once (uv_fit).
+rw, rl = RUG
+make("Rug", mat["Mat_Rug"], ("xyz", (bx - rw / 2, bx + rw / 2), (by - rl / 2, by + rl / 2), (0.002, 0.002 + RUG_T)))
+uv_fit(bpy.data.objects["Rug"])
 
 # Placard stand: a box whose top is tilted toward the viewer (who stands to the
 # south) by lowering its front edge. It stands just right (east) of the frame,
@@ -240,14 +413,6 @@ for v in bm.verts:
         v.co.z -= top_len * sin(tilt)
 finish("Pedestal_Bedroom", mat["Mat_Bench"], bm, centred=True)
 
-# Baseboard: one strip per wall, with a gap at the entrance.
-bh, bd = BASEBOARD_H, BASEBOARD_D
-make("Baseboard", mat["Mat_Baseboard"],
-     ("xzy", (x0, x1), (0, bh), (y1 - bd, y1)),                                            # north
-     ("xzy", (x0, x1), (0, bh), (y0, y0 + bd), [(-ENTRANCE_W / 2, ENTRANCE_W / 2, 0, bh)]),  # south
-     ("yzx", (y0 + bd, y1 - bd), (0, bh), (x1 - bd, x1)),                                  # east
-     ("yzx", (y0 + bd, y1 - bd), (0, bh), (x0, x0 + bd)))                                  # west
-
 # Attachment points. -Y is Unity's forward, so the slot needs no turn to face
 # into the room, and the spawn point turns 180 degrees to face the painting.
 empty("Slot_Bedroom", (0, y1, pz0 + PAINTING_H / 2))
@@ -261,6 +426,7 @@ for name, f in (("Placard_Bedroom", 0.65), ("Button_Bedroom", 0.2)):  # title te
 
 tris = sum(len(p.vertices) - 2 for o in scene.objects if o.type == "MESH" for p in o.data.polygons)
 print(f"Triangles: {tris} (budget 20000)")
+assert tris < 20000, tris
 
 bpy.ops.wm.save_as_mainfile(filepath=str(BLEND_PATH))
 FBX_PATH.parent.mkdir(parents=True, exist_ok=True)

@@ -52,12 +52,14 @@ namespace InnerFrame.StarryNight.EditorTools
 
         /// <summary>Spot A (Phase 2, approved 2026-11-05): on the east wall's inner face (x = -5; Wall_East is centred at
         /// x = -5.1 and 0.2 m thick), 3.6 m north of the room's middle; the root faces into the room (+X).</summary>
-        public static readonly Vector3 RootPosition = new Vector3(-5f, 0f, -3.6f);
+        // 2026-11-10: the Gallery is 7 x 9 m (build_gallery.py), so the east wall is at x = -3.5 and the painting hangs at z = -1.6
+        // (it was (-5, 0, -3.6) in the 10 x 14 m room): its pedestal then stands clear of the bench and the rug.
+        public static readonly Vector3 RootPosition = new Vector3(-3.5f, 0f, -1.6f);
         public const float RootYaw = 90f;
         public static Quaternion RootRotation => Quaternion.Euler(0f, RootYaw, 0f);
         /// <summary>The north wall's inner face (Wall_North: centre z -7.1, 0.2 m thick), which The Bedroom hangs from.
         /// Its frame, pedestal and button keep their offsets from it, relative to the entrance's root.</summary>
-        public static readonly Vector3 BedroomWall = new Vector3(0f, 0f, -7f);
+        public static readonly Vector3 BedroomWall = new Vector3(0f, 0f, -4.5f);   // the north wall's face (-7 in the 14 m room)
         /// <summary>The Bedroom's painting is 3 m wide (both canvases are about 92 cm wide); the height follows the image.</summary>
         public const float PaintingWidth = 3f;
         /// <summary>The quad faces -Z; turned round it faces out of the wall, as Painting_TheBedroom does.</summary>

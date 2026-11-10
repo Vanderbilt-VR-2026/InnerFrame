@@ -97,7 +97,8 @@ namespace InnerFrame.Gallery.EditorTools.Tests
             foreach (var r in decor.GetComponentsInChildren<Renderer>(true))
             {
                 var b = r.bounds;
-                bool inside = b.min.x > -5.001f && b.max.x < 5.001f && b.min.z > -7.001f && b.max.z < 7.001f && b.min.y > -0.005f && b.max.y < 6.001f;
+                const float e = 0.001f;
+                bool inside = b.min.x > -G.HalfW - e && b.max.x < G.HalfW + e && b.min.z > -G.HalfL - e && b.max.z < G.HalfL + e && b.min.y > -0.005f && b.max.y < G.CeilingY + e;
                 Check(inside, $"{PathOf(r.transform, decor.transform)} is inside the room ({b.min:F2}..{b.max:F2})");
             }
 
@@ -120,6 +121,14 @@ namespace InnerFrame.Gallery.EditorTools.Tests
                     var kb = k.GetComponent<Renderer>() ? k.GetComponent<Renderer>().bounds : k.GetComponent<Collider>()?.bounds;
                     if (kb.HasValue && r.bounds.Intersects(kb.Value)) Check(false, $"{PathOf(r.transform, decor.transform)} reaches into {k.name}");
                 }
+
+            // Vincent's portrait (VanGoghSpawner hangs it at run time, beside The Bedroom): nothing of the decor in front of it
+            var slot = roots.SelectMany(r => r.GetComponentsInChildren<Transform>(true)).First(t => t.name == "Slot_Bedroom");
+            var pc = slot.position + slot.rotation * VanGoghSpawner.PortraitOffset;
+            var portrait = new Bounds(pc + slot.forward * 0.3f, new Vector3(VanGoghSpawner.PortraitSize.x + 0.36f, VanGoghSpawner.PortraitSize.y + 0.36f, 0.6f));
+            Check(portrait.min.x > -G.HalfW && portrait.max.x < G.HalfW, $"Vincent's portrait fits on the north wall (x {portrait.min.x:F2}..{portrait.max.x:F2})");
+            foreach (var r in decor.GetComponentsInChildren<Renderer>(true))
+                if (r.bounds.Intersects(portrait)) Check(false, $"{PathOf(r.transform, decor.transform)} stands in front of Vincent's portrait");
 
             // frame corners: on each frame's front, at its corners, covering at most 0.15 m of the painting
             foreach (var (name, centre, yaw, hw, hh) in G.Frames)
@@ -159,12 +168,12 @@ namespace InnerFrame.Gallery.EditorTools.Tests
             cam.fieldOfView = 75f; cam.nearClipPlane = 0.05f;
             var views = new (string name, Vector3 at, Vector3 look)[]
             {
-                ("1_spawn", spawn + Vector3.up * EyeY, new Vector3(0f, 2f, -6.9f)),
-                ("2_gather", new Vector3(0.5f, EyeY, -2.5f), new Vector3(0f, 2f, -6.9f)),
-                ("3_starrynight", new Vector3(1.5f, EyeY, -3.2f), new Vector3(-4.9f, 1.8f, -3.6f)),
-                ("4_back", new Vector3(0f, EyeY, -5.5f), new Vector3(0f, 2.5f, 6f)),
-                ("5_statue", new Vector3(1.6f, EyeY, -2.2f), new Vector3(4.1f, 1.6f, -3.6f)),
-                ("6_lantern", new Vector3(2.05f, 3.0f, -0.95f), new Vector3(2.4f, 3.15f, -1.5f)),
+                ("1_spawn", spawn + Vector3.up * EyeY, new Vector3(0f, 1.8f, -4.4f)),
+                ("2_gather", new Vector3(0.3f, EyeY, -1.6f), new Vector3(0.6f, 2f, -4.4f)),
+                ("3_starrynight", new Vector3(1.6f, EyeY, -0.6f), new Vector3(-3.4f, 1.8f, -1.6f)),
+                ("4_back", new Vector3(0f, EyeY, -3.6f), new Vector3(0f, 1.9f, 4.5f)),
+                ("5_statue", new Vector3(-0.6f, EyeY, 0.9f), new Vector3(1.9f, 1.3f, 2.8f)),
+                ("6_lantern", new Vector3(0.45f, 2.2f, 3.4f), new Vector3(0f, 2.4f, 4.3f)),
             };
             var rt = new RenderTexture(1280, 720, 24);
             cam.targetTexture = rt;

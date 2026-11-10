@@ -53,44 +53,53 @@ namespace InnerFrame.Gallery.EditorTools
         // ------------------------------------------------------------------------------------------- the layout
         public const float StatuePlinthH = 0.6f, StatuePlinthW = 0.7f;
         public const float VasePlinthH = 0.9f, VasePlinthW = 0.45f;
-        public const float CeilingY = 6f, LanternTopY = 3.5f, ChainRadius = 0.012f;
-        static readonly Vector3 PotBox = new Vector3(0.6f, 0.55f, 0.6f);   // a plant's collider, round its pot
+        // The room (Gallery.fbx, 2026-11-10): x from -3.5 (east wall) to 3.5 (west), z from -4.5 (north wall, The Bedroom)
+        // to 4.5 (south wall, the arch), 4 m tall.
+        public const float HalfW = 3.5f, HalfL = 4.5f, CeilingY = 4f;
+        public const float BracketRadius = 0.012f, BracketRise = 0.06f;   // a wall lantern's arm, above its ring
+        public const float PlantScale = 0.7f;   // 0.91 m tall, 0.6 m from the pot's centre to a leaf tip: room for the corners
+        static readonly Vector3 PotBox = new Vector3(0.6f, 0.55f, 0.6f);   // a plant's collider, round its pot (before PlantScale)
 
         // The lanterns' flame and light. CandleTop: the Tripo candle's top below the ring's top (tripo_props.json,
         // "candle_top_m"). The flame is The Starry Night's (0.045 x 0.09 m, centred), scaled for this bigger lantern and
         // standing on the wick; the light sits just above it, as in SN_Setup. Light: about 2700 K, a candle-warm lamp.
         public const float CandleTop = 0.417f, FlameScale = 1.3f, FlameH = 0.09f * FlameScale;
-        public static float FlameY => LanternTopY - CandleTop + FlameH * 0.45f;   // its bottom just into the wick
+        public static float FlameY => -CandleTop + FlameH * 0.45f;   // below the ring's top; its bottom just into the wick
         public static readonly Color LampColour = new Color(1f, 0.70f, 0.42f);
-        public const float LampIntensity = 4f, LampRange = 9f;
+        public const float LampIntensity = 3f, LampRange = 6f;
         public static readonly Color GlassColour = new Color(1f, 0.9f, 0.75f, 0.3f);   // over the amber texture: tinted, see-through
         const string FlameMesh = "Assets/StarryNight/Meshes/SN_FlameCross.asset";
         const string FlameMat = "Assets/StarryNight/Materials/SN_Flame.mat";
 
-        // spot (floor), yaw (the prop's front, +Z, turned this much about Y)
-        public static readonly (string name, Vector3 at, float yaw)[] Statues = { ("Statue_West", new Vector3(4.1f, 0f, -3.6f), -90f) };
+        // As the concept sheet (docs/gallery/README.md): plants in the four corners, the statue by the arch, flowers on the
+        // side walls, lanterns at the arch. Spot (floor), yaw (the prop's front, +Z, turned this much about Y).
+        public static readonly (string name, Vector3 at, float yaw)[] Statues =
+        {
+            ("Statue_Arch", new Vector3(1.9f, 0f, 2.8f), -140f),   // west of the arch, turned to the bench and The Bedroom
+        };
         public static readonly (string name, Vector3 at, float yaw)[] Plants =
         {
-            // 0.9 m from both walls: the leaves reach 0.85 m from the pot's centre when turned
-            ("Plant_NorthEast", new Vector3(-4.1f, 0f, -6.1f), 20f), ("Plant_NorthWest", new Vector3(4.1f, 0f, -6.1f), -40f),
-            ("Plant_SouthEast", new Vector3(-4.1f, 0f, 6.1f), 160f), ("Plant_SouthWest", new Vector3(4.1f, 0f, 6.1f), 200f),
+            // 0.65 m from both walls; the north two stay under Vincent's portrait (its bottom 1.15 m) and clear of the
+            // Bedroom's pedestal
+            ("Plant_NorthEast", new Vector3(-2.85f, 0f, -3.85f), 20f), ("Plant_NorthWest", new Vector3(2.85f, 0f, -3.85f), -40f),
+            ("Plant_SouthEast", new Vector3(-2.85f, 0f, 3.85f), 160f), ("Plant_SouthWest", new Vector3(2.85f, 0f, 3.85f), 200f),
         };
         public static readonly (string name, Vector3 at, float yaw)[] Vases =
         {
-            ("Vase_BedroomWest", new Vector3(2.5f, 0f, -6.4f), 0f), ("Vase_EastWall", new Vector3(-4.45f, 0f, 2f), 90f),
+            ("Vase_EastWall", new Vector3(-3.0f, 0f, 2.4f), 90f), ("Vase_WestWall", new Vector3(3.0f, 0f, -1.0f), -90f),
         };
-        public static readonly (string name, Vector3 at, float yaw)[] Lanterns =
+        // Each hangs by its ring from an arm out of the south wall (z 4.5): one over the arch (its moulding tops out at
+        // 2.75 m), one each side of it. Where the ring's top is, and the arm's length back to the wall (+Z).
+        public static readonly (string name, Vector3 at, float arm)[] Lanterns =
         {
-            // pairs over the aisle, the second just south of the skylight (z -6..-3) so the light reaches the north wall;
-            // x = 2.4 keeps them outside The Bedroom's frame (x +-1.68) as seen from the spawn point
-            ("Lantern_1", new Vector3(2.4f, 0f, 3.5f), 0f), ("Lantern_2", new Vector3(-2.4f, 0f, 3.5f), 0f),
-            ("Lantern_3", new Vector3(2.4f, 0f, -1.5f), 30f), ("Lantern_4", new Vector3(-2.4f, 0f, -1.5f), 30f),
+            ("Lantern_Arch", new Vector3(0f, 2.72f, 4.26f), 0.24f),
+            ("Lantern_ArchEast", new Vector3(-1.45f, 2.35f, 4.26f), 0.24f), ("Lantern_ArchWest", new Vector3(1.45f, 2.35f, 4.26f), 0.24f),
         };
         // a frame's centre on its front face, its yaw (facing into the room), half its outer width and height
         public static readonly (string name, Vector3 centre, float yaw, float hw, float hh)[] Frames =
         {
-            ("FrameCorners_Bedroom", new Vector3(0f, 2f, -6.879f), 0f, 1.68f, 1.38f),
-            ("FrameCorners_StarryNight", new Vector3(-4.879f, 2f, -3.6f), 90f, 1.68f, 1.38f),
+            ("FrameCorners_Bedroom", new Vector3(0f, 2f, -HalfL + 0.121f), 0f, 1.68f, 1.38f),
+            ("FrameCorners_StarryNight", new Vector3(-HalfW + 0.121f, 2f, -1.6f), 90f, 1.68f, 1.38f),
         };
 
         static string Fbx(string n) => $"{Folder}/GP_{n}.fbx";
@@ -125,6 +134,7 @@ namespace InnerFrame.Gallery.EditorTools
         public static List<string> Apply()
         {
             var changes = new List<string>();
+            GalleryShellSetup.Apply(changes);
             foreach (var p in Props) { ImportModel(p.name, changes); ImportTexture(Tex(p.name), p.tex, changes); }
             var mats = Props.ToDictionary(p => p.name, p => MakeMaterial(Mat(p.name), Tex(p.name), Color.white, p.smooth, p.twoSided, false, changes));
             mats["LanternGlass"] = MakeGlass(GlassMat, Tex("Lantern"), GlassColour, changes);
@@ -152,7 +162,7 @@ namespace InnerFrame.Gallery.EditorTools
             if (dirty) { mi.SaveAndReimport(); changes.Add($"{Fbx(n)}: import settings"); }
         }
 
-        static void ImportTexture(string path, int size, List<string> changes)
+        public static void ImportTexture(string path, int size, List<string> changes, bool repeat = true)
         {
             var ti = AssetImporter.GetAtPath(path) as TextureImporter ?? throw new Exception($"{Tag} {path} missing: run make_tripo_props.py");
             bool dirty = false;
@@ -160,6 +170,8 @@ namespace InnerFrame.Gallery.EditorTools
             if (!ti.sRGBTexture) { ti.sRGBTexture = true; dirty = true; }
             if (!ti.mipmapEnabled) { ti.mipmapEnabled = true; dirty = true; }
             if (ti.maxTextureSize != size) { ti.maxTextureSize = size; dirty = true; }
+            var wrap = repeat ? TextureWrapMode.Repeat : TextureWrapMode.Clamp;
+            if (ti.wrapMode != wrap) { ti.wrapMode = wrap; dirty = true; }
             var android = ti.GetPlatformTextureSettings("Android");
             if (!android.overridden || android.format != TextureImporterFormat.ASTC_6x6 || android.maxTextureSize != size)
             {
@@ -172,7 +184,7 @@ namespace InnerFrame.Gallery.EditorTools
         /// <summary>URP Lit with a base map, no emission; opaque, or transparent (premultiplied) as SN_Setup's Lit does.
         /// Everything is set every run, exactly as URP's own material validation leaves it, so the file only changes when
         /// a value does.</summary>
-        static Material MakeMaterial(string path, string texPath, Color colour, float smooth, bool twoSided, bool transparent, List<string> changes)
+        public static Material MakeMaterial(string path, string texPath, Color colour, float smooth, bool twoSided, bool transparent, List<string> changes, Vector2? tiling = null)
         {
             var shader = Shader.Find("Universal Render Pipeline/Lit") ?? throw new Exception($"{Tag} URP Lit shader not found");
             var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(texPath);
@@ -182,6 +194,9 @@ namespace InnerFrame.Gallery.EditorTools
             string before = created ? "" : System.IO.File.ReadAllText(path);
             if (m.shader != shader) m.shader = shader;
             m.SetTexture("_BaseMap", tex); m.SetTexture("_MainTex", tex);   // URP fills _MainTex from _BaseMap on reload; set both
+            var scale = tiling ?? Vector2.one;
+            m.SetTextureScale("_BaseMap", scale); m.SetTextureScale("_MainTex", scale);
+            m.SetTextureOffset("_BaseMap", Vector2.zero); m.SetTextureOffset("_MainTex", Vector2.zero);
             m.SetColor("_BaseColor", colour); m.SetColor("_Color", colour);
             m.SetFloat("_Smoothness", smooth);
             m.SetFloat("_Metallic", 0f);
@@ -269,11 +284,11 @@ namespace InnerFrame.Gallery.EditorTools
             return go;
         }
 
-        static GameObject Primitive(string mesh, Material mat, Transform parent, string name, Vector3 pos, Vector3 scale, bool collider)
+        static GameObject Primitive(string mesh, Material mat, Transform parent, string name, Vector3 pos, Vector3 scale, bool collider, Quaternion? rot = null)
         {
             var go = new GameObject(name);
             go.transform.SetParent(parent, false);
-            go.transform.localPosition = pos;
+            go.transform.SetLocalPositionAndRotation(pos, rot ?? Quaternion.identity);
             go.transform.localScale = scale;
             go.AddComponent<MeshFilter>().sharedMesh = Resources.GetBuiltinResource<Mesh>(mesh);
             go.AddComponent<MeshRenderer>().sharedMaterial = mat;
@@ -306,7 +321,7 @@ namespace InnerFrame.Gallery.EditorTools
             }
             foreach (var (name, at, yaw) in Plants)
             {
-                var m = Model("Plant", mats["Plant"], root, name, at, Quaternion.Euler(0f, yaw, 0f), one);
+                var m = Model("Plant", mats["Plant"], root, name, at, Quaternion.Euler(0f, yaw, 0f), one * PlantScale);
                 var box = m.AddComponent<BoxCollider>();
                 box.size = PotBox;
                 box.center = new Vector3(0f, PotBox.y / 2, 0f);
@@ -317,12 +332,15 @@ namespace InnerFrame.Gallery.EditorTools
                 Primitive("Cube.fbx", bench, g, "Plinth", new Vector3(0f, VasePlinthH / 2, 0f), new Vector3(VasePlinthW, VasePlinthH, VasePlinthW), true);
                 Model("Vase", mats["Vase"], g, "GP_Vase", new Vector3(0f, VasePlinthH, 0f), Quaternion.identity, one);
             }
-            foreach (var (name, at, yaw) in Lanterns)
+            foreach (var (name, at, arm) in Lanterns)
             {
-                var g = Group(root, name, at, yaw).transform;
-                float chain = CeilingY - LanternTopY;   // Unity's cylinder is 2 m tall, 1 m across
-                Primitive("Cylinder.fbx", metal, g, "Chain", new Vector3(0f, LanternTopY + chain / 2, 0f), new Vector3(ChainRadius * 2, chain / 2, ChainRadius * 2), false);
-                Model("Lantern", mats["Lantern"], g, "GP_Lantern", new Vector3(0f, LanternTopY, 0f), Quaternion.identity, one, mats["LanternGlass"]);
+                // the group's origin is the top of the lantern's ring; its +Z runs back to the wall
+                var g = Group(root, name, at, 0f).transform;
+                float d = BracketRadius * 2;   // Unity's cylinder is 2 m tall, 1 m across, along its Y
+                Primitive("Cylinder.fbx", metal, g, "Hook", new Vector3(0f, BracketRise / 2, 0f), new Vector3(d, BracketRise / 2, d), false);
+                Primitive("Cylinder.fbx", metal, g, "Arm", new Vector3(0f, BracketRise, arm / 2), new Vector3(d, arm / 2, d), false, Quaternion.Euler(90f, 0f, 0f));
+                Primitive("Cube.fbx", metal, g, "WallPlate", new Vector3(0f, BracketRise, arm - 0.01f), new Vector3(0.08f, 0.14f, 0.02f), false);
+                Model("Lantern", mats["Lantern"], g, "GP_Lantern", Vector3.zero, Quaternion.identity, one, mats["LanternGlass"]);
                 var flame = new GameObject("Flame");
                 flame.transform.SetParent(g, false);
                 flame.transform.localPosition = new Vector3(0f, FlameY, 0f);

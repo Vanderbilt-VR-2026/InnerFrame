@@ -17,6 +17,26 @@ ModelImporter:
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
+      name: Mat_BenchWood
+    second: {fileID: 2100000, guid: 563c43319922d4b738b5740b6e73f6c3, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Mat_Ceiling
+    second: {fileID: 2100000, guid: dea377397ab974f8eb6f42ad48c934de, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Mat_Cushion
+    second: {fileID: 2100000, guid: a698c90b254304cb3ab6c771d3f41744, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Mat_Door
+    second: {fileID: 2100000, guid: 57dd574a9d32744a1ab094d6239acee0, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
       name: Mat_Floor
     second: {fileID: 2100000, guid: 10546c82e5587455a9e85c45013dd4c0, type: 2}
   - first:
@@ -29,6 +49,21 @@ ModelImporter:
       assembly: UnityEngine.CoreModule
       name: Mat_Metal
     second: {fileID: 2100000, guid: da3441a04cb4940db9c0a70b10e6daa1, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Mat_Rug
+    second: {fileID: 2100000, guid: 3fce293be56d74f5b89f331d9c3c5925, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Mat_Trim
+    second: {fileID: 2100000, guid: 8acf43aae7159464aa48a27aa8b53648, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Mat_Wainscot
+    second: {fileID: 2100000, guid: 4ce75ac42018348d299f89c72e4c2ddc, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule

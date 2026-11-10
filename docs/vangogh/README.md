@@ -280,7 +280,7 @@ until his voice is free. B stops a scripted line, as it stops any of his answers
   mirror.
 - **Canvas images:** `Assets/VanGogh/Art/Canvas/`, made from the portrait by `Art/Source/VanGogh/make_canvas_stages.py`
   (Pillow).
-- **Lines:** `Art/Source/VanGogh/mirror_lines.txt`, made into WAVs by `make_mirror_lines.sh` (macOS `say`, voice Daniel)
+- **Lines:** `Art/Source/VanGogh/mirror_lines.txt`, made into WAVs by `make_mirror_lines.sh` (Piper, voice `en_GB-northern_english_male-medium`, set in `Art/Source/Voice/piper_lines.sh`)
   in `Assets/VanGogh/Audio/`. Rowling may rewrite the lines (#75).
 - After changing the images or the lines, run **Tools > InnerFrame > Van Gogh > Rebuild assets**.
 

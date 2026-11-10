@@ -187,7 +187,7 @@ avatars appear, but the night isn't shared.
 | Colour grading (off by default) | `SN_Layout.colourGrading`: on, `SN_Bootstrap` adds a global Volume with `SN_Grading.asset` (Color Adjustments: post exposure 0.35, contrast 14, saturation 20, a warm filter) and turns post-processing on for the scene's camera at runtime (the rig prefab is not changed). Off by default until its cost is measured on a Quest | `SN_Setup` (the profile), `SN_Bootstrap` |
 | Dialogue box and hint | the shared `VG_DialogueUI` with `VG_Dialogue_StarryNight` (above) | `Assets/VanGogh` (VanGoghAssetSetup) |
 | Vincent | Vincent v2: Cici's Tripo model (10,619 triangles, one 2048² texture), rigged by Mixamo (33 bones, 28 skinned; mitten hands), 1.70 m, sitting on the rock (his root at (−0.17, 0, 0.19), facing the valley); SittingIdle, SittingTalking, SitToStand, BreathingIdle; look and point by Humanoid IK (`SN_VincentDriver`); see "Vincent" | `Models/Vincent` (Mixamo files, unchanged), `make_vincent_texture.py`, `SN_Setup` |
-| Still placeholder | Vincent's lines (macOS `say`, voice Daniel) | |
+| Still placeholder | Vincent's lines (Piper, voice `en_GB-northern_english_male-medium`) | |
 
 ## Checks
 

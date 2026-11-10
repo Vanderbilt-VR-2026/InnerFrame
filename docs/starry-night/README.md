@@ -71,8 +71,8 @@ the build list now, after the existing scenes; the Gallery still starts the game
 - **The way back:** any time, the player menu (left Menu button, or M) → **Back to Gallery**, as from the Bedroom. At
   Done ("The night is painted"), `SN_GalleryReturn` opens that menu by itself 10 s later (the morning star's 8 s fade,
   then 2 s); X closes it and you can stay. You land at the Gallery's start (0, 0, 6), facing The Bedroom.
-- **Two players:** each enters alone; the other stays in the Gallery's room. If both enter, each plays their own solo
-  night (the temporary measure above). A shared night is a team decision and a change in `NetworkSession`.
+- **Two players:** each scene is its own room, so whoever enters first is alone in the night until the other follows;
+  both then share one night (see "Two players (shared night)").
 - **Made by** Tools > InnerFrame > Starry Night > **Add to Gallery** (`Editor/SN_GallerySetup.cs`): the image's import,
   `Gallery/SN_GalleryPainting.mat`, `Gallery/SN_GalleryEntrance.prefab` (the frame and pedestal are Gallery.fbx's own
   meshes and materials, by reference, at The Bedroom's offsets from its wall, read from `Gallery.unity`), one instance in
@@ -137,15 +137,34 @@ settings asset (the Bedroom has its own).
 Every state change logs `[SN] <state> t=<seconds since the start>` (and raises `SN_Game.StateEntered`, for the portrait
 deck later); the score at Done logs `[SN] score stars=…/12 named=…/3 wind=… letter=…`.
 
-## TEMPORARY: solo, the network session is left at Start
+## Two players (shared night)
 
-`NetworkSession` (`Assets/Script/Network/NetworkSession.cs`, Sonya's file) joins a Photon Fusion room in every scene with
-an XR Origin, and has no opt-out yet. This scene is solo for now, so **as a temporary measure for this blockout**
-`SN_Bootstrap.LeaveNetworkSession()` stops the session's join and makes it leave at Start (still there after the art pass; log:
-`[SN] Solo for now: left the network session …`). The session object stays alive, so the next scene joins its own room
-as usual. **To be replaced by an opt-out in NetworkSession** (Sonya's call); nothing in `Assets/Script` was changed.
-Checked in Play mode (Editor, no headset): no `[NetworkSession] Joined InnerFrame_StarryNight`, no NetworkRunner or
-NetworkPlayer in the scene, the rig not moved (`Editor/Tests/SN_PlayCheck.cs`).
+Set up the same way as the Gallery and the Painted Bedroom (`docs/multiplayer/README.md`): nothing in the scene.
+`NetworkSession` joins `InnerFrame_StarryNight` by itself and spawns your avatar (the default `NetworkPlayer`; a
+`Resources/NetworkPlayer_StarryNight` prefab would give this scene its own, as the Painted Bedroom has). What the scene
+itself needs to share is done by **`StarryNightLink`** (`Assets/Script/Network/`), one more component on each avatar
+beside `VincentLink` and `MirrorLink`:
+
+- **The night.** Each player sends how far their night has got (`SN_Game.Progress`: arrived, seated, the lantern down,
+  the stars woken, the wind's dots, the letter, the page taken). Each headset merges everyone else's into its own game
+  (`SN_Game.ShareRoom`), which plays it through the same paths as its own player's actions: a star one player wakes
+  blooms for both, the wind can be traced together (the furthest dot counts), and Vincent says the same line on every
+  headset. Progress only grows and each player re-sends what it merged, so a late joiner catches up and someone who
+  leaves takes nothing with them. Dawn, the paint and the voice keep each headset's own clock (a few frames apart).
+- **The lantern, the sketchbook, the page.** They are spawned by `SN_Bootstrap`, not saved in the scene, so
+  `NetworkGrabbable` (scene objects only) doesn't fit; they are shared like the bedroom's mirror instead. Whoever moves
+  one sends its pose; the other copies follow it and can't be grabbed meanwhile. Two grabs at the same moment: the lower
+  player number keeps it. After a let-go the mover keeps sending until its physics has put it down (at most 4 s), and
+  every copy is put exactly there.
+- **Not shared:** where each player stands, walks and sits (each player's own, through the avatar), and the score's
+  attention (each headset logs its own `[SN] score`, which counts the room's stars).
+
+Alone, or offline, nothing calls `ShareRoom` and the night plays exactly as before. The temporary
+`SN_Bootstrap.LeaveNetworkSession()` (blockout, 2026-11-04) is gone; `NetworkSession` is unchanged.
+
+After pulling this: **InnerFrame → Multiplayer → Rebuild Network Player Prefab** and **Rebuild Painted Bedroom Avatar**,
+so both avatar prefabs carry `StarryNightLink` (Fusion rebuilds its prefab table). Until then the room still joins and
+avatars appear, but the night isn't shared.
 
 ## What is made of what
 
@@ -209,8 +228,8 @@ each scene's first frame it notes the join NetworkSession was starting, then sto
 `-executeMethod InnerFrame.StarryNight.EditorTools.SN_GalleryPlayCheck.RunBatch -snLog <file>`, without `-quit`):
 1. StarryNight opened directly: the world's fingerprint (SN_World's objects, renderers, triangles, names);
 2. the Gallery as the game starts; the desktop dot on the button from 1.2 m in front of the pedestal; the press → a fade
-   to black → StarryNight by name: one scene, one XR Origin, one desktop rig, one camera, one audio listener, no runner
-   (`[SN] Solo for now`), Arrive, the dialogue box at 1.6 m, and the same world and light as opened directly; at 9 s still
+   to black → StarryNight by name: one scene, one XR Origin, one desktop rig, one camera, one audio listener,
+   NetworkSession starting StarryNight's own join (for `InnerFrame_StarryNight`) with no runner left, Arrive, the dialogue box at 1.6 m, and the same world and light as opened directly; at 9 s still
    no runner;
 3. back from anywhere (the menu): the Gallery's start (0, 0, 6) yaw 180, one rig, one listener, the portrait once, one
    entrance, NetworkSession starting the Gallery's join (for `InnerFrame_Gallery`) with no runner left;

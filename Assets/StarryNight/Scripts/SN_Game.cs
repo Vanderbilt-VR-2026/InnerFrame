@@ -8,6 +8,29 @@ namespace InnerFrame.StarryNight
     public enum SN_State { Arrive, Sit, Lantern, Stars, Wind, Dawn, Done, Sketchbook }
 
     /// <summary>
+    /// How far one headset's night has got, as the room shares it (StarryNightLink, Assets/Script/Network). Every field
+    /// only ever grows, so two merge by OR / max: a player who joins late catches up, and one who leaves never takes the
+    /// night backwards.
+    /// </summary>
+    public struct SN_Shared
+    {
+        public bool arrived, seated, lanternDown, letterFound, pageTaken;
+        public int stars;   // bit i: sky.Stars[i] is woken
+        public int wind;    // dots of the wind's path passed
+
+        public static SN_Shared Merge(SN_Shared a, SN_Shared b) => new SN_Shared
+        {
+            arrived = a.arrived || b.arrived,
+            seated = a.seated || b.seated,
+            lanternDown = a.lanternDown || b.lanternDown,
+            letterFound = a.letterFound || b.letterFound,
+            pageTaken = a.pageTaken || b.pageTaken,
+            stars = a.stars | b.stars,
+            wind = Mathf.Max(a.wind, b.wind),
+        };
+    }
+
+    /// <summary>
     /// The Starry Night's story: Arrive, Sit, Lantern, Stars, Wind, Dawn, Done (Sketchbook any time after the lantern).
     /// Attention, never speed: no failure, no timer, and a later step done early is accepted (turning the lantern down
     /// before sitting skips Sit). Every transition logs "[SN] &lt;state&gt; t=&lt;seconds&gt;" and raises StateEntered.
@@ -66,6 +89,38 @@ namespace InnerFrame.StarryNight
         float sketchTimer, idle, dawnDelay = -1f, dawnT = -1f, guideAlpha, swirlShown;
         float paint, paintFrom, paintTo, paintT = -1f, paintSeconds;
 
+        /// <summary>This headset's night, for the room (StarryNightLink sends it).</summary>
+        public SN_Shared Progress
+        {
+            get
+            {
+                int stars = 0;
+                if (sky != null) for (int i = 0; i < sky.Stars.Length && i < 31; i++) if (sky.Stars[i] != null && sky.Stars[i].IsWoken) stars |= 1 << i;
+                return new SN_Shared
+                {
+                    arrived = State >= SN_State.Sit,
+                    seated = State >= SN_State.Lantern,
+                    lanternDown = lantern != null && (lantern.IsDown || lantern.Dimming),
+                    letterFound = letterFound,
+                    pageTaken = State == SN_State.Done,
+                    stars = stars,
+                    wind = windPassed,
+                };
+            }
+        }
+
+        /// <summary>The objects the room shares, in a fixed order (StarryNightLink indexes them).</summary>
+        public SN_Grabbable[] Shareables => new[] { lanternGrab, sketchbook, page };
+
+        /// <summary>
+        /// What the other players in the room have done (StarryNightLink, every frame). Applied at the start of the next
+        /// Step through the same paths as this player's own actions, so Vincent says the same lines on every headset.
+        /// Alone, or outside a room, nothing calls this and the night plays as before.
+        /// </summary>
+        public void ShareRoom(SN_Shared others) => room = SN_Shared.Merge(room, others);
+
+        SN_Shared room;
+
         Transform Head => HeadOverride != null ? HeadOverride : (Camera.main != null ? Camera.main.transform : null);
 
         public void Begin()
@@ -88,6 +143,7 @@ namespace InnerFrame.StarryNight
             var head = Head;
             if (head == null || Input == null) return;
             Vector3 hp = head.position;
+            ApplyRoom();
 
             int down = -1;
             for (int h = 0; h < Input.HandCount; h++) if (Input.TriggerDown(h)) { down = h; break; }
@@ -159,7 +215,7 @@ namespace InnerFrame.StarryNight
                 morningStarArmed = false;
                 foreach (var s in sky.Stars) if (s.Spec.named == 3) s.FadeOut(layout.morningStarFadeSeconds);
             }
-            if (State == SN_State.Dawn && pageShown && page != null && page.IsHeld)
+            if (State == SN_State.Dawn && pageShown && page != null && (page.IsHeld || room.pageTaken))
             {
                 Enter(SN_State.Done);
                 Debug.Log($"[SN] score {Score}");
@@ -193,16 +249,41 @@ namespace InnerFrame.StarryNight
             if (State < SN_State.Stars)
             {
                 voice.Say("L03");
-                voice.Say("L04", SN_SayMode.Append);
+                // L04 names N1; a player joining a shared night late may have N1 or more already woken (StarryNightLink)
+                if (namedProgress < 3) voice.Say(CurrentInstruction(), SN_SayMode.Append);
                 Enter(SN_State.Stars);
                 idle = 0f;
+                if (namedProgress >= 3) StartWind();
             }
+        }
+
+        // Another player's progress, through this player's own paths (see ShareRoom).
+        void ApplyRoom()
+        {
+            if (room.arrived && State == SN_State.Arrive) { voice.Say("L01"); Enter(SN_State.Sit); }
+            if (room.seated && State == SN_State.Sit) { voice.Say("L02"); Enter(SN_State.Lantern); }
+            if (room.lanternDown && !lantern.IsDown && !lantern.Dimming) lantern.TurnDown(layout.lanternDimTo, layout.lanternDimSeconds);
+            if (room.stars != 0)
+                for (int i = 0; i < sky.Stars.Length && i < 31; i++)
+                    if ((room.stars & (1 << i)) != 0 && sky.Stars[i] != null && !sky.Stars[i].IsWoken) WakeStar(sky.Stars[i]);
+            if (State == SN_State.Wind && room.wind > windPassed && windPassed < sky.PathLength)
+            {
+                windPassed = Mathf.Min(room.wind, sky.PathLength);
+                idle = 0f;
+                if (windPassed == sky.PathLength) WindTraced();
+            }
+            if (room.letterFound && !letterFound) FindLetter();
         }
 
         void TryWake(Ray aim)
         {
             var star = sky.FindStar(aim, layout.aimAssistDeg);
             if (star == null || star.IsWoken) return;
+            WakeStar(star);
+        }
+
+        void WakeStar(SN_Star star)
+        {
             star.Wake();
             Score.starsWoken++;
             sky.WakeFieldHalos(layout.starBloomSeconds);   // the medium stars' small halos
@@ -248,15 +329,17 @@ namespace InnerFrame.StarryNight
                 if (Vector3.Angle(aim.direction, next - aim.origin) > layout.windToleranceDeg) continue;
                 windPassed++;
                 idle = 0f;
-                if (windPassed == sky.PathLength)
-                {
-                    Score.windTraced = true;
-                    StartPaint(paint, 1f, layout.paintToFullSeconds);
-                    voice.Say("L08", SN_SayMode.Replace);
-                    dawnDelay = layout.dawnDelaySeconds;
-                }
+                if (windPassed == sky.PathLength) WindTraced();
                 return;
             }
+        }
+
+        void WindTraced()
+        {
+            Score.windTraced = true;
+            StartPaint(paint, 1f, layout.paintToFullSeconds);
+            voice.Say("L08", SN_SayMode.Replace);
+            dawnDelay = layout.dawnDelaySeconds;
         }
 
         void StepSketchbook(float dt, Transform head)
@@ -268,6 +351,11 @@ namespace InnerFrame.StarryNight
             bool valley = Mathf.Abs(Mathf.Atan2(f.x, f.z) * Mathf.Rad2Deg) <= layout.sketchValleyYaw;
             sketchTimer = near && inView && valley ? sketchTimer + dt : 0f;
             if (sketchTimer < layout.sketchHoldSeconds) return;
+            FindLetter();
+        }
+
+        void FindLetter()
+        {
             letterFound = true;
             Score.letterFound = true;
             voice.Say("L10", SN_SayMode.Keep);

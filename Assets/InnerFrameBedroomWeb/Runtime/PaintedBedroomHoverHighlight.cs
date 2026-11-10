@@ -14,6 +14,8 @@ namespace InnerFrame.PaintedBedroom
     /// Same technique and material as the held outline (NetworkGrabbable): a hidden copy of each mesh drawn with
     /// InnerFrame/Held Outline. It is thinner, steady and pale so that "you could take this" reads differently from
     /// "someone is holding this", which pulses in the player's colour. It gives way to the held outline.
+    /// On glass (Tumbler, the bottles) it shows as a milky cream tint rather than a rim: glass writes no depth, so
+    /// nothing hides the middle of the copy. The held outline does the same.
     ///
     /// Nothing needs to be placed in the scene: it adds itself to every movable object when the scene loads, so
     /// Import and Build (which rebuilds the scene) can't remove it. The rim is built the first time it is needed.
@@ -26,7 +28,7 @@ namespace InnerFrame.PaintedBedroom
         const string MirrorName = "Mirror";
         const string OutlineMaterialPath = "HeldOutline";    // Resources/HeldOutline.mat, shared with the held outline
         static readonly Color RimColor = new Color(1f, 0.93f, 0.7f);   // warm candle cream, reads against the room's blues and yellows
-        const float RimWidth = 2f;                           // pixels; the held outline is 3
+        const float RimWidth = 4f;                           // pixels of the eye buffer: 2 is barely visible at Quest resolution
 
         static Material outlineMaterial;
         static bool warnedNoMaterial;
@@ -65,8 +67,10 @@ namespace InnerFrame.PaintedBedroom
 
         void Update() => Show(grab.isHovered && !grab.isSelected && !HeldByAnotherPlayer());
 
-        // Networked properties can only be read once the object is spawned.
-        bool HeldByAnotherPlayer() => shared != null && shared.Object != null && shared.Object.IsValid && shared.Held;
+        // Networked properties can only be read once the object is spawned. Held stays set if the holder drops out
+        // of the room, so ask whether its owner is still a real player, as the held outline does.
+        bool HeldByAnotherPlayer() => shared != null && shared.Object != null && shared.Object.IsValid
+                                      && shared.Held && shared.Object.StateAuthority.IsRealPlayer;
 
         void Show(bool show)
         {

@@ -12,7 +12,8 @@ namespace InnerFrame.PaintedBedroom.EditorTools
     /// <summary>
     /// Play-mode check of the hover highlight (#94), no headset needed: a test hand hovers a liftable object through
     /// the XR Interaction Manager. Passes when the rim comes on while hovered, gives way while held, comes back after
-    /// letting go, goes off when the hand moves away, and the bed never gets one.
+    /// letting go, and goes off when the hand moves away. Also checks the bed's grab is off, so it can't be hovered.
+    /// Doesn't cover real rays, how the rim looks, or an object held by another player.
     /// Menu: InnerFrame > Bedroom > Test Hover Highlight.
     /// Command line: -executeMethod InnerFrame.PaintedBedroom.EditorTools.PaintedBedroomHoverHighlightTest.RunFromCommandLine
     /// </summary>
@@ -47,6 +48,7 @@ namespace InnerFrame.PaintedBedroom.EditorTools
 
         static void Begin(bool exit)
         {
+            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
             EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
             SessionState.SetBool(KeyRunning, true);
             SessionState.SetBool(KeyExit, exit);
@@ -75,8 +77,8 @@ namespace InnerFrame.PaintedBedroom.EditorTools
 
         static void Tick()
         {
-            if (!EditorApplication.isPlaying) return;
             if (EditorApplication.timeSinceStartup - stepStarted > StepTimeout) { Finish(false, $"timed out at step {step}{Describe()}"); return; }
+            if (!EditorApplication.isPlaying) return;
             // the object's own manager: a scene with a player avatar can have more than one
             var manager = target != null ? target.interactionManager : Object.FindAnyObjectByType<XRInteractionManager>();
             switch (step)
@@ -107,7 +109,7 @@ namespace InnerFrame.PaintedBedroom.EditorTools
                     if (Rim(target).Any(r => r.transform.parent.name == "Held Outline")) { Finish(false, "the rim outlined the held outline"); return; }
                     var block = new MaterialPropertyBlock();
                     Rim(target)[0].GetPropertyBlock(block);
-                    if (block.GetFloat("_Pulse") != 0f) { Finish(false, "the rim pulses, like the held outline"); return; }
+                    if (!block.HasFloat("_Pulse") || block.GetFloat("_Pulse") != 0f) { Finish(false, "the rim pulses, like the held outline"); return; }
                     Debug.Log($"[HoverHighlightTest] Hover: rim on ({Rim(target).Length} parts)");
                     hand.gripping = true;
                     Next();

@@ -19,14 +19,21 @@ public static class SherpaFiles
 #if UNITY_ANDROID && !UNITY_EDITOR
         double started = Time.realtimeSinceStartupAsDouble;
         dir = Path.Combine(Application.persistentDataPath, folder);
+        // Every file operation is wrapped (Try): an exception here (storage full, a locked file) would otherwise end
+        // the coroutine without calling `done`, and the model would wait to load forever.
         string marker = Path.Combine(dir, "copied.txt");
-        if (!File.Exists(marker) || File.ReadAllText(marker) != version)
+        bool copied = false;
+        string error = Try(() => copied = File.Exists(marker) && File.ReadAllText(marker) == version);
+        if (error != null) { done(null, error); yield break; }
+        if (!copied)
         {
-            if (Directory.Exists(dir)) Directory.Delete(dir, true);   // an older version's files (a replaced voice)
+            error = Try(() => { if (Directory.Exists(dir)) Directory.Delete(dir, true); });   // an older version's files
+            if (error != null) { done(null, error); yield break; }
             foreach (var file in files)
             {
                 string to = Path.Combine(dir, file);
-                Directory.CreateDirectory(Path.GetDirectoryName(to));
+                error = Try(() => Directory.CreateDirectory(Path.GetDirectoryName(to)));
+                if (error != null) { done(null, error); yield break; }
                 using (var req = UnityWebRequest.Get(Application.streamingAssetsPath + "/" + folder + "/" + file))
                 {
                     req.downloadHandler = new DownloadHandlerFile(to) { removeFileOnAbort = true };
@@ -34,7 +41,8 @@ public static class SherpaFiles
                     if (req.result != UnityWebRequest.Result.Success) { done(null, $"copying {file}: {req.error}"); yield break; }
                 }
             }
-            File.WriteAllText(marker, version);
+            error = Try(() => File.WriteAllText(marker, version));
+            if (error != null) { done(null, error); yield break; }
             Debug.Log($"[SherpaFiles] copied {folder} to {dir} in {(Time.realtimeSinceStartupAsDouble - started) * 1000:F0} ms");
         }
 #endif
@@ -43,6 +51,13 @@ public static class SherpaFiles
         PreloadRuntime();
         done(dir, null);
         yield break;
+    }
+
+    /// <summary>Runs `action`; returns null, or what went wrong.</summary>
+    public static string Try(Action action)
+    {
+        try { action(); return null; }
+        catch (Exception e) { return $"{e.GetType().Name}: {e.Message}"; }
     }
 
     static bool preloaded;

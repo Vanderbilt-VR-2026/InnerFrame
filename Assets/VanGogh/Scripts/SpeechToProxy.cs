@@ -79,7 +79,10 @@ public class SpeechToProxy : MonoBehaviour
     public void SayRemote(string asker, string transcript, string reply, string audioUrl, int part = 0)
     {
         if (IsAsking) return;   // never cut into our own question
-        if (part == 0 || !answering)
+        // A later part with no answer open: a scripted line has cut this answer off here (MirrorScene), so its tail
+        // isn't replayed after the line. (A player who joins mid-answer hears the next answer, not the rest of this one.)
+        if (part > 0 && !answering) return;
+        if (part == 0)
         {
             BeginAnswer();
             if (!string.IsNullOrEmpty(transcript))
@@ -127,9 +130,13 @@ public class SpeechToProxy : MonoBehaviour
     string answerHint;   // "Player 1 asked: ..." while another player's answer plays
     Coroutine speaker;
 
+    const float OpenAnswerSeconds = 30f;   // the safety net in Update
+    float lastPartAt;
+
     void BeginAnswer()
     {
         ClearAnswer();
+        lastPartAt = Time.time;
         answering = answerOpen = true;
         answerText = spokenText = "";
     }
@@ -149,6 +156,7 @@ public class SpeechToProxy : MonoBehaviour
     void AddPart(string text, AudioClip clip = null)
     {
         if (!answering || string.IsNullOrWhiteSpace(text)) return;
+        lastPartAt = Time.time;
         text = text.Trim();
         answerText = answerText.Length == 0 ? text : answerText + " " + text;
         if (clip != null) { toPlay.Enqueue(new KeyValuePair<AudioClip, string>(clip, text)); return; }
@@ -238,6 +246,13 @@ public class SpeechToProxy : MonoBehaviour
     {
         if (answering)
         {
+            // A safety net: an answer whose end never comes (the asker left mid-stream, or this player joined after
+            // the lock was taken) closes once nothing new has come for this long, so he isn't busy forever.
+            if (answerOpen && Time.time - lastPartAt > OpenAnswerSeconds && !streamLive)
+            {
+                answerOpen = false;
+                Debug.LogWarning($"[VanGogh] no more of this answer for {OpenAnswerSeconds} s; closing it");
+            }
             if (!voice.isPlaying && toPlay.Count > 0) PlayPart();   // the next part, once the one before (or a thinking line) ends
             else if (!voice.isPlaying && !answerOpen && inFlight == 0) { ClearAnswer(); SetState(State.Idle); }
         }
@@ -248,7 +263,8 @@ public class SpeechToProxy : MonoBehaviour
     /// <summary>Plays a clip through his voice and shows its words in his caption.</summary>
     public void Say(AudioClip clip, string text)
     {
-        ClearAnswer();   // a scripted line (or the proxy's whole answer) replaces any answer in progress
+        AbandonStream();   // a scripted line (or the proxy's whole answer) replaces any answer in progress
+        ClearAnswer();
         voice.clip = clip;
         voice.Play();
         SetState(State.Playing);
@@ -259,6 +275,7 @@ public class SpeechToProxy : MonoBehaviour
     public void Cancel()
     {
         if (state == State.Recording) Microphone.End(null);
+        AbandonStream();
         StopAllCoroutines();
         autoStop = null;
         speaker = null;
@@ -279,7 +296,8 @@ public class SpeechToProxy : MonoBehaviour
         }
 #endif
         if (Microphone.devices.Length == 0) { SetState(State.Error); return; }
-        ClearAnswer();   // B stops his answer, as it stops a scripted line
+        AbandonStream();   // B stops his answer, as it stops a scripted line, including what Convai is still sending
+        ClearAnswer();
         if (voice.isPlaying) voice.Stop();
         int seconds = AIProxySettings.Current.maxSeconds;
         recording = Microphone.Start(null, false, seconds, SampleRate);
@@ -466,6 +484,8 @@ public class SpeechToProxy : MonoBehaviour
         }
         Debug.Log($"[VanGogh] Convai: sending your question as {(question.Length > 0 ? $"text, {Ms(released, Time.realtimeSinceStartupAsDouble)} ms after release" : "audio")}");
 
+        int mine = ++streamId;   // B, a scripted line or Cancel abandons this stream (AbandonStream)
+        streamLive = true;
         streamParts = 0;
         streamQuestion = question;
         streamReleased = released;
@@ -480,6 +500,7 @@ public class SpeechToProxy : MonoBehaviour
             var op = req.SendWebRequest();
             while (true)
             {
+                if (mine != streamId) yield break;   // abandoned: nothing more of it is played or sent to the room
                 bool done = op.isDone;   // read first, so a line that arrives while draining isn't left behind
                 if (done) reader.Flush();
                 while (reader.Next(out string l))
@@ -498,6 +519,7 @@ public class SpeechToProxy : MonoBehaviour
                 yield return null;
             }
             if (unsaid.Length > 0) SendPart(unsaid.ToString());
+            streamLive = false;
             if (streamParts == 0)
             {
                 SetState(State.Error);
@@ -506,12 +528,31 @@ public class SpeechToProxy : MonoBehaviour
             }
         }
         answerOpen = false;
+        LastAnswerText = answerText;
+        LastQuestionText = question;
         Answered?.Invoke("", "", "", streamParts, true);   // no more parts
         Debug.Log($"[VanGogh] Convai (streamed): release->all words {Ms(released, Time.realtimeSinceStartupAsDouble)} ms, " +
                   $"{streamParts} part(s); said \"{answerText}\"");
     }
 
-    // Convai's stream in progress: parts sent so far, and when the question was sent.
+    /// <summary>The last streamed answer, whole, and the question as this headset heard it ("" if it sent audio).
+    /// For tests and logs.</summary>
+    public string LastAnswerText { get; private set; }
+    public string LastQuestionText { get; private set; }
+
+    /// <summary>Stops a Convai stream that is still arriving: nothing more of it plays here or goes to the room, and
+    /// the room is told it has ended (B pressed again, a scripted line, or Cancel).</summary>
+    void AbandonStream()
+    {
+        if (!streamLive) return;
+        streamLive = false;
+        streamId++;
+        if (streamParts > 0) Answered?.Invoke("", "", "", streamParts, true);
+    }
+
+    // Convai's stream in progress: which one, whether it's still arriving, parts sent, when the question was sent.
+    int streamId;
+    bool streamLive;
     int streamParts;
     double streamReleased;
     string streamQuestion;   // what this headset heard you ask, or "" (sent to the room with the first part)

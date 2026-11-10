@@ -112,18 +112,26 @@ public static class VincentVoiceSetup
             case 2:   // the first part, in his headset voice, after the thinking line
                 if (!playing || clip.name != VincentVoice.ClipName) return;
                 if (talker.LastReply != TestLine) { Finish(false, $"first part: \"{talker.LastReply}\""); return; }
+                if (clip.length < 1f) { Finish(false, $"first part: only {clip.length:F2} s of sound"); return; }
                 Debug.Log($"[VincentVoiceTest] part 1: {clip.length:F1} s");
                 Next();
                 break;
             case 3:   // then the second part
                 if (!playing || clip.name != VincentVoice.ClipName || talker.LastReply == TestLine) return;
                 if (talker.LastReply != TestLine + " " + TestLine2) { Finish(false, $"second part: \"{talker.LastReply}\""); return; }
+                if (clip.length < 1f) { Finish(false, $"second part: only {clip.length:F2} s of sound"); return; }
                 Debug.Log($"[VincentVoiceTest] part 2: {clip.length:F1} s");
                 Next();
                 break;
-            case 4:   // and then he's free again
+            case 4:   // and then he's free again; a stray later part (its answer cut off, or long over) is ignored
                 if (talker.IsBusy) return;
-                Finish(true, "thinking line, then both parts in his headset voice, then free");
+                talker.SayRemote("Player 2", "", "This part belongs to an answer that is over.", "", 2);
+                Next();
+                break;
+            case 5:
+                if (EditorApplication.timeSinceStartup - stepStarted < 1) return;
+                if (talker.IsBusy || talker.LastReply != TestLine + " " + TestLine2) { Finish(false, "a stray later part started an answer"); return; }
+                Finish(true, "thinking line, then both parts in his headset voice, then free; a stray part ignored");
                 break;
         }
     }

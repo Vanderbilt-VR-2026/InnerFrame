@@ -72,22 +72,24 @@ who asked.
   (on by default) turns it off; if it can't load, or hears nothing, the audio goes
   as before. It mishears some names ("Gogan" for Gauguin), which Convai's character
   understood anyway in our tests.
-- **Timing** (Editor on a Mac, 3 runs each):
+- **Timing** (Editor on a Mac, with real Convai; 3 runs for each older setup, 7 for the current one):
 
   | | Audio, no streaming | Audio, streamed | Text, streamed (now) |
   |---|---|---|---|
   | Thinking line | none | 0 s | 0 s |
-  | His first sentence | 5.4–7 s | 3.0–4.5 s | **2.0–2.3 s** |
+  | His first sentence | 5.4–7 s | 3.0–4.5 s | **2.0–3.2 s** |
 
   Each sentence's voice is made in 0.1–0.4 s, while the one before plays. Almost
-  all of the rest is Convai writing.
+  all of the rest is Convai writing, and it varies from run to run.
   The voice loads in the background when a Vincent starts (about 1 s on a Mac).
   Quest timing isn't measured yet; the Console says it:
   `[VanGogh] Convai (streamed): release->first words 2977 ms`.
 - **First run on a Quest:** the voice files are copied out of the APK once (about
   65 MB with the speech-to-text, to the app's own storage), because native code can't read inside the APK.
 - **If it fails** (a missing library or file), the Console says
-  `[VincentVoice] off: ...`, and he shows his words with no voice, as before.
+  `[VincentVoice] off: ...`, and Convai is asked for its own voice again, which only
+  the asker hears, as before. If loading never finishes, his answers give up waiting
+  after 60 s and do the same.
 - **The library settings** (which platform loads which file) are in their `.meta`
   files. After updating the libraries, run **Tools > InnerFrame > Van Gogh > Set Up
   Headset Voice Libraries**.
@@ -111,8 +113,10 @@ who asked.
   convai.com matter most: its language model, shorter answers, and features it
   doesn't need (narrative design, knowledge bank, long-term memory).
 - **The proxy isn't streamed:** with Use Convai off, he answers as before.
-- **The app is bigger:** about 19 MB for the voice, 44 MB for the speech-to-text and
-  27 MB for the Android libraries.
+- **The app is bigger:** about 72 MB in the APK (an estimate, not measured from a
+  build): Unity stores StreamingAssets uncompressed, so the voice (19 MB) and the
+  speech-to-text (43 MB) count in full, and the Android libraries (27 MB) compress
+  to about 9 MB.
 - **The API key ships in the APK.** Fine for team testing. For anything shared more
   widely, move the call to a server (the proxy, hosted online) so the key stays there.
 - **The scene sentence isn't sent.** The mirror scene's `SceneContext` isn't passed

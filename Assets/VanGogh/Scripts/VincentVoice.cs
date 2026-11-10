@@ -27,6 +27,7 @@ public static class VincentVoice
     const string ModelFile = "en_US-norman-medium.onnx";
     const string DataFolder = "espeak-ng-data";
     const int Threads = 2;          // the Quest's other cores render and run the game
+    const float LoadSeconds = 60f;  // Speak gives up waiting for a load after this long
     const string Version = "2";     // bump when any file below changes, so headsets copy them again
 
     // Every file the voice needs, relative to StreamingAssets/VincentVoice (Android copies exactly these).
@@ -92,7 +93,13 @@ public static class VincentVoice
     public static IEnumerator Speak(string text, Action<AudioClip> done)
     {
         Warm();
-        while (state == State.Loading) yield return null;
+        double waitFrom = Time.realtimeSinceStartupAsDouble;
+        while (state == State.Loading)
+        {
+            // Loading takes seconds; this long means its coroutine died without saying why (an unexpected exception).
+            if (Time.realtimeSinceStartupAsDouble - waitFrom > LoadSeconds) { Fail($"still loading after {LoadSeconds} s"); break; }
+            yield return null;
+        }
         string clean = Clean(text);
         if (state != State.Ready || clean.Length == 0) { done(null); yield break; }
 
@@ -133,13 +140,17 @@ public static class VincentVoice
         if (data.Length > 140)
         {
             string shortData = Path.Combine(Application.temporaryCachePath, "VincentVoice-" + Version, DataFolder);
-            foreach (var file in Files)
+            string error = SherpaFiles.Try(() =>
             {
-                if (!file.StartsWith(DataFolder + "/")) continue;
-                string to = Path.Combine(shortData, file.Substring(DataFolder.Length + 1));
-                Directory.CreateDirectory(Path.GetDirectoryName(to));
-                File.Copy(Path.Combine(dir, file), to, true);
-            }
+                foreach (var file in Files)
+                {
+                    if (!file.StartsWith(DataFolder + "/")) continue;
+                    string to = Path.Combine(shortData, file.Substring(DataFolder.Length + 1));
+                    Directory.CreateDirectory(Path.GetDirectoryName(to));
+                    File.Copy(Path.Combine(dir, file), to, true);
+                }
+            });
+            if (error != null) { Fail($"copying espeak-ng data to {shortData}: {error}"); yield break; }
             data = shortData;
         }
 

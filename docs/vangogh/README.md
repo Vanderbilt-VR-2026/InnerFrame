@@ -32,7 +32,7 @@ October 1888, text-to-speech), and his answer plays from the portrait.
     is not yet confirmed (see `docs/ASSETS.md`).
 - Why B and not A: A is already bound to XRI's Jump on the right hand.
 - **Captions:** `Scripts/VanGoghCaption.cs`, made by `SpeechToProxy`, in one of two styles, chosen by the `style` field
-  on `Resources/VG_Caption` (the asset tool sets **Box**; switch back to **Sign** with that one field).
+  on `Resources/VG_Caption` (in `Assets/Shared/UI/Resources/`; the asset tool sets **Box**; switch back to **Sign** with that one field).
 - **Box style** (the default, from Cici's concepts V1–V3, 2026-11-04; after the 11/03 playtest found the sign and the
   pill too easy to miss and VR text too small):
   - His words sit in a dark dialogue box low in your view: night blue at 88 % with a 4 mm chrome-yellow border, his
@@ -57,10 +57,10 @@ October 1888, text-to-speech), and his answer plays from the portrait.
     judge on the Quest whether that feels wrong.
   - Pages, timing and fades are the same rules as the sign's (below), at one size: a sentence that needs more than three
     lines splits at the comma nearest its middle.
-  - Code: `Scripts/UI/` (`VG_DialogueUI` and its parts `VG_FollowGroup`, `VG_DialogueBox`, `VG_Hint`, `VG_Paging`,
+  - Code: `Assets/Shared/UI/Scripts/` (`VG_DialogueUI` and its parts `VG_FollowGroup`, `VG_DialogueBox`, `VG_Hint`, `VG_Paging`,
     `VG_UI`, with `VG_DialogueSettings`). They know nothing about Vincent or the mirror; `VanGoghCaption` tells them
     what to show. See *Use the dialogue UI in another scene* below.
-  - Sprites: `VG_Box.png`, `VG_NameTab.png`, `VG_HintPlate.png` (9-slice, 64 px borders), `VG_Star.png`,
+  - Sprites (`Assets/Shared/UI/Art/`): `VG_Box.png`, `VG_NameTab.png`, `VG_HintPlate.png` (9-slice, 64 px borders), `VG_Star.png`,
     `VG_StarRing.png`, drawn by `Art/Source/VanGogh/make_box_sprites.py` (Pillow); the asset tool imports them (borders,
     mipmaps, max 1024). The key circle is the sign's `VG_Caption_Button.png`.
 - **Sign style** (2026-10-27, storybook style, from Cici's concept):
@@ -79,10 +79,10 @@ October 1888, text-to-speech), and his answer plays from the portrait.
     the frame, with the pill below them. Both turn to face your head and fade in and out over 0.2 s.
   - Sizes are world metres, named at the top of `VanGoghCaption`: the sign 1.00 m wide (its panel gives a 0.76 × 0.10 m
     text area), 2.8 cm capitals shrinking to 2.2 cm; a 6 cm pill. They are guesses until tried on a Quest.
-  - The text is uGUI Text in Libre Baskerville (`Art/Fonts`, OFL), laid out at a large font size and scaled down so it
+  - The text is uGUI Text in Libre Baskerville (`Assets/Shared/UI/Fonts`, OFL), laid out at a large font size and scaled down so it
     stays sharp. TextMesh Pro's Essential Resources aren't in the project, and importing them would be a shared change.
   - The parchment, pill and button sprites are drawn by `Art/Source/VanGogh/make_caption_sprites.py`. The asset tool
-    imports the baked sign and sets the sprites' 9-slice borders, and builds `Resources/VG_Caption`, which holds them
+    imports the baked sign and sets the sprites' 9-slice borders, and builds `Resources/VG_Caption` (in `Assets/Shared/UI/`), which holds them
     and the font.
 - Each question logs one line starting with `[VanGogh]` (times in ms, plus the proxy's
   own timings).
@@ -91,7 +91,7 @@ October 1888, text-to-speech), and his answer plays from the portrait.
 
 ## Use the dialogue UI in another scene
 
-The box and hint are one prefab, `Assets/VanGogh/Prefabs/VG_DialogueUI.prefab` (made by the asset tool), with no tie to
+The box and hint are one prefab, `Assets/Shared/UI/Prefabs/VG_DialogueUI.prefab` (made by the asset tool), with no tie to
 Vincent, the mirror or the Bedroom.
 
 1. Put the prefab in the scene (or `Instantiate` it), anywhere; it follows the main camera.

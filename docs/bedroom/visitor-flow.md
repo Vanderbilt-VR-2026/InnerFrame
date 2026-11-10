@@ -5,7 +5,8 @@ Written for #105. It describes what the room does on `main` today, in the order 
 since the Tripo room (that walkthrough waits for the room size, #144).
 
 1. **Enter.** From the Gallery, through The Bedroom's pedestal button. [V, `docs/starry-night/README.md`]
-2. **Look around.** Point at something you can pick up and a pale rim appears around it (#94); glass turns a milky cream instead. The
+2. **Look around.** Point at something you can pick up and a pale rim appears around it (#94), on glass too (the tumbler and bottles get a
+   depth-only pass under the rim, and under the held outline). The
    mirror has its own yellow outline and no rim. Grip takes it.
    Light things follow the hand at once; the chairs lag a little, which is how they feel heavy. [V, code; feel is [I]]
 3. **Vincent greets you,** about 2 s after you arrive. Ten seconds after his greeting ends (or as soon as he has answered a question) he explains, and asks you to take the mirror

@@ -46,7 +46,7 @@ namespace InnerFrame.StarryNight.EditorTools
         public static readonly string[] VincentClips = { "SittingIdle", "SittingTalking", "SitToStand", "BreathingIdle" };
         static string VincentClipPath(string clip) => $"{VincentDir}/VincentV2@{clip}.fbx";
         public const string VincentControllerPath = Prefabs + "/SN_Vincent.controller";
-        const string DialoguePrefab = "Assets/VanGogh/Prefabs/VG_DialogueUI.prefab";
+        const string DialoguePrefab = "Assets/Shared/UI/Prefabs/VG_DialogueUI.prefab";
         const string DialogueSettingsPath = "Assets/VanGogh/Prefabs/VG_Dialogue_StarryNight.asset";
         const float RayDistance = 2f;          // XRRigSettings.RayDistance (the Gallery's and the Bedroom's)
         const string TeleportLayer = "Teleport";

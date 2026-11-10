@@ -30,12 +30,23 @@ prefix="$3"
 # A short home for Piper: its espeak-ng phonemizer can't read its data from a path longer than about 160 characters.
 home="${HOME}/.cache/innerframe-piper"
 venv="${home}/venv"
+if (( ${#home} > 120 )); then
+  echo "${home} is too long a path for Piper's espeak-ng (about 160 characters with its data): set HOME shorter" >&2
+  exit 1
+fi
 mkdir -p "${home}/voices" "${out}"
+
+# Python 3: `python3` on macOS and Linux; on Windows (Git Bash) often only `python` or `py -3`.
+if command -v python3 >/dev/null && python3 -c 'import sys' 2>/dev/null; then system_py=(python3)
+elif command -v python >/dev/null && python -c 'import sys; sys.exit(sys.version_info < (3, 9))' 2>/dev/null; then system_py=(python)
+elif command -v py >/dev/null; then system_py=(py -3)
+else echo "Python 3.9 or later is needed (python.org)" >&2; exit 1
+fi
 
 if [[ -x "${venv}/bin/python" ]]; then py="${venv}/bin/python"; else py="${venv}/Scripts/python.exe"; fi
 if ! "${py}" -c "import piper" 2>/dev/null || [[ "$("${py}" -m pip show piper-tts 2>/dev/null | sed -n 's/^Version: //p')" != "${PIPER_VERSION}" ]]; then
   echo "Installing Piper ${PIPER_VERSION} into ${venv}..."
-  python3 -m venv "${venv}"
+  "${system_py[@]}" -m venv "${venv}"
   if [[ -x "${venv}/bin/python" ]]; then py="${venv}/bin/python"; else py="${venv}/Scripts/python.exe"; fi
   "${py}" -m pip install --quiet "piper-tts==${PIPER_VERSION}"
 fi
@@ -66,7 +77,7 @@ if [[ ! -d "${data}" ]]; then
 fi
 
 "${py}" -I - "${home}/voices/${VOICE}.onnx" "${data}" "${lines}" "${out}" "${prefix}" <<'EOF'
-import sys, wave
+import os, sys, wave
 from piper import PiperVoice
 
 model, data, lines, out, prefix = sys.argv[1:]
@@ -78,7 +89,17 @@ with open(lines, encoding="utf-8") as f:
             continue
         line_id, _, text = row.partition(" ")
         name = f"{prefix}{line_id}.wav"
-        with wave.open(f"{out}/{name}", "wb") as w:
-            voice.synthesize_wav(text.strip(), w)
+        part = f"{out}/{name}.part"   # the real file is replaced only once its new version is whole
+        try:
+            with wave.open(part, "wb") as w:
+                voice.synthesize_wav(text.strip(), w)
+            with wave.open(part, "rb") as r:
+                if r.getnframes() == 0:
+                    raise RuntimeError("Piper made no sound (see the error above)")
+        except Exception as e:
+            if os.path.exists(part):
+                os.remove(part)
+            sys.exit(f"{name}: {e}; the existing file is left as it was")
+        os.replace(part, f"{out}/{name}")
         print(name)
 EOF

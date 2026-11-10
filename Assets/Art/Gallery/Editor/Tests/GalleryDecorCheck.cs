@@ -74,8 +74,24 @@ namespace InnerFrame.Gallery.EditorTools.Tests
                     $"{PathOf(l.transform, decor.transform)}: a warm realtime point light without shadows ({l.color}, {l.intensity}, range {l.range})");
             int sceneLights = roots.SelectMany(r => r.GetComponentsInChildren<Light>(true)).Count(l => l.type != LightType.Directional);
             Check(sceneLights <= 4, $"{sceneLights} point/spot lights in the scene, within Mobile_RPAsset's 4 per object");
-            var lantern = AssetDatabase.LoadAssetAtPath<Material>("Assets/Art/Gallery/Props/GP_Lantern.mat");
-            Check(lantern != null && lantern.IsKeywordEnabled("_EMISSION") && lantern.GetTexture("_EmissionMap") != null, "the lantern material glows (emission on, with its map)");
+            // each lantern as SN_Lantern: see-through glass, a flame on the candle and the light just above it, inside the glass
+            var glass = AssetDatabase.LoadAssetAtPath<Material>(G.GlassMat);
+            Check(glass != null && glass.GetFloat("_Surface") == 1f && glass.GetColor("_BaseColor").a < 0.5f && glass.renderQueue == 3000,
+                $"{G.GlassMat} is transparent glass (alpha {(glass ? glass.GetColor("_BaseColor").a : -1)})");
+            foreach (var (name, _, _) in G.Lanterns)
+            {
+                var g = decor.transform.Find(name);
+                var panes = g.GetComponentsInChildren<MeshRenderer>(true).Where(r => r.name == G.GlassPart).ToList();
+                var flame = g.Find("Flame")?.GetComponent<MeshRenderer>();
+                var lamp = g.Find("Lamp");
+                var frame = g.GetComponentsInChildren<MeshRenderer>(true).First(r => r.name == "GP_Lantern");
+                Bounds inside = panes.Count == 1 ? panes[0].bounds : new Bounds();
+                Check(panes.Count == 1 && panes[0].sharedMaterial == glass && frame.sharedMaterial != glass,
+                    $"{name}: its panes draw {G.GlassMat}, its frame does not");
+                Check(flame != null && flame.sharedMaterial != null && flame.sharedMaterial.name == "SN_Flame" && inside.Contains(flame.bounds.center),
+                    $"{name}: a flame (SN_Flame) inside the glass ({(flame ? flame.bounds.center.ToString("F3") : "none")})");
+                Check(lamp != null && inside.Contains(lamp.position), $"{name}: its light is inside the glass");
+            }
 
             // inside the room and on the floor
             foreach (var r in decor.GetComponentsInChildren<Renderer>(true))
@@ -148,6 +164,7 @@ namespace InnerFrame.Gallery.EditorTools.Tests
                 ("3_starrynight", new Vector3(1.5f, EyeY, -3.2f), new Vector3(-4.9f, 1.8f, -3.6f)),
                 ("4_back", new Vector3(0f, EyeY, -5.5f), new Vector3(0f, 2.5f, 6f)),
                 ("5_statue", new Vector3(1.6f, EyeY, -2.2f), new Vector3(4.1f, 1.6f, -3.6f)),
+                ("6_lantern", new Vector3(2.05f, 3.0f, -0.95f), new Vector3(2.4f, 3.15f, -1.5f)),
             };
             var rt = new RenderTexture(1280, 720, 24);
             cam.targetTexture = rt;

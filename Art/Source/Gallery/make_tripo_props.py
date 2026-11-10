@@ -11,9 +11,12 @@ since Tripo made it 0.42 deep for 0.93 wide), collapse-decimate it to its triang
 centre (the frame corner's at its outer corner), and write
     Assets/Art/Gallery/Props/GP_<Name>.fbx            (mesh only, no embedded textures or materials)
     Assets/Art/Gallery/Props/GP_<Name>_BaseColor.jpg  (the base colour, downsized)
-    Assets/Art/Gallery/Props/GP_Lantern_Emission.jpg  (the lantern only: its panes lit, its brass black; see GLOW)
 and tripo_props.json here (what was measured). The materials, prefabs and placement in Gallery.unity are made in Unity by
 Assets/Art/Gallery/Editor/GalleryDecorSetup.cs.
+
+The lantern is split in two objects in its FBX, as SN_Lantern is: GP_Lantern (the brass frame, the cap and the candle
+inside) and GP_Lantern_Glass (the six amber panes), so Unity can give the panes a see-through material. The candle's top
+is measured into tripo_props.json ("candle_top_m", below the ring's top), where Unity puts the flame and the light.
 
 Axes: the FBX export matches build_gallery.py (forward -Z, up Y), so a prop's front (-Y here) is its +Z (forward) in Unity.
 """
@@ -41,23 +44,39 @@ PROPS = {
 }
 
 
-# The lantern's emission map: its base colour where the panes are, black on the brass. The texture's green channel splits
-# them (brass 0.2-0.45, amber panes 0.5-0.7, measured on GP_Lantern_BaseColor.jpg); the mask ramps over GLOW's range.
-GLOW = {"Lantern": (0.47, 0.57)}
+# The lantern's panes, told from its brass by the texture under each face: the green channel is 0.2-0.45 on the brass
+# and 0.5-0.7 on the amber panes (measured on GP_Lantern_BaseColor.jpg). Faces above GLASS_G go to GP_Lantern_Glass.
+GLASS = {"Lantern": 0.52}
 
 
-def glow(base, name, scene):
+def split_glass(obj, name, img):
+    import bmesh
     import numpy as np
-    lo, hi = GLOW[name]
-    w, h = base.size
-    px = np.array(base.pixels[:], dtype=np.float32).reshape(-1, 4)
-    t = np.clip((px[:, 1] - lo) / (hi - lo), 0.0, 1.0)
-    mask = t * t * (3 - 2 * t)                       # smoothstep
-    out = px.copy()
-    out[:, :3] *= mask[:, None]
-    img = bpy.data.images.new(f"GP_{name}_Emission", w, h)
-    img.pixels = out.ravel()
-    img.save_render(os.path.join(OUT, f"GP_{name}_Emission.jpg"), scene=scene)
+    w, h = img.size
+    px = np.array(img.pixels[:], dtype=np.float32).reshape(h, w, 4)
+    uv = obj.data.uv_layers.active.data
+    glass = []
+    for poly in obj.data.polygons:
+        u = sum(uv[i].uv[0] for i in poly.loop_indices) / poly.loop_total
+        v = sum(uv[i].uv[1] for i in poly.loop_indices) / poly.loop_total
+        g = px[min(h - 1, max(0, int(v * h))), min(w - 1, max(0, int(u * w))), 1]
+        glass.append(bool(g > GLASS[name]))
+    bpy.ops.object.select_all(action="DESELECT")
+    obj.select_set(True)
+    bpy.context.view_layer.objects.active = obj
+    bpy.ops.object.mode_set(mode="EDIT")
+    bm = bmesh.from_edit_mesh(obj.data)
+    bm.faces.ensure_lookup_table()
+    for f in bm.faces:
+        f.select = glass[f.index]
+    bmesh.update_edit_mesh(obj.data)
+    bpy.ops.mesh.separate(type="SELECTED")
+    bpy.ops.object.mode_set(mode="OBJECT")
+    pane = next(o for o in bpy.context.scene.objects if o.type == "MESH" and o != obj)
+    pane.name = pane.data.name = f"GP_{name}_Glass"
+    # the candle: the highest point near the axis below the cap (the cap starts 0.27 m below the ring's top)
+    near = [vt.co.z for vt in obj.data.vertices if (vt.co.x ** 2 + vt.co.y ** 2) ** 0.5 < 0.04 and -0.55 < vt.co.z < -0.27]
+    return pane, (round(-max(near), 3) if near else None)
 
 
 def clear():
@@ -145,8 +164,7 @@ def build(name, src, height, depth, budget, tex_size, origin):
     scene.render.image_settings.file_format = "JPEG"
     scene.render.image_settings.quality = 90
     out_img.save_render(tex_path, scene=scene)
-    if name in GLOW:
-        glow(out_img, name, scene)
+    pane, candle = split_glass(obj, name, img) if name in GLASS else (None, None)
 
     for slot in obj.material_slots:   # the FBX carries one material name only; Unity assigns its own
         slot.material.name = f"GP_{name}"
@@ -157,11 +175,15 @@ def build(name, src, height, depth, budget, tex_size, origin):
         bake_space_transform=True, path_mode="STRIP", embed_textures=False, mesh_smooth_type="FACE",
     )
     (x0, y0, z0), (x1, y1, z1) = bounds(obj)
-    return {
-        "source": src, "triangles_raw": raw_tris, "triangles": tris(obj), "budget": budget,
+    report = {
+        "source": src, "triangles_raw": raw_tris, "triangles": tris(obj) + (tris(pane) if pane else 0), "budget": budget,
         "size_m_xyz": [round(x1 - x0, 3), round(y1 - y0, 3), round(z1 - z0, 3)],
         "texture": f"{img.size[0]} -> {min(img.size[0], tex_size)}", "origin": origin,
     }
+    if pane:
+        report["glass_triangles"] = tris(pane)
+        report["candle_top_m"] = candle
+    return report
 
 
 os.makedirs(OUT, exist_ok=True)

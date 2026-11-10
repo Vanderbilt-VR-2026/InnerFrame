@@ -49,7 +49,9 @@
       0.601
     ],
     "texture": "2048 -> 1024",
-    "origin": "top"
+    "origin": "top",
+    "glass_triangles": 63,
+    "candle_top_m": 0.417
   },
   "FrameCorner": {
     "source": "gallery-frame-corner.glb",

@@ -5,6 +5,7 @@ using System.Text;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
 
@@ -15,12 +16,17 @@ namespace InnerFrame.Gallery.EditorTools
     /// Art/Source/Gallery/make_tripo_props.py (Assets/Art/Gallery/Props/GP_*.fbx and GP_*_BaseColor.jpg).
     /// What it writes, each only when it differs:
     ///   - the props' import settings (no materials or animation from the FBX; textures with mipmaps, ASTC 6x6 on Android);
-    ///   - GP_&lt;Name&gt;.mat: URP Lit with the base colour, GPU instancing on; leaves, petals and panes render both faces;
-    ///     the lantern's panes glow (GP_Lantern_Emission.jpg, warm);
+    ///   - GP_&lt;Name&gt;.mat: URP Lit with the base colour, GPU instancing on; leaves and petals render both faces;
+    ///     GP_LanternGlass.mat: the lantern's panes (GP_Lantern_Glass in its FBX), see-through amber glass: URP Unlit,
+    ///     alpha-blended, both faces. Unlit, unlike SN_LanternGlass, because the lamp sits a few cm from the panes and would
+    ///     light them white (about 100x what it gives a wall), hiding the flame. Every property is written on every run with
+    ///     the values URP's own validation leaves, and a change is reported only when the saved file differs;
     ///   - GalleryDecor.prefab: every prop at its spot below. Plinths and lantern chains are Unity's cube and cylinder with
     ///     Gallery.fbx's own Mat_Bench and Mat_Metal. Only the plinths and plant pots have colliders (boxes), so nobody
-    ///     walks through them; the frame corners and lanterns have none. Each lantern holds a warm realtime point light
-    ///     without shadows (Mobile_RPAsset: per-pixel additional lights, at most 4 per object, no additional-light shadows);
+    ///     walks through them; the frame corners and lanterns have none. Each lantern holds a candle flame and a warm realtime
+    ///     point light without shadows, as SN_Lantern does: The Starry Night's own flame (SN_FlameCross mesh, SN_Flame
+    ///     material, by reference) on the Tripo candle's wick, and the light just above it (Mobile_RPAsset: per-pixel
+    ///     additional lights, at most 4 per object, no additional-light shadows);
     ///   - Gallery.unity: exactly one GalleryDecor instance at the origin, as the root just before SN_GalleryEntrance (whose
     ///     own check wants it last); the scene is saved only if something changed.
     /// Running it twice changes nothing. Batch: -executeMethod InnerFrame.Gallery.EditorTools.GalleryDecorSetup.RunBatch -quit
@@ -41,7 +47,7 @@ namespace InnerFrame.Gallery.EditorTools
         static readonly (string name, int tex, float smooth, bool twoSided)[] Props =
         {
             ("Statue", 2048, 0.35f, false), ("Plant", 1024, 0.15f, true), ("Vase", 1024, 0.25f, true),
-            ("Lantern", 1024, 0.4f, true), ("FrameCorner", 1024, 0.3f, false),
+            ("Lantern", 1024, 0.4f, false), ("FrameCorner", 1024, 0.3f, false),
         };
 
         // ------------------------------------------------------------------------------------------- the layout
@@ -50,10 +56,16 @@ namespace InnerFrame.Gallery.EditorTools
         public const float CeilingY = 6f, LanternTopY = 3.5f, ChainRadius = 0.012f;
         static readonly Vector3 PotBox = new Vector3(0.6f, 0.55f, 0.6f);   // a plant's collider, round its pot
 
-        // The lanterns' light: about 2700 K (a candle-warm lamp), from the middle of the lantern's body
+        // The lanterns' flame and light. CandleTop: the Tripo candle's top below the ring's top (tripo_props.json,
+        // "candle_top_m"). The flame is The Starry Night's (0.045 x 0.09 m, centred), scaled for this bigger lantern and
+        // standing on the wick; the light sits just above it, as in SN_Setup. Light: about 2700 K, a candle-warm lamp.
+        public const float CandleTop = 0.417f, FlameScale = 1.3f, FlameH = 0.09f * FlameScale;
+        public static float FlameY => LanternTopY - CandleTop + FlameH * 0.45f;   // its bottom just into the wick
         public static readonly Color LampColour = new Color(1f, 0.70f, 0.42f);
-        public const float LampIntensity = 4f, LampRange = 9f, LampDrop = 0.33f;   // drop: below the ring's top
-        public static readonly Color GlowColour = new Color(1f, 0.62f, 0.3f) * 1.1f;   // HDR: amber panes, a little brighter than lit
+        public const float LampIntensity = 4f, LampRange = 9f;
+        public static readonly Color GlassColour = new Color(1f, 0.9f, 0.75f, 0.3f);   // over the amber texture: tinted, see-through
+        const string FlameMesh = "Assets/StarryNight/Meshes/SN_FlameCross.asset";
+        const string FlameMat = "Assets/StarryNight/Materials/SN_Flame.mat";
 
         // spot (floor), yaw (the prop's front, +Z, turned this much about Y)
         public static readonly (string name, Vector3 at, float yaw)[] Statues = { ("Statue_West", new Vector3(4.1f, 0f, -3.6f), -90f) };
@@ -84,8 +96,8 @@ namespace InnerFrame.Gallery.EditorTools
         static string Fbx(string n) => $"{Folder}/GP_{n}.fbx";
         static string Tex(string n) => $"{Folder}/GP_{n}_BaseColor.jpg";
         static string Mat(string n) => $"{Folder}/GP_{n}.mat";
-        static string Emission(string n) => $"{Folder}/GP_{n}_Emission.jpg";
-        static readonly string[] Glowing = { "Lantern" };
+        public const string GlassMat = Folder + "/GP_LanternGlass.mat";
+        public const string GlassPart = "GP_Lantern_Glass";
 
         [MenuItem("Tools/InnerFrame/Gallery/Add Decor")]
         public static void Run()
@@ -114,8 +126,8 @@ namespace InnerFrame.Gallery.EditorTools
         {
             var changes = new List<string>();
             foreach (var p in Props) { ImportModel(p.name, changes); ImportTexture(Tex(p.name), p.tex, changes); }
-            foreach (var n in Glowing) ImportTexture(Emission(n), Props.First(p => p.name == n).tex, changes);
-            var mats = Props.ToDictionary(p => p.name, p => MakeMaterial(p.name, p.smooth, p.twoSided, changes));
+            var mats = Props.ToDictionary(p => p.name, p => MakeMaterial(Mat(p.name), Tex(p.name), Color.white, p.smooth, p.twoSided, false, changes));
+            mats["LanternGlass"] = MakeGlass(GlassMat, Tex("Lantern"), GlassColour, changes);
             var prefab = MakePrefab(mats, changes);
             var scene = EditorSceneManager.OpenScene(GalleryPath, OpenSceneMode.Single);
             PlaceInGallery(scene, prefab, changes);
@@ -157,47 +169,95 @@ namespace InnerFrame.Gallery.EditorTools
             if (dirty) { ti.SaveAndReimport(); changes.Add($"{path}: import settings"); }
         }
 
-        static Material MakeMaterial(string n, float smooth, bool twoSided, List<string> changes)
+        /// <summary>URP Lit with a base map, no emission; opaque, or transparent (premultiplied) as SN_Setup's Lit does.
+        /// Everything is set every run, exactly as URP's own material validation leaves it, so the file only changes when
+        /// a value does.</summary>
+        static Material MakeMaterial(string path, string texPath, Color colour, float smooth, bool twoSided, bool transparent, List<string> changes)
         {
             var shader = Shader.Find("Universal Render Pipeline/Lit") ?? throw new Exception($"{Tag} URP Lit shader not found");
-            var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(Tex(n));
-            var mat = AssetDatabase.LoadAssetAtPath<Material>(Mat(n));
-            bool created = mat == null;
-            if (created) { mat = new Material(shader) { name = $"GP_{n}" }; AssetDatabase.CreateAsset(mat, Mat(n)); }
-            var why = new List<string>();
-            if (mat.shader != shader) { mat.shader = shader; why.Add("shader"); }
-            if (mat.GetTexture("_BaseMap") != tex) { mat.SetTexture("_BaseMap", tex); mat.mainTexture = tex; why.Add("base map"); }
-            if (mat.GetColor("_BaseColor") != Color.white) { mat.SetColor("_BaseColor", Color.white); why.Add("colour"); }
-            if (!Mathf.Approximately(mat.GetFloat("_Smoothness"), smooth)) { mat.SetFloat("_Smoothness", smooth); why.Add("smoothness"); }
-            if (!Mathf.Approximately(mat.GetFloat("_Metallic"), 0f)) { mat.SetFloat("_Metallic", 0f); why.Add("metallic"); }
-            float cull = twoSided ? 0f : 2f;   // UnityEngine.Rendering.CullMode: Off = both faces, Back = front only
-            if (!Mathf.Approximately(mat.GetFloat("_Cull"), cull)) { mat.SetFloat("_Cull", cull); why.Add("render face"); }
-            if (mat.doubleSidedGI != twoSided) { mat.doubleSidedGI = twoSided; why.Add("double-sided GI"); }
-            if (!mat.enableInstancing) { mat.enableInstancing = true; why.Add("instancing"); }
-            if (Glowing.Contains(n))
+            var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(texPath);
+            var m = AssetDatabase.LoadAssetAtPath<Material>(path);
+            bool created = m == null;
+            if (created) { m = new Material(shader) { name = System.IO.Path.GetFileNameWithoutExtension(path) }; AssetDatabase.CreateAsset(m, path); }
+            string before = created ? "" : System.IO.File.ReadAllText(path);
+            if (m.shader != shader) m.shader = shader;
+            m.SetTexture("_BaseMap", tex); m.SetTexture("_MainTex", tex);   // URP fills _MainTex from _BaseMap on reload; set both
+            m.SetColor("_BaseColor", colour); m.SetColor("_Color", colour);
+            m.SetFloat("_Smoothness", smooth);
+            m.SetFloat("_Metallic", 0f);
+            m.SetFloat("_EmissionEnabled", 0f); m.DisableKeyword("_EMISSION");
+            m.SetColor("_EmissionColor", Color.black); m.SetTexture("_EmissionMap", null);
+            m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.EmissiveIsBlack;
+            m.SetFloat("_AlphaClip", 0f); m.DisableKeyword("_ALPHATEST_ON");
+            m.SetFloat("_Surface", transparent ? 1f : 0f);
+            m.SetFloat("_Blend", 0f);
+            bool both = twoSided || transparent;
+            m.SetFloat("_Cull", (float)(both ? CullMode.Off : CullMode.Back));
+            m.doubleSidedGI = both;
+            m.SetFloat("_BlendModePreserveSpecular", 1f);
+            if (transparent)
             {
-                var em = AssetDatabase.LoadAssetAtPath<Texture2D>(Emission(n));
-                if (mat.GetTexture("_EmissionMap") != em) { mat.SetTexture("_EmissionMap", em); why.Add("emission map"); }
-                if (mat.GetColor("_EmissionColor") != GlowColour) { mat.SetColor("_EmissionColor", GlowColour); why.Add("emission colour"); }
-                // Read from the saved file: in the editor, reading a property can clear this keyword on the loaded copy
-                // (seen in 6000.3.23f1), so it is set again before every save below.
-                if (!System.IO.File.ReadAllText(Mat(n)).Contains("- _EMISSION")) why.Add("emission on");
-                mat.SetKeyword(new UnityEngine.Rendering.LocalKeyword(shader, "_EMISSION"), true);
-                if (mat.globalIlluminationFlags != MaterialGlobalIlluminationFlags.None)
-                { mat.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None; why.Add("no baked emission"); }
+                m.EnableKeyword("_ALPHAPREMULTIPLY_ON");
+                m.SetOverrideTag("RenderType", "Transparent");
+                m.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                m.SetFloat("_SrcBlend", (float)BlendMode.One); m.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
+                m.SetFloat("_SrcBlendAlpha", (float)BlendMode.One); m.SetFloat("_DstBlendAlpha", (float)BlendMode.OneMinusSrcAlpha);
+                m.SetFloat("_ZWrite", 0f);
+                m.renderQueue = (int)RenderQueue.Transparent;
             }
-            if (created || why.Count > 0)
+            else
             {
-                EditorUtility.SetDirty(mat);
-                AssetDatabase.SaveAssetIfDirty(mat);   // now: a later scene load can drop an unsaved keyword
-                changes.Add($"{Mat(n)}: {(created ? "created" : string.Join(", ", why))}");
+                m.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+                m.SetOverrideTag("RenderType", "Opaque");
+                m.DisableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                m.SetFloat("_SrcBlend", (float)BlendMode.One); m.SetFloat("_DstBlend", (float)BlendMode.Zero);
+                m.SetFloat("_SrcBlendAlpha", (float)BlendMode.One); m.SetFloat("_DstBlendAlpha", (float)BlendMode.Zero);
+                m.SetFloat("_ZWrite", 1f);
+                m.renderQueue = (int)RenderQueue.Geometry;
             }
-            return mat;
+            m.SetShaderPassEnabled("MotionVectors", false);
+            m.enableInstancing = true;
+            EditorUtility.SetDirty(m);
+            AssetDatabase.SaveAssetIfDirty(m);
+            if (created || System.IO.File.ReadAllText(path) != before) changes.Add($"{path}: {(created ? "created" : "updated")}");
+            return m;
+        }
+
+        /// <summary>URP Unlit, transparent (alpha blend), both faces: the lantern's panes. Set in full every run, as above.</summary>
+        static Material MakeGlass(string path, string texPath, Color colour, List<string> changes)
+        {
+            var shader = Shader.Find("Universal Render Pipeline/Unlit") ?? throw new Exception($"{Tag} URP Unlit shader not found");
+            var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(texPath);
+            var m = AssetDatabase.LoadAssetAtPath<Material>(path);
+            bool created = m == null;
+            if (created) { m = new Material(shader) { name = System.IO.Path.GetFileNameWithoutExtension(path) }; AssetDatabase.CreateAsset(m, path); }
+            string before = created ? "" : System.IO.File.ReadAllText(path);
+            if (m.shader != shader) m.shader = shader;
+            m.SetTexture("_BaseMap", tex); m.SetTexture("_MainTex", tex);
+            m.SetColor("_BaseColor", colour); m.SetColor("_Color", colour);
+            m.SetFloat("_AlphaClip", 0f); m.DisableKeyword("_ALPHATEST_ON");
+            m.SetFloat("_Surface", 1f);
+            m.SetFloat("_Blend", 0f);
+            m.SetFloat("_Cull", (float)CullMode.Off);
+            m.doubleSidedGI = true;
+            m.SetOverrideTag("RenderType", "Transparent");
+            m.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            m.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+            m.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha); m.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
+            m.SetFloat("_SrcBlendAlpha", (float)BlendMode.One); m.SetFloat("_DstBlendAlpha", (float)BlendMode.OneMinusSrcAlpha);
+            m.SetFloat("_ZWrite", 0f);
+            m.renderQueue = (int)RenderQueue.Transparent;
+            m.SetShaderPassEnabled("MotionVectors", false);
+            m.enableInstancing = true;
+            EditorUtility.SetDirty(m);
+            AssetDatabase.SaveAssetIfDirty(m);
+            if (created || System.IO.File.ReadAllText(path) != before) changes.Add($"{path}: {(created ? "created" : "updated")}");
+            return m;
         }
 
         // ------------------------------------------------------------------------------------------- the prefab
 
-        static GameObject Model(string n, Material mat, Transform parent, string name, Vector3 pos, Quaternion rot, Vector3 scale)
+        static GameObject Model(string n, Material mat, Transform parent, string name, Vector3 pos, Quaternion rot, Vector3 scale, Material glass = null)
         {
             var fbx = AssetDatabase.LoadAssetAtPath<GameObject>(Fbx(n));
             var go = (GameObject)PrefabUtility.InstantiatePrefab(fbx);
@@ -205,7 +265,7 @@ namespace InnerFrame.Gallery.EditorTools
             go.transform.SetParent(parent, false);
             go.transform.SetLocalPositionAndRotation(pos, rot);
             go.transform.localScale = scale;
-            foreach (var r in go.GetComponentsInChildren<MeshRenderer>(true)) r.sharedMaterial = mat;
+            foreach (var r in go.GetComponentsInChildren<MeshRenderer>(true)) r.sharedMaterial = glass != null && r.name == GlassPart ? glass : mat;
             return go;
         }
 
@@ -233,6 +293,8 @@ namespace InnerFrame.Gallery.EditorTools
         {
             var bench = AssetDatabase.LoadAssetAtPath<Material>(BenchMat) ?? throw new Exception($"{Tag} {BenchMat} missing");
             var metal = AssetDatabase.LoadAssetAtPath<Material>(MetalMat) ?? throw new Exception($"{Tag} {MetalMat} missing");
+            var flameMesh = AssetDatabase.LoadAssetAtPath<Mesh>(FlameMesh) ?? throw new Exception($"{Tag} {FlameMesh} missing");
+            var flameMat = AssetDatabase.LoadAssetAtPath<Material>(FlameMat) ?? throw new Exception($"{Tag} {FlameMat} missing");
             var root = new GameObject(InstanceName).transform;
             var one = Vector3.one;
 
@@ -260,10 +322,19 @@ namespace InnerFrame.Gallery.EditorTools
                 var g = Group(root, name, at, yaw).transform;
                 float chain = CeilingY - LanternTopY;   // Unity's cylinder is 2 m tall, 1 m across
                 Primitive("Cylinder.fbx", metal, g, "Chain", new Vector3(0f, LanternTopY + chain / 2, 0f), new Vector3(ChainRadius * 2, chain / 2, ChainRadius * 2), false);
-                Model("Lantern", mats["Lantern"], g, "GP_Lantern", new Vector3(0f, LanternTopY, 0f), Quaternion.identity, one);
+                Model("Lantern", mats["Lantern"], g, "GP_Lantern", new Vector3(0f, LanternTopY, 0f), Quaternion.identity, one, mats["LanternGlass"]);
+                var flame = new GameObject("Flame");
+                flame.transform.SetParent(g, false);
+                flame.transform.localPosition = new Vector3(0f, FlameY, 0f);
+                flame.transform.localScale = Vector3.one * FlameScale;
+                flame.AddComponent<MeshFilter>().sharedMesh = flameMesh;
+                var fr = flame.AddComponent<MeshRenderer>();
+                fr.sharedMaterial = flameMat;
+                fr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                fr.receiveShadows = false;
                 var lamp = new GameObject("Lamp");
                 lamp.transform.SetParent(g, false);
-                lamp.transform.localPosition = new Vector3(0f, LanternTopY - LampDrop, 0f);
+                lamp.transform.localPosition = new Vector3(0f, FlameY + 0.01f, 0f);
                 var light = lamp.AddComponent<Light>();
                 light.type = LightType.Point;
                 light.color = LampColour;

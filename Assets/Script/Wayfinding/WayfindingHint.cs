@@ -5,18 +5,20 @@ using UnityEngine.UI;
 /// A hint plate for finding your way (#163), in the same look as the dialogue's hint: VG_Hint (star, title, one line
 /// with a button in a circle) on its own small world-space canvas, sized in degrees for a given viewing distance, so it
 /// reads like the other hints wherever it hangs. The caller places it (Root) and says what to show; it fades in and
-/// out with Visible. The key "≡" is drawn as the Menu button's three bars (the font has no such glyph).
+/// out with Visible. Controller buttons show as their icons (MenuLook.DrawIcon): MenuKey as the Menu button's bars,
+/// GripKey as the grip button. Any other key shows as its letter, as VG_Hint draws it.
 /// </summary>
 public class WayfindingHint : MonoBehaviour
 {
-    public const string MenuKey = "≡";
+    public const string MenuKey = "≡", GripKey = "grip";
     const float FadeSeconds = 0.25f;
 
     VG_Hint hint;
     RectTransform hintRect, plate;
     CanvasGroup group;
     Material onTop;
-    GameObject glyph;
+    GameObject icon;
+    string iconKey;
     Transform key;
     Text letter;
 
@@ -73,21 +75,22 @@ public class WayfindingHint : MonoBehaviour
         letter = key != null ? key.Find("Letter")?.GetComponent<Text>() : null;
     }
 
-    /// <summary>`title` (empty: none) and one line: `line`, then `buttonKey` in a circle (MenuKey: the Menu button's
-    /// bars), then `rest`. Centred on Root.</summary>
+    /// <summary>`title` (empty: none) and one line: `line`, then `buttonKey` in a circle (MenuKey or GripKey: that
+    /// button's icon), then `rest`. Centred on Root.</summary>
     public void Show(string title, string line, string buttonKey = null, string rest = null)
     {
         Shown = $"{title} | {line}{(buttonKey != null ? $" ({buttonKey}) " : "")}{rest}";
-        bool menu = buttonKey == MenuKey;
-        hint.Show(title, line, menu ? " " : buttonKey, rest);
-        if (menu && glyph == null && key != null)
+        bool drawn = buttonKey == MenuKey || buttonKey == GripKey;
+        hint.Show(title, line, drawn ? " " : buttonKey, rest);
+        if (icon != null && iconKey != buttonKey) { Kill(icon); icon = null; }
+        if (drawn && icon == null && key != null)
         {
-            MenuLook.MenuGlyph(key, Vector2.zero, 0.42f * ((RectTransform)key).sizeDelta.x / VG_UI.UnitsPerMetre, MenuLook.KeyLetter);
-            glyph = key.Find("Menu Glyph").gameObject;
-            if (onTop != null) foreach (var image in glyph.GetComponentsInChildren<Image>()) image.material = onTop;
+            float size = 0.82f * ((RectTransform)key).sizeDelta.x / VG_UI.UnitsPerMetre;
+            icon = MenuLook.DrawIcon(key, buttonKey == MenuKey ? MenuLook.Icon.Menu : MenuLook.Icon.Grip, Vector2.zero, size, MenuLook.KeyLetter);
+            iconKey = buttonKey;
+            if (onTop != null) foreach (var image in icon.GetComponentsInChildren<Image>(true)) image.material = onTop;
         }
-        if (glyph != null) glyph.SetActive(menu);
-        if (letter != null) letter.enabled = !menu;
+        if (letter != null) letter.enabled = !drawn;
         hintRect.anchoredPosition = -plate.sizeDelta / 2f;   // VG_Hint hangs from its bottom-left corner; centre it
     }
 

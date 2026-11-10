@@ -58,7 +58,8 @@ public static class WayfindingCheck
             string title = PaintingNames.Title(p.Target);
             Check(title != p.Target, $"{p.Target}: the hint names the painting ('{title}'), not the scene");
             Check(p.transform.Find("Entrance Glow") != null, $"{p.Target}: the box glows");
-            Check(p.Hint != null && p.Hint.Shown.Contains(PaintingEntrancePrompt.Line) && p.Hint.Shown.StartsWith(title),
+            Check(p.Hint != null && p.Hint.Shown.Contains(PaintingEntrancePrompt.Rest) && p.Hint.Shown.StartsWith(title)
+                && p.Hint.transform.Find("Layout/Hint/Key/Grip Icon") != null,
                 $"{p.Target}: hint '{(p.Hint != null ? p.Hint.Shown : "none")}'");
             var box = p.GetComponent<Collider>().bounds;
             Check(p.Hint != null && p.Hint.transform.position.y > box.max.y && Vector2.Distance(Flat(p.Hint.transform.position), Flat(box.center)) < 0.01f,
@@ -92,7 +93,7 @@ public static class WayfindingCheck
         if (arrival != null)
         {
             arrival.Show("You're inside The Bedroom", ArrivalHint.HeadsetLine, WayfindingHint.MenuKey, ArrivalHint.HeadsetRest);
-            Check(arrival.transform.Find("Layout/Hint/Key/Menu Glyph") != null, "the arrival hint draws the Menu button's bars");
+            Check(arrival.transform.Find("Layout/Hint/Key/Menu Glyph") != null, "the arrival hint draws the Menu button's icon");
             var follow = arrival.gameObject.AddComponent<VG_FollowGroup>();
             follow.settings = arrival.Settings;
             arrival.Settings.belowGaze = 4f;

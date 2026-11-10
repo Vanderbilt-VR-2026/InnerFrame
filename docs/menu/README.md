@@ -56,7 +56,7 @@ Code: `Assets/Script/Wayfinding/`.
 - **In the Gallery, every way into a painting** (each `SceneChangeButton`, the
   invisible box on a pedestal) gets a soft chrome-yellow glow over that box,
   so players can see what to grip. A hint floats above it with the painting's
-  title and *Hold grip on the pedestal to step inside*. The hint shows while a
+  title and *Hold (grip icon) on the pedestal to step inside*. The hint shows while a
   ray points at the box. Until the player has entered a painting once, it also
   shows whenever they're within 1.6 m.
 - **On arrival in a painting**, a hint says *You're inside The Bedroom / To go
@@ -107,7 +107,7 @@ With `-menuShots` it also renders the panel and the tag to PNGs.
 6. **Back to Gallery** fades you back to the Gallery's start, from the Painted Bedroom and from The Starry Night.
 7. In the Gallery, press ≡: no Back button, a line about the glowing pedestals instead.
 8. Outside the Gallery, look at your left controller: the **(≡) Menu** tag is readable and doesn't block the ray. It's gone in the Gallery.
-9. In the Gallery, walk toward the Bedroom pedestal: its box glows, and from about 1.5 m the hint *The Bedroom / Hold grip…* appears over it. Point at it from further away: the hint appears too.
+9. In the Gallery, walk toward the Bedroom pedestal: its box glows, and from about 1.5 m the hint *The Bedroom / Hold (grip icon)…* appears over it, the grip button drawn as an icon. Point at it from further away: the hint appears too.
 10. Grip it: after the fade, *You're inside The Bedroom* names ≡ for about 10 s, and pressing ≡ closes it at once.
 11. Back in the Gallery, walk to the Starry Night pedestal: the hint now waits until you point at it.
 12. In The Starry Night: the arrival hint doesn't overlap Vincent's opening words or the game's hint.

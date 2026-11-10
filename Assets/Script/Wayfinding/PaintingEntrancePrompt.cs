@@ -5,12 +5,13 @@ using UnityEngine.XR.Interaction.Toolkit.Interactables;
 /// <summary>
 /// Shows how to step into a painting (#163). In the Gallery, every way in (a SceneChangeButton: the invisible box on a
 /// pedestal) gets this at load, without editing the scene: a soft chrome-yellow glow over the box, so you can see what
-/// to grip, and a hint above it with the painting's title and "Hold grip on the pedestal to step inside". The hint shows
+/// to grip, and a hint above it with the painting's title and "Hold (grip) on the pedestal to step inside", the grip
+/// button drawn as its icon. The hint shows
 /// while a ray points at the box, and, until you have stepped into a painting once, whenever you're within NearMetres.
 /// </summary>
 public class PaintingEntrancePrompt : MonoBehaviour
 {
-    public const string Line = "Hold grip on the pedestal to step inside";
+    public const string Line = "Hold", Rest = "on the pedestal to step inside";   // Hold (grip icon) on the pedestal…
     const float NearMetres = 1.6f;          // horizontal, from the eyes to the box
     const float HintAbove = 0.22f;          // the hint's centre over the box's top, metres
     const float ReadDistance = 1.4f;        // the distance it is sized to be read from
@@ -77,7 +78,7 @@ public class PaintingEntrancePrompt : MonoBehaviour
         if (hint != null)
         {
             SceneManager.MoveGameObjectToScene(hint.gameObject, gameObject.scene);
-            hint.Show(PaintingNames.Title(button.targetScene), Line);
+            hint.Show(PaintingNames.Title(button.targetScene), Line, WayfindingHint.GripKey, Rest);
             hint.transform.position = new Vector3(box.center.x, box.max.y + HintAbove, box.center.z);
         }
     }

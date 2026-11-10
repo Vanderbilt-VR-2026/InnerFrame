@@ -41,6 +41,21 @@ public static class VincentVoice
         DataFolder + "/lang/gmw/en-GB-x-rp", DataFolder + "/lang/gmw/en-US", DataFolder + "/lang/gmw/en-US-nyc",
     };
 
+    /// <summary>What he says the moment a question is sent, while Convai writes his answer (a few seconds), so he
+    /// reacts at once. Made once, when the voice loads; every headset has the same ones, so the room can say "line 2".</summary>
+    public static readonly string[] ThinkingLines =
+    {
+        "Hmm, let me think.",
+        "Ah, a good question.",
+        "Let me think, my friend.",
+        "Hm. Let me see.",
+    };
+    static AudioClip[] thinking;
+
+    /// <summary>Thinking line `i` (ThinkingLines), or null while the voice is still loading or is off.</summary>
+    public static AudioClip Thinking(int i) =>
+        thinking != null && i >= 0 && i < thinking.Length ? thinking[i] : null;
+
     enum State { NotStarted, Loading, Ready, Failed }
     static State state;
     static OfflineTts tts;
@@ -52,6 +67,7 @@ public static class VincentVoice
         // The model stays loaded across Play sessions in the Editor only if domain reload is off; start clean anyway.
         lock (gate) { tts?.Dispose(); tts = null; }
         state = State.NotStarted;
+        thinking = null;
     }
 
     /// <summary>Speak his answers here: switched on (ConvaiDirectSettings.headsetVoice) and not failed.</summary>
@@ -169,6 +185,15 @@ public static class VincentVoice
         lock (gate) tts = job.Result;
         state = State.Ready;
         Debug.Log($"[VincentVoice] ready in {(Time.realtimeSinceStartupAsDouble - started) * 1000:F0} ms ({tts.SampleRate} Hz)");
+
+        var made = new AudioClip[ThinkingLines.Length];
+        for (int i = 0; i < made.Length; i++)
+        {
+            int n = i;
+            yield return Speak(ThinkingLines[n], c => made[n] = c);
+            if (made[n] != null) made[n].name = "Vincent thinking";
+        }
+        thinking = made;
     }
 
     // Every field set by hand: Unity's C# compiler skips the wrapper's struct constructors, which hold its defaults.

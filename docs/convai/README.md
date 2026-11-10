@@ -56,10 +56,20 @@ who asked.
   tokens and the English part of espeak-ng's phoneme data are in
   `Assets/StreamingAssets/VincentVoice`. Not 2.x: sherpa-onnx 2.0 removed
   espeak-ng, which Piper voices need.
-- **Timing:** the voice loads in the background when a Vincent starts (about 1 s
-  on a Mac). Then each answer takes a fraction of a second on a Mac (5.4 s of
-  speech in 0.3 s). Quest timing isn't measured yet; the log says it:
-  `[VincentVoice] 5.4 s of voice in 294 ms`.
+- **Streaming:** Convai is asked to stream (`stream=True`). Its reply comes as
+  lines of `data: {json}`, a sentence or two each; each one is spoken as soon as it
+  arrives, while the next is still being written, and goes to the other players the
+  same way (`VincentLink`: one message per part, then an end message).
+- **A thinking line at once:** the moment the question is sent, he says one of
+  `VincentVoice.ThinkingLines` ("Hmm, let me think.", "Ah, a good question."...), on
+  every headset, while *Vincent is thinking…* shows above him. They're made when the
+  voice loads, so they cost nothing later.
+- **Timing** (Editor on a Mac, 3 runs): thinking line at 0 s; his first sentence
+  3.0–4.5 s after you let go (5.4–7 s before streaming); each sentence's voice made
+  in 0.1–0.4 s, while the one before plays. Almost all the wait is Convai writing.
+  The voice loads in the background when a Vincent starts (about 1 s on a Mac).
+  Quest timing isn't measured yet; the Console says it:
+  `[VanGogh] Convai (streamed): release->first words 2977 ms`.
 - **First run on a Quest:** the voice files are copied out of the APK once (about
   63 MB, to the app's own storage), because native code can't read inside the APK.
 - **If it fails** (a missing library or file), the Console says
@@ -71,18 +81,23 @@ who asked.
 ### Test it
 
 - **Tools > InnerFrame > Van Gogh > Test Headset Voice** (no Convai, no network): plays
-  the Gallery, hands the portrait an answer as if another player had asked, and
-  passes when he speaks it in his headset voice.
+  the Gallery and does what happens when another player asks: a thinking line, then
+  an answer in two parts. Passes when he says them in order, in his headset voice,
+  and is then free again.
 - With Convai set up: `CONVAI_TEST_WAV=question.wav Unity -batchmode -projectPath .
-  -executeMethod ConvaiDirectTest.RunFromCommandLine` passes with "his headset voice".
-- Two players (Quest + Editor): ask from one, and both should hear him, from the
-  portrait, at about the same time.
+  -executeMethod ConvaiDirectTest.RunFromCommandLine` passes when he says the
+  thinking line, then every part of Convai's answer in his headset voice.
+- Two players (Quest + Editor): ask from one. Both should hear the same thinking
+  line at once, then his answer, sentence by sentence, at about the same time.
 
 ## Limits
 
-- **Answers aren't streamed.** He answers a few seconds after you let go, like the proxy.
-  His headset voice makes the whole answer before he starts; if that's slow on a
-  Quest, the next step is to speak it a sentence at a time.
+- **His first words still take 3–4.5 s,** because that is how long Convai takes to
+  write them (even a typed question takes 3.4–8 s). The thinking line covers it. To
+  go faster, the character's settings on convai.com matter most: its language model,
+  shorter answers, and features it doesn't need (narrative design, knowledge bank,
+  long-term memory).
+- **The proxy isn't streamed:** with Use Convai off, he answers as before.
 - **The app is bigger:** about 63 MB for the voice and 27 MB for the Android libraries.
 - **The API key ships in the APK.** Fine for team testing. For anything shared more
   widely, move the call to a server (the proxy, hosted online) so the key stays there.

@@ -18,6 +18,7 @@ public static class ConvaiDirectTest
     static int step;
     static double stepStarted;
     static SpeechToProxy talker;
+    static bool sawThinking;
 
     public static void RunFromCommandLine()
     {
@@ -52,6 +53,8 @@ public static class ConvaiDirectTest
                 talker = Object.FindObjectsByType<SpeechToProxy>(FindObjectsSortMode.None).FirstOrDefault();
                 if (talker == null || talker.voice == null) return;
                 if (EditorApplication.timeSinceStartup - stepStarted < 1) return;
+                // With his headset voice on, wait until it and his thinking lines are made, as they are for a player.
+                if (VincentVoice.Enabled && VincentVoice.Thinking(VincentVoice.ThinkingLines.Length - 1) == null) return;
                 string why = ConvaiDirectSettings.WhyNotReady();
                 if (why != null) { Finish(false, $"Convai isn't set up: {why}"); return; }
                 var wav = File.ReadAllBytes(SessionState.GetString(KeyWav, ""));
@@ -60,12 +63,23 @@ public static class ConvaiDirectTest
                 Next();
                 break;
             case 1:   // his answer arrived and his voice is playing
+                if (talker.voice.isPlaying && talker.voice.clip != null && talker.voice.clip.name == "Vincent thinking" && !sawThinking)
+                {
+                    sawThinking = true;
+                    Debug.Log($"[ConvaiDirectTest] thinking line {(EditorApplication.timeSinceStartup - stepStarted) * 1000:F0} ms after sending");
+                }
                 if (string.IsNullOrEmpty(talker.LastReply) || !talker.voice.isPlaying || talker.voice.clip == null) return;
                 string clipName = talker.voice.clip.name;
                 bool voiced = clipName == "Convai reply" || clipName == VincentVoice.ClipName;
                 string whose = clipName == VincentVoice.ClipName ? "his headset voice" : "his Convai voice";
-                Finish(voiced, $"Vincent said \"{talker.LastReply}\" with {talker.voice.clip.length:F1} s of " +
-                               (voiced ? $"{whose} ({talker.voice.clip.frequency} Hz, {talker.voice.clip.channels} ch)" : "silence (no voice came back)"));
+                Debug.Log($"[ConvaiDirectTest] first words \"{talker.LastReply}\" with {talker.voice.clip.length:F1} s of " +
+                          (voiced ? $"{whose} ({talker.voice.clip.frequency} Hz, {talker.voice.clip.channels} ch)" : "silence (no voice came back)"));
+                if (!voiced) { Finish(false, "no voice came back"); return; }
+                Next();
+                break;
+            case 2:   // he says the rest, a part at a time, and is then free again
+                if (talker.IsBusy) return;
+                Finish(true, $"Vincent said \"{talker.LastReply}\", then was free again");
                 break;
         }
     }

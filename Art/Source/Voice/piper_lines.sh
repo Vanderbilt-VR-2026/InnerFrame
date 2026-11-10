@@ -5,16 +5,17 @@
 #   piper_lines.sh <lines.txt> <output dir> <file prefix>
 #   -> <output dir>/<file prefix><id>.wav, mono, 16-bit, 22,050 Hz (the format Unity already imports for his lines)
 #
-# Vincent's voice is VOICE below. The same voice speaks his live answers on the headset (#157), so change both together.
+# Vincent's voice is VOICE below. The same voice speaks his live answers on the headset (#157; there in its int8
+# version, Assets/StreamingAssets/VincentVoice), so change both together.
 # The first run installs Piper (pip package piper-tts, pinned) into ~/.cache/innerframe-piper and downloads the voice
 # from the rhasspy/piper-voices repo on Hugging Face (pinned revision, checked by SHA-256). Nothing it downloads is
 # committed. Needs python3 (3.9 or later) and curl. Works on macOS, Linux and Git Bash on Windows.
 set -euo pipefail
 
-VOICE="en_GB-northern_english_male-medium"
-VOICE_DIR="en/en_GB/northern_english_male/medium"
-VOICE_SHA256="57a219ae8e638873db7d18893304be5069c42868f392bb95c3ff17f0690d0689"
-VOICE_JSON_SHA256="69557ed3d974463453e9b0c09dd99a7ed0e52b8b87b64b357dbeeb2540a97d47"
+VOICE="en_US-norman-medium"
+VOICE_DIR="en/en_US/norman/medium"
+VOICE_SHA256="b9739443232a80a59c7d18810dd856899bf16a7964725f5ab81ea49b1351cb71"
+VOICE_JSON_SHA256="6c2db7f558a4a8deb9fe822583c1c5105f6c4e834dd0f9de8ad17a888ee9fe1d"
 VOICES_REVISION="cf910fb59f1d79ab3b625a63993a108751c6c25d"
 PIPER_VERSION="1.8.0"
 

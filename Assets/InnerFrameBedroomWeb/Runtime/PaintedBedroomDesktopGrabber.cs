@@ -124,6 +124,7 @@ namespace InnerFrame.PaintedBedroom
         void Grab(PaintedBedroomMovable m, float distance)
         {
             m.Claim();
+            if (m.TryGetComponent(out PaintedBedroomObjectSound sound)) sound.PlayPickUp();
             held = m;
             holdDistance = Mathf.Max(distance, minDistance);
             spin = 0f;

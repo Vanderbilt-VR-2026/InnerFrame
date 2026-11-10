@@ -4,7 +4,6 @@ using System.IO;
 using System.Threading.Tasks;
 using SherpaOnnx;
 using UnityEngine;
-using UnityEngine.Networking;
 
 /// <summary>
 /// Vincent's voice made on this headset (#157): turns his words into speech with Piper's voice
@@ -15,10 +14,10 @@ using UnityEngine.Networking;
 /// Runs the voice with sherpa-onnx 1.13.8 (Assets/Plugins/SherpaOnnx: its C# wrapper and native libraries for Android
 /// arm64, macOS and Windows x64). The voice, its tokens and the English part of espeak-ng's phoneme data are in
 /// Assets/StreamingAssets/VincentVoice. On Android those sit inside the APK, where native code can't open them, so the
-/// first run copies them to Application.persistentDataPath (about 63 MB, once).
+/// first run copies them to Application.persistentDataPath (about 63 MB, once; SherpaFiles.Prepare).
 ///
 /// The voice loads in the background as soon as a Vincent starts (SpeechToProxy.Start calls Warm), so his first answer
-/// doesn't wait for it. If anything fails (a missing library or file), Available turns false, a warning says why, and
+/// doesn't wait for it. If anything fails (a missing library or file), Enabled turns false, a warning says why, and
 /// he falls back to showing his words with no voice, as before.
 /// </summary>
 public static class VincentVoice
@@ -85,7 +84,7 @@ public static class VincentVoice
     {
         if (state != State.NotStarted || !Enabled) return;
         state = State.Loading;
-        Runner.Instance.StartCoroutine(Load());
+        SherpaFiles.Runner.Instance.StartCoroutine(Load());
     }
 
     /// <summary>Speaks `text` and hands back the clip, or null when the voice isn't available (`done` always runs).
@@ -125,29 +124,9 @@ public static class VincentVoice
     static IEnumerator Load()
     {
         double started = Time.realtimeSinceStartupAsDouble;
-        string dir = Path.Combine(Application.streamingAssetsPath, Folder);
-#if UNITY_ANDROID && !UNITY_EDITOR
-        dir = Path.Combine(Application.persistentDataPath, Folder);
-        string marker = Path.Combine(dir, "copied.txt");
-        if (!File.Exists(marker) || File.ReadAllText(marker) != Version)
-        {
-            foreach (var file in Files)
-            {
-                string to = Path.Combine(dir, file);
-                Directory.CreateDirectory(Path.GetDirectoryName(to));
-                using (var req = UnityWebRequest.Get(Application.streamingAssetsPath + "/" + Folder + "/" + file))
-                {
-                    req.downloadHandler = new DownloadHandlerFile(to) { removeFileOnAbort = true };
-                    yield return req.SendWebRequest();
-                    if (req.result != UnityWebRequest.Result.Success) { Fail($"copying {file}: {req.error}"); yield break; }
-                }
-            }
-            File.WriteAllText(marker, Version);
-            Debug.Log($"[VincentVoice] copied the voice to {dir} in {(Time.realtimeSinceStartupAsDouble - started) * 1000:F0} ms");
-        }
-#endif
-        foreach (var file in Files)
-            if (!File.Exists(Path.Combine(dir, file))) { Fail($"missing {Path.Combine(dir, file)}"); yield break; }
+        string dir = null, why = null;
+        yield return SherpaFiles.Prepare(Folder, Files, Version, (d, w) => { dir = d; why = w; });
+        if (dir == null) { Fail(why); yield break; }
 
         // espeak-ng can't read its data from a path longer than about 160 characters: copy it (860 KB) somewhere short.
         string data = Path.Combine(dir, DataFolder);
@@ -164,21 +143,12 @@ public static class VincentVoice
             data = shortData;
         }
 
-#if UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN
-        // Windows 11 has its own, older onnxruntime.dll in System32, which the loader would find before ours.
-        // Loading ours first by its full path makes sherpa-onnx use it.
-        string ort = Application.isEditor
-            ? Path.Combine(Application.dataPath, "Plugins/SherpaOnnx/Windows/x86_64/onnxruntime.dll")
-            : Path.Combine(Application.dataPath, "Plugins/x86_64/onnxruntime.dll");
-        if (File.Exists(ort) && LoadLibraryW(ort) == IntPtr.Zero) Debug.LogWarning($"[VincentVoice] couldn't preload {ort}");
-#endif
         var config = Config(Path.Combine(dir, ModelFile), Path.Combine(dir, "tokens.txt"), data);
         var job = Task.Run(() =>
         {
-            var made = new OfflineTts(config);
-            // A model that fails to load leaves a null native handle, and any call on it would crash the app.
-            if (NativeHandle(made) == IntPtr.Zero) throw new Exception("sherpa-onnx couldn't load the voice (see its log)");
-            return made;
+            var loaded = new OfflineTts(config);
+            if (SherpaFiles.Handle(loaded) == IntPtr.Zero) throw new Exception("sherpa-onnx couldn't load the voice (see its log)");
+            return loaded;
         });
         while (!job.IsCompleted) yield return null;
         if (job.IsFaulted) { Fail(job.Exception.GetBaseException().ToString()); yield break; }
@@ -208,19 +178,6 @@ public static class VincentVoice
         return new OfflineTtsConfig { Model = modelConfig, RuleFsts = "", RuleFars = "", MaxNumSentences = 1, SilenceScale = 0.2f };
     }
 
-#if UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN
-    [System.Runtime.InteropServices.DllImport("kernel32", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
-    static extern IntPtr LoadLibraryW(string path);
-#endif
-
-    // The wrapper keeps its native pointer private (OfflineTts._handle, a HandleRef); link.xml keeps it from stripping.
-    static IntPtr NativeHandle(OfflineTts t)
-    {
-        var field = typeof(OfflineTts).GetField("_handle",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        return field?.GetValue(t) is System.Runtime.InteropServices.HandleRef h ? h.Handle : IntPtr.Zero;
-    }
-
     static void Fail(string why)
     {
         state = State.Failed;
@@ -232,20 +189,4 @@ public static class VincentVoice
         string.IsNullOrEmpty(text) ? "" : text.Replace("*", "").Replace("_", " ").Replace("~", "").Trim();
 
     static string Shorten(string s) => s.Length > 60 ? s.Substring(0, 57) + "…" : s;
-
-    /// <summary>Runs the loading coroutine where a scene change or SpeechToProxy.Cancel can't stop it.</summary>
-    class Runner : MonoBehaviour
-    {
-        static Runner instance;
-        public static Runner Instance
-        {
-            get
-            {
-                if (instance != null) return instance;
-                var go = new GameObject("VincentVoice") { hideFlags = HideFlags.HideAndDontSave };
-                UnityEngine.Object.DontDestroyOnLoad(go);
-                return instance = go.AddComponent<Runner>();
-            }
-        }
-    }
 }

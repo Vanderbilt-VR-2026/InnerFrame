@@ -64,9 +64,23 @@ who asked.
   `VincentVoice.ThinkingLines` ("Hmm, let me think.", "Ah, a good question."...), on
   every headset, while *Vincent is thinking…* shows above him. They're made when the
   voice loads, so they cost nothing later.
-- **Timing** (Editor on a Mac, 3 runs): thinking line at 0 s; his first sentence
-  3.0–4.5 s after you let go (5.4–7 s before streaming); each sentence's voice made
-  in 0.1–0.4 s, while the one before plays. Almost all the wait is Convai writing.
+- **Your question as text:** after you let go, the headset turns your recording into
+  text (`Scripts/VincentEars.cs`: Moonshine tiny, English, through sherpa-onnx; about
+  30 ms on a Mac) and sends Convai `userText` instead of the audio. Convai answers
+  sooner when it doesn't have to transcribe, and the other players see what was
+  asked (*Player 1 asked: "…"*). **Headset Speech To Text** in `ConvaiDirectSettings`
+  (on by default) turns it off; if it can't load, or hears nothing, the audio goes
+  as before. It mishears some names ("Gogan" for Gauguin), which Convai's character
+  understood anyway in our tests.
+- **Timing** (Editor on a Mac, 3 runs each):
+
+  | | Audio, no streaming | Audio, streamed | Text, streamed (now) |
+  |---|---|---|---|
+  | Thinking line | none | 0 s | 0 s |
+  | His first sentence | 5.4–7 s | 3.0–4.5 s | **2.0–2.3 s** |
+
+  Each sentence's voice is made in 0.1–0.4 s, while the one before plays. Almost
+  all of the rest is Convai writing.
   The voice loads in the background when a Vincent starts (about 1 s on a Mac).
   Quest timing isn't measured yet; the Console says it:
   `[VanGogh] Convai (streamed): release->first words 2977 ms`.
@@ -92,13 +106,13 @@ who asked.
 
 ## Limits
 
-- **His first words still take 3–4.5 s,** because that is how long Convai takes to
-  write them (even a typed question takes 3.4–8 s). The thinking line covers it. To
-  go faster, the character's settings on convai.com matter most: its language model,
-  shorter answers, and features it doesn't need (narrative design, knowledge bank,
-  long-term memory).
+- **His first words still take about 2 s,** because that is how long Convai takes to
+  write them. The thinking line covers it. To go faster, the character's settings on
+  convai.com matter most: its language model, shorter answers, and features it
+  doesn't need (narrative design, knowledge bank, long-term memory).
 - **The proxy isn't streamed:** with Use Convai off, he answers as before.
-- **The app is bigger:** about 63 MB for the voice and 27 MB for the Android libraries.
+- **The app is bigger:** about 63 MB for the voice, 44 MB for the speech-to-text and
+  27 MB for the Android libraries.
 - **The API key ships in the APK.** Fine for team testing. For anything shared more
   widely, move the call to a server (the proxy, hosted online) so the key stays there.
 - **The scene sentence isn't sent.** The mirror scene's `SceneContext` isn't passed

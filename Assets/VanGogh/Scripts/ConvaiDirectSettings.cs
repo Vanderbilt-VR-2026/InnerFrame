@@ -27,6 +27,11 @@ public class ConvaiDirectSettings : ScriptableObject
              "Off: Convai's own voice, which only the player who asked hears.")]
     public bool headsetVoice = true;
 
+    [Tooltip("Turn your question into text on the headset (VincentEars, Moonshine) and send Convai the text: " +
+             "about 1.4 s faster, and the other players see what was asked. Off: Convai gets the audio. " +
+             "Only with Headset Voice on (it streams).")]
+    public bool headsetSpeechToText = true;
+
     static ConvaiDirectSettings current;
     static string apiKey;
     static bool keyLoaded;

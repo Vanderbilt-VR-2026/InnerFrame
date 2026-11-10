@@ -224,6 +224,7 @@ public class SpeechToProxy : MonoBehaviour
         caption = VanGoghCaption.Make(transform, labelOffset);
         SetState(State.Idle);
         VincentVoice.Warm();   // load his headset voice now, so his first answer doesn't wait for it
+        VincentEars.Warm();    // and the speech-to-text that sends your question to Convai as text
         string why = ConvaiDirectSettings.WhyNotReady();
         Debug.Log(why == null ? $"[VanGogh] {name}: talking through Convai's web API"
                               : $"[VanGogh] {name}: talking through the AI proxy ({why})");
@@ -443,15 +444,30 @@ public class SpeechToProxy : MonoBehaviour
             ThinkingStarted?.Invoke(line);
         }
 
+        // Your question as text when this headset can transcribe it (VincentEars): Convai answers sooner without
+        // transcribing, and the room sees what was asked. Otherwise, or if nothing was heard, the audio as before.
+        string question = "";
+        if (VincentEars.Ready)
+        {
+            var samples = WavSamples(wav, out int rate);
+            if (samples != null) yield return VincentEars.Transcribe(samples, rate, t => question = t);
+        }
+
         var form = new WWWForm();
         form.AddField("charID", ConvaiDirectSettings.Current.characterId.Trim());
         form.AddField("sessionID", convaiSession);
         form.AddField("voiceResponse", "False");
         form.AddField("stream", "True");
-        form.AddField("sample_rate", SampleRate.ToString());
-        form.AddBinaryData("file", wav, "speech.wav", "audio/wav");
+        if (question.Length > 0) form.AddField("userText", question);
+        else
+        {
+            form.AddField("sample_rate", SampleRate.ToString());
+            form.AddBinaryData("file", wav, "speech.wav", "audio/wav");
+        }
+        Debug.Log($"[VanGogh] Convai: sending your question as {(question.Length > 0 ? $"text, {Ms(released, Time.realtimeSinceStartupAsDouble)} ms after release" : "audio")}");
 
         streamParts = 0;
+        streamQuestion = question;
         streamReleased = released;
         var unsaid = new StringBuilder();   // text that doesn't end a sentence yet
 
@@ -498,6 +514,7 @@ public class SpeechToProxy : MonoBehaviour
     // Convai's stream in progress: parts sent so far, and when the question was sent.
     int streamParts;
     double streamReleased;
+    string streamQuestion;   // what this headset heard you ask, or "" (sent to the room with the first part)
 
     void SendPart(string text)
     {
@@ -508,7 +525,43 @@ public class SpeechToProxy : MonoBehaviour
         }
         AddPart(text);
         int part = streamParts++;   // not inside Invoke's arguments: with no listener, `?.` skips evaluating them
-        Answered?.Invoke("", text.Trim(), "", part, false);   // the room speaks it too, at the same time
+        Answered?.Invoke(part == 0 ? streamQuestion : "", text.Trim(), "", part, false);   // the room speaks it too
+    }
+
+    /// <summary>A 16-bit PCM WAV (what Wav() writes, or `say`'s files in tests) as mono samples; null if it isn't one.</summary>
+    static float[] WavSamples(byte[] bytes, out int rate)
+    {
+        rate = SampleRate;
+        if (bytes == null || bytes.Length < 44 || bytes[0] != 'R' || bytes[1] != 'I' || bytes[2] != 'F' || bytes[3] != 'F') return null;
+        int channels = 1, bits = 16;
+        for (int i = 12; i + 8 <= bytes.Length;)
+        {
+            string id = Encoding.ASCII.GetString(bytes, i, 4);
+            int size = BitConverter.ToInt32(bytes, i + 4);
+            if (id == "fmt ")
+            {
+                channels = BitConverter.ToInt16(bytes, i + 10);
+                rate = BitConverter.ToInt32(bytes, i + 12);
+                bits = BitConverter.ToInt16(bytes, i + 22);
+            }
+            else if (id == "data")
+            {
+                if (bits != 16 || channels < 1) return null;
+                int start = i + 8, length = size > 0 ? Mathf.Min(size, bytes.Length - start) : bytes.Length - start;
+                int frames = length / (2 * channels);
+                var mono = new float[frames];
+                for (int f = 0; f < frames; f++)
+                {
+                    float sum = 0f;
+                    for (int c = 0; c < channels; c++) sum += BitConverter.ToInt16(bytes, start + (f * channels + c) * 2);
+                    mono[f] = sum / channels / 32768f;
+                }
+                return mono;
+            }
+            if (size < 0) return null;
+            i += 8 + size + (size & 1);
+        }
+        return null;
     }
 
     static bool EndsSentence(StringBuilder s)

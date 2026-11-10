@@ -55,6 +55,7 @@ public static class ConvaiDirectTest
                 if (EditorApplication.timeSinceStartup - stepStarted < 1) return;
                 // With his headset voice on, wait until it and his thinking lines are made, as they are for a player.
                 if (VincentVoice.Enabled && VincentVoice.Thinking(VincentVoice.ThinkingLines.Length - 1) == null) return;
+                if (VincentEars.Enabled && !VincentEars.Ready) return;   // and his speech-to-text, when it's on
                 string why = ConvaiDirectSettings.WhyNotReady();
                 if (why != null) { Finish(false, $"Convai isn't set up: {why}"); return; }
                 var wav = File.ReadAllBytes(SessionState.GetString(KeyWav, ""));

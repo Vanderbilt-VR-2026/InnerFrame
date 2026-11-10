@@ -15,7 +15,8 @@ using UnityEngine.SceneManagement;
 /// The models and any key stay on the proxy, never in the app. This object's forward faces the visitor.
 ///
 /// Convai instead, when ConvaiDirectSettings is Ready: the same recording goes straight to Convai's web API
-/// (getResponse) from the headset, with no proxy, and his voice comes back in the same reply. No Convai SDK.
+/// (getResponse) from the headset, with no proxy. No Convai SDK. Convai sends only his words, and each headset speaks
+/// them in his Piper voice (VincentVoice, #157); with that voice off, Convai's own voice comes back in the reply.
 /// </summary>
 public class SpeechToProxy : MonoBehaviour
 {
@@ -77,6 +78,8 @@ public class SpeechToProxy : MonoBehaviour
                 if (req.result == UnityWebRequest.Result.Success) clip = DownloadHandlerAudioClip.GetContent(req);
                 else Debug.LogWarning($"[VanGogh] {asker}'s answer: {req.url}: {req.responseCode} {req.error}; showing his words only");
             }
+        if (clip == null && VincentVoice.Enabled)   // Convai's answers carry no voice: make it here (#157)
+            yield return VincentVoice.Speak(reply, c => clip = c);
         if (state == State.Recording || state == State.Waiting) yield break;
         if (clip == null)   // silence as long as his words would take, so the caption pages through them
             clip = AudioClip.Create("silence", Mathf.CeilToInt(Mathf.Max(2f, 0.06f * reply.Length) * 22050), 1, 22050, false);
@@ -116,6 +119,7 @@ public class SpeechToProxy : MonoBehaviour
         if (voice == null) voice = GetComponentInChildren<AudioSource>();
         caption = VanGoghCaption.Make(transform, labelOffset);
         SetState(State.Idle);
+        VincentVoice.Warm();   // load his headset voice now, so his first answer doesn't wait for it
         string why = ConvaiDirectSettings.WhyNotReady();
         Debug.Log(why == null ? $"[VanGogh] {name}: talking through Convai's web API"
                               : $"[VanGogh] {name}: talking through the AI proxy ({why})");
@@ -263,7 +267,8 @@ public class SpeechToProxy : MonoBehaviour
         var form = new WWWForm();
         form.AddField("charID", settings.characterId.Trim());
         form.AddField("sessionID", convaiSession);
-        form.AddField("voiceResponse", "True");
+        // With his headset voice on, ask for words only: a smaller, faster reply, and every headset speaks it the same.
+        form.AddField("voiceResponse", VincentVoice.Enabled ? "False" : "True");
         form.AddField("sample_rate", SampleRate.ToString());
         form.AddBinaryData("file", wav, "speech.wav", "audio/wav");
 
@@ -294,6 +299,11 @@ public class SpeechToProxy : MonoBehaviour
         }
         if (!string.IsNullOrEmpty(answer.sessionID)) convaiSession = answer.sessionID;
 
+        string reply = answer.text.Trim();
+        // Shared Vincent: his words for the room (Convai doesn't return what was asked). Sent before his voice is made
+        // here, so the other headsets make theirs at the same time and everyone hears him together.
+        Answered?.Invoke("", reply, "");
+
         var match = System.Text.RegularExpressions.Regex.Match(json, "\"sample_rate\"\\s*:\\s*\"?(\\d+)");
         int rate = match.Success ? int.Parse(match.Groups[1].Value) : 22050;
         AudioClip clip = null;
@@ -302,14 +312,16 @@ public class SpeechToProxy : MonoBehaviour
             try { clip = ConvaiAudioClip(Convert.FromBase64String(answer.audio), rate); }
             catch (FormatException) { Debug.LogWarning("[VanGogh] Convai: its audio wasn't base64"); }
         }
+        if (clip == null && VincentVoice.Enabled)   // his headset voice (#157), the same one every player hears
+            yield return VincentVoice.Speak(reply, c => clip = c);
+        double voiced = Time.realtimeSinceStartupAsDouble;
         if (clip == null)   // no voice: show his words for as long as they'd take, as SayRemote does
-            clip = AudioClip.Create("silence", Mathf.CeilToInt(Mathf.Max(2f, 0.06f * answer.text.Length) * 22050), 1, 22050, false);
+            clip = AudioClip.Create("silence", Mathf.CeilToInt(Mathf.Max(2f, 0.06f * reply.Length) * 22050), 1, 22050, false);
 
-        string reply = answer.text.Trim();
         LastReply = reply;
         Say(clip, reply);
-        Answered?.Invoke("", reply, "");   // shared Vincent: his words for the room (Convai doesn't return what was asked)
-        Debug.Log($"[VanGogh] Convai: release->answer {Ms(released, responded)} ms, {clip.length:F1} s of voice; said \"{reply}\"");
+        Debug.Log($"[VanGogh] Convai: release->answer {Ms(released, responded)} ms, release->voice {Ms(released, voiced)} ms, " +
+                  $"{clip.length:F1} s of voice ({clip.name}); said \"{reply}\"");
     }
 
     // Convai's voice: a WAV file (RIFF), or raw 16-bit mono PCM at the reply's sample_rate.

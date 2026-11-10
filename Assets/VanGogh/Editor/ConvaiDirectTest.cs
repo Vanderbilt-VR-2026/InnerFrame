@@ -61,9 +61,11 @@ public static class ConvaiDirectTest
                 break;
             case 1:   // his answer arrived and his voice is playing
                 if (string.IsNullOrEmpty(talker.LastReply) || !talker.voice.isPlaying || talker.voice.clip == null) return;
-                bool voiced = talker.voice.clip.name == "Convai reply";
+                string clipName = talker.voice.clip.name;
+                bool voiced = clipName == "Convai reply" || clipName == VincentVoice.ClipName;
+                string whose = clipName == VincentVoice.ClipName ? "his headset voice" : "his Convai voice";
                 Finish(voiced, $"Vincent said \"{talker.LastReply}\" with {talker.voice.clip.length:F1} s of " +
-                               (voiced ? $"his Convai voice ({talker.voice.clip.frequency} Hz, {talker.voice.clip.channels} ch)" : "silence (no voice came back)"));
+                               (voiced ? $"{whose} ({talker.voice.clip.frequency} Hz, {talker.voice.clip.channels} ch)" : "silence (no voice came back)"));
                 break;
         }
     }

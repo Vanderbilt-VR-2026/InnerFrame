@@ -40,8 +40,8 @@ The room is 7 × 9 × 4 m: x from −3.5 (east wall) to 3.5 (west wall), z from 
 | Bench (`Bench_01`) | 1.6 × 0.55 m, 0.48 m high, centred at z = 1.2: an upholstered top on a walnut frame with turned legs, on the rug, facing The Bedroom (0.5 m clear of where you stand at The Starry Night's pedestal) | `Mat_BenchWood` (`bench_wood.png`, 0.6 m), `Mat_Cushion` (`bench_fabric.png`, 0.5 m) |
 | Rug | 2 × 3 m under the bench, long side towards The Bedroom; you can teleport onto it | `Mat_Rug` (`rug.png`, once) |
 
-Without its texture a surface keeps a plain colour from the concept sheet. In so far (2026-11-10): wall, wainscot,
-floor, cornice, rail, trim and rug. Still plain: ceiling, bench wood, bench fabric, door.
+Without its texture a surface keeps a plain colour from the concept sheet. All eleven are in (2026-11-10). The door came as one quarter of a
+ChatGPT sheet: 423 × 546 pixels, so it is soft up close; a full-size `door.png` (1024 × 1536) would sharpen it.
 
 ### Decoration (`GalleryDecor.prefab`)
 

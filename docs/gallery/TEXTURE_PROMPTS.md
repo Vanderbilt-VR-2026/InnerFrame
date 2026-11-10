@@ -48,6 +48,7 @@ From the repo root (Blender 5.2):
 /Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup --python Art/Source/Gallery/make_textures.py -- ~/Desktop/gallery-textures
 ```
 
+If ChatGPT gives several textures on one sheet, crop each out first (the door to its outer frame and the arch's apex).
 It writes `Assets/Art/Gallery/Textures/GT_<Name>_BaseColor.jpg` for each file it finds (missing files are skipped):
 tiling ones cropped square, their edges blended so they repeat without a seam, sized to 1024 (trim 512); the wainscot
 blended left to right only; the rug cropped to 2 : 3 and the door to its 1.6 × 2.6 m shape. Then in Unity run

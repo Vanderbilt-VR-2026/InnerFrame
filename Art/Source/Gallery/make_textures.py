@@ -11,7 +11,9 @@ writes Assets/Art/Gallery/Textures/GT_<Name>_BaseColor.jpg:
   - "plain": the trim image's widest band with no moulding line in it (the rows whose average changes least), tiled:
     for the arch's moulding and the skylight's frame, which a profile would stripe the wrong way;
   - "tile_x": the wainscot, 1.5 x 1 m (3 : 2), seamless left to right only (it never repeats upwards);
-  - "fit": a picture mapped once (rug 2 x 3 m, door 1.6 x 2.6 m), cropped from the centre to its shape.
+  - "fit": a picture mapped once (the rug, 2 x 3 m), cropped from the centre to its shape;
+  - "stretch": the door (1.6 x 2.6 m), mapped once and stretched to its shape rather than cropped, so its frame stays
+    whole: crop it to the door's outer frame and the arch's apex first.
 Colours are kept as they are: images are saved with Blender's Standard view transform (AgX would shift them).
 GalleryShellSetup.cs then puts each on its material at its real-world size.
 """
@@ -38,7 +40,7 @@ SLOTS = {
     "bench_wood":   [("BenchWood", "tile", (1024, 1024), 1.0)],
     "bench_fabric": [("Cushion", "tile", (1024, 1024), 1.0)],
     "rug":          [("Rug", "fit", (683, 1024), 2.0 / 3.0)],
-    "door":         [("Door", "fit", (945, 1536), 1.6 / 2.6)],
+    "door":         [("Door", "stretch", (945, 1536), 1.6 / 2.6)],
 }
 
 
@@ -108,7 +110,7 @@ for stem, outputs in SLOTS.items():
             px = np.ascontiguousarray(np.rot90(px))
         if kind == "plain":
             px = plain_band(px)
-        px = crop(px, shape) if kind not in ("band",) else px
+        px = crop(px, shape) if kind not in ("band", "stretch") else px
         if kind in ("tile", "tile_turned", "tile_x", "band", "plain"):
             px = wrap(px, 1)
         if kind in ("tile", "tile_turned", "plain"):

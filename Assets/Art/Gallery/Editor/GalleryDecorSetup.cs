@@ -71,6 +71,28 @@ namespace InnerFrame.Gallery.EditorTools
         const string FlameMesh = "Assets/StarryNight/Meshes/SN_FlameCross.asset";
         const string FlameMat = "Assets/StarryNight/Materials/SN_Flame.mat";
 
+        // Ceiling spotlights round the skylight, as the concept sheet's: not lights (the four lanterns use Mobile_RPAsset's
+        // four), but a dark fitting, a warm unlit bulb and a soft additive halo on the ceiling round it: GP_SpotHalo.mat,
+        // The Starry Night's glow shader and soft dot (SN_StarCore.png) by reference, warmer and stronger than its village
+        // glow (SN_VillageGlow, made faint for a night sky, hardly showed on a lit ceiling). A ring 0.3 m outside the
+        // skylight's moulded frame (the opening is 3 x 2.5 m in the ceiling's middle, its frame 0.18 m): five along each
+        // long side, three along each short one.
+        public const float SpotRingX = 1.5f + 0.18f + 0.3f, SpotRingZ = 1.25f + 0.18f + 0.3f, SpotHalo = 1.2f;
+        public static readonly Color BulbColour = new Color(1f, 0.8f, 0.5f);
+        public static readonly Color HaloColour = new Color(2.2f, 1.32f, 0.62f, 1f);   // HDR: SN_StarCore is pale and mostly clear; at 1x it hardly showed on the lit ceiling
+        const string GlowShader = "InnerFrame/StarryNight/Glow", HaloTex = "Assets/StarryNight/Textures/SN_StarCore.png";
+        public const string HaloMat = Folder + "/GP_SpotHalo.mat";
+        public const string HaloMesh = Folder + "/GP_HaloQuad.asset";   // a 1 m quad with white vertex colours: the glow shader multiplies by them
+        public const string BulbMat = Folder + "/GP_Bulb.mat";
+        public static IEnumerable<(string name, Vector3 at)> Spots()
+        {
+            int k = 0;
+            foreach (float z in new[] { -SpotRingZ, SpotRingZ })
+                foreach (float x in new[] { -1.6f, -0.8f, 0f, 0.8f, 1.6f }) yield return ($"Spot_{++k:00}", new Vector3(x, CeilingY, z));
+            foreach (float x in new[] { -SpotRingX, SpotRingX })
+                foreach (float z in new[] { -0.86f, 0f, 0.86f }) yield return ($"Spot_{++k:00}", new Vector3(x, CeilingY, z));
+        }
+
         // As the concept sheet (docs/gallery/README.md): plants in the four corners, the statue by the arch, flowers on the
         // side walls, lanterns at the arch. Spot (floor), yaw (the prop's front, +Z, turned this much about Y).
         public static readonly (string name, Vector3 at, float yaw)[] Statues =
@@ -144,6 +166,9 @@ namespace InnerFrame.Gallery.EditorTools
             foreach (var p in Props) { ImportModel(p.name, changes); ImportTexture(Tex(p.name), p.tex, changes); }
             var mats = Props.ToDictionary(p => p.name, p => MakeMaterial(Mat(p.name), Tex(p.name), Color.white, p.smooth, p.twoSided, false, changes));
             mats["LanternGlass"] = MakeGlass(GlassMat, Tex("Lantern"), GlassColour, changes);
+            mats["Bulb"] = MakeGlass(BulbMat, null, BulbColour, changes, opaque: true);
+            mats["Halo"] = MakeHalo(changes);
+            MakeHaloMesh(changes);
             var prefab = MakePrefab(mats, changes);
             var scene = EditorSceneManager.OpenScene(GalleryPath, OpenSceneMode.Single);
             PlaceInGallery(scene, prefab, changes);
@@ -246,7 +271,7 @@ namespace InnerFrame.Gallery.EditorTools
         }
 
         /// <summary>URP Unlit, transparent (alpha blend), both faces: the lantern's panes. Set in full every run, as above.</summary>
-        static Material MakeGlass(string path, string texPath, Color colour, List<string> changes)
+        static Material MakeGlass(string path, string texPath, Color colour, List<string> changes, bool opaque = false)
         {
             var shader = Shader.Find("Universal Render Pipeline/Unlit") ?? throw new Exception($"{Tag} URP Unlit shader not found");
             var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(texPath);
@@ -258,22 +283,63 @@ namespace InnerFrame.Gallery.EditorTools
             m.SetTexture("_BaseMap", tex); m.SetTexture("_MainTex", tex);
             m.SetColor("_BaseColor", colour); m.SetColor("_Color", colour);
             m.SetFloat("_AlphaClip", 0f); m.DisableKeyword("_ALPHATEST_ON");
-            m.SetFloat("_Surface", 1f);
+            m.SetFloat("_Surface", opaque ? 0f : 1f);
             m.SetFloat("_Blend", 0f);
-            m.SetFloat("_Cull", (float)CullMode.Off);
-            m.doubleSidedGI = true;
-            m.SetOverrideTag("RenderType", "Transparent");
-            m.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            m.SetFloat("_Cull", (float)(opaque ? CullMode.Back : CullMode.Off));
+            m.doubleSidedGI = !opaque;
+            m.SetOverrideTag("RenderType", opaque ? "Opaque" : "Transparent");
+            if (opaque) m.DisableKeyword("_SURFACE_TYPE_TRANSPARENT"); else m.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
             m.DisableKeyword("_ALPHAPREMULTIPLY_ON");
-            m.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha); m.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
-            m.SetFloat("_SrcBlendAlpha", (float)BlendMode.One); m.SetFloat("_DstBlendAlpha", (float)BlendMode.OneMinusSrcAlpha);
-            m.SetFloat("_ZWrite", 0f);
-            m.renderQueue = (int)RenderQueue.Transparent;
+            m.SetFloat("_SrcBlend", (float)(opaque ? BlendMode.One : BlendMode.SrcAlpha)); m.SetFloat("_DstBlend", (float)(opaque ? BlendMode.Zero : BlendMode.OneMinusSrcAlpha));
+            m.SetFloat("_SrcBlendAlpha", (float)BlendMode.One); m.SetFloat("_DstBlendAlpha", (float)(opaque ? BlendMode.Zero : BlendMode.OneMinusSrcAlpha));
+            m.SetFloat("_ZWrite", opaque ? 1f : 0f);
+            m.renderQueue = (int)(opaque ? RenderQueue.Geometry : RenderQueue.Transparent);
             m.SetShaderPassEnabled("MotionVectors", false);
             m.enableInstancing = true;
             EditorUtility.SetDirty(m);
             AssetDatabase.SaveAssetIfDirty(m);
             if (created || System.IO.File.ReadAllText(path) != before) changes.Add($"{path}: {(created ? "created" : "updated")}");
+            return m;
+        }
+
+        /// <summary>The ceiling spots' halo: The Starry Night's glow shader, additive (as SN_Setup's Glow does it), with its
+        /// soft dot, warm. Set in full every run.</summary>
+        /// <summary>A flat 1 x 1 m quad facing down (-Y), with UVs and white vertex colours (Unity's own Quad has none, so
+        /// the glow shader, which multiplies by them, drew it black: nothing, when added).</summary>
+        static Mesh MakeHaloMesh(List<string> changes)
+        {
+            var mesh = AssetDatabase.LoadAssetAtPath<Mesh>(HaloMesh);
+            if (mesh != null && mesh.colors.Length == 4) return mesh;
+            mesh = new Mesh { name = "GP_HaloQuad" };
+            mesh.vertices = new[] { new Vector3(-0.5f, 0f, -0.5f), new Vector3(0.5f, 0f, -0.5f), new Vector3(0.5f, 0f, 0.5f), new Vector3(-0.5f, 0f, 0.5f) };
+            mesh.uv = new[] { new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(1f, 1f), new Vector2(0f, 1f) };
+            mesh.colors = new[] { Color.white, Color.white, Color.white, Color.white };
+            mesh.normals = new[] { Vector3.down, Vector3.down, Vector3.down, Vector3.down };
+            mesh.triangles = new[] { 0, 1, 2, 0, 2, 3 };
+            mesh.RecalculateBounds();
+            AssetDatabase.CreateAsset(mesh, HaloMesh);
+            changes.Add($"{HaloMesh}: created");
+            return mesh;
+        }
+
+        static Material MakeHalo(List<string> changes)
+        {
+            var shader = Shader.Find(GlowShader) ?? throw new Exception($"{Tag} {GlowShader} not found");
+            var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(HaloTex) ?? throw new Exception($"{Tag} {HaloTex} missing");
+            var m = AssetDatabase.LoadAssetAtPath<Material>(HaloMat);
+            bool created = m == null;
+            if (created) { m = new Material(shader) { name = "GP_SpotHalo" }; AssetDatabase.CreateAsset(m, HaloMat); }
+            string before = created ? "" : System.IO.File.ReadAllText(HaloMat);
+            if (m.shader != shader) m.shader = shader;
+            m.SetTexture("_BaseMap", tex); m.SetTexture("_MainTex", tex);
+            m.SetColor("_BaseColor", HaloColour);
+            m.SetFloat("_SrcBlend", (float)BlendMode.One); m.SetFloat("_DstBlend", (float)BlendMode.One);
+            m.SetFloat("_Premultiply", 1f);
+            m.enableInstancing = true;
+            m.renderQueue = -1;
+            EditorUtility.SetDirty(m);
+            AssetDatabase.SaveAssetIfDirty(m);
+            if (created || System.IO.File.ReadAllText(HaloMat) != before) changes.Add($"{HaloMat}: {(created ? "created" : "updated")}");
             return m;
         }
 
@@ -317,6 +383,7 @@ namespace InnerFrame.Gallery.EditorTools
             var metal = AssetDatabase.LoadAssetAtPath<Material>(MetalMat) ?? throw new Exception($"{Tag} {MetalMat} missing");
             var flameMesh = AssetDatabase.LoadAssetAtPath<Mesh>(FlameMesh) ?? throw new Exception($"{Tag} {FlameMesh} missing");
             var flameMat = AssetDatabase.LoadAssetAtPath<Material>(FlameMat) ?? throw new Exception($"{Tag} {FlameMat} missing");
+            var haloMat = mats["Halo"];
             var root = new GameObject(InstanceName).transform;
             var one = Vector3.one;
 
@@ -369,6 +436,23 @@ namespace InnerFrame.Gallery.EditorTools
                 light.lightmapBakeType = LightmapBakeType.Realtime;
             }
             // GP_FrameCorner's origin is its outer top corner on the viewer's left, at its back; mirrored for the other three
+            var spots = new GameObject("CeilingSpots").transform;
+            spots.SetParent(root, false);
+            foreach (var (name, at) in Spots())
+            {
+                var g = Group(spots, name, at, 0f).transform;   // at the ceiling's underside (y 4)
+                Primitive("Cylinder.fbx", metal, g, "Fitting", new Vector3(0f, -0.015f, 0f), new Vector3(0.11f, 0.015f, 0.11f), false);
+                Primitive("Cylinder.fbx", mats["Bulb"], g, "Bulb", new Vector3(0f, -0.035f, 0f), new Vector3(0.07f, 0.012f, 0.07f), false);
+                var halo = new GameObject("Halo");
+                halo.transform.SetParent(g, false);
+                halo.transform.localPosition = new Vector3(0f, -0.006f, 0f);
+                halo.transform.localScale = new Vector3(SpotHalo, 1f, SpotHalo);
+                halo.AddComponent<MeshFilter>().sharedMesh = AssetDatabase.LoadAssetAtPath<Mesh>(HaloMesh);
+                halo.AddComponent<MeshRenderer>().sharedMaterial = haloMat;
+                var hr = halo.GetComponent<MeshRenderer>();
+                hr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; hr.receiveShadows = false;
+                foreach (var r in g.GetComponentsInChildren<MeshRenderer>()) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            }
             foreach (var (name, centre, yaw, hw, hh) in Frames)
             {
                 var g = Group(root, name, centre, yaw).transform;

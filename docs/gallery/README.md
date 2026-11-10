@@ -51,6 +51,7 @@ ChatGPT sheet: 423 × 546 pixels, so it is soft up close; a full-size `door.png`
 | Potted plant (0.7×, 0.9 m tall) | 4 | The room's four corners |
 | Hydrangeas on a 0.9 m plinth | 2 | East wall by the arch (−3.0, 2.4); west wall (3.0, −1.0) |
 | Lantern with a lit candle inside, on a wall arm | 4 | Each side of the arch (x = ±1.45, its ring at 2.35 m), and one on each side wall at z = 1 (just south of The Starry Night's frame, so neither covers a painting) |
+| Ceiling spotlight: a dark fitting, a warm bulb and a soft glow on the ceiling | 16 | A ring 0.3 m outside the skylight's frame, five along each long side and three along each short one, as in the concept sheet. Not lights: the bulb is unlit, the glow (`GP_SpotHalo.mat`, 1.2 m) is The Starry Night's glow shader and soft dot added onto the ceiling, so they cost no light and almost nothing to draw |
 | Carved frame corner, 1.7× (0.51 × 0.54 m) | 8 | The four corners of both paintings' frames. The frames (`Mat_Frame`, shared by The Bedroom, The Starry Night and Vincent's portrait) take the trim's painted wood tinted to the corners' colour, so frame and corners read as one carving |
 
 ### Lamp light
@@ -87,7 +88,7 @@ frame corners have none. Nothing covers the spawn point's view of The Bedroom or
 Don't move the props in the scene: the next run of the setup reverts any override. Change the spots in
 `GalleryDecorSetup.cs` (the `Statues`, `Plants`, `Vases`, `Lanterns` and `Frames` tables), then run
 **Tools > InnerFrame > Gallery > Add Decor** and **Tools > InnerFrame > Gallery > Check Decor**. The check also renders
-seven views (five from eye height, a side-wall lamp and a frame corner close up) to `Logs/GalleryDecor/`.
+eight views (five from eye height; a side-wall lamp, a frame corner and the ceiling spots close up) to `Logs/GalleryDecor/`.
 
 To change the room itself, edit the parameters at the top of `build_gallery.py`, run it, then Add Decor. If the east
 wall or the north wall moves, move `SN_GallerySetup.RootPosition` and `BedroomWall` with it and run

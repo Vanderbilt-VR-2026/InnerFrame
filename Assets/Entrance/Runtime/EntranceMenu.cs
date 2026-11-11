@@ -293,7 +293,13 @@ namespace InnerFrame.Entrance
             {
                 case 0:
                     Sign("Begin",0,-230,450,215,() => Show(1),100);
-                    Text(root, "Point at Begin and pull Trigger to select", 34).rectTransform.anchoredPosition = new Vector2(0, -385);
+                    var instruction = new GameObject("Begin trigger instruction", typeof(RectTransform));
+                    instruction.transform.SetParent(root, false);
+                    var instructionRect = (RectTransform)instruction.transform;
+                    instructionRect.sizeDelta = new Vector2(1100, 90);
+                    instructionRect.anchoredPosition = new Vector2(0, -385);
+                    Text(instructionRect, "Point at Begin and pull Trigger to select", 34);
+                    controls.Add(instruction);
                     break;
                 case 1:
                     Sign("Choose Who You'll Be",0,395,860,110,() => {},66);

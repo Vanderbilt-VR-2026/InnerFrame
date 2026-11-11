@@ -51,8 +51,18 @@ namespace InnerFrame.AlmondStudio
             if (XRSettings.isDeviceActive) return;
             var kb = Keyboard.current;
             if (kb == null) return;
-            if (kb.pKey.wasPressedThisFrame) { painter = !painter; if (!painter) compare = false; }
-            if (kb.cKey.wasPressedThisFrame && reference != null) { compare = !compare; if (compare) painter = true; }
+            if (kb.pKey.wasPressedThisFrame)
+            {
+                painter = !painter; if (!painter) compare = false;
+                Debug.Log("[AS] Painter's view " + (painter ? "on (C lays the painting over it)" : "off"));
+            }
+            if (kb.cKey.wasPressedThisFrame)
+            {
+                if (reference == null) Debug.LogWarning("[AS] C: no painting to compare with. Put AS_WindowInTheStudio.jpg in Assets/AlmondStudio/Textures/Reference, stop, run Tools > InnerFrame > Almond Studio > Build, and Play again.");
+                compare = reference != null && !compare;
+                painter = painter || reference != null;
+                Debug.Log("[AS] Comparison " + (compare ? "on ([ and ] change how much shows)" : "off"));
+            }
             if (compare && kb.leftBracketKey.wasPressedThisFrame) layout.compareOpacity = Mathf.Clamp01(layout.compareOpacity - 0.1f);
             if (compare && kb.rightBracketKey.wasPressedThisFrame) layout.compareOpacity = Mathf.Clamp01(layout.compareOpacity + 0.1f);
         }

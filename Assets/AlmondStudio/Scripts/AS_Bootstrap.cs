@@ -23,6 +23,8 @@ namespace InnerFrame.AlmondStudio
         public Material wall, floor, ceiling, wood, frame, brushHead, vincent, bark, ink, skyMaterial, groundMaterial, glow, guideDot, blossom;
         [Tooltip("VG_DialogueUI.prefab: Vincent's words and the hint, as in every scene.")] public GameObject uiPrefab;
         public VG_DialogueSettings uiSettings;
+        [Tooltip("Window in the Studio, for the painter's view comparison (C). Textures/Reference/AS_WindowInTheStudio.jpg")] public Texture reference;
+        [Tooltip("The Bedroom's chair, saved for this scene by AS_Setup (Prefabs/AS_Chair.prefab). Boxes if missing.")] public GameObject chairPrefab;
 
         public AS_Game Game { get; private set; }
         AS_InputXR xrInput;
@@ -105,6 +107,10 @@ namespace InnerFrame.AlmondStudio
                 Box(world, "Table leg", new Vector3(p.x, 0.36f, p.y), new Vector3(0.05f, 0.72f, 0.05f), wood);
             Chair(world, new Vector3(-0.8f, 0f, 1.05f), 0f);
             Chair(world, new Vector3(-0.8f, 0f, 2.75f), 180f);
+
+            var compare = world.gameObject.AddComponent<AS_Compare>();
+            compare.layout = layout;
+            compare.reference = reference;
             Box(world, "Door", new Vector3(-0.6f, 1.05f, 0.02f), new Vector3(0.9f, 2.1f, 0.05f), wood);
             Easel(world, new Vector3(0.9f, 0f, 0.35f));
             Box(world, "Chest", new Vector3(W / 2f - 0.3f, 0.3f, D - 0.4f), new Vector3(0.5f, 0.6f, 0.6f), wood);
@@ -265,6 +271,13 @@ namespace InnerFrame.AlmondStudio
 
         void Chair(Transform parent, Vector3 at, float yaw)
         {
+            if (chairPrefab != null)
+            {
+                var ch = Instantiate(chairPrefab, parent);
+                ch.name = "Chair (Bedroom)";
+                ch.transform.SetPositionAndRotation(at, Quaternion.Euler(0f, yaw + layout.chairYawOffset, 0f));
+                return;
+            }
             var c = new GameObject("Chair").transform;
             c.SetParent(parent, false);
             c.SetPositionAndRotation(at, Quaternion.Euler(0f, yaw, 0f));

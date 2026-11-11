@@ -51,6 +51,18 @@ namespace InnerFrame.AlmondStudio
         [Tooltip("Past this, the branch counts as done.")] public float finishAt = 0.95f;
         [Tooltip("How far the beam reaches when it points at no branch.")] public float beamLength = 6f;
 
+        [Header("Painter's view: where he stood for Window in the Studio (P; C lays the painting over it)")]
+        [Tooltip("Left of the window and back a little, at a seated painter's eye: the painting sees the green right-hand reveal wide and the wall running away to the right.")]
+        public Vector3 painterPosition = new Vector3(-1.0f, 1.35f, 2.4f);
+        [Tooltip("Degrees round from north (+z) toward east (+x).")] public float painterYaw = 22f;
+        [Tooltip("Degrees; negative looks up.")] public float painterPitch = -10f;
+        public float painterRoll = 0f;
+        [Tooltip("Vertical field of view, degrees.")] public float painterFov = 62f;
+        [Tooltip("How much of the painting shows over the view (C; [ and ] change it).")] [Range(0f, 1f)] public float compareOpacity = 0.5f;
+
+        [Header("Chairs reused from the Bedroom (Chair_Front of PaintedBedroom.prefab)")]
+        [Tooltip("Turns the Bedroom chair so its seat faces the table.")] public float chairYawOffset = 0f;
+
         [Header("Blossoms on the Tripo tree (AS_Blossoms)")]
         [Tooltip("A blossom's petal length, metres.")] public float blossomSize = 0.07f;
         [Tooltip("Share of the buds that never open, as in the painting.")] [Range(0f, 1f)] public float blossomStayBud = 0.2f;

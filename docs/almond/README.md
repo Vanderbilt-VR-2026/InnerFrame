@@ -82,6 +82,17 @@ The almond tree outside is now a Tripo model placed by hand in the scene (the ge
    the flower overshoots a little and settles, a petal or two drifts down). About a fifth stay buds. At
    `blossomFinish` the rest open in a wave from the trunk out. All the numbers are on `AS_Layout` under "Blossoms".
 
+## Fitting the studio to *Window in the Studio* (Editor)
+
+Put the painting at `Assets/AlmondStudio/Textures/Reference/AS_WindowInTheStudio.jpg` and run **Build**. In Play:
+**P** switches to the painter's view (a fixed camera where he stood, framed like the painting); **C** lays the
+painting over it, half see-through (**[** and **]** change how much). Then change `AS_Layout` in the Inspector
+(the "Painter's view" numbers first, until the window sits where his does; then the window, sill and room) and
+watch it move. AS_Layout keeps its Play-mode edits.
+
+The chairs are the Bedroom's (`Chair_Front`), copied to `Prefabs/AS_Chair.prefab` by Build; turn them with
+`chairYawOffset`.
+
 ## What is verified
 
 - [I] Not compiled or run yet: written in a workspace without Unity. The first Build and Play may show compile

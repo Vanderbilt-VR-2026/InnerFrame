@@ -21,6 +21,9 @@ namespace InnerFrame.AlmondStudio.EditorTools
         const string BranchesPath = Root + "/Data/AS_Branches.json";
         const string Materials = Root + "/Materials";
         const string AtlasPath = Root + "/Textures/Blossom/AS_BlossomAtlas.png";
+        const string ReferencePath = Root + "/Textures/Reference/AS_WindowInTheStudio.jpg";
+        const string BedroomPrefab = "Assets/InnerFrameBedroomWeb/Generated/PaintedBedroom.prefab";
+        const string ChairPrefab = Root + "/Prefabs/AS_Chair.prefab";
         const string ScenePath = Root + "/Scenes/AlmondStudio.unity";
         const string XrOriginPrefab = "Assets/Samples/XR Interaction Toolkit/3.3.2/Starter Assets/Prefabs/XR Origin (XR Rig).prefab";
         const string XrOriginName = "XR Origin (XR Rig)";
@@ -110,6 +113,9 @@ namespace InnerFrame.AlmondStudio.EditorTools
             boot.groundMaterial = Lit("AS_Ground", lit, ColorUtility.ToHtmlStringRGB(layout.groundColour));
             boot.glow = Mat("AS_Glow", glowShader);
             boot.guideDot = Unlit("AS_GuideDot", unlit, "FFF2C8");
+            boot.reference = AssetDatabase.LoadAssetAtPath<Texture2D>(ReferencePath);
+            if (boot.reference == null) Debug.LogWarning("[AS Setup] No Window in the Studio at " + ReferencePath + "; the comparison (C) is off.");
+            boot.chairPrefab = ChairFromBedroom();
             boot.uiPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(DialoguePrefab);
             boot.uiSettings = AssetDatabase.LoadAssetAtPath<VG_DialogueSettings>(DialogueSettings);
             if (boot.branchesJson == null) Debug.LogError("[AS Setup] No branch paths at " + BranchesPath);
@@ -141,6 +147,28 @@ namespace InnerFrame.AlmondStudio.EditorTools
             l.layoutVersion = 1;
             EditorUtility.SetDirty(l);
             Debug.Log("[AS Setup] AS_Layout.asset updated to version 1 (painting size and distance, arrival spot).");
+        }
+
+        /// <summary>
+        /// The Bedroom's front chair (Charlyne's Tripo chair), copied out of PaintedBedroom.prefab into this scene's own
+        /// prefab the first time; the Bedroom's files are only read. Its meshes and material stay the Bedroom's.
+        /// </summary>
+        static GameObject ChairFromBedroom()
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<GameObject>(ChairPrefab);
+            if (existing != null) return existing;
+            var bedroom = AssetDatabase.LoadAssetAtPath<GameObject>(BedroomPrefab);
+            var src = bedroom != null ? bedroom.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == "Chair_Front") : null;
+            if (src == null) { Debug.LogWarning("[AS Setup] No Chair_Front in " + BedroomPrefab + "; the chairs stay boxes."); return null; }
+            EnsureFolder(Root + "/Prefabs");
+            var copy = Object.Instantiate(src.gameObject);
+            copy.name = "AS_Chair";
+            copy.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+            copy.transform.localScale = src.lossyScale;
+            var prefab = PrefabUtility.SaveAsPrefabAsset(copy, ChairPrefab);
+            Object.DestroyImmediate(copy);
+            Debug.Log("[AS Setup] Saved the Bedroom chair as " + ChairPrefab + ".");
+            return prefab;
         }
 
         static Material Mat(string name, Shader shader)

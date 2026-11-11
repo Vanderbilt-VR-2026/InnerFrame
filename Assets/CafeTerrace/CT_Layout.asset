@@ -1,0 +1,364 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: de64a06580f2d4ad099a1235ea529ac4, type: 3}
+  m_Name: CT_Layout
+  m_EditorClassIdentifier: Assembly-CSharp::InnerFrame.CafeTerrace.CT_Layout
+  rigScale: 0.8
+  worldScale: 0.8
+  eyeHeight: 1.6
+  saturation: 0.94
+  lightRange: 4
+  skyTop: {r: 0.07058824, g: 0.21960784, b: 0.62352943, a: 1}
+  skyHorizon: {r: 0.10980392, g: 0.29803923, b: 0.7058824, a: 1}
+  starsSmall: 1400
+  starsLarge: 170
+  starsSeed: 1889
+  spawn:
+    x: 3.25
+    y: -5.4
+    yaw: 0
+  painter:
+    x: -3.4
+    y: -3.83
+    yaw: -2
+  vincent:
+    x: -2.45
+    y: -3.6
+    yaw: 0
+  exitCentre: {x: -0.1, y: 22.5}
+  exitSize: {x: 7, y: 1.5}
+  flame: {x: -4.209167, y: 4.9, z: 2.397809}
+  objects:
+  - name: Chair_01
+    model: CT_Chairs
+    position: {x: -4.33, y: 8.85, z: 0.12}
+    rotZ: 11.987
+    scale: {x: 0.90195, y: 0.90195, z: 0.90195}
+  - name: Chair_02
+    model: CT_Chairs
+    position: {x: -4.7, y: 8.35, z: 0.12}
+    rotZ: 86.437
+    scale: {x: 0.90195, y: 0.90195, z: 0.90195}
+  - name: Chair_03
+    model: CT_Chairs
+    position: {x: -4.41, y: 7.81, z: 0.12}
+    rotZ: 151.216
+    scale: {x: 0.90195, y: 0.90195, z: 0.90195}
+  - name: Chair_04
+    model: CT_Chairs
+    position: {x: -3.86, y: 8.71, z: 0.12}
+    rotZ: 325.223
+    scale: {x: 0.90195, y: 0.90195, z: 0.90195}
+  - name: Chair_05
+    model: CT_Chairs
+    position: {x: -3, y: 8.58, z: 0.12}
+    rotZ: 39.197
+    scale: {x: 0.90195, y: 0.90195, z: 0.90195}
+  - name: Chair_06
+    model: CT_Chairs
+    position: {x: -2.58, y: 8.83, z: 0.12}
+    rotZ: 352.01
+    scale: {x: 0.90195, y: 0.90195, z: 0.90195}
+  - name: Chair_07
+    model: CT_Chairs
+    position: {x: -2.35, y: 8.42, z: 0.12}
+    rotZ: 300.277
+    scale: {x: 0.90195, y: 0.90195, z: 0.90195}
+  - name: Chair_08
+    model: CT_Chairs
+    position: {x: -2.55, y: 7.7, z: 0.12}
+    rotZ: 194.877
+    scale: {x: 0.90195, y: 0.90195, z: 0.90195}
+  - name: Chair_09
+    model: CT_Chairs
+    position: {x: -4.33, y: 7.01, z: 0.12}
+    rotZ: 9.779
+    scale: {x: 0.90195, y: 0.90195, z: 0.90195}
+  - name: Chair_10
+    model: CT_Chairs
+    position: {x: -4.61, y: 6.71, z: 0.12}
+    rotZ: 47.489
+    scale: {x: 0.90195, y: 0.90195, z: 0.90195}
+  - name: Chair_11
+    model: CT_Chairs
+    position: {x: -3.92, y: 6.61, z: 0.12}
+    rotZ: 317.197
+    scale: {x: 0.90195, y: 0.90195, z: 0.90195}
+  - name: Chair_12
+    model: CT_Chairs
+    position: {x: -4.47, y: 5.9, z: 0.12}
+    rotZ: 147.809
+    scale: {x: 0.90195, y: 0.90195, z: 0.90195}
+  - name: Chair_13
+    model: CT_Chairs
+    position: {x: -2.92, y: 6.25, z: 0.12}
+    rotZ: 23.801
+    scale: {x: 0.90195, y: 0.90195, z: 0.90195}
+  - name: Chair_14
+    model: CT_Chairs
+    position: {x: -2.47, y: 6.18, z: 0.12}
+    rotZ: 339.364
+    scale: {x: 0.90195, y: 0.90195, z: 0.90195}
+  - name: Chair_15
+    model: CT_Chairs
+    position: {x: -2.35, y: 5.14, z: 0.12}
+    rotZ: 215.346
+    scale: {x: 0.90195, y: 0.90195, z: 0.90195}
+  - name: Chair_16
+    model: CT_Chairs
+    position: {x: -4.42, y: 4.42, z: 0.12}
+    rotZ: 17.196
+    scale: {x: 0.90195, y: 0.90195, z: 0.90195}
+  - name: Chair_17
+    model: CT_Chairs
+    position: {x: -4.67, y: 4.03, z: 0.12}
+    rotZ: 73.841
+    scale: {x: 0.90195, y: 0.90195, z: 0.90195}
+  - name: Chair_18
+    model: CT_Chairs
+    position: {x: -4.5, y: 3.44, z: 0.12}
+    rotZ: 156.66
+    scale: {x: 0.90195, y: 0.90195, z: 0.90195}
+  - name: Chair_19
+    model: CT_Chairs
+    position: {x: -1.58, y: 5.66, z: 0}
+    rotZ: 22.23
+    scale: {x: 0.90195, y: 0.90195, z: 0.90195}
+  - name: Chair_20
+    model: CT_Chairs
+    position: {x: -1.3, y: 4.55, z: 0}
+    rotZ: 189.044
+    scale: {x: 0.90195, y: 0.90195, z: 0.90195}
+  - name: Chair_21
+    model: CT_Chairs
+    position: {x: -3.08, y: 4.78, z: 0.12}
+    rotZ: -21.482
+    scale: {x: 0.90195, y: 0.90195, z: 0.90195}
+  - name: Chair_22
+    model: CT_Chairs
+    position: {x: -2.38, y: 6.75, z: 0.12}
+    rotZ: 183.331
+    scale: {x: 0.90195, y: 0.90195, z: 0.90195}
+  - name: Chair_23
+    model: CT_Chairs
+    position: {x: -4.4, y: 0.84, z: 0}
+    rotZ: 7.957
+    scale: {x: 0.90195, y: 0.90195, z: 0.90195}
+  - name: Chair_24
+    model: CT_Chairs
+    position: {x: -3.68, y: 0.5, z: 0}
+    rotZ: 44.957
+    scale: {x: 0.90195, y: 0.90195, z: 0.90195}
+  - name: Chair_25
+    model: CT_Chairs
+    position: {x: -2.43, y: 0.72, z: 0}
+    rotZ: 44.957
+    scale: {x: 0.90195, y: 0.90195, z: 0.90195}
+  - name: Chair_26
+    model: CT_Chairs
+    position: {x: -2.22, y: 2.3, z: 0.12}
+    rotZ: 79.957
+    scale: {x: 0.90195, y: 0.90195, z: 0.90195}
+  - name: Chair_27
+    model: CT_Chairs
+    position: {x: -3.3, y: 1.9, z: 0.12}
+    rotZ: -0.043
+    scale: {x: 0.90195, y: 0.90195, z: 0.90195}
+  - name: Chair_28
+    model: CT_Chairs
+    position: {x: -3.8, y: 2.1, z: 0.12}
+    rotZ: 4.957
+    scale: {x: 0.90195, y: 0.90195, z: 0.90195}
+  - name: Lantern
+    model: CT_Lantern
+    position: {x: -4.525, y: 4.9, z: 2}
+    rotZ: 0
+    scale: {x: 0.97085, y: 0.97085, z: 0.97085}
+  - name: Table_01
+    model: CT_Tables
+    position: {x: -4.18, y: 8.29, z: 0.12}
+    rotZ: 323.063
+    scale: {x: 0.65115, y: 0.65115, z: 0.75066}
+  - name: Table_02
+    model: CT_Tables
+    position: {x: -2.69, y: 8.21, z: 0.12}
+    rotZ: 265.287
+    scale: {x: 0.65115, y: 0.65115, z: 0.75066}
+  - name: Table_03
+    model: CT_Tables
+    position: {x: -4.2, y: 6.31, z: 0.12}
+    rotZ: 164.938
+    scale: {x: 0.65115, y: 0.65115, z: 0.75066}
+  - name: Table_04
+    model: CT_Tables
+    position: {x: -2.67, y: 5.65, z: 0.12}
+    rotZ: 50.782
+    scale: {x: 0.65115, y: 0.65115, z: 0.75066}
+  - name: Table_05
+    model: CT_Tables
+    position: {x: -4.27, y: 3.91, z: 0.12}
+    rotZ: 312.651
+    scale: {x: 0.65115, y: 0.65115, z: 0.75066}
+  - name: Table_06
+    model: CT_Tables
+    position: {x: -4.43, y: 0.68, z: 0}
+    rotZ: 297.75
+    scale: {x: 0.65115, y: 0.65115, z: 0.75066}
+  - name: Table_07
+    model: CT_Tables
+    position: {x: -3.2, y: 0.8, z: 0}
+    rotZ: 80.647
+    scale: {x: 0.65115, y: 0.65115, z: 0.75066}
+  - name: Table_08
+    model: CT_Tables
+    position: {x: -1.55, y: 2.4, z: 0}
+    rotZ: 86.132
+    scale: {x: 0.65115, y: 0.65115, z: 0.75066}
+  - name: Table_09
+    model: CT_Tables
+    position: {x: -1.36, y: 5.12, z: 0}
+    rotZ: 144.737
+    scale: {x: 0.65115, y: 0.65115, z: 0.75066}
+  shots:
+  - name: forward
+    target: 01_master_v2.webp
+    position: {x: -3.4, y: -3.83, z: 1.6}
+    yaw: 0
+    pitch: 0
+    verticalFov: 76.934
+    width: 1536
+    height: 1024
+    hide:
+    - PH_Easel
+    - PH_Vincent
+  - name: right
+    target: 07_right.webp
+    position: {x: -3.4, y: -3.83, z: 1.6}
+    yaw: 90
+    pitch: 0
+    verticalFov: 76.934
+    width: 1536
+    height: 1024
+    hide:
+    - PH_Easel
+    - PH_Vincent
+  - name: back
+    target: 08_back.webp
+    position: {x: -3.4, y: -3.83, z: 1.6}
+    yaw: 180
+    pitch: 0
+    verticalFov: 76.934
+    width: 1536
+    height: 1024
+    hide:
+    - PH_Easel
+    - PH_Vincent
+  - name: left
+    target: 09_left.webp
+    position: {x: -3.4, y: -3.83, z: 1.6}
+    yaw: 270
+    pitch: 0
+    verticalFov: 76.934
+    width: 1536
+    height: 1024
+    hide:
+    - PH_Easel
+    - PH_Vincent
+  - name: overview
+    target: 03_overview.webp
+    position: {x: -0.6, y: -6.4, z: 3.4}
+    yaw: -6
+    pitch: -8
+    verticalFov: 54.184
+    width: 1536
+    height: 1024
+    hide: []
+  - name: elev_right
+    target: 07_right.webp
+    position: {x: -1.1, y: 1.2, z: 2.4}
+    yaw: 90
+    pitch: 6
+    verticalFov: 76.934
+    width: 1536
+    height: 1024
+    hide:
+    - PH_Easel
+    - PH_Vincent
+  - name: elev_back
+    target: 08_back.webp
+    position: {x: -0.5, y: 3, z: 2.6}
+    yaw: 180
+    pitch: 4
+    verticalFov: 48.424
+    width: 1536
+    height: 1024
+    hide:
+    - PH_Easel
+    - PH_Vincent
+  - name: elev_left
+    target: 09_left.webp
+    position: {x: 3.6, y: -0.4, z: 2.4}
+    yaw: 270
+    pitch: 2
+    verticalFov: 36.024
+    width: 1536
+    height: 1024
+    hide:
+    - PH_Easel
+    - PH_Vincent
+  - name: lantern
+    target: 
+    position: {x: -2.5, y: 3.5, z: 2}
+    yaw: -48
+    pitch: 6
+    verticalFov: 34
+    width: 1024
+    height: 1024
+    hide: []
+  - name: terrace
+    target: 
+    position: {x: -0.6, y: -0.6, z: 1.6}
+    yaw: -38
+    pitch: -12
+    verticalFov: 50.047
+    width: 1536
+    height: 1024
+    hide: []
+  - name: sky_view
+    target: 06_sky_parked.webp
+    position: {x: 0.5, y: 2, z: 1.6}
+    yaw: 5
+    pitch: 32
+    verticalFov: 67.38
+    width: 1536
+    height: 1024
+    hide: []
+  - name: painting
+    target: 01_master_v2.webp
+    position: {x: -3.4, y: -3.83, z: 1.6}
+    yaw: -2
+    pitch: 8
+    verticalFov: 65
+    width: 1122
+    height: 1402
+    hide:
+    - PH_Easel
+    - PH_Vincent
+  - name: spawn
+    target: 
+    position: {x: 3.25, y: -5.4, z: 1.6}
+    yaw: 0
+    pitch: 0
+    verticalFov: 67.38
+    width: 1536
+    height: 1024
+    hide: []

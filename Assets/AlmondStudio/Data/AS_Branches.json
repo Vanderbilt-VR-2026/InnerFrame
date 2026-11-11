@@ -1,8 +1,12 @@
 {
- "note": "Almond Blossom branch paths, base to tip, in painting UV (u right, v up, 0..1). Edit here, then press Play: AS_Branches reads this file. Made 2026-11-10 by Claude for Serena.",
+ "note": "Almond Blossom branch paths, base to tip, in painting UV (u right, v up, 0..1), as seen from the paint viewpoint (AS_Layout.paintEye). width: radius at the base in painting widths. depthBase/depthTip: how far along the eye's ray each end sits, as a multiple of the reference plane's distance (1 = on the plane; more = further out). decor: part of the tree, not painted (the trunk and the big limb). toGround: a trunk continues from its base straight down to the ground. At most 8 paintable branches. Edit here, then press Play. 2026-11-11, Claude for Serena.",
  "branches": [
   {
    "name": "B1_top",
+   "width": 0.012,
+   "depthBase": 2.1,
+   "depthTip": 2.4,
+   "decor": false,
    "points": [
     {
      "x": 0.3106,
@@ -48,10 +52,15 @@
      "x": 0.9938,
      "y": 0.8574
     }
-   ]
+   ],
+   "toGround": false
   },
   {
    "name": "B2_centre",
+   "width": 0.012,
+   "depthBase": 1.8,
+   "depthTip": 2.4,
+   "decor": false,
    "points": [
     {
      "x": 0.5047,
@@ -85,10 +94,15 @@
      "x": 0.6832,
      "y": 0.941
     }
-   ]
+   ],
+   "toGround": false
   },
   {
    "name": "B3_left_up",
+   "width": 0.014,
+   "depthBase": 1.6,
+   "depthTip": 2.2,
+   "decor": false,
    "points": [
     {
      "x": 0.4037,
@@ -122,10 +136,15 @@
      "x": 0.0815,
      "y": 0.9508
     }
-   ]
+   ],
+   "toGround": false
   },
   {
    "name": "B4_left_mid",
+   "width": 0.009,
+   "depthBase": 1.9,
+   "depthTip": 1.6,
+   "decor": false,
    "points": [
     {
      "x": 0.3339,
@@ -151,10 +170,15 @@
      "x": 0.0233,
      "y": 0.5379
     }
-   ]
+   ],
+   "toGround": false
   },
   {
    "name": "B5_right_up",
+   "width": 0.013,
+   "depthBase": 1.6,
+   "depthTip": 2.3,
+   "decor": false,
    "points": [
     {
      "x": 0.5435,
@@ -192,10 +216,15 @@
      "x": 0.9084,
      "y": 0.7542
     }
-   ]
+   ],
+   "toGround": false
   },
   {
    "name": "B6_right_low",
+   "width": 0.012,
+   "depthBase": 1.45,
+   "depthTip": 1.75,
+   "decor": false,
    "points": [
     {
      "x": 0.6211,
@@ -221,10 +250,15 @@
      "x": 0.8579,
      "y": 0.4002
     }
-   ]
+   ],
+   "toGround": false
   },
   {
    "name": "B7_left_low",
+   "width": 0.012,
+   "depthBase": 1.55,
+   "depthTip": 1.35,
+   "decor": false,
    "points": [
     {
      "x": 0.2562,
@@ -246,10 +280,15 @@
      "x": 0.0116,
      "y": 0.3215
     }
-   ]
+   ],
+   "toGround": false
   },
   {
    "name": "B8_bottom_left",
+   "width": 0.01,
+   "depthBase": 1.7,
+   "depthTip": 1.45,
+   "decor": false,
    "points": [
     {
      "x": 0.2562,
@@ -267,7 +306,114 @@
      "x": 0.0466,
      "y": 0.0708
     }
-   ]
+   ],
+   "toGround": false
+  },
+  {
+   "name": "T1_limb",
+   "width": 0.05,
+   "depthBase": 1.5,
+   "depthTip": 1.6,
+   "decor": true,
+   "points": [
+    {
+     "x": 1.0,
+     "y": 0.0069
+    },
+    {
+     "x": 0.8929,
+     "y": 0.0315
+    },
+    {
+     "x": 0.7764,
+     "y": 0.0659
+    },
+    {
+     "x": 0.6832,
+     "y": 0.1101
+    },
+    {
+     "x": 0.5901,
+     "y": 0.1524
+    },
+    {
+     "x": 0.4969,
+     "y": 0.1721
+    },
+    {
+     "x": 0.4037,
+     "y": 0.1819
+    },
+    {
+     "x": 0.3261,
+     "y": 0.174
+    },
+    {
+     "x": 0.2562,
+     "y": 0.1465
+    }
+   ],
+   "toGround": true
+  },
+  {
+   "name": "T2_trunk",
+   "width": 0.034,
+   "depthBase": 1.6,
+   "depthTip": 1.7,
+   "decor": true,
+   "points": [
+    {
+     "x": 0.5047,
+     "y": 0.0
+    },
+    {
+     "x": 0.5186,
+     "y": 0.0855
+    },
+    {
+     "x": 0.5435,
+     "y": 0.174
+    },
+    {
+     "x": 0.5575,
+     "y": 0.292
+    },
+    {
+     "x": 0.5435,
+     "y": 0.3904
+    }
+   ],
+   "toGround": true
+  },
+  {
+   "name": "T3_trunk",
+   "width": 0.03,
+   "depthBase": 1.55,
+   "depthTip": 1.6,
+   "decor": true,
+   "points": [
+    {
+     "x": 0.4581,
+     "y": 0.0
+    },
+    {
+     "x": 0.4736,
+     "y": 0.0855
+    },
+    {
+     "x": 0.4348,
+     "y": 0.1642
+    },
+    {
+     "x": 0.3649,
+     "y": 0.2134
+    },
+    {
+     "x": 0.3261,
+     "y": 0.3117
+    }
+   ],
+   "toGround": true
   }
  ]
 }

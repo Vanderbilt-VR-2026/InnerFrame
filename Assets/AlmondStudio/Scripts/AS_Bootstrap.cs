@@ -11,7 +11,7 @@ namespace InnerFrame.AlmondStudio
     /// <summary>
     /// The only thing in AlmondStudio.unity besides the player rig (blockout, step 1). At runtime it builds the studio
     /// from boxes (walls with the window opening, sill, floor, ceiling, table, chairs, easel, door), the two casements,
-    /// the brush on the sill, a stand-in Vincent, the painting outside with its reveal map, the guides and the shared
+    /// the brush on the sill, a stand-in Vincent, the painted sky, the 3D almond tree (AS_Tree), the guides and the shared
     /// dialogue box, places the rig from AS_Layout, and starts AS_Game.
     /// Editor fallback (no headset; DesktopTestRig walks and looks with W A S D and the mouse): O opens the window,
     /// G takes or puts down the brush, Space is the trigger, N blooms the next branch at once, R starts over.
@@ -20,7 +20,7 @@ namespace InnerFrame.AlmondStudio
     {
         public AS_Layout layout;
         [Tooltip("Assets/AlmondStudio/Data/AS_Branches.json: the branch paths.")] public TextAsset branchesJson;
-        public Material wall, floor, ceiling, wood, frame, brushHead, vincent, painting, glow, guideDot, skyBehind;
+        public Material wall, floor, ceiling, wood, frame, brushHead, vincent, bark, ink, skyMaterial, groundMaterial, glow, guideDot;
         [Tooltip("VG_DialogueUI.prefab: Vincent's words and the hint, as in every scene.")] public GameObject uiPrefab;
         public VG_DialogueSettings uiSettings;
 
@@ -150,19 +150,20 @@ namespace InnerFrame.AlmondStudio
             letter.transform.localRotation = Quaternion.Euler(-20f, 0f, 0f);
             DestroyImmediate(letter.GetComponent<Collider>());
 
-            // the painting outside, and a plain sky far behind it for views past its edges
-            var branches = AS_Branches.Load(branchesJson, layout.paintingAspect);
-            var map = AS_Branches.BuildRevealMap(branches, layout.revealMapWidth, layout.paintingAspect);
-            var quad = Prim(world, PrimitiveType.Quad, "Almond Blossom", layout.PaintingCentre, new Vector3(layout.paintingWidth, layout.PaintingHeight, 1f), painting);
-            DestroyImmediate(quad.GetComponent<Collider>());
-            var paint = quad.AddComponent<AS_Painting>();
-            paint.Init(painting, map, layout.revealSoftness, layout.paintingEdgeFade, layout.skyBehind);
-            var back = Prim(world, PrimitiveType.Quad, "Sky behind", layout.PaintingCentre + new Vector3(0f, 0f, 6f), new Vector3(60f, 40f, 1f), skyBehind);
-            DestroyImmediate(back.GetComponent<Collider>());
+            // outside: the painted sky all round, the ground, and the almond tree fitted to the painting
+            var sky = Prim(world, PrimitiveType.Sphere, "Sky", layout.WindowCentreOuter, Vector3.one * layout.skyRadius * 2f, skyMaterial);
+            DestroyImmediate(sky.GetComponent<Collider>());
+            sky.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            var ground = Box(world, "Garden ground", new Vector3(0f, -0.06f, D + T + 6f), new Vector3(24f, 0.1f, 12f), groundMaterial, collider: false);
+            ground.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            var branches = AS_Branches.Load(branchesJson);
+            var tree = new GameObject("Almond tree").AddComponent<AS_Tree>();
+            tree.transform.SetParent(world, false);
+            tree.Build(branches, layout, bark, ink);
 
             var guides = new GameObject("Guides").AddComponent<AS_Guides>();
             guides.transform.SetParent(world, false);
-            guides.Build(branches, paint, glow, guideDot);
+            guides.Build(branches, glow, guideDot);
 
             VG_DialogueUI ui = null;
             if (uiPrefab != null)
@@ -175,7 +176,7 @@ namespace InnerFrame.AlmondStudio
             Game = world.gameObject.AddComponent<AS_Game>();
             Game.layout = layout;
             Game.window = win;
-            Game.painting = paint;
+            Game.tree = tree;
             Game.guides = guides;
             Game.brush = brush;
             Game.brushTip = tip;

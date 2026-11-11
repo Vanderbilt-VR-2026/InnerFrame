@@ -27,22 +27,27 @@ namespace InnerFrame.AlmondStudio
         public float casementOpenDegrees = 105f;
         public float casementOpenSeconds = 1.2f;
 
-        [Header("The painting outside (Almond Blossom, bare and original)")]
-        [Tooltip("From the wall's outer face to the painting. With paintingWidth: from about 1 m in front of the window the whole tree just fits its width (the opening's outer edge is the limit); further back the sides are cut a little.")] public float paintingDistance = 0.4f;
+        [Header("The tree outside, fitted to Almond Blossom from the paint viewpoint")]
+        [Tooltip("The eye the tree is fitted from: standing about 1 m in front of the window. From here the branches fall where the painting has them.")]
+        public Vector3 paintEye = new Vector3(0f, 1.6f, 3f);
+        [Tooltip("The reference plane: the painting as it would hang this far outside the wall's outer face, so that from paintEye the whole tree fits the window. Each branch then sits at its own depth along the eye's rays (AS_Branches.json).")]
+        public float paintingDistance = 0.4f;
         public float paintingWidth = 1.5f;
         [Tooltip("On the line from a standing eye (1.6 m) through the window's centre.")] public float paintingCentreY = 1.95f;
-        [Tooltip("How far in from the painting's edges it fades into skyBehind (0..0.5 of its size), so no hard edge shows past it.")] public float paintingEdgeFade = 0.06f;
-        [Tooltip("Width / height of the painting image (2576 x 2035).")] public float paintingAspect = 1.2658f;
-        [Tooltip("The plain sky colour far behind the painting, for views past its edges.")] public Color skyBehind = new Color(0.486f, 0.682f, 0.686f);
+        [Tooltip("Width / height of Almond Blossom (2576 x 2035).")] public float paintingAspect = 1.2658f;
+        [Tooltip("No branch comes nearer the wall's outer face than this.")] public float treeClearance = 0.15f;
+        [Tooltip("The dark outline round the branches, metres.")] public float inkWidth = 0.006f;
+        [Tooltip("The sky's radius round the window.")] public float skyRadius = 40f;
+        [Tooltip("The camera's clear colour (only seen if the sky is missing).")] public Color skyBehind = new Color(0.486f, 0.682f, 0.686f);
+        public Color groundColour = new Color(0.55f, 0.6f, 0.38f);
 
-        [Header("Following a branch (painting UV units, width scaled by the aspect)")]
-        [Tooltip("How close the beam must come to a branch's next point to start on it.")] public float startTolerance = 0.08f;
-        [Tooltip("How far from the branch the beam may stray while following it.")] public float followTolerance = 0.09f;
+        [Header("Following a branch with the brush's beam (degrees from the beam)")]
+        [Tooltip("How close the beam must come to a branch's glowing dot to start on it.")] public float startToleranceDeg = 4f;
+        [Tooltip("How far from the branch the beam may stray while following it.")] public float followToleranceDeg = 5f;
         [Tooltip("How far ahead along the branch one frame may jump (0..1 of its length).")] public float lookAhead = 0.15f;
         [Tooltip("Seconds off the branch before it is let go (the progress stays).")] public float loseSeconds = 0.6f;
-        [Tooltip("Past this, the branch counts as done and blooms to its tip.")] public float finishAt = 0.95f;
-        [Tooltip("Softness of the bloom's edge behind the stroke (0..1 of the branch).")] public float revealSoftness = 0.06f;
-        [Tooltip("Size of the reveal map built from the branch paths (the painting's height follows the aspect).")] public int revealMapWidth = 512;
+        [Tooltip("Past this, the branch counts as done.")] public float finishAt = 0.95f;
+        [Tooltip("How far the beam reaches when it points at no branch.")] public float beamLength = 6f;
 
         [Header("People")]
         [Tooltip("Where the player arrives (step 2 will move this to his viewpoint for Window in the Studio).")] public Vector3 playerStart = new Vector3(0.3f, 0f, 1.1f);
@@ -70,6 +75,7 @@ namespace InnerFrame.AlmondStudio
         public string hintOthers = "Wake the other branches";
 
         public Vector3 WindowCentreInner => new Vector3(0f, (windowBottom + windowTop) * 0.5f, roomDepth);
+        public Vector3 WindowCentreOuter => new Vector3(0f, (windowBottom + windowTop) * 0.5f, roomDepth + wallThickness);
         public float PaintingHeight => paintingWidth / paintingAspect;
         public Vector3 PaintingCentre => new Vector3(0f, paintingCentreY, roomDepth + wallThickness + paintingDistance);
     }

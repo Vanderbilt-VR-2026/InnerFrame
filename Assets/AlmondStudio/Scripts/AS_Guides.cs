@@ -3,35 +3,34 @@ using UnityEngine;
 namespace InnerFrame.AlmondStudio
 {
     /// <summary>
-    /// What shows the player where to paint: for each branch still bare, a faint line along the part not yet painted
-    /// and a small glowing dot where it starts; the branch being followed glows brighter. And the brush's beam.
-    /// Line renderers with AS_Glow.shader, a little in front of the painting.
+    /// What shows the player where to paint: for each branch still to paint, a faint line along the part not yet
+    /// painted, lifted off the bark toward the viewer, and a small glowing dot where it starts; the branch being
+    /// followed glows brighter. And the brush's beam. Line renderers with AS_Glow.shader.
     /// </summary>
     public class AS_Guides : MonoBehaviour
     {
         const int Samples = 40;
-        const float Lift = 0.015f, Width = 0.006f, DotSize = 0.025f;   // sized for a 1.5 m painting
-        static readonly Color Idle = new Color(1f, 0.96f, 0.82f, 0.35f), Active = new Color(1f, 0.93f, 0.7f, 0.85f);
+        const float Width = 0.008f, DotSize = 0.04f;
+        static readonly Color Idle = new Color(1f, 0.96f, 0.82f, 0.4f), Active = new Color(1f, 0.93f, 0.7f, 0.9f);
 
         LineRenderer[] lines;
         Transform[] dots;
         LineRenderer beam;
-        AS_Painting painting;
-        float shown = 1f, showTarget = 1f;
+        float shown, showTarget;
 
-        public void Build(AS_Branch[] branches, AS_Painting p, Material glow, Material dotMaterial)
+        public void Build(AS_Branch[] branches, Material glow, Material dotMaterial)
         {
-            painting = p;
             lines = new LineRenderer[branches.Length];
             dots = new Transform[branches.Length];
             for (int i = 0; i < branches.Length; i++)
             {
-                var go = new GameObject("Guide " + branches[i].name);
+                if (!branches[i].Paintable) continue;
+                var go = new GameObject("Guide " + branches[i].Name);
                 go.transform.SetParent(transform, false);
                 lines[i] = Line(go, glow, Width);
                 lines[i].positionCount = Samples;
                 var dot = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                dot.name = "Start " + branches[i].name;
+                dot.name = "Start " + branches[i].Name;
                 DestroyImmediate(dot.GetComponent<Collider>());
                 dot.transform.SetParent(transform, false);
                 dot.transform.localScale = Vector3.one * DotSize;
@@ -40,7 +39,7 @@ namespace InnerFrame.AlmondStudio
             }
             var b = new GameObject("Beam");
             b.transform.SetParent(transform, false);
-            beam = Line(b, glow, 0.008f);
+            beam = Line(b, glow, 0.006f);
             beam.positionCount = 2;
             beam.enabled = false;
         }
@@ -57,14 +56,17 @@ namespace InnerFrame.AlmondStudio
             return l;
         }
 
-        /// <summary>The guides fade in (window open, brush in hand) and out (the ending).</summary>
+        /// <summary>The guides fade in (brush in hand) and out (the ending).</summary>
         public void Show(bool on) => showTarget = on ? 1f : 0f;
 
-        public void Refresh(AS_Branch[] branches, int active, float dt)
+        /// <summary>`viewer`: where the line is lifted toward (the player's head).</summary>
+        public void Refresh(AS_Branch[] branches, int active, Vector3 viewer, float dt)
         {
+            if (lines == null) return;
             shown = Mathf.MoveTowards(shown, showTarget, dt * 2f);
             for (int i = 0; i < branches.Length; i++)
             {
+                if (lines[i] == null) continue;
                 var br = branches[i];
                 bool visible = !br.Done && shown > 0.01f;
                 lines[i].enabled = visible;
@@ -73,15 +75,21 @@ namespace InnerFrame.AlmondStudio
                 for (int k = 0; k < Samples; k++)
                 {
                     float t = Mathf.Lerp(br.progress, 1f, k / (Samples - 1f));
-                    lines[i].SetPosition(k, painting.WorldAt(br.PointAt(t), Lift));
+                    lines[i].SetPosition(k, Lifted(br, t, viewer));
                 }
                 var c = i == active ? Active : Idle;
                 c.a *= shown;
                 lines[i].startColor = c;
                 lines[i].endColor = new Color(c.r, c.g, c.b, c.a * 0.4f);
-                dots[i].position = painting.WorldAt(br.PointAt(br.progress), Lift * 1.5f);
-                dots[i].localScale = Vector3.one * DotSize * (i == active ? 1.3f : 1f + 0.15f * Mathf.Sin(Time.time * 3f + i));
+                dots[i].position = Lifted(br, br.progress, viewer);
+                dots[i].localScale = Vector3.one * DotSize * (i == active ? 1.4f : 1f + 0.2f * Mathf.Sin(Time.time * 3f + i));
             }
+        }
+
+        static Vector3 Lifted(AS_Branch br, float t, Vector3 viewer)
+        {
+            Vector3 p = br.WorldAt(t);
+            return p + (viewer - p).normalized * (br.RadiusAt(t) + 0.012f);
         }
 
         public void Beam(Vector3 from, Vector3 to, bool strong)

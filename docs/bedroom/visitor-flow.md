@@ -14,7 +14,8 @@ since the Tripo room (that walkthrough waits for the room size, #144).
 4. **Hold the mirror near his face** (within 1 m). He paints for 24 s in total: charcoal sketch, colour, finished
    portrait, with a comment at each stage. Move it away and he pauses and asks for it back. Let go near him and it
    stays in the air beside the canvas, as if on a stand. [V, same]
-5. **Talk to him** by holding B, whenever nobody else is asking and he isn't already answering. [V, `SpeechToProxy`]
+5. **Talk to him** by holding B, whenever nobody else is asking and no question of yours is still waiting for his answer.
+   Pressing B while he is speaking cuts him off and starts recording. [V, `SpeechToProxy.OnPress`]
 6. **He finishes and thanks you.** The mirror goes back on the wall when you let go. [V, same]
 7. **Leave** with the player menu: left Menu button, **Back to Gallery**. [V, `docs/starry-night/README.md`, "as from
    the Bedroom"]

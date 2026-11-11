@@ -95,7 +95,8 @@ namespace InnerFrame.Gallery.EditorTools.Tests
 
             // inside the room and on the floor
             // (the glow cards are light, not things: a spot's ball of light reaches above the ceiling, which hides that half)
-            foreach (var r in decor.GetComponentsInChildren<Renderer>(true).Where(r => r.sharedMaterial == null || r.sharedMaterial.shader.name != "InnerFrame/StarryNight/Glow"))
+            // (the Sky card is outside on purpose: above the skylight)
+            foreach (var r in decor.GetComponentsInChildren<Renderer>(true).Where(r => (r.sharedMaterial == null || r.sharedMaterial.shader.name != "InnerFrame/StarryNight/Glow") && r.name != "Sky"))
             {
                 var b = r.bounds;
                 const float e = 0.001f;
@@ -113,6 +114,10 @@ namespace InnerFrame.Gallery.EditorTools.Tests
                     .Where(h => !mine.Contains(h)).Select(h => h.name).ToList();
                 Check(hits.Count == 0, $"{PathOf(c.transform, decor.transform)}'s collider overlaps nothing{(hits.Count > 0 ? ": " + string.Join(", ", hits) : "")}");
             }
+            var skyCard = decor.transform.Find("Sky");
+            Check(skyCard != null && skyCard.GetComponent<Renderer>().bounds.min.y > G.CeilingY + 0.4f && skyCard.GetComponent<Renderer>().shadowCastingMode == UnityEngine.Rendering.ShadowCastingMode.Off,
+                $"the sky card is above the skylight and casts no shadow ({(skyCard ? skyCard.GetComponent<Renderer>().bounds.min.ToString("F2") + ".." + skyCard.GetComponent<Renderer>().bounds.max.ToString("F2") : "none")})");
+
             // and no decor renderer reaches into the Starry Night's pedestal or button, or The Bedroom's
             var keepClear = roots.SelectMany(r => r.GetComponentsInChildren<Transform>(true))
                 .Where(t => t.name.StartsWith("Pedestal_") || t.name.StartsWith("Button_") || t.name.StartsWith("Bench_")).ToList();

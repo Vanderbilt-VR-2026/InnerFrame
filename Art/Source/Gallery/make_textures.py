@@ -33,6 +33,7 @@ SEAM = 0.12
 SLOTS = {
     "wall":         [("Wall", "tile", (1024, 1024), 1.0)],
     "ceiling":      [("Ceiling", "tile", (1024, 1024), 1.0)],
+    "sky":          [("Sky", "tile", (1024, 1024), 1.0)],   # seen through the skylight, on a card above it
     "floor":        [("Floor", "tile_turned", (1024, 1024), 1.0)],
     "wainscot":     [("Wainscot", "tile_x", (1536, 1024), 1.5)],
     "cornice":      [("Cornice", "band", (1024, 1024), 1.0)],

@@ -98,6 +98,12 @@ namespace InnerFrame.Gallery.EditorTools
         public const string HaloMat = Folder + "/GP_SpotHalo.mat";
         public const string HaloMesh = Folder + "/GP_HaloQuad.asset";   // a 1 m quad with white vertex colours: the glow shader multiplies by them
         public const string BulbMat = Folder + "/GP_Bulb.mat";
+        // The sky seen through the skylight: a painted card (GT_Sky, ChatGPT, made seamless by make_textures.py), unlit,
+        // facing down, 2 m above the ceiling's top (4.4 m) and 14 m square, so its edge never shows through the 3 x 2.5 m
+        // opening even from a far corner; the clouds repeat every 4 m. It casts no shadow, so the sun still falls
+        // through the skylight.
+        public const float SkyY = 6.4f, SkySize = 14f, SkyMetres = 4f;
+        public const string SkyMat = Folder + "/GP_Sky.mat", SkyTex = "Assets/Art/Gallery/Textures/GT_Sky_BaseColor.jpg";
         public static IEnumerable<(string name, Vector3 at)> Spots()
         {
             int k = 0;
@@ -182,6 +188,8 @@ namespace InnerFrame.Gallery.EditorTools
             var mats = Props.ToDictionary(p => p.name, p => MakeMaterial(Mat(p.name), Tex(p.name), Color.white, p.smooth, p.twoSided, false, changes));
             mats["LanternGlass"] = MakeGlass(GlassMat, Tex("Lantern"), GlassColour, changes);
             mats["Bulb"] = MakeGlass(BulbMat, null, BulbColour, changes, opaque: true);
+            ImportTexture(SkyTex, 1024, changes);
+            mats["Sky"] = MakeGlass(SkyMat, SkyTex, Color.white, changes, opaque: true, tiling: Vector2.one * (SkySize / SkyMetres));
             mats["Marble"] = MakeMaterial(MarbleMat, null, MarbleColour, 0.45f, false, false, changes);
             mats["Halo"] = MakeHalo(HaloMat, HaloColour, changes);
             mats["Pool"] = MakeHalo(PoolMat, PoolColour, changes);
@@ -291,7 +299,7 @@ namespace InnerFrame.Gallery.EditorTools
         }
 
         /// <summary>URP Unlit, transparent (alpha blend), both faces: the lantern's panes. Set in full every run, as above.</summary>
-        static Material MakeGlass(string path, string texPath, Color colour, List<string> changes, bool opaque = false)
+        static Material MakeGlass(string path, string texPath, Color colour, List<string> changes, bool opaque = false, Vector2? tiling = null)
         {
             var shader = Shader.Find("Universal Render Pipeline/Unlit") ?? throw new Exception($"{Tag} URP Unlit shader not found");
             var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(texPath);
@@ -301,7 +309,9 @@ namespace InnerFrame.Gallery.EditorTools
             string before = created ? "" : System.IO.File.ReadAllText(path);
             if (m.shader != shader) m.shader = shader;
             m.SetTexture("_BaseMap", tex); m.SetTexture("_MainTex", tex);
-            m.SetColor("_BaseColor", colour); m.SetColor("_Color", colour);
+            var scale = tiling ?? Vector2.one;
+            m.SetTextureScale("_BaseMap", scale); m.SetTextureScale("_MainTex", scale);
+            m.SetColor("_BaseColor", colour); m.SetColor("_Color", m.GetColor("_BaseColor"));
             m.SetFloat("_AlphaClip", 0f); m.DisableKeyword("_ALPHATEST_ON");
             m.SetFloat("_Surface", opaque ? 0f : 1f);
             m.SetFloat("_Blend", 0f);
@@ -486,6 +496,13 @@ namespace InnerFrame.Gallery.EditorTools
                 light.lightmapBakeType = LightmapBakeType.Realtime;
             }
             // GP_FrameCorner's origin is its outer top corner on the viewer's left, at its back; mirrored for the other three
+            // Unity's Plane, facing up, turned over to face down into the room; scaled from its own size (it measured 1 m
+            // here, not the 10 m Unity documents, so a fixed 1.4 made a 1.4 m card)
+            var sky = Primitive("Plane.fbx", mats["Sky"], root, "Sky", new Vector3(0f, SkyY, 0f), Vector3.one, false, Quaternion.Euler(180f, 0f, 0f));
+            float planeSize = sky.GetComponent<MeshFilter>().sharedMesh.bounds.size.x;
+            sky.transform.localScale = new Vector3(SkySize / planeSize, 1f, SkySize / planeSize);
+            var skyR = sky.GetComponent<MeshRenderer>();
+            skyR.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; skyR.receiveShadows = false;
             var spots = new GameObject("CeilingSpots").transform;
             spots.SetParent(root, false);
             spots.gameObject.AddComponent<GP_GlowBillboards>();

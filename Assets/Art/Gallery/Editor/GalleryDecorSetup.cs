@@ -77,7 +77,15 @@ namespace InnerFrame.Gallery.EditorTools
         // glow (SN_VillageGlow, made faint for a night sky, hardly showed on a lit ceiling). A ring 0.3 m outside the
         // skylight's moulded frame (the opening is 3 x 2.5 m in the ceiling's middle, its frame 0.18 m): five along each
         // long side, three along each short one.
-        public const float SpotRingX = 1.5f + 0.18f + 0.3f, SpotRingZ = 1.25f + 0.18f + 0.3f, SpotHalo = 1.2f;
+        // Each spot also hangs a glowing half-ball under its bulb (GP_SpotGlow: a card centred on the bulb that
+        // GP_GlowBillboards turns to face each camera; the ceiling hides its upper half. Crossed upright cards cut the bulb
+        // in two from below) and throws a soft pool of light on the floor below (GP_FloorPool,
+        // just above the rug's top, 0.01 m), since a real light per spot is out of the four-light budget.
+        public const float SpotRingX = 1.5f + 0.18f + 0.3f, SpotRingZ = 1.25f + 0.18f + 0.3f, SpotHalo = 2.0f, SpotOrb = 0.8f;
+        public const float PoolY = 0.014f, PoolSize = 1.8f;
+        public static readonly Color PoolColour = new Color(0.9f, 0.55f, 0.25f, 1f);
+        public const string PoolMat = Folder + "/GP_FloorPool.mat";
+        public const string OrbMesh = Folder + "/GP_SpotGlow.asset";
         public static readonly Color BulbColour = new Color(1f, 0.8f, 0.5f);
         public static readonly Color HaloColour = new Color(2.2f, 1.32f, 0.62f, 1f);   // HDR: SN_StarCore is pale and mostly clear; at 1x it hardly showed on the lit ceiling
         const string GlowShader = "InnerFrame/StarryNight/Glow", HaloTex = "Assets/StarryNight/Textures/SN_StarCore.png";
@@ -167,8 +175,10 @@ namespace InnerFrame.Gallery.EditorTools
             var mats = Props.ToDictionary(p => p.name, p => MakeMaterial(Mat(p.name), Tex(p.name), Color.white, p.smooth, p.twoSided, false, changes));
             mats["LanternGlass"] = MakeGlass(GlassMat, Tex("Lantern"), GlassColour, changes);
             mats["Bulb"] = MakeGlass(BulbMat, null, BulbColour, changes, opaque: true);
-            mats["Halo"] = MakeHalo(changes);
+            mats["Halo"] = MakeHalo(HaloMat, HaloColour, changes);
+            mats["Pool"] = MakeHalo(PoolMat, PoolColour, changes);
             MakeHaloMesh(changes);
+            MakeOrbMesh(changes);
             var prefab = MakePrefab(mats, changes);
             var scene = EditorSceneManager.OpenScene(GalleryPath, OpenSceneMode.Single);
             PlaceInGallery(scene, prefab, changes);
@@ -229,7 +239,9 @@ namespace InnerFrame.Gallery.EditorTools
             m.SetTextureScale("_BaseMap", scale); m.SetTextureScale("_MainTex", scale);
             var shift = offset ?? Vector2.zero;
             m.SetTextureOffset("_BaseMap", shift); m.SetTextureOffset("_MainTex", shift);
-            m.SetColor("_BaseColor", colour); m.SetColor("_Color", colour);
+            // URP keeps _Color in step with _BaseColor this way when it reloads the material; doing the same keeps the file
+            // unchanged between runs (setting both to colour left _Color 0.667 vs URP's 0.66699994, rewritten every session)
+            m.SetColor("_BaseColor", colour); m.SetColor("_Color", m.GetColor("_BaseColor"));
             m.SetFloat("_Smoothness", smooth);
             m.SetFloat("_Metallic", 0f);
             m.SetFloat("_EmissionEnabled", 0f); m.DisableKeyword("_EMISSION");
@@ -302,8 +314,6 @@ namespace InnerFrame.Gallery.EditorTools
             return m;
         }
 
-        /// <summary>The ceiling spots' halo: The Starry Night's glow shader, additive (as SN_Setup's Glow does it), with its
-        /// soft dot, warm. Set in full every run.</summary>
         /// <summary>A flat 1 x 1 m quad facing down (-Y), with UVs and white vertex colours (Unity's own Quad has none, so
         /// the glow shader, which multiplies by them, drew it black: nothing, when added).</summary>
         static Mesh MakeHaloMesh(List<string> changes)
@@ -322,24 +332,46 @@ namespace InnerFrame.Gallery.EditorTools
             return mesh;
         }
 
-        static Material MakeHalo(List<string> changes)
+        /// <summary>An upright 1 x 1 m card (XY plane, centred) showing the whole soft dot, white vertex colours: turned to
+        /// face the camera by GP_GlowBillboards.</summary>
+        static Mesh MakeOrbMesh(List<string> changes)
+        {
+            var verts = new List<Vector3> { new Vector3(-0.5f, -0.5f, 0f), new Vector3(0.5f, -0.5f, 0f), new Vector3(0.5f, 0.5f, 0f), new Vector3(-0.5f, 0.5f, 0f) };
+            var uvs = new List<Vector2> { new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(1f, 1f), new Vector2(0f, 1f) };
+            var mesh = AssetDatabase.LoadAssetAtPath<Mesh>(OrbMesh);
+            if (mesh != null && mesh.vertices.SequenceEqual(verts) && mesh.uv.SequenceEqual(uvs)) return mesh;
+            bool created = mesh == null;
+            if (created) { mesh = new Mesh { name = "GP_SpotGlow" }; AssetDatabase.CreateAsset(mesh, OrbMesh); }
+            mesh.Clear();
+            mesh.SetVertices(verts); mesh.SetUVs(0, uvs); mesh.SetTriangles(new[] { 0, 2, 1, 0, 3, 2 }, 0);
+            mesh.colors = Enumerable.Repeat(Color.white, verts.Count).ToArray();
+            mesh.RecalculateNormals(); mesh.RecalculateBounds();
+            EditorUtility.SetDirty(mesh);
+            AssetDatabase.SaveAssetIfDirty(mesh);
+            changes.Add($"{OrbMesh}: {(created ? "created" : "updated")}");
+            return mesh;
+        }
+
+        /// <summary>A glow: The Starry Night's glow shader, additive (as SN_Setup's Glow does it), with its soft dot, in
+        /// this colour. Set in full every run.</summary>
+        static Material MakeHalo(string path, Color colour, List<string> changes)
         {
             var shader = Shader.Find(GlowShader) ?? throw new Exception($"{Tag} {GlowShader} not found");
             var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(HaloTex) ?? throw new Exception($"{Tag} {HaloTex} missing");
-            var m = AssetDatabase.LoadAssetAtPath<Material>(HaloMat);
+            var m = AssetDatabase.LoadAssetAtPath<Material>(path);
             bool created = m == null;
-            if (created) { m = new Material(shader) { name = "GP_SpotHalo" }; AssetDatabase.CreateAsset(m, HaloMat); }
-            string before = created ? "" : System.IO.File.ReadAllText(HaloMat);
+            if (created) { m = new Material(shader) { name = System.IO.Path.GetFileNameWithoutExtension(path) }; AssetDatabase.CreateAsset(m, path); }
+            string before = created ? "" : System.IO.File.ReadAllText(path);
             if (m.shader != shader) m.shader = shader;
             m.SetTexture("_BaseMap", tex); m.SetTexture("_MainTex", tex);
-            m.SetColor("_BaseColor", HaloColour);
+            m.SetColor("_BaseColor", colour);
             m.SetFloat("_SrcBlend", (float)BlendMode.One); m.SetFloat("_DstBlend", (float)BlendMode.One);
             m.SetFloat("_Premultiply", 1f);
             m.enableInstancing = true;
             m.renderQueue = -1;
             EditorUtility.SetDirty(m);
             AssetDatabase.SaveAssetIfDirty(m);
-            if (created || System.IO.File.ReadAllText(HaloMat) != before) changes.Add($"{HaloMat}: {(created ? "created" : "updated")}");
+            if (created || System.IO.File.ReadAllText(path) != before) changes.Add($"{path}: {(created ? "created" : "updated")}");
             return m;
         }
 
@@ -438,6 +470,7 @@ namespace InnerFrame.Gallery.EditorTools
             // GP_FrameCorner's origin is its outer top corner on the viewer's left, at its back; mirrored for the other three
             var spots = new GameObject("CeilingSpots").transform;
             spots.SetParent(root, false);
+            spots.gameObject.AddComponent<GP_GlowBillboards>();
             foreach (var (name, at) in Spots())
             {
                 var g = Group(spots, name, at, 0f).transform;   // at the ceiling's underside (y 4)
@@ -449,8 +482,19 @@ namespace InnerFrame.Gallery.EditorTools
                 halo.transform.localScale = new Vector3(SpotHalo, 1f, SpotHalo);
                 halo.AddComponent<MeshFilter>().sharedMesh = AssetDatabase.LoadAssetAtPath<Mesh>(HaloMesh);
                 halo.AddComponent<MeshRenderer>().sharedMaterial = haloMat;
-                var hr = halo.GetComponent<MeshRenderer>();
-                hr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; hr.receiveShadows = false;
+                var orb = new GameObject("Orb");
+                orb.transform.SetParent(g, false);
+                orb.transform.localPosition = new Vector3(0f, -0.035f, 0f);   // centred on the bulb
+                orb.transform.localScale = Vector3.one * SpotOrb;
+                orb.AddComponent<MeshFilter>().sharedMesh = AssetDatabase.LoadAssetAtPath<Mesh>(OrbMesh);
+                orb.AddComponent<MeshRenderer>().sharedMaterial = haloMat;
+                var pool = new GameObject("FloorPool");
+                pool.transform.SetParent(g, false);
+                pool.transform.localPosition = new Vector3(0f, PoolY - CeilingY, 0f);
+                pool.transform.localScale = new Vector3(PoolSize, 1f, PoolSize);
+                pool.AddComponent<MeshFilter>().sharedMesh = AssetDatabase.LoadAssetAtPath<Mesh>(HaloMesh);
+                pool.AddComponent<MeshRenderer>().sharedMaterial = mats["Pool"];
+                foreach (var r in new[] { halo, orb, pool }.Select(o => o.GetComponent<MeshRenderer>())) r.receiveShadows = false;
                 foreach (var r in g.GetComponentsInChildren<MeshRenderer>()) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             }
             foreach (var (name, centre, yaw, hw, hh) in Frames)

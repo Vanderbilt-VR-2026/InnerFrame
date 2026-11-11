@@ -59,7 +59,7 @@ namespace InnerFrame.Gallery.EditorTools
         // is GP_FrameCorner_BaseColor's (linear 0.597, 0.136, 0.011; its black gutters left out), measured 2026-11-10.
         public static readonly Dictionary<string, Color> Tints = new Dictionary<string, Color>
         {
-            ["Mat_Frame"] = new Color(0.958f, 0.667f, 0.291f),
+            ["Mat_Frame"] = Hex("F4AA4A"),   // (0.958, 0.667, 0.291) to the nearest 1/255
         };
         public static string TexPath(string name) => $"{Textures}/GT_{name}_BaseColor.jpg";
 

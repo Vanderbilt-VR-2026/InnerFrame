@@ -94,7 +94,8 @@ namespace InnerFrame.Gallery.EditorTools.Tests
             }
 
             // inside the room and on the floor
-            foreach (var r in decor.GetComponentsInChildren<Renderer>(true))
+            // (the glow cards are light, not things: a spot's ball of light reaches above the ceiling, which hides that half)
+            foreach (var r in decor.GetComponentsInChildren<Renderer>(true).Where(r => r.sharedMaterial == null || r.sharedMaterial.shader.name != "InnerFrame/StarryNight/Glow"))
             {
                 var b = r.bounds;
                 const float e = 0.001f;
@@ -115,7 +116,8 @@ namespace InnerFrame.Gallery.EditorTools.Tests
             // and no decor renderer reaches into the Starry Night's pedestal or button, or The Bedroom's
             var keepClear = roots.SelectMany(r => r.GetComponentsInChildren<Transform>(true))
                 .Where(t => t.name.StartsWith("Pedestal_") || t.name.StartsWith("Button_") || t.name.StartsWith("Bench_")).ToList();
-            foreach (var r in decor.GetComponentsInChildren<Renderer>(true))
+            // (glows, the ceiling spots' halo, orb and floor pool, are light, not things: a pool may lie under a bench)
+            foreach (var r in decor.GetComponentsInChildren<Renderer>(true).Where(r => r.sharedMaterial == null || r.sharedMaterial.shader.name != "InnerFrame/StarryNight/Glow"))
                 foreach (var k in keepClear)
                 {
                     var kb = k.GetComponent<Renderer>() ? k.GetComponent<Renderer>().bounds : k.GetComponent<Collider>()?.bounds;

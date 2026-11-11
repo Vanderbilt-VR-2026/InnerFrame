@@ -12,7 +12,7 @@ namespace InnerFrame.PaintedBedroom
     public class PaintedBedroomRoomSizeTester : MonoBehaviour
     {
         // the size to try: how many times smaller than the room data it feels (rig scale / room scale)
-        static readonly float[] Sizes = { 1.0f, 1.1f, 1.2f, 1.3f };
+        static readonly float[] Sizes = { 0.8f, 0.9f, 1.0f, 1.1f };
         const float LabelSeconds = 3f;
 
         PaintedBedroomPhysicsApplier applier;

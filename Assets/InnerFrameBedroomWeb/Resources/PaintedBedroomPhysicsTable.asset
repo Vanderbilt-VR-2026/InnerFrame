@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::InnerFrame.PaintedBedroom.PaintedBedroomPhysicsTable
   rigScale: 0.8
   rayDistance: 2
-  roomScale: 0.8
+  roomScale: 0.88888896
   desktopScale: 0.8
   desktopReach: 2
   rows:

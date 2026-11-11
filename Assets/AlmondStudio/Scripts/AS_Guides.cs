@@ -64,7 +64,7 @@ namespace InnerFrame.AlmondStudio
         {
             if (lines == null) return;
             shown = Mathf.MoveTowards(shown, showTarget, dt * 2f);
-            for (int i = 0; i < branches.Length; i++)
+            for (int i = 0; i < branches.Length && i < lines.Length; i++)
             {
                 if (lines[i] == null) continue;
                 var br = branches[i];

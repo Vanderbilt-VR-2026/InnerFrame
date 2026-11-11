@@ -263,7 +263,8 @@ FRAME_PROFILE = [   # (out, depth) round the cross-section, back at the wall to 
     (0.046, 0.104), (0.062, 0.100), (0.078, 0.104), (0.090, 0.116), (0.104, 0.132), (0.120, 0.142), (0.136, 0.145),
     (0.150, 0.140), (0.160, 0.128), (0.166, 0.118), (0.172, 0.116), (0.180, 0.104), (0.180, 0.000),
 ]
-ROSETTE_R, ROSETTE_PETALS = 0.088, 10     # corner rosettes (they stay within the 0.18 m rail); the side ones are 0.75x
+ROSETTE_R, ROSETTE_PETALS = 0.088, 8      # corner rosettes (they stay within the 0.18 m rail); the side ones are 0.75x
+# (coarse pieces: 10 petals of 64 triangles each made the rosettes 55 % of the frame, detail nobody sees from 2 m)
 LEAF_STEP, LEAF_SIZE = 0.085, (0.036, 0.016, 0.024)   # the run of carved leaves round the crown: spacing; half length, depth, width
 SHELL_R, SHELL_RIBS = 0.20, 9             # the fan shell over the top rail
 
@@ -322,11 +323,11 @@ def build_frame():
     mid = FRAME_W / 2
 
     def rosette(cx, cz, r):
-        parts.append(ellipsoid("ros", (cx, front - r * 0.45, cz), (r * 0.42, r * 0.5, r * 0.42)))   # the domed centre
+        parts.append(ellipsoid("ros", (cx, front - r * 0.45, cz), (r * 0.42, r * 0.5, r * 0.42), seg=6, rings=4))   # the domed centre
         for k in range(ROSETTE_PETALS):
             t = 2 * pi * k / ROSETTE_PETALS
             parts.append(ellipsoid("pet", (cx + cos(t) * r * 0.6, front - r * 0.22, cz + sin(t) * r * 0.6),
-                                   (r * 0.4, r * 0.3, r * 0.24), rot_y=-t))
+                                   (r * 0.4, r * 0.3, r * 0.24), rot_y=-t, seg=6, rings=3))
     for sx in (-1, 1):
         for sz in (-1, 1):
             rosette(sx * (w2 + mid), zc + sz * (h2 + mid), ROSETTE_R)
@@ -343,7 +344,7 @@ def build_frame():
             if any(abs(x - sx_) < r_ and abs(z - sz_) < r_ for sx_, sz_, r_ in skip):
                 continue
             along = 0.0 if abs(z1 - z0) < 1e-6 else pi / 2
-            parts.append(ellipsoid("leaf", (x, y1 - crown_depth - ld * 0.4, z), (ll, ld, lw), rot_y=along, seg=6, rings=3))
+            parts.append(ellipsoid("leaf", (x, y1 - crown_depth - ld * 0.4, z), (ll, ld, lw), rot_y=along, seg=4, rings=3))
     a, b = w2 + crown_out, h2 + crown_out
     corners = [(sx * (w2 + mid), zc + sz * (h2 + mid), ROSETTE_R * 1.3) for sx in (-1, 1) for sz in (-1, 1)]
     sides = [(sx * (w2 + mid), zc, ROSETTE_R * 1.0) for sx in (-1, 1)]

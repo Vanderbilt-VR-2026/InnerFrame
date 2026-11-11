@@ -82,13 +82,14 @@ The almond tree outside is now a Tripo model placed by hand in the scene (the ge
    the flower overshoots a little and settles, a petal or two drifts down). About a fifth stay buds. At
    `blossomFinish` the rest open in a wave from the trunk out. All the numbers are on `AS_Layout` under "Blossoms".
 
-## Fitting the studio to *Window in the Studio* (Editor)
+## Fitting the studio to its pictures (Editor)
 
-Put the painting at `Assets/AlmondStudio/Textures/Reference/AS_WindowInTheStudio.jpg` and run **Build**. In Play:
-**P** switches to the painter's view (a fixed camera where he stood, framed like the painting); **C** lays the
-painting over it, half see-through (**[** and **]** change how much). Then change `AS_Layout` in the Inspector
-(the "Painter's view" numbers first, until the window sits where his does; then the window, sill and room) and
-watch it move. AS_Layout keeps its Play-mode edits.
+Put the pictures in `Assets/AlmondStudio/Textures/Reference/` (`AS_WindowInTheStudio.jpg`, `AS_Ref_S02.jpg`,
+`AS_Ref_S03.jpg`) and run **Build**. In Play: **P** switches to a fixed camera; **1**, **2**, **3** choose the view (his
+painting, the S02 arrival concept, the S03 turned-round concept); **C** lays that view's picture over it, half
+see-through (**[** and **]** change how much). Change `AS_Layout` in the Inspector in Play mode (each view's camera
+under "Comparison views" first, then the room) and watch it move. AS_Layout keeps its Play-mode edits. His painting
+is distorted on purpose, so it sets the colours and the window's character; the concept images set the space.
 
 The chairs are the Bedroom's (`Chair_Front`), copied to `Prefabs/AS_Chair.prefab` by Build; turn them with
 `chairYawOffset`.

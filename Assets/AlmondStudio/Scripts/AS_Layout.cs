@@ -7,6 +7,17 @@ namespace InnerFrame.AlmondStudio
     /// Tools > InnerFrame > Almond Studio > Build). Metres and degrees. The room's floor is at y = 0, x runs east, z north;
     /// the window is centred on the north wall, whose inner face is at z = roomDepth.
     /// </summary>
+    [System.Serializable]
+    public class AS_View
+    {
+        public string name;
+        [Tooltip("The picture's file name in Textures/Reference.")] public string file;
+        public Vector3 position;
+        [Tooltip("Degrees round from north (+z) toward east (+x).")] public float yaw;
+        [Tooltip("Degrees; negative looks up.")] public float pitch;
+        [Tooltip("Vertical field of view, degrees.")] public float fov = 60f;
+    }
+
     [CreateAssetMenu(menuName = "InnerFrame/Almond Studio Layout", fileName = "AS_Layout")]
     public class AS_Layout : ScriptableObject
     {
@@ -22,7 +33,9 @@ namespace InnerFrame.AlmondStudio
         [Header("Window, centred on the north wall")]
         public float windowWidth = 1.2f;
         public float windowBottom = 0.95f;
-        public float windowTop = 2.75f;
+        [Tooltip("The arch's crown; the arch is a half circle, so the casements end at Springing = windowTop - windowWidth / 2.")] public float windowTop = 3.0f;
+        [Tooltip("How much wider the opening is at the room face than at the glass, each side, metres.")] public float revealSplay = 0.18f;
+        [Tooltip("Where the glass sits in the wall's thickness (0 = room face, 1 = outer face).")] [Range(0.1f, 0.95f)] public float glassDepth = 0.6f;
         [Tooltip("How far the sill board reaches into the room.")] public float sillOverhang = 0.08f;
         public float casementOpenDegrees = 105f;
         public float casementOpenSeconds = 1.2f;
@@ -51,14 +64,15 @@ namespace InnerFrame.AlmondStudio
         [Tooltip("Past this, the branch counts as done.")] public float finishAt = 0.95f;
         [Tooltip("How far the beam reaches when it points at no branch.")] public float beamLength = 6f;
 
-        [Header("Painter's view: where he stood for Window in the Studio (P; C lays the painting over it)")]
-        [Tooltip("Left of the window and back a little, at a seated painter's eye: the painting sees the green right-hand reveal wide and the wall running away to the right.")]
-        public Vector3 painterPosition = new Vector3(-1.0f, 1.35f, 2.4f);
-        [Tooltip("Degrees round from north (+z) toward east (+x).")] public float painterYaw = 22f;
-        [Tooltip("Degrees; negative looks up.")] public float painterPitch = -10f;
-        public float painterRoll = 0f;
-        [Tooltip("Vertical field of view, degrees.")] public float painterFov = 62f;
-        [Tooltip("How much of the painting shows over the view (C; [ and ] change it).")] [Range(0f, 1f)] public float compareOpacity = 0.5f;
+        [Header("Comparison views (P: the view; 1, 2, 3: which; C: its picture over it; [ ]: how much)")]
+        [Tooltip("Each view: a fixed camera and the picture it is compared with (Textures/Reference/<file>). Change the numbers in Play mode and watch the picture line up; they stay.")]
+        public AS_View[] compareViews =
+        {
+            new AS_View { name = "Window in the Studio (his view)", file = "AS_WindowInTheStudio.jpg", position = new Vector3(-1.0f, 1.35f, 2.4f), yaw = 22f, pitch = -10f, fov = 62f },
+            new AS_View { name = "S02 arrival (concept)", file = "AS_Ref_S02.jpg", position = new Vector3(-0.8f, 1.45f, 2.3f), yaw = 15f, pitch = -8f, fov = 60f },
+            new AS_View { name = "S03 turned round (concept)", file = "AS_Ref_S03.jpg", position = new Vector3(0f, 1.6f, 3.5f), yaw = 180f, pitch = 3f, fov = 55f },
+        };
+        [Range(0f, 1f)] public float compareOpacity = 0.5f;
 
         [Header("Chairs reused from the Bedroom (Chair_Front of PaintedBedroom.prefab)")]
         [Tooltip("Turns the Bedroom chair so its seat faces the table.")] public float chairYawOffset = 0f;
@@ -98,6 +112,7 @@ namespace InnerFrame.AlmondStudio
         public string hintSweep = "Hold the trigger and brush over the branches";
         public string hintOthers = "Wake the other branches";
 
+        public float Springing => windowTop - windowWidth / 2f;
         public Vector3 WindowCentreInner => new Vector3(0f, (windowBottom + windowTop) * 0.5f, roomDepth);
         public Vector3 WindowCentreOuter => new Vector3(0f, (windowBottom + windowTop) * 0.5f, roomDepth + wallThickness);
         public float PaintingHeight => paintingWidth / paintingAspect;

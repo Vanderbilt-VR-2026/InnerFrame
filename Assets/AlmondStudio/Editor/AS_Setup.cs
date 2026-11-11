@@ -21,7 +21,7 @@ namespace InnerFrame.AlmondStudio.EditorTools
         const string BranchesPath = Root + "/Data/AS_Branches.json";
         const string Materials = Root + "/Materials";
         const string AtlasPath = Root + "/Textures/Blossom/AS_BlossomAtlas.png";
-        const string ReferencePath = Root + "/Textures/Reference/AS_WindowInTheStudio.jpg";
+        const string ReferenceFolder = Root + "/Textures/Reference";
         const string BedroomPrefab = "Assets/InnerFrameBedroomWeb/Generated/PaintedBedroom.prefab";
         const string ChairPrefab = Root + "/Prefabs/AS_Chair.prefab";
         const string ScenePath = Root + "/Scenes/AlmondStudio.unity";
@@ -49,6 +49,17 @@ namespace InnerFrame.AlmondStudio.EditorTools
             {
                 layout.showGeneratedTree = false;   // version 2 (2026-11-11): the Tripo tree is placed by hand while it is tried
                 layout.layoutVersion = 2;
+                EditorUtility.SetDirty(layout);
+            }
+            if (layout.layoutVersion < 3)
+            {
+                // version 3 (2026-11-11): the arched window with a splayed reveal, after Window in the Studio
+                var d3 = ScriptableObject.CreateInstance<AS_Layout>();
+                layout.windowTop = d3.windowTop;
+                layout.revealSplay = d3.revealSplay;
+                layout.glassDepth = d3.glassDepth;
+                Object.DestroyImmediate(d3);
+                layout.layoutVersion = 3;
                 EditorUtility.SetDirty(layout);
             }
 
@@ -86,8 +97,12 @@ namespace InnerFrame.AlmondStudio.EditorTools
             if (boot == null) boot = bootGo.AddComponent<AS_Bootstrap>();
             boot.layout = layout;
             boot.branchesJson = AssetDatabase.LoadAssetAtPath<TextAsset>(BranchesPath);
-            boot.wall = Lit("AS_Wall", lit, "C26637");
-            boot.floor = Lit("AS_Floor", lit, "9A4A2C");
+            boot.wall = Lit("AS_Wall", lit, "C9923F");            // the ochre of Window in the Studio (Van Gogh Museum)
+            boot.revealLeft = Unlit("AS_RevealLeft", unlit, "C4DCDC");   // pale blue
+            boot.revealRight = Unlit("AS_RevealRight", unlit, "A6D2C0");  // green
+            boot.revealLeft.SetFloat("_Cull", 0f); boot.revealRight.SetFloat("_Cull", 0f);
+            boot.canvas = Lit("AS_Canvas", lit, "D9C9A3");
+            boot.floor = Lit("AS_Floor", lit, "A0623A");
             boot.ceiling = Lit("AS_Ceiling", lit, "E8DCC0");
             boot.wood = Lit("AS_Wood", lit, "8A5A2E");
             boot.frame = Lit("AS_Frame", lit, "2C3A2C");
@@ -113,8 +128,13 @@ namespace InnerFrame.AlmondStudio.EditorTools
             boot.groundMaterial = Lit("AS_Ground", lit, ColorUtility.ToHtmlStringRGB(layout.groundColour));
             boot.glow = Mat("AS_Glow", glowShader);
             boot.guideDot = Unlit("AS_GuideDot", unlit, "FFF2C8");
-            boot.reference = AssetDatabase.LoadAssetAtPath<Texture2D>(ReferencePath);
-            if (boot.reference == null) Debug.LogWarning("[AS Setup] No Window in the Studio at " + ReferencePath + "; the comparison (C) is off.");
+            boot.references = new Texture[layout.compareViews.Length];
+            for (int i = 0; i < layout.compareViews.Length; i++)
+            {
+                string path = ReferenceFolder + "/" + layout.compareViews[i].file;
+                boot.references[i] = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+                if (boot.references[i] == null) Debug.LogWarning("[AS Setup] No comparison picture at " + path + " (view " + (i + 1) + ").");
+            }
             boot.chairPrefab = ChairFromBedroom();
             boot.uiPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(DialoguePrefab);
             boot.uiSettings = AssetDatabase.LoadAssetAtPath<VG_DialogueSettings>(DialogueSettings);

@@ -94,7 +94,7 @@ public class PlayerMenu : MonoBehaviour
 
         EnsureXRUIEventSystem();
         if (panel == null) panel = PlayerMenuPanel.Create(eyes);   // belongs to this scene; rebuilt in the next one
-        panel.ShowInFrontOf(eyes.transform, SceneManager.GetActiveScene().name, BackScene, desktop);
+        panel.ShowInFrontOf(eyes.transform, BackScene, desktop);
     }
 
     // Desktop: free the mouse while the menu is open (every frame, in case something re-captures it),

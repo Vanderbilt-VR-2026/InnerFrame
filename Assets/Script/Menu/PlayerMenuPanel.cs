@@ -1,4 +1,3 @@
-using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.XR.Interaction.Toolkit;
@@ -7,46 +6,27 @@ using UnityEngine.XR.Interaction.Toolkit.Interactables;
 using UnityEngine.XR.Interaction.Toolkit.UI;
 
 /// <summary>
-/// The menu panel, built in code (see <see cref="PlayerMenu"/>) in the dialogue box's look (MenuLook: Libre Baskerville,
-/// the rounded plate, chrome yellow). One centred column (#161): a grip bar with X, "You are in" and the painting's
-/// name, then "Back to Gallery" (or, in the Gallery, how to enter a painting), then how to move and close it.
-/// It stays where it is in the world. Grab the top bar (grip) to drag it; it turns to face you while you move it.
-/// Talking to Vincent is hold-B, see Assets/VanGogh/.
+/// The menu panel, built in code (see <see cref="PlayerMenu"/>). It stays where it is in the world.
+/// Grab the title bar (grip) to drag it; it turns to face you while you move it.
+/// Buttons: X (close) and Back to Gallery, everywhere but the Gallery (#160; the rule is PlayerMenu.BackFrom).
+/// (Talking to Vincent is hold-B, see Assets/VanGogh/.) Its look is the plain one on purpose: the menu style (#161) is
+/// to be redone with Rowling's artwork panel, on Cici's text frame prefab.
 /// </summary>
 public class PlayerMenuPanel : MonoBehaviour
 {
     public const string BackLabel = "Back to Gallery";   // the Starry Night checks and docs use these words
-    // {grip} and {menu} are drawn as the buttons' icons (MenuLook.IconLine).
-    public const string GalleryLine = "Hold {grip} on a glowing pedestal to step inside";
-    public const string FootLine = "Hold {grip} on the top bar to move  ·  {menu} to close";
 
-    const float SpawnDistance = 0.6f;    // metres in front of the eyes: inside the controllers' 2 m ray
-    const float SpawnDrop = 0.08f;       // a little below eye level, on the line of sight
+    const float SpawnDistance = 0.55f;   // metres in front of the eyes: inside the controllers' 2 m ray
+    const float SpawnDrop = 0.12f;       // a little below eye level, like a lectern
     const float DesktopDistance = 0.7f;  // on a monitor: far enough back to fit the screen, at eye level
-
-    // Layout, in metres (laid out at VG_UI.UnitsPerMetre and scaled down, so the text stays sharp).
-    const float W = 0.40f, Pad = 0.02f, HeadH = 0.036f, HandleH = 0.05f, CloseSize = 0.032f;
-    const float SmallCap = 0.008f, NameCap = 0.014f, ButtonCap = 0.012f, LineCap = 0.009f, FootCap = 0.0075f;
-    const float ButtonH = 0.06f, Corner = 0.012f;
+    const float MetresPerPixel = 0.001f; // the canvas is laid out in pixels; 500 px = 0.5 m wide
+    const float W = 500f, H = 200f, TitleH = 56f;
 
     Transform cam;
     XRGrabInteractable grab;
-    RectTransform canvasRect;
-    Text placeLabel;
-    RectTransform galleryLine, footLine;
     Button backButton;
+    Text backLabel;
     string backScene;
-
-    /// <summary>The back button's label, or null when it's hidden (for the checks).</summary>
-    public string ShownBackLabel => backButton != null && backButton.gameObject.activeSelf ? BackLabel : null;
-    /// <summary>The "You are in" name now shown (for the checks).</summary>
-    public string ShownPlace => placeLabel != null ? placeLabel.text : null;
-    /// <summary>The widths of the lines with button icons, in metres (for the checks).</summary>
-    public float[] IconLineWidths => new[] { galleryLine.sizeDelta.x, footLine.sizeDelta.x }.Select(w => w / VG_UI.UnitsPerMetre).ToArray();
-    /// <summary>The panel's width inside its padding, in metres.</summary>
-    public const float InnerWidth = W - 2f * Pad;
-    /// <summary>The panel's size in metres (for the checks).</summary>
-    public Vector2 Size => canvasRect != null ? canvasRect.sizeDelta / VG_UI.UnitsPerMetre : Vector2.zero;
 
     public static PlayerMenuPanel Create(Camera camera)
     {
@@ -57,8 +37,7 @@ public class PlayerMenuPanel : MonoBehaviour
         return panel;
     }
 
-    /// <summary>Opens the panel in front of `eyes`, for the scene `current`; `back` is where its button goes (null: none).</summary>
-    public void ShowInFrontOf(Transform eyes, string current, string back, bool desktop = false)
+    public void ShowInFrontOf(Transform eyes, string back, bool desktop = false)
     {
         cam = eyes;
         Vector3 forward = Vector3.ProjectOnPlane(eyes.forward, Vector3.up);
@@ -68,12 +47,13 @@ public class PlayerMenuPanel : MonoBehaviour
         transform.SetPositionAndRotation(eyes.position + offset, Quaternion.LookRotation(forward, Vector3.up));
 
         backScene = back;
-        bool hasBack = !string.IsNullOrEmpty(back);
-        backButton.gameObject.SetActive(hasBack);
-        galleryLine.gameObject.SetActive(!hasBack);
-        placeLabel.text = PaintingNames.TitleWithYear(current);
+        backButton.gameObject.SetActive(!string.IsNullOrEmpty(back));
+        if (backLabel != null) backLabel.text = "Back to " + back;
         gameObject.SetActive(true);
     }
+
+    /// <summary>The Back button's words while it shows, or null when it is hidden (PlayerMenuCheck).</summary>
+    public string ShownBackLabel => backButton != null && backButton.gameObject.activeSelf && backLabel != null ? backLabel.text : null;
 
     public void Hide()
     {
@@ -90,70 +70,35 @@ public class PlayerMenuPanel : MonoBehaviour
 
     void Build(Camera camera)
     {
-        // ---- canvas: VG_UI units, scaled down to metres ----
+        // ---- canvas ----
         var canvasGo = new GameObject("Canvas", typeof(RectTransform));
         canvasGo.transform.SetParent(transform, false);
         var canvas = canvasGo.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.WorldSpace;
         canvas.worldCamera = camera;
-        canvasRect = (RectTransform)canvasGo.transform;
-        canvasRect.localScale = Vector3.one / VG_UI.UnitsPerMetre;
+        var rect = (RectTransform)canvasGo.transform;
+        rect.sizeDelta = new Vector2(W, H);
+        rect.localScale = Vector3.one * MetresPerPixel;
         canvasGo.AddComponent<TrackedDeviceGraphicRaycaster>();   // controller rays
         canvasGo.AddComponent<GraphicRaycaster>();                // mouse, in the Editor
-        var root = canvasGo.transform;
-        var font = MenuLook.Font;
 
-        // Rows from the top; each value is a row's centre, measured down from the top edge.
-        float y = Pad;
-        float headY = y + HeadH / 2f; y += HeadH + 0.014f;
-        float smallY = y + SmallCap; y += SmallCap * 2f + 0.006f;
-        float nameY = y + NameCap; y += NameCap * 2f + 0.02f;
-        float actionY = y + ButtonH / 2f; y += ButtonH + 0.016f;
-        float footH = FootCap * 2.8f;   // the row's button icons are taller than its words
-        float footY = y + footH / 2f; y += footH + Pad;
-        float h = y;
-        canvasRect.sizeDelta = new Vector2(VG_UI.U(W), VG_UI.U(h));
-        Vector2 At(float fromTop) => new Vector2(0f, h / 2f - fromTop);
+        AddImage(rect, "Background", new Vector2(0, 0), new Vector2(W, H), new Color(0.08f, 0.08f, 0.1f, 0.92f));
 
-        var background = Plate("Background", root, Vector2.zero, new Vector2(W, h), MenuLook.Plate, false);
-        background.transform.SetAsFirstSibling();
+        // ---- title bar: the drag handle ----
+        var title = AddImage(rect, "Title Bar (grab to move)", new Vector2(0, (H - TitleH) / 2), new Vector2(W, TitleH), new Color(0.22f, 0.24f, 0.3f, 1f));
+        AddText(title, "Menu   ·   grip here to move", new Vector2(-30, 0), new Vector2(W - 100, TitleH), 22, TextAnchor.MiddleLeft);
+        var handle = title.gameObject.AddComponent<BoxCollider>();
+        handle.size = new Vector3(W, TitleH, 20f);
+        handle.center = new Vector3(0, 0, -10f);   // just in front of the canvas, so the ray finds it
 
-        // ---- top bar: the drag handle, a grip bar and X ----
-        var handle = VG_UI.Rect("Top Bar (grab to move)", root, new Vector2(0.5f, 0.5f), At(headY));
-        var handleCollider = handle.gameObject.AddComponent<BoxCollider>();
-        handleCollider.size = new Vector3(VG_UI.U(W), VG_UI.U(HandleH), VG_UI.U(0.02f));
-        handleCollider.center = new Vector3(0f, 0f, -VG_UI.U(0.01f));   // just in front of the canvas, so the ray finds it
-        Plate("Grip Bar", root, At(headY), new Vector2(0.12f, 0.007f), MenuLook.Line, false, MenuLook.Rounded);
+        var close = AddButton(title, "X", new Vector2((W - TitleH) / 2, 0), new Vector2(TitleH - 10, TitleH - 10), new Color(0.55f, 0.18f, 0.18f, 1f), out _);
+        close.onClick.AddListener(Hide);
 
-        var close = Plate("Close Button", root, At(headY) + new Vector2(W / 2f - Pad - CloseSize / 2f, 0f), Vector2.one * CloseSize,
-            MenuLook.KeySprite != null ? Color.white : MenuLook.Line, true, MenuLook.KeySprite);
-        var closeButton = close.gameObject.AddComponent<Button>();
-        Tint(closeButton);
-        var x = VG_UI.Label("X", close.transform, font, 0.011f, MenuLook.KeySprite != null ? MenuLook.KeyLetter : MenuLook.Text,
-            new Vector2(0.5f, 0.5f), TextAnchor.MiddleCenter, null);
-        x.text = "X";
-        x.rectTransform.sizeDelta = Vector2.one * VG_UI.U(CloseSize);
-        closeButton.onClick.AddListener(Hide);
-
-        // ---- where you are ----
-        Centred("You Are In", root, font, SmallCap, MenuLook.Muted, At(smallY), "YOU ARE IN");
-        placeLabel = Centred("Place", root, font, NameCap, MenuLook.Text, At(nameY), "");
-
-        // ---- the one action: back to the Gallery, or (in the Gallery) how to enter a painting ----
-        var back = Plate("Back Button", root, At(actionY), new Vector2(W - 2f * Pad, ButtonH), MenuLook.Star, true, MenuLook.Rounded);
-        backButton = back.gameObject.AddComponent<Button>();
-        Tint(backButton);
-        var backText = VG_UI.Label("Label", back.transform, font, ButtonCap, MenuLook.OnStar, new Vector2(0.5f, 0.5f), TextAnchor.MiddleCenter, null);
-        backText.text = BackLabel;
-        backText.rectTransform.sizeDelta = new Vector2(VG_UI.U(W - 2f * Pad), VG_UI.U(ButtonH));
+        // ---- buttons ----
+        backButton = AddButton(rect, "Back", new Vector2(0, -TitleH / 2), new Vector2(W - 60, 64), new Color(0.2f, 0.36f, 0.6f, 1f), out backLabel);
         backButton.onClick.AddListener(() => { if (!string.IsNullOrEmpty(backScene)) SceneFader.Instance.FadeToScene(backScene); });
 
-        galleryLine = MenuLook.IconLine("Gallery Line", root, GalleryLine, LineCap, MenuLook.Text, At(actionY));
-
-        // ---- how to move and close it ----
-        footLine = MenuLook.IconLine("Foot", root, FootLine, FootCap, MenuLook.Muted, At(footY));
-
-        // ---- drag: added last, so it picks up the top bar's collider ----
+        // ---- drag: added last, so it picks up the title bar's collider ----
         var body = gameObject.AddComponent<Rigidbody>();
         body.isKinematic = true;
         body.useGravity = false;
@@ -165,37 +110,46 @@ public class PlayerMenuPanel : MonoBehaviour
         grab.throwOnDetach = false;                                  // let go: it stays there
     }
 
-    // ---- small UI helpers (metres, VG_UI layout) ----
+    // ---- small UI helpers ----
 
-    /// <summary>A rounded plate (the hint plate sprite, or `sprite`), or a plain rectangle without one.</summary>
-    static Image Plate(string name, Transform parent, Vector2 at, Vector2 size, Color colour, bool clickable, Sprite sprite = null)
+    static RectTransform AddImage(RectTransform parent, string name, Vector2 pos, Vector2 size, Color color)
     {
-        sprite = sprite != null ? sprite : MenuLook.PlateSprite;
-        bool sliced = sprite != null && sprite.border != Vector4.zero;
-        Image image = sprite != null
-            ? VG_UI.Picture(name, parent, sprite, new Vector2(0.5f, 0.5f), at, size, sliced ? Mathf.Min(Corner, size.y / 2f) : 0f, null)
-            : VG_UI.Rect(name, parent, new Vector2(0.5f, 0.5f), at).gameObject.AddComponent<Image>();
-        image.rectTransform.sizeDelta = size * VG_UI.UnitsPerMetre;
-        image.color = colour;
-        image.raycastTarget = clickable;
-        return image;
+        var go = new GameObject(name, typeof(RectTransform));
+        go.transform.SetParent(parent, false);
+        var r = (RectTransform)go.transform;
+        r.anchoredPosition = pos;
+        r.sizeDelta = size;
+        var img = go.AddComponent<Image>();
+        img.color = color;
+        return r;
     }
 
-    static Text Centred(string name, Transform parent, Font font, float cap, Color colour, Vector2 at, string text)
+    static Text AddText(RectTransform parent, string text, Vector2 pos, Vector2 size, int fontSize, TextAnchor anchor)
     {
-        var label = VG_UI.Label(name, parent, font, cap, colour, new Vector2(0.5f, 0.5f), TextAnchor.MiddleCenter, null);
-        label.text = text;
-        label.rectTransform.sizeDelta = new Vector2(VG_UI.U(W - 2f * Pad), VG_UI.LineHeight(cap));
-        label.rectTransform.anchoredPosition = at * VG_UI.UnitsPerMetre;
-        return label;
+        var go = new GameObject("Text", typeof(RectTransform));
+        go.transform.SetParent(parent, false);
+        var r = (RectTransform)go.transform;
+        r.anchoredPosition = pos;
+        r.sizeDelta = size;
+        var t = go.AddComponent<Text>();
+        t.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        t.fontSize = fontSize;
+        t.alignment = anchor;
+        t.color = Color.white;
+        t.text = text;
+        t.raycastTarget = false;
+        return t;
     }
 
-    static void Tint(Button button)
+    static Button AddButton(RectTransform parent, string label, Vector2 pos, Vector2 size, Color color, out Text text)
     {
+        var r = AddImage(parent, label + " Button", pos, size, color);
+        var button = r.gameObject.AddComponent<Button>();
         var colors = button.colors;
-        colors.highlightedColor = new Color(1.15f, 1.15f, 1.15f, 1f);
-        colors.selectedColor = Color.white;
-        colors.pressedColor = new Color(0.75f, 0.75f, 0.75f, 1f);
+        colors.highlightedColor = new Color(1.2f, 1.2f, 1.2f, 1f);
+        colors.pressedColor = new Color(0.7f, 0.7f, 0.7f, 1f);
         button.colors = colors;
+        text = AddText(r, label, Vector2.zero, size, 24, TextAnchor.MiddleCenter);
+        return button;
     }
 }

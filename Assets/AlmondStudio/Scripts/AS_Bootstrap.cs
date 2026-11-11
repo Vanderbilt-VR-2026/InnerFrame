@@ -20,7 +20,7 @@ namespace InnerFrame.AlmondStudio
     {
         public AS_Layout layout;
         [Tooltip("Assets/AlmondStudio/Data/AS_Branches.json: the branch paths.")] public TextAsset branchesJson;
-        public Material wall, floor, ceiling, wood, frame, brushHead, vincent, bark, ink, skyMaterial, groundMaterial, glow, guideDot;
+        public Material wall, floor, ceiling, wood, frame, brushHead, vincent, bark, ink, skyMaterial, groundMaterial, glow, guideDot, blossom;
         [Tooltip("VG_DialogueUI.prefab: Vincent's words and the hint, as in every scene.")] public GameObject uiPrefab;
         public VG_DialogueSettings uiSettings;
 
@@ -167,6 +167,18 @@ namespace InnerFrame.AlmondStudio
                 tree.Build(branches, layout, bark, ink);
                 guides.Build(branches, glow, guideDot);
             }
+            else guides.Build(new AS_Branch[0], glow, guideDot);   // the brush's beam only
+
+            // the Tripo tree placed by hand in the scene, with its blossoms (Tools > ... > Scatter Blossoms On Selected Tree)
+            AS_Blossoms blossoms = null;
+            var tripo = FindAnyObjectByType<AS_TripoTree>();
+            if (tripo != null && tripo.positions.Length > 0 && blossom != null)
+            {
+                blossoms = new GameObject("Blossoms").AddComponent<AS_Blossoms>();
+                blossoms.transform.SetParent(world, false);
+                blossoms.Build(tripo, layout, blossom);
+            }
+            else if (tripo == null) Debug.Log("[AS] No AS_TripoTree in the scene: no blossoms. Select the Tripo tree and run Tools > InnerFrame > Almond Studio > Scatter Blossoms On Selected Tree.");
 
             VG_DialogueUI ui = null;
             if (uiPrefab != null)
@@ -180,6 +192,7 @@ namespace InnerFrame.AlmondStudio
             Game.layout = layout;
             Game.window = win;
             Game.tree = tree;
+            Game.blossoms = blossoms;
             Game.guides = guides;
             Game.brush = brush;
             Game.brushTip = tip;

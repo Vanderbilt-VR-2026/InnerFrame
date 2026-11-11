@@ -51,6 +51,15 @@ namespace InnerFrame.AlmondStudio
         [Tooltip("Past this, the branch counts as done.")] public float finishAt = 0.95f;
         [Tooltip("How far the beam reaches when it points at no branch.")] public float beamLength = 6f;
 
+        [Header("Blossoms on the Tripo tree (AS_Blossoms)")]
+        [Tooltip("A blossom's petal length, metres.")] public float blossomSize = 0.07f;
+        [Tooltip("Share of the buds that never open, as in the painting.")] [Range(0f, 1f)] public float blossomStayBud = 0.2f;
+        [Tooltip("Seconds for one bud to open.")] public float blossomOpenSeconds = 0.6f;
+        [Tooltip("Buds within this angle of the beam open.")] public float blossomBeamDegrees = 3f;
+        [Tooltip("...or within this distance of the beam's line, metres.")] public float blossomBeamMetres = 0.12f;
+        [Tooltip("Once this share has opened, the rest open in a wave and the act ends.")] [Range(0.1f, 1f)] public float blossomFinish = 0.75f;
+        [Tooltip("How long the wave from the trunk out takes, seconds.")] public float blossomWaveSeconds = 2.5f;
+
         [Header("People")]
         [Tooltip("Where the player arrives (step 2 will move this to his viewpoint for Window in the Studio).")] public Vector3 playerStart = new Vector3(0.3f, 0f, 1.1f);
         public float playerStartYaw = -5f;
@@ -74,6 +83,7 @@ namespace InnerFrame.AlmondStudio
         public string hintOpen = "Open the window";
         public string hintBrush = "Take a brush";
         public string hintFollow = "Hold the trigger and follow the branch";
+        public string hintSweep = "Hold the trigger and brush over the branches";
         public string hintOthers = "Wake the other branches";
 
         public Vector3 WindowCentreInner => new Vector3(0f, (windowBottom + windowTop) * 0.5f, roomDepth);

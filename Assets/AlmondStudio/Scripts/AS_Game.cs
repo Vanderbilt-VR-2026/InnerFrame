@@ -16,6 +16,7 @@ namespace InnerFrame.AlmondStudio
         public AS_Layout layout;
         public AS_Window window;
         public AS_Tree tree;
+        public AS_Blossoms blossoms;
         public AS_Guides guides;
         public XRGrabInteractable brush;
         public Transform brushTip;
@@ -38,6 +39,7 @@ namespace InnerFrame.AlmondStudio
         {
             foreach (var b in Branches) b.progress = 0f;
             tree?.SetProgress(Branches);
+            blossoms?.ResetAll();
             guides.Show(false);
             Enter(AS_State.Arrive);
         }
@@ -57,7 +59,7 @@ namespace InnerFrame.AlmondStudio
                     break;
                 case AS_State.Paint:
                     Say(layout.linePaint);
-                    Hint(layout.hintFollow);
+                    Hint(blossoms != null ? layout.hintSweep : layout.hintFollow);
                     guides.Show(true);
                     break;
                 case AS_State.Done:
@@ -83,7 +85,7 @@ namespace InnerFrame.AlmondStudio
                     break;
                 case AS_State.Paint:
                     if (stateTime > 4f && ui != null && ui.IsSpeaking) ui.Clear();
-                    PaintStep(dt);
+                    if (blossoms != null) SweepStep(); else PaintStep(dt);
                     break;
                 case AS_State.Done:
                     guides.HideBeam();
@@ -122,6 +124,25 @@ namespace InnerFrame.AlmondStudio
             guides.Beam(brushTip.position, end, trigger);
         }
 
+        /// <summary>The Tripo tree: sweep the beam over the branches and the buds near it open.</summary>
+        void SweepStep()
+        {
+            if (!BrushHeld || Input == null) { guides.HideBeam(); return; }
+            Ray aim;
+            if (Input.AimsFromHead) { if (!Input.TryGetHeadAim(out aim)) return; }
+            else aim = new Ray(brushTip.position, brushTip.forward);
+            bool trigger = Input.TriggerHeld;
+            guides.Beam(brushTip.position, aim.GetPoint(layout.beamLength), trigger);
+            if (!trigger) return;
+            int n = blossoms.Paint(aim, layout.blossomBeamDegrees, layout.blossomBeamMetres);
+            if (n > 0) Input.Haptic(0.15f, 0.04f);
+            if (blossoms.Fraction >= layout.blossomFinish)
+            {
+                blossoms.OpenAllInAWave(layout.blossomWaveSeconds);
+                Enter(AS_State.Done);
+            }
+        }
+
         /// <summary>The branch still to paint whose glowing dot is nearest the beam, if near enough.</summary>
         int PickStart(Ray aim)
         {
@@ -154,6 +175,7 @@ namespace InnerFrame.AlmondStudio
         public void FinishNextBranch()
         {
             if (State != AS_State.Paint) return;
+            if (blossoms != null) { blossoms.OpenAllInAWave(layout.blossomWaveSeconds); Enter(AS_State.Done); return; }
             for (int i = 0; i < Branches.Length; i++) if (Branches[i].Paintable && !Branches[i].Done) { Finish(i); return; }
         }
 

@@ -68,6 +68,20 @@ to `lookAhead` per frame, while the beam stays within `followToleranceDeg`. Off 
 is let go (its progress stays). Past `finishAt` it is done. The painted part of the bark warms a little (the
 blossoms come in step 1b).
 
+## The Tripo tree and its blossoms (2026-11-11)
+
+The almond tree outside is now a Tripo model placed by hand in the scene (the generated tree is off:
+`AS_Layout.showGeneratedTree`). To give it blossoms:
+
+1. Put the blossom atlas at `Assets/AlmondStudio/Textures/Blossom/AS_BlossomAtlas.png` (painted petal, bud petal,
+   heart and sepals, cut out of a ChatGPT image) and run **Build** once.
+2. Select the tree in the Hierarchy and run **Tools > InnerFrame > Almond Studio > Scatter Blossoms On Selected Tree**.
+   It adds `AS_TripoTree` and scatters buds over the outer crown. Change `count`, `minSpacing`, `minHeight`,
+   `minReach` or `seed` on it and run the menu again until it looks right; then save the scene.
+3. Play: take the brush, hold the trigger and brush over the branches. Buds near the beam open (petals swing out,
+   the flower overshoots a little and settles, a petal or two drifts down). About a fifth stay buds. At
+   `blossomFinish` the rest open in a wave from the trunk out. All the numbers are on `AS_Layout` under "Blossoms".
+
 ## What is verified
 
 - [I] Not compiled or run yet: written in a workspace without Unity. The first Build and Play may show compile

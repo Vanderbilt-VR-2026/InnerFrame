@@ -20,6 +20,7 @@ namespace InnerFrame.AlmondStudio.EditorTools
         const string LayoutPath = Root + "/AS_Layout.asset";
         const string BranchesPath = Root + "/Data/AS_Branches.json";
         const string Materials = Root + "/Materials";
+        const string AtlasPath = Root + "/Textures/Blossom/AS_BlossomAtlas.png";
         const string ScenePath = Root + "/Scenes/AlmondStudio.unity";
         const string XrOriginPrefab = "Assets/Samples/XR Interaction Toolkit/3.3.2/Starter Assets/Prefabs/XR Origin (XR Rig).prefab";
         const string XrOriginName = "XR Origin (XR Rig)";
@@ -54,9 +55,10 @@ namespace InnerFrame.AlmondStudio.EditorTools
             var barkShader = Shader.Find("InnerFrame/AlmondStudio/Bark");
             var inkShader = Shader.Find("InnerFrame/AlmondStudio/Ink");
             var skyShader = Shader.Find("InnerFrame/AlmondStudio/Sky");
-            if (lit == null || unlit == null || glowShader == null || barkShader == null || inkShader == null || skyShader == null)
+            var blossomShader = Shader.Find("InnerFrame/AlmondStudio/Blossom");
+            if (lit == null || unlit == null || glowShader == null || barkShader == null || inkShader == null || skyShader == null || blossomShader == null)
             {
-                Debug.LogError("[AS Setup] A shader is missing (URP Lit/Unlit, or one of AS_Glow, AS_Bark, AS_Ink, AS_Sky did not compile). See the Console.");
+                Debug.LogError("[AS Setup] A shader is missing (URP Lit/Unlit, or one of AS_Glow, AS_Bark, AS_Ink, AS_Sky, AS_Blossom did not compile). See the Console.");
                 return;
             }
 
@@ -91,6 +93,20 @@ namespace InnerFrame.AlmondStudio.EditorTools
             boot.bark = Mat("AS_Bark", barkShader);
             boot.ink = Mat("AS_Ink", inkShader);
             boot.skyMaterial = Mat("AS_Sky", skyShader);
+            boot.blossom = Mat("AS_Blossom", blossomShader);
+            var atlas = AssetDatabase.LoadAssetAtPath<Texture2D>(AtlasPath);
+            if (atlas == null) Debug.LogWarning("[AS Setup] No blossom atlas at " + AtlasPath + "; the blossoms will be white squares.");
+            else
+            {
+                var imp = (TextureImporter)AssetImporter.GetAtPath(AtlasPath);
+                if (!imp.alphaIsTransparency || imp.maxTextureSize != 1024 || imp.wrapMode != TextureWrapMode.Clamp)
+                {
+                    imp.alphaIsTransparency = true; imp.maxTextureSize = 1024; imp.wrapMode = TextureWrapMode.Clamp; imp.mipmapEnabled = true;
+                    imp.SaveAndReimport();
+                }
+                boot.blossom.SetTexture("_BaseMap", atlas);
+                EditorUtility.SetDirty(boot.blossom);
+            }
             boot.groundMaterial = Lit("AS_Ground", lit, ColorUtility.ToHtmlStringRGB(layout.groundColour));
             boot.glow = Mat("AS_Glow", glowShader);
             boot.guideDot = Unlit("AS_GuideDot", unlit, "FFF2C8");

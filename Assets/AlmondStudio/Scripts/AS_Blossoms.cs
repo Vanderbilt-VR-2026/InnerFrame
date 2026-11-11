@@ -1,0 +1,225 @@
+using System.Collections.Generic;
+using UnityEngine;
+
+namespace InnerFrame.AlmondStudio
+{
+    /// <summary>
+    /// The almond blossoms on the Tripo tree. Every blossom starts as a closed pink bud; sweep the brush's beam over the
+    /// branches with the trigger held and the buds near the beam open: five petals swing out, the flower grows and
+    /// settles with a little overshoot, its yellow heart appears, and a petal or two drifts down. About a fifth stay
+    /// buds, as in the painting. When enough have opened (finishFraction) the rest open in a wave from the trunk out.
+    /// All of it is one mesh rebuilt each frame (a few thousand vertices), drawn with AS_Blossom.shader and the painted
+    /// atlas (Textures/Blossom/AS_BlossomAtlas.png: petal, bud petal, heart, sepals), so one draw call.
+    /// </summary>
+    public class AS_Blossoms : MonoBehaviour
+    {
+        // atlas cells (UV, v up): petal top left, bud petal top right, heart bottom left, sepals bottom right
+        static readonly Rect Petal = new Rect(0f, 0.5f, 0.5f, 0.5f), Heart = new Rect(0f, 0f, 0.5f, 0.5f), Sepals = new Rect(0.5f, 0f, 0.5f, 0.5f);
+        static readonly Vector3 LightDir = new Vector3(0.3f, 0.8f, -0.5f).normalized;
+
+        class Blossom
+        {
+            public Vector3 pos, axis, e1, e2;
+            public float size, rot, openAt = -1f, sway;
+            public bool stayBud;
+            public float[] petalScale = new float[5];
+            public float Openness(float now, float dur) => openAt < 0f ? 0f : Mathf.Clamp01((now - openAt) / dur);
+        }
+
+        class Drift { public Vector3 pos, vel; public float born, rot, spin, size; }
+
+        AS_Layout layout;
+        readonly List<Blossom> blossoms = new List<Blossom>();
+        readonly List<Drift> drifts = new List<Drift>();
+        Mesh mesh;
+        readonly List<Vector3> v = new List<Vector3>();
+        readonly List<Vector2> uv = new List<Vector2>();
+        readonly List<Color> col = new List<Color>();
+        readonly List<int> tri = new List<int>();
+        Vector3 trunkBase;
+        bool waveStarted;
+        System.Random rnd;
+
+        public int Total { get; private set; }
+        public int Opened { get; private set; }
+        public float Fraction => Total == 0 ? 1f : Opened / (float)Total;
+        public bool AllOpen => waveStarted;
+
+        public void Build(AS_TripoTree tree, AS_Layout l, Material material)
+        {
+            layout = l;
+            rnd = new System.Random(tree.seed);
+            var t = tree.transform;
+            trunkBase = t.position;
+            for (int i = 0; i < tree.positions.Length; i++)
+            {
+                var b = new Blossom
+                {
+                    pos = t.TransformPoint(tree.positions[i]),
+                    size = l.blossomSize * Mathf.Lerp(0.75f, 1.25f, (float)rnd.NextDouble()),
+                    rot = (float)rnd.NextDouble() * 72f,
+                    stayBud = rnd.NextDouble() < l.blossomStayBud,
+                    sway = (float)rnd.NextDouble() * 10f,
+                };
+                // facing out from the branch, lifted toward the sky and a little random, as in the painting
+                Vector3 n = i < tree.normals.Length ? t.TransformDirection(tree.normals[i]).normalized : Vector3.up;
+                Vector3 jitter = new Vector3((float)rnd.NextDouble() - 0.5f, (float)rnd.NextDouble() - 0.5f, (float)rnd.NextDouble() - 0.5f);
+                b.axis = (n + Vector3.up * 0.5f + jitter * 0.9f).normalized;
+                b.pos += n * b.size * 0.15f;
+                b.e1 = Vector3.Cross(Mathf.Abs(b.axis.y) < 0.9f ? Vector3.up : Vector3.right, b.axis).normalized;
+                b.e2 = Vector3.Cross(b.axis, b.e1);
+                for (int k = 0; k < 5; k++) b.petalScale[k] = Mathf.Lerp(0.85f, 1.15f, (float)rnd.NextDouble());
+                blossoms.Add(b);
+                if (!b.stayBud) Total++;
+            }
+            mesh = new Mesh { name = "AS_Blossoms (runtime)" };
+            mesh.MarkDynamic();
+            gameObject.AddComponent<MeshFilter>().sharedMesh = mesh;
+            var r = gameObject.AddComponent<MeshRenderer>();
+            r.sharedMaterial = material;
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            Rebuild(0f);
+        }
+
+        public void ResetAll()
+        {
+            foreach (var b in blossoms) b.openAt = -1f;
+            drifts.Clear();
+            Opened = 0;
+            waveStarted = false;
+        }
+
+        /// <summary>Opens the buds near the beam (within `degrees` of it, or `metres` of its line). Returns how many opened.</summary>
+        public int Paint(Ray beam, float degrees, float metres)
+        {
+            int n = 0;
+            float now = Time.time;
+            foreach (var b in blossoms)
+            {
+                if (b.stayBud || b.openAt >= 0f) continue;
+                Vector3 to = b.pos - beam.origin;
+                float along = Vector3.Dot(to, beam.direction);
+                if (along <= 0f) continue;
+                bool hit = Vector3.Angle(beam.direction, to) <= degrees || (to - beam.direction * along).magnitude <= metres;
+                if (!hit) continue;
+                Open(b, now + (float)rnd.NextDouble() * 0.12f);
+                n++;
+            }
+            return n;
+        }
+
+        /// <summary>The ending: every bud still closed (except those that stay buds) opens, in a wave from the trunk out.</summary>
+        public void OpenAllInAWave(float seconds)
+        {
+            if (waveStarted) return;
+            waveStarted = true;
+            float maxD = 0.01f;
+            foreach (var b in blossoms) maxD = Mathf.Max(maxD, Vector3.Distance(b.pos, trunkBase));
+            float now = Time.time;
+            foreach (var b in blossoms)
+                if (!b.stayBud && b.openAt < 0f) Open(b, now + seconds * Vector3.Distance(b.pos, trunkBase) / maxD);
+        }
+
+        void Open(Blossom b, float at)
+        {
+            b.openAt = at;
+            Opened++;
+            int petals = rnd.NextDouble() < 0.6 ? 1 : 2;
+            for (int k = 0; k < petals; k++)
+                drifts.Add(new Drift
+                {
+                    pos = b.pos, born = at + 0.3f + (float)rnd.NextDouble() * 0.3f,
+                    vel = new Vector3((float)rnd.NextDouble() - 0.5f, 0f, -(float)rnd.NextDouble()) * 0.3f,
+                    rot = (float)rnd.NextDouble() * 360f, spin = 90f + (float)rnd.NextDouble() * 180f,
+                    size = b.size * 0.8f,
+                });
+        }
+
+        void Update() => Rebuild(Time.time);
+
+        // ------------------------------------------------------------------------------------------------ the mesh
+
+        void Rebuild(float now)
+        {
+            v.Clear(); uv.Clear(); col.Clear(); tri.Clear();
+            float dur = Mathf.Max(layout.blossomOpenSeconds, 0.05f);
+            foreach (var b in blossoms)
+            {
+                float o = b.Openness(now, dur);
+                float open = 1f - Mathf.Pow(1f - o, 3f);                  // ease out
+                float scale = Mathf.Lerp(0.55f, 1f, BackOut(o));          // grows, overshoots a little, settles
+                float s = b.size * scale;
+                float swayA = Mathf.Sin(now * 1.3f + b.sway) * 2.5f;
+                Quaternion sway = Quaternion.AngleAxis(swayA, b.e1);
+                Vector3 axis = sway * b.axis, e1 = sway * b.e1, e2 = sway * b.e2;
+
+                if (open < 0.6f) // sepals behind the bud
+                    Quad(b.pos - axis * s * 0.25f, axis, e1, s * 0.9f, s * 0.75f, Sepals, 0f, Shade(axis), 1f);
+
+                float theta = Mathf.Lerp(22f, 80f, open) * Mathf.Deg2Rad;
+                for (int k = 0; k < 5; k++)
+                {
+                    float az = (b.rot + k * 72f) * Mathf.Deg2Rad;
+                    Vector3 radial = e1 * Mathf.Cos(az) + e2 * Mathf.Sin(az);
+                    Vector3 alongP = axis * Mathf.Cos(theta) + radial * Mathf.Sin(theta);
+                    float len = s * b.petalScale[k];
+                    Quad(b.pos, alongP, Vector3.Cross(alongP, axis).normalized, len, len * 0.9f, Petal, 1f - open, Shade(Vector3.Cross(Vector3.Cross(alongP, axis), alongP)), 1f);
+                }
+                if (open > 0.35f) // the yellow heart, facing out
+                {
+                    float hs = s * 0.55f * Mathf.InverseLerp(0.35f, 1f, open);
+                    CentredQuad(b.pos + axis * s * 0.06f, axis, e1, hs, Heart, Shade(axis));
+                }
+            }
+            for (int i = drifts.Count - 1; i >= 0; i--)
+            {
+                var d = drifts[i];
+                float age = now - d.born;
+                if (age > 2.4f) { drifts.RemoveAt(i); continue; }
+                if (age < 0f) continue;
+                Vector3 p = d.pos + d.vel * age + Vector3.down * (0.35f * age + 0.08f * age * age)
+                            + new Vector3(Mathf.Sin(age * 3f + d.rot), 0f, Mathf.Cos(age * 2.3f + d.rot)) * 0.06f;
+                Quaternion q = Quaternion.Euler(d.rot + age * d.spin, d.rot * 0.7f + age * d.spin * 0.6f, 0f);
+                float fade = 1f - Mathf.InverseLerp(1.8f, 2.4f, age);
+                CentredQuad(p, q * Vector3.forward, q * Vector3.right, d.size * fade, Petal, 0.9f);
+            }
+            mesh.Clear();
+            mesh.SetVertices(v); mesh.SetUVs(0, uv); mesh.SetColors(col); mesh.SetTriangles(tri, 0);
+            mesh.RecalculateBounds();
+        }
+
+        static float BackOut(float x)
+        {
+            const float k = 1.9f;
+            x = Mathf.Clamp01(x) - 1f;
+            return 1f + (k + 1f) * x * x * x + k * x * x;
+        }
+
+        static float Shade(Vector3 n) => 0.78f + 0.22f * Mathf.Abs(Vector3.Dot(n.normalized, LightDir));
+
+        /// <summary>A quad from `root` along `along` (`length`), `width` wide across `across`: the cell's bottom centre at the root.
+        /// colour: r = budness (shader blends to the bud petal cell), g = shade.</summary>
+        void Quad(Vector3 root, Vector3 along, Vector3 across, float length, float width, Rect cell, float bud, float shade, float a)
+        {
+            int i = v.Count;
+            Vector3 hw = across.normalized * width * 0.5f, tip = root + along.normalized * length;
+            v.Add(root - hw); v.Add(root + hw); v.Add(tip + hw); v.Add(tip - hw);
+            uv.Add(new Vector2(cell.xMin, cell.yMin)); uv.Add(new Vector2(cell.xMax, cell.yMin));
+            uv.Add(new Vector2(cell.xMax, cell.yMax)); uv.Add(new Vector2(cell.xMin, cell.yMax));
+            var c = new Color(bud, shade, 0f, a);
+            col.Add(c); col.Add(c); col.Add(c); col.Add(c);
+            tri.Add(i); tri.Add(i + 2); tri.Add(i + 1); tri.Add(i); tri.Add(i + 3); tri.Add(i + 2);
+        }
+
+        void CentredQuad(Vector3 centre, Vector3 normal, Vector3 right, float size, Rect cell, float shade)
+        {
+            Vector3 up = Vector3.Cross(normal, right).normalized;
+            Quad(centre - up * size * 0.5f, up, right, size, size, cell, 0f, shade, 1f);
+        }
+
+        void OnDestroy()
+        {
+            if (mesh != null) Destroy(mesh);
+        }
+    }
+}

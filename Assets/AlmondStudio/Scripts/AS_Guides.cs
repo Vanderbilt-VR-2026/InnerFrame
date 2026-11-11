@@ -10,7 +10,7 @@ namespace InnerFrame.AlmondStudio
     public class AS_Guides : MonoBehaviour
     {
         const int Samples = 40;
-        const float Lift = 0.03f, Width = 0.018f, DotSize = 0.07f;
+        const float Lift = 0.015f, Width = 0.006f, DotSize = 0.025f;   // sized for a 1.5 m painting
         static readonly Color Idle = new Color(1f, 0.96f, 0.82f, 0.35f), Active = new Color(1f, 0.93f, 0.7f, 0.85f);
 
         LineRenderer[] lines;

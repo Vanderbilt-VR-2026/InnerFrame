@@ -12,6 +12,8 @@ Shader "InnerFrame/AlmondStudio/Reveal"
         _MapTex ("Reveal map (runtime)", 2D) = "black" {}
         _Soft ("Edge softness", Range(0.005, 0.3)) = 0.06
         _All ("Show all", Range(0, 1)) = 0
+        _Feather ("Edge fade (0..0.5)", Range(0, 0.5)) = 0.06
+        _EdgeColor ("Sky behind (edge fade colour)", Color) = (0.486, 0.682, 0.686, 1)
     }
     SubShader
     {
@@ -36,6 +38,8 @@ Shader "InnerFrame/AlmondStudio/Reveal"
                 float4 _BareTex_ST;
                 half _Soft;
                 half _All;
+                half _Feather;
+                half4 _EdgeColor;
             CBUFFER_END
 
             float _Progress[8];
@@ -75,7 +79,12 @@ Shader "InnerFrame/AlmondStudio/Reveal"
                 float p = _Progress[id];
                 float r = p > 0.0 ? saturate((p - map.r) / max(_Soft, 1e-3) + 1.0) : 0.0;
                 r = max(r, _All);
-                return half4(lerp(bare.rgb, full.rgb, r), 1.0h);
+                half3 col = lerp(bare.rgb, full.rgb, r);
+                // fade into the plain sky behind near the edges, so the painting has no hard border past the window
+                float2 e = min(i.uv, 1.0 - i.uv);
+                float edge = _Feather > 0.0 ? saturate(min(e.x, e.y) / _Feather) : 1.0;
+                col = lerp(_EdgeColor.rgb, col, edge * edge * (3.0 - 2.0 * edge));
+                return half4(col, 1.0h);
             }
             ENDHLSL
         }

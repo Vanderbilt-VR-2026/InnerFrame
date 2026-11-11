@@ -13,16 +13,20 @@ namespace InnerFrame.AlmondStudio
         static readonly int AllId = Shader.PropertyToID("_All");
         static readonly int MapId = Shader.PropertyToID("_MapTex");
         static readonly int SoftId = Shader.PropertyToID("_Soft");
+        static readonly int FeatherId = Shader.PropertyToID("_Feather");
+        static readonly int EdgeColourId = Shader.PropertyToID("_EdgeColor");
 
         Material mat;
         readonly float[] sent = new float[AS_Branches.MaxBranches];
         float all;
 
-        public void Init(Material shared, Texture2D revealMap, float softness)
+        public void Init(Material shared, Texture2D revealMap, float softness, float edgeFade, Color edgeColour)
         {
             mat = new Material(shared) { name = shared.name + " (runtime)" };
             mat.SetTexture(MapId, revealMap);
             mat.SetFloat(SoftId, softness);
+            mat.SetFloat(FeatherId, edgeFade);
+            mat.SetColor(EdgeColourId, edgeColour);
             mat.SetFloatArray(ProgressId, sent);
             mat.SetFloat(AllId, 0f);
             GetComponent<MeshRenderer>().sharedMaterial = mat;

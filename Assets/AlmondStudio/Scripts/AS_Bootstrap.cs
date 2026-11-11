@@ -99,11 +99,12 @@ namespace InnerFrame.AlmondStudio
             }
 
             // furniture from the floor plan: table and two rush chairs in the middle, door and easel south, chest east
-            Box(world, "Table top", new Vector3(0f, 0.74f, 1.9f), new Vector3(1.1f, 0.05f, 0.75f), wood);
-            foreach (var p in new[] { new Vector2(-0.5f, 1.6f), new Vector2(0.5f, 1.6f), new Vector2(-0.5f, 2.2f), new Vector2(0.5f, 2.2f) })
+            // the table along the west side, its chairs at either end, so the way from the arrival spot to the window is clear
+            Box(world, "Table top", new Vector3(-0.8f, 0.74f, 1.9f), new Vector3(0.75f, 0.05f, 1.1f), wood);
+            foreach (var p in new[] { new Vector2(-1.1f, 1.45f), new Vector2(-0.5f, 1.45f), new Vector2(-1.1f, 2.35f), new Vector2(-0.5f, 2.35f) })
                 Box(world, "Table leg", new Vector3(p.x, 0.36f, p.y), new Vector3(0.05f, 0.72f, 0.05f), wood);
-            Chair(world, new Vector3(-0.8f, 0f, 1.9f), 90f);
-            Chair(world, new Vector3(0.8f, 0f, 1.9f), -90f);
+            Chair(world, new Vector3(-0.8f, 0f, 1.05f), 0f);
+            Chair(world, new Vector3(-0.8f, 0f, 2.75f), 180f);
             Box(world, "Door", new Vector3(-0.6f, 1.05f, 0.02f), new Vector3(0.9f, 2.1f, 0.05f), wood);
             Easel(world, new Vector3(0.9f, 0f, 0.35f));
             Box(world, "Chest", new Vector3(W / 2f - 0.3f, 0.3f, D - 0.4f), new Vector3(0.5f, 0.6f, 0.6f), wood);
@@ -155,7 +156,7 @@ namespace InnerFrame.AlmondStudio
             var quad = Prim(world, PrimitiveType.Quad, "Almond Blossom", layout.PaintingCentre, new Vector3(layout.paintingWidth, layout.PaintingHeight, 1f), painting);
             DestroyImmediate(quad.GetComponent<Collider>());
             var paint = quad.AddComponent<AS_Painting>();
-            paint.Init(painting, map, layout.revealSoftness);
+            paint.Init(painting, map, layout.revealSoftness, layout.paintingEdgeFade, layout.skyBehind);
             var back = Prim(world, PrimitiveType.Quad, "Sky behind", layout.PaintingCentre + new Vector3(0f, 0f, 6f), new Vector3(60f, 40f, 1f), skyBehind);
             DestroyImmediate(back.GetComponent<Collider>());
 

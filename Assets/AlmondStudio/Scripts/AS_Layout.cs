@@ -10,6 +10,9 @@ namespace InnerFrame.AlmondStudio
     [CreateAssetMenu(menuName = "InnerFrame/Almond Studio Layout", fileName = "AS_Layout")]
     public class AS_Layout : ScriptableObject
     {
+        [Tooltip("Bumped when the defaults change; AS_Setup brings an older AS_Layout.asset up to date (see AS_Setup.Migrate).")]
+        public int layoutVersion;
+
         [Header("Room (the floor plan S10: window north, door and easel south)")]
         public float roomWidth = 3.5f;
         public float roomDepth = 4f;
@@ -25,9 +28,10 @@ namespace InnerFrame.AlmondStudio
         public float casementOpenSeconds = 1.2f;
 
         [Header("The painting outside (Almond Blossom, bare and original)")]
-        [Tooltip("From the wall's outer face to the painting.")] public float paintingDistance = 1.2f;
-        public float paintingWidth = 6.2f;
-        public float paintingCentreY = 2.2f;
+        [Tooltip("From the wall's outer face to the painting. With paintingWidth: from about 1 m in front of the window the whole tree just fits its width (the opening's outer edge is the limit); further back the sides are cut a little.")] public float paintingDistance = 0.4f;
+        public float paintingWidth = 1.5f;
+        [Tooltip("On the line from a standing eye (1.6 m) through the window's centre.")] public float paintingCentreY = 1.95f;
+        [Tooltip("How far in from the painting's edges it fades into skyBehind (0..0.5 of its size), so no hard edge shows past it.")] public float paintingEdgeFade = 0.06f;
         [Tooltip("Width / height of the painting image (2576 x 2035).")] public float paintingAspect = 1.2658f;
         [Tooltip("The plain sky colour far behind the painting, for views past its edges.")] public Color skyBehind = new Color(0.486f, 0.682f, 0.686f);
 
@@ -41,8 +45,8 @@ namespace InnerFrame.AlmondStudio
         [Tooltip("Size of the reveal map built from the branch paths (the painting's height follows the aspect).")] public int revealMapWidth = 512;
 
         [Header("People")]
-        [Tooltip("Where the player arrives (step 2 will move this to his viewpoint for Window in the Studio).")] public Vector3 playerStart = new Vector3(-0.5f, 0f, 1.3f);
-        public float playerStartYaw = 12f;
+        [Tooltip("Where the player arrives (step 2 will move this to his viewpoint for Window in the Studio).")] public Vector3 playerStart = new Vector3(0.3f, 0f, 1.1f);
+        public float playerStartYaw = -5f;
         public Vector3 vincentSpot = new Vector3(0.95f, 0f, 3.2f);
         public float vincentYaw = 200f;
 
@@ -56,6 +60,7 @@ namespace InnerFrame.AlmondStudio
         public Vector3 editorHoldOffset = new Vector3(0.18f, -0.22f, 0.35f);
 
         [Header("Lines (ours, placeholders) and hints")]
+        public string hintTitle = "Saint-Rémy, February 1890";
         public string lineArrive = "A letter from Theo. A boy, and they have named him Vincent.";
         public string linePaint = "Slowly. Let each one open.";
         public string lineDone = "Now I know what to paint for his room.";

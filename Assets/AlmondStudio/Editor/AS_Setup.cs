@@ -51,6 +51,7 @@ namespace InnerFrame.AlmondStudio.EditorTools
                 layout = ScriptableObject.CreateInstance<AS_Layout>();
                 AssetDatabase.CreateAsset(layout, LayoutPath);
             }
+            Migrate(layout);
 
             var lit = Shader.Find("Universal Render Pipeline/Lit");
             var unlit = Shader.Find("Universal Render Pipeline/Unlit");
@@ -110,6 +111,28 @@ namespace InnerFrame.AlmondStudio.EditorTools
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, ScenePath);
             Debug.Log("[AS Setup] Built " + ScenePath + ". Press Play: O opens the window, G takes the brush, hold Space to paint, N blooms the next branch, R starts over.");
+        }
+
+        /// <summary>
+        /// Brings an older AS_Layout.asset up to the current defaults for the numbers that changed (Build keeps the asset,
+        /// so its old values would otherwise stay). Version 1 (2026-11-11): the painting close outside the window and
+        /// small enough that the whole tree shows through it; the arrival spot clear of the table.
+        /// </summary>
+        static void Migrate(AS_Layout l)
+        {
+            if (l.layoutVersion >= 1) return;
+            var d = ScriptableObject.CreateInstance<AS_Layout>();
+            l.paintingDistance = d.paintingDistance;
+            l.paintingWidth = d.paintingWidth;
+            l.paintingCentreY = d.paintingCentreY;
+            l.paintingEdgeFade = d.paintingEdgeFade;
+            l.playerStart = d.playerStart;
+            l.playerStartYaw = d.playerStartYaw;
+            l.hintTitle = d.hintTitle;
+            Object.DestroyImmediate(d);
+            l.layoutVersion = 1;
+            EditorUtility.SetDirty(l);
+            Debug.Log("[AS Setup] AS_Layout.asset updated to version 1 (painting size and distance, arrival spot).");
         }
 
         static void ImportPainting(string path)

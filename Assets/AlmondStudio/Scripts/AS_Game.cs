@@ -166,7 +166,7 @@ namespace InnerFrame.AlmondStudio
 
         void Hint(string line)
         {
-            if (ui != null) ui.SetHint(null, line);
+            if (ui != null) ui.SetHint(layout.hintTitle, line);
         }
     }
 }

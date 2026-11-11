@@ -81,7 +81,7 @@ blooms to its tip.
 4. Trigger on a glowing dot, follow the branch: blossoms open behind the beam; a buzz when it finishes.
 5. All branches: the original painting fills the window; Vincent's last line.
 6. Frame rate (OVR Metrics, target 72+), and the load hitch when the scene opens.
-7. Comfort: is the painting at 1.2 m outside the window convincing, or too flat when you lean out?
+7. Comfort: the painting is 1.5 m wide, 0.4 m outside the window (the whole tree fits the window from about 1 m away). Convincing, or too flat when you lean out?
 
 ## Next steps
 

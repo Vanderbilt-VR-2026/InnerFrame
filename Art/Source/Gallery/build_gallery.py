@@ -561,7 +561,10 @@ top_z = lambda y: PEDESTAL_H - (py[1] - y) / (py[1] - py[0]) * top_len * sin(til
 
 def rr_ring(inset, z, radius, smooth_z=None):
     """A rounded rectangle round (cx, cy), inset from the full footprint, at height z (or on the reading plane)."""
-    ax, ay, r = hx - inset, hy - inset, min(radius, hx - inset, hy - inset)
+    # (never below 1 cm: the base's radius shrinks with its inset, and a negative one turned the corners inside out,
+    # so the top cap crossed itself and was not drawn: the floor showed through, 2026-11-10)
+    ax, ay = hx - inset, hy - inset
+    r = max(0.01, min(radius, ax, ay))
     pts = []
     for qx, qy, a0 in ((1, 1, 0), (-1, 1, pi / 2), (-1, -1, pi), (1, -1, 3 * pi / 2)):
         for k in range(RR_SEG + 1):

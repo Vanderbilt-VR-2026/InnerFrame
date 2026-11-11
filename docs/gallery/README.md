@@ -90,7 +90,7 @@ the frames' carving has its generated collider like the rest of the shell. Nothi
 Don't move the props in the scene: the next run of the setup reverts any override. Change the spots in
 `GalleryDecorSetup.cs` (the `Statues`, `Plants`, `Vases`, `Lanterns` and `Frames` tables), then run
 **Tools > InnerFrame > Gallery > Add Decor** and **Tools > InnerFrame > Gallery > Check Decor**. The check also renders
-eight views (five from eye height; a side-wall lamp, the frame's corner and the ceiling spots close up) to `Logs/GalleryDecor/`.
+nine views (five from eye height; a side-wall lamp, the frame's corner, the ceiling spots and a pedestal close up) to `Logs/GalleryDecor/`.
 
 To change the room itself, edit the parameters at the top of `build_gallery.py`, run it, then Add Decor. If the east
 wall or the north wall moves, move `SN_GallerySetup.RootPosition` and `BedroomWall` with it and run

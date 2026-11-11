@@ -172,6 +172,7 @@ namespace InnerFrame.Gallery.EditorTools.Tests
                 ("6_lantern", new Vector3(-2.0f, 2.2f, 1.9f), new Vector3(-3.26f, 2.05f, 1.0f)),
                 ("7_frame", new Vector3(0.9f, 2.7f, -3.0f), new Vector3(1.55f, 3.2f, -4.38f)),
                 ("8_spots", new Vector3(-0.8f, 2.4f, -0.4f), new Vector3(-0.8f, 4f, -1.73f)),
+                ("9_pedestal", new Vector3(-1.35f, 0.75f, -2.35f), new Vector3(-2.03f, 0.45f, -3.0f)),
             };
             var rt = new RenderTexture(1280, 720, 24);
             cam.targetTexture = rt;

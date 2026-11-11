@@ -138,7 +138,6 @@ public class PlayerMenuPanel : MonoBehaviour
     {
         var r = AddImage(parent, label + " Button", pos, size, color);
         var button = r.gameObject.AddComponent<Button>();
-        InnerFrame.Entrance.EntranceButtonSound.Bind(button);
         var colors = button.colors;
         colors.highlightedColor = new Color(1.2f, 1.2f, 1.2f, 1f);
         colors.pressedColor = new Color(0.7f, 0.7f, 0.7f, 1f);

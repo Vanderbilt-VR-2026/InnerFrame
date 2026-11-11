@@ -37,7 +37,7 @@ namespace InnerFrame.AlmondStudio
         public void Begin()
         {
             foreach (var b in Branches) b.progress = 0f;
-            tree.SetProgress(Branches);
+            tree?.SetProgress(Branches);
             guides.Show(false);
             Enter(AS_State.Arrive);
         }
@@ -116,7 +116,7 @@ namespace InnerFrame.AlmondStudio
                     if (br.progress >= layout.finishAt) Finish(Active);
                 }
                 else if ((offBranchFor += dt) > layout.loseSeconds) Active = -1;
-                tree.SetProgress(Branches);
+                tree?.SetProgress(Branches);
             }
             else if (!trigger) Active = -1;
             guides.Beam(brushTip.position, end, trigger);
@@ -143,7 +143,7 @@ namespace InnerFrame.AlmondStudio
             Branches[i].progress = 1f;
             Active = -1;
             Input?.Haptic(0.35f, 0.12f);
-            tree.SetProgress(Branches);
+            tree?.SetProgress(Branches);
             int left = 0, paintable = 0;
             foreach (var b in Branches) if (b.Paintable) { paintable++; if (!b.Done) left++; }
             if (left == 0) Enter(AS_State.Done);

@@ -41,6 +41,12 @@ namespace InnerFrame.AlmondStudio.EditorTools
                 AssetDatabase.CreateAsset(layout, LayoutPath);
             }
             Migrate(layout);
+            if (layout.layoutVersion < 2)
+            {
+                layout.showGeneratedTree = false;   // version 2 (2026-11-11): the Tripo tree is placed by hand while it is tried
+                layout.layoutVersion = 2;
+                EditorUtility.SetDirty(layout);
+            }
 
             var lit = Shader.Find("Universal Render Pipeline/Lit");
             var unlit = Shader.Find("Universal Render Pipeline/Unlit");

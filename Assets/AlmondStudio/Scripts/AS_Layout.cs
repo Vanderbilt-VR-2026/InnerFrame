@@ -28,6 +28,8 @@ namespace InnerFrame.AlmondStudio
         public float casementOpenSeconds = 1.2f;
 
         [Header("The tree outside, fitted to Almond Blossom from the paint viewpoint")]
+        [Tooltip("Off while the Tripo tree is being placed by hand in the scene: the generated tree and its guides are not built.")]
+        public bool showGeneratedTree = false;
         [Tooltip("The eye the tree is fitted from: standing about 1 m in front of the window. From here the branches fall where the painting has them.")]
         public Vector3 paintEye = new Vector3(0f, 1.6f, 3f);
         [Tooltip("The reference plane: the painting as it would hang this far outside the wall's outer face, so that from paintEye the whole tree fits the window. Each branch then sits at its own depth along the eye's rays (AS_Branches.json).")]

@@ -157,13 +157,16 @@ namespace InnerFrame.AlmondStudio
             var ground = Box(world, "Garden ground", new Vector3(0f, -0.06f, D + T + 6f), new Vector3(24f, 0.1f, 12f), groundMaterial, collider: false);
             ground.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             var branches = AS_Branches.Load(branchesJson);
-            var tree = new GameObject("Almond tree").AddComponent<AS_Tree>();
-            tree.transform.SetParent(world, false);
-            tree.Build(branches, layout, bark, ink);
-
+            AS_Tree tree = null;
             var guides = new GameObject("Guides").AddComponent<AS_Guides>();
             guides.transform.SetParent(world, false);
-            guides.Build(branches, glow, guideDot);
+            if (layout.showGeneratedTree)
+            {
+                tree = new GameObject("Almond tree").AddComponent<AS_Tree>();
+                tree.transform.SetParent(world, false);
+                tree.Build(branches, layout, bark, ink);
+                guides.Build(branches, glow, guideDot);
+            }
 
             VG_DialogueUI ui = null;
             if (uiPrefab != null)

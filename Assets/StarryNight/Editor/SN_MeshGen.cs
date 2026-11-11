@@ -246,6 +246,135 @@ namespace InnerFrame.StarryNight.EditorTools
 
         /// <summary>The lantern's flame: two crossed quads (width x height, centred; the second turned 90 degrees about y,
         /// as the builtin Quad would be), one mesh, so one transparent renderer instead of two. White vertex colours.</summary>
+        /// <summary>
+        /// The rock's keep-off rim (SN_Layout version 6): a vertical prism round the rock's outline seen from above (the
+        /// convex hull of its vertices, placed as SN_Bootstrap places the rock, pushed out by rockRimMargin), from
+        /// rockRimBelow under the lowest ground along it to rockRimHeight above the highest. Convex (for a convex
+        /// MeshCollider); world space (the hilltop sits at the origin).
+        /// </summary>
+        public static Mesh RockRim(SN_Layout l, Mesh rock, Matrix4x4 node)
+        {
+            var place = Matrix4x4.TRS(new Vector3(0f, -l.rockBuried, 0f), Quaternion.identity, new Vector3(1f, l.rockHeightScale, 1f)) * node;
+            var pts = rock.vertices.Select(v => { var w = place.MultiplyPoint3x4(v); return new Vector2(w.x, w.z); }).ToList();
+            var hull = RockRimOutline(pts, l.rockRimMargin);
+            float lo = float.MaxValue, hi = float.MinValue;
+            foreach (var q in hull) { float g = l.GroundHeight(q.x, q.y); lo = Mathf.Min(lo, g); hi = Mathf.Max(hi, g); }
+            float yBottom = lo - l.rockRimBelow, yTop = hi + l.rockRimHeight;
+            var b = new Builder();
+            int n = hull.Count;
+            var centre = new Vector3(hull.Average(q => q.x), 0f, hull.Average(q => q.y));
+            for (int i = 0; i < n; i++) { b.Add(new Vector3(hull[i].x, yBottom, hull[i].y), Vector2.zero); b.Add(new Vector3(hull[i].x, yTop, hull[i].y), Vector2.zero); }
+            for (int i = 0; i < n; i++)
+            {
+                int j = (i + 1) % n;
+                Vector3 mid = (b.v[2 * i] + b.v[2 * j]) * 0.5f, outward = mid - centre; outward.y = 0f;
+                b.Tri(2 * i, 2 * j, 2 * j + 1, outward);
+                b.Tri(2 * i, 2 * j + 1, 2 * i + 1, outward);
+            }
+            for (int i = 1; i + 1 < n; i++)
+            {
+                b.Tri(1, 2 * i + 1, 2 * i + 3, Vector3.up);
+                b.Tri(0, 2 * i, 2 * i + 2, Vector3.down);
+            }
+            return b.Build("SN_RockRim");
+        }
+
+        // ---- 2026-11-09: the lantern's post, the blanket ----
+
+        /// <summary>A tube along `a` -> `b` with `sides` sides, its radius going from ra to rb (open ends; a cap on b if capB).</summary>
+        static void Tube(Builder b, Vector3 a, Vector3 c, float ra, float rb, int sides, bool capB)
+        {
+            Vector3 axis = (c - a).normalized, u = Vector3.Cross(axis, Mathf.Abs(axis.y) > 0.9f ? Vector3.forward : Vector3.up).normalized, w = Vector3.Cross(axis, u);
+            int i0 = b.v.Count;
+            for (int i = 0; i < sides; i++)
+            {
+                float t = i * 2f * Mathf.PI / sides;
+                Vector3 dir = u * Mathf.Cos(t) + w * Mathf.Sin(t);
+                b.Add(a + dir * ra, new Vector2(i / (float)sides, 0f)); b.Add(c + dir * rb, new Vector2(i / (float)sides, 1f));
+            }
+            for (int i = 0; i < sides; i++)
+            {
+                int j = (i + 1) % sides;
+                Vector3 mid = (b.v[i0 + 2 * i] + b.v[i0 + 2 * j]) * 0.5f, outward = mid - a; outward -= Vector3.Project(outward, axis);
+                b.Tri(i0 + 2 * i, i0 + 2 * j, i0 + 2 * j + 1, outward);
+                b.Tri(i0 + 2 * i, i0 + 2 * j + 1, i0 + 2 * i + 1, outward);
+            }
+            if (capB) for (int i = 1; i + 1 < sides; i++) b.Tri(i0 + 1, i0 + 2 * i + 1, i0 + 2 * i + 3, axis);
+        }
+
+        /// <summary>The lantern's post (in its own space: the base at the origin, its arm along +Z): a thin tapered iron post
+        /// lanternPostHeight tall, an arm lanternPostSide long 6 cm over the lantern's handle, and a hook down to the handle.</summary>
+        public static Mesh LanternPost(SN_Layout l)
+        {
+            var b = new Builder();
+            float handle = l.lanternHome.y + 0.316f;   // the lantern model's GrabPoint
+            float arm = handle + 0.06f;
+            Tube(b, new Vector3(0f, -0.08f, 0f), new Vector3(0f, l.lanternPostHeight, 0f), 0.016f, 0.011f, 8, true);
+            Tube(b, new Vector3(0f, arm, -0.012f), new Vector3(0f, arm, l.lanternPostSide), 0.007f, 0.006f, 6, true);
+            // the hook: down from the arm's end, then a small curl back toward the post
+            Tube(b, new Vector3(0f, arm, l.lanternPostSide), new Vector3(0f, handle + 0.012f, l.lanternPostSide), 0.005f, 0.005f, 6, false);
+            Tube(b, new Vector3(0f, handle + 0.012f, l.lanternPostSide), new Vector3(0f, handle + 0.002f, l.lanternPostSide - 0.012f), 0.005f, 0.004f, 6, true);
+            // a ball on top of the post
+            Tube(b, new Vector3(0f, l.lanternPostHeight, 0f), new Vector3(0f, l.lanternPostHeight + 0.018f, 0f), 0.014f, 0.004f, 8, true);
+            return b.Build("SN_LanternPost");
+        }
+
+        /// <summary>The seat's blanket (in its own space: centred on the seat, on the ground): size.x across (X) by size.y
+        /// along (Z), a few gentle folds 1-2 cm above the grass; u across (the texture's fringes are at its ends), v along.</summary>
+        public static Mesh Blanket(SN_Layout l)
+        {
+            var b = new Builder();
+            int nx = 12, nz = 8;
+            Vector2 s = l.blanketSize;
+            for (int j = 0; j <= nz; j++)
+                for (int i = 0; i <= nx; i++)
+                {
+                    float u = i / (float)nx, v = j / (float)nz;
+                    float y = 0.012f + 0.006f * Mathf.Sin(u * 7.1f + 0.6f) * Mathf.Sin(v * 3.3f + 1.1f) + 0.004f * Mathf.Sin(v * 9.7f);
+                    b.Add(new Vector3((u - 0.5f) * s.x, y, (v - 0.5f) * s.y), new Vector2(u, v));
+                }
+            for (int j = 0; j < nz; j++)
+                for (int i = 0; i < nx; i++)
+                {
+                    int a = j * (nx + 1) + i;
+                    b.Tri(a, a + 1, a + nx + 2, Vector3.up);
+                    b.Tri(a, a + nx + 2, a + nx + 1, Vector3.up);
+                }
+            return b.Build("SN_Blanket");
+        }
+
+        /// <summary>The convex hull of `pts` (counter-clockwise seen from above), corners closer than 3 cm merged, pushed out by
+        /// `margin` (each edge moves out by exactly `margin`).</summary>
+        public static List<Vector2> RockRimOutline(List<Vector2> pts, float margin)
+        {
+            var p = pts.Distinct().OrderBy(q => q.x).ThenBy(q => q.y).ToList();
+            float Cross(Vector2 o, Vector2 a, Vector2 c) => (a.x - o.x) * (c.y - o.y) - (a.y - o.y) * (c.x - o.x);
+            var h = new List<Vector2>();
+            for (int pass = 0; pass < 2; pass++)
+            {
+                int start = h.Count;
+                foreach (var q in pass == 0 ? p : Enumerable.Reverse(p))
+                {
+                    while (h.Count >= start + 2 && Cross(h[h.Count - 2], h[h.Count - 1], q) <= 0f) h.RemoveAt(h.Count - 1);
+                    h.Add(q);
+                }
+                h.RemoveAt(h.Count - 1);
+            }
+            var merged = new List<Vector2>();
+            foreach (var q in h) if (merged.Count == 0 || (q - merged[merged.Count - 1]).magnitude >= 0.03f) merged.Add(q);
+            if (merged.Count > 3 && (merged[0] - merged[merged.Count - 1]).magnitude < 0.03f) merged.RemoveAt(merged.Count - 1);
+            var outline = new List<Vector2>();
+            int n = merged.Count;
+            for (int i = 0; i < n; i++)
+            {
+                Vector2 a = merged[(i + n - 1) % n], c = merged[i], d = merged[(i + 1) % n];
+                Vector2 n1 = new Vector2(c.y - a.y, a.x - c.x).normalized, n2 = new Vector2(d.y - c.y, c.x - d.x).normalized;   // outward (counter-clockwise)
+                Vector2 bis = (n1 + n2).normalized;
+                outline.Add(c + bis * (margin / Mathf.Max(0.2f, Vector2.Dot(bis, n1))));
+            }
+            return outline;
+        }
+
         public static Mesh FlameCross(float width, float height)
         {
             var b = new Builder();

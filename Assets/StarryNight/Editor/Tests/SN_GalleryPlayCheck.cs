@@ -56,7 +56,7 @@ namespace InnerFrame.StarryNight.EditorTools
     public static class SN_GalleryPlayCheck
     {
         const string Active = "SN_GalleryPlay.active", Phase = "SN_GalleryPlay.phase", LogFile = "SN_GalleryPlay.log",
-            Began = "SN_GalleryPlay.began", Passes = "SN_GalleryPlay.passes", Failures = "SN_GalleryPlay.failures",
+            Began = "SN_GalleryPlay.began", Passes = "SN_GalleryPlay.passes", Failures = "SN_GalleryPlay.failures", Skips = "SN_GalleryPlay.skips",
             DirectPrint = "SN_GalleryPlay.directPrint", DirectRender = "SN_GalleryPlay.directRender";
         const float GiveUpSeconds = 420f;
         const float OriginTolerance = 0.01f, DesktopRigTolerance = 0.10f;   // as SN_PlayCheck
@@ -86,7 +86,9 @@ namespace InnerFrame.StarryNight.EditorTools
             Application.logMessageReceived += (msg, stack, type) => logs.Add((EditorApplication.timeSinceStartup, type, msg, stack));
             SceneManager.sceneLoaded += (scene, mode) =>
             {
-                if (SessionState.GetString(Phase, "") != "gallery") return;
+                // session 1 joins for real only where the Photon settings are (see PhotonSettingsPresent); otherwise it is
+                // stopped on its first frame like session 2, and the real join is reported as SKIP
+                if (SessionState.GetString(Phase, "") != "gallery" && !(SessionState.GetString(Phase, "") == "direct" && !PhotonSettingsPresent)) return;
                 var go = new GameObject("SN_GalleryCheckOffline");
                 SceneManager.MoveGameObjectToScene(go, scene);
                 go.AddComponent<SN_GalleryCheckOffline>();
@@ -114,6 +116,7 @@ namespace InnerFrame.StarryNight.EditorTools
             SessionState.SetFloat(Began, (float)EditorApplication.timeSinceStartup);
             SessionState.SetInt(Passes, 0);
             SessionState.SetInt(Failures, 0);
+            SessionState.SetInt(Skips, 0);
             Hook();
             ResetSession();
             EditorSceneManager.OpenScene(SN_Setup.ScenePath, OpenSceneMode.Single);
@@ -165,9 +168,16 @@ namespace InnerFrame.StarryNight.EditorTools
 
         // ---------------------------------------------------------------------------------------------- session 1
 
+        /// <summary>Photon's App Settings (the App ID): gitignored (.gitignore, "Photon Fusion: the App ID is a per-project key and
+        /// this repo is public"), so a fresh checkout has none, and NetworkSession's real join then fails in StartGame.</summary>
+        public const string PhotonSettingsPath = "Assets/Photon/Fusion/Resources/PhotonAppSettings.asset";
+        public static bool PhotonSettingsPresent => File.Exists(PhotonSettingsPath);
+
         static void DirectStep(double now)
         {
             W("# session 1: StarryNight opened directly");
+            if (!PhotonSettingsPresent)
+                Skip($"session 1: NetworkSession's real join of InnerFrame_StarryNight (Fusion's StartGame) not tried: no Photon App Settings in this checkout ({PhotonSettingsPath} is gitignored); the join was stopped on its first frame, as in session 2");
             var game = Object.FindAnyObjectByType<SN_Game>();
             string print = WorldPrint();
             W($"  3 s in: {Counts()}; SN_Game {game?.State}; world {print}; render {RenderPrint()}");
@@ -519,18 +529,25 @@ namespace InnerFrame.StarryNight.EditorTools
             W($"{(ok ? "PASS" : "FAIL")}  {what}");
         }
 
+        /// <summary>Not checked here, and not a pass: counted apart and listed by SN_Checks.RunAll.</summary>
+        static void Skip(string what)
+        {
+            SessionState.SetInt(Skips, SessionState.GetInt(Skips, 0) + 1);
+            W($"SKIP  {what}");
+        }
+
         static void Finish()
         {
             EditorApplication.update -= Tick;
             Errors("session 2, the rest");
-            int p = SessionState.GetInt(Passes, 0), f = SessionState.GetInt(Failures, 0);
-            W($"RESULT: {p} passed, {f} failed");
+            int p = SessionState.GetInt(Passes, 0), f = SessionState.GetInt(Failures, 0), sk = SessionState.GetInt(Skips, 0);
+            W($"RESULT: {p} passed, {f} failed{(sk > 0 ? $", {sk} skipped" : "")}");
             SessionState.SetBool(Active, false);
             SessionState.SetString(Phase, "");
             bool ok = f == 0;
             string log = SessionState.GetString(LogFile, "");
-            Debug.Log($"[SN GalleryPlayCheck] {p} passed, {f} failed; log: {log}");
-            if (SN_Checks.TakePlayResult(ok, $"{p} passed, {f} failed; log {log}")) return;   // chained from Run all checks
+            Debug.Log($"[SN GalleryPlayCheck] {p} passed, {f} failed{(sk > 0 ? $", {sk} skipped" : "")}; log: {log}");
+            if (SN_Checks.TakePlayResult(ok, $"{p} passed, {f} failed{(sk > 0 ? $", {sk} skipped" : "")}; log {log}")) return;   // chained from Run all checks
             EditorApplication.Exit(ok ? 0 : 3);
         }
 

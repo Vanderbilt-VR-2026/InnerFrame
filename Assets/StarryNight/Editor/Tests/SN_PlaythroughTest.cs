@@ -30,6 +30,8 @@ namespace InnerFrame.StarryNight.EditorTools
             public SN_InputScripted input;
             public Transform head;
             public SN_Layout L;
+            /// <summary>Every title the hint showed in each state, sampled after every step (2026-11-10).</summary>
+            public readonly Dictionary<SN_State, HashSet<string>> titles = new Dictionary<SN_State, HashSet<string>>();
         }
 
         [MenuItem("Tools/InnerFrame/Starry Night/Run Playthrough Test")]
@@ -73,6 +75,7 @@ namespace InnerFrame.StarryNight.EditorTools
                 MorningStarFirst();
                 Backwards();
                 LanternBeforeSitting();
+                PointAtTheLantern();
             }
             catch (Exception e)
             {
@@ -174,7 +177,13 @@ namespace InnerFrame.StarryNight.EditorTools
             Check(w.game.Score.starsWoken == 4 && w.game.Score.namedInOrder == 3 && w.game.Score.windTraced && w.game.Score.letterFound, "score: 4/12 stars, 3/3 named, wind, letter");
             Check(SameStates(w, SN_State.Arrive, SN_State.Sit, SN_State.Lantern, SN_State.Stars, SN_State.Sketchbook, SN_State.Wind, SN_State.Dawn, SN_State.Done),
                 "transitions: Arrive, Sit, Lantern, Stars, Sketchbook, Wind, Dawn, Done");
-            W($"  dialogue box: {w.game.ui.BoxHeight:F3} m tall on its last page; speaking {w.game.ui.IsSpeaking}; hint: \"{w.game.ui.HintLine}\"");
+            W($"  dialogue box: {w.game.ui.BoxHeight:F3} m tall on its last page; speaking {w.game.ui.IsSpeaking}; title: \"{ShownTitle(w.game.ui)}\"; hint: \"{w.game.ui.HintLine}\"");
+            W("  the hint's title in each state, as drawn after every step:");
+            Check(TitlesRule(w, false), "in each state the hint's title is that state's title (Cici's table, 2026-11-10)");
+            // positive control: a wrong title shown during Done -> the same rule fails
+            w.game.ui.SetHint(SN_Game.TitleFor(SN_State.Stars), SN_Game.HintFor(SN_State.Done));
+            Tick(w);
+            Check(!TitlesRule(w, true), "positive control: \"Wake the stars\" shown during Done -> FAIL");
         }
 
         static void AimedAway()
@@ -247,6 +256,57 @@ namespace InnerFrame.StarryNight.EditorTools
             Check(w.game.State == SN_State.Stars && !w.game.Transitions.Any(t => t.Key == SN_State.Lantern), "lantern down before sitting: Sit skipped, Stars, no Lantern state");
         }
 
+        /// <summary>2026-11-09: the lantern turned down without holding it: the trigger of a hand that points at it (within
+        /// lanternAimDeg and lanternAimReach) or touches it (within lanternTouchReach); not from farther, not aimed away.</summary>
+        static void PointAtTheLantern()
+        {
+            var w = NewWorld("F the lantern pointed at or touched, not held");
+            var L = w.L;
+            WalkTo(w, new Vector3(1.3f, 0f, -1.1f));
+            WalkTo(w, L.playerSeat, eye: 0.64f);
+            var box = w.game.lanternGrab.GetComponent<BoxCollider>();
+            Vector3 centre = box.transform.TransformPoint(box.center);
+            W($"  the lantern on its hook: base {V(w.game.lanternGrab.transform.position)}, centre {V(centre)}; {(centre - w.head.position).magnitude:F2} m from the floor-seated eye; held {w.game.lanternGrab.IsHeld}");
+            Check(w.game.State == SN_State.Lantern && w.game.lantern.Calling, "seated: Lantern, the lantern calling (its light pulses)");
+            // aimed 20 degrees off: nothing
+            LookAt(w, centre);
+            Vector3 hand = Hand(w), to = (centre - hand).normalized;
+            w.input.aim = new Ray(hand, Quaternion.AngleAxis(20f, Vector3.up) * to);
+            Trigger(w);
+            Check(!w.game.lantern.Dimming && !w.game.lantern.IsDown && !w.game.LanternTargeted(0), "the trigger aimed 20 deg off the lantern: nothing (control for the aim)");
+            // from 2.5 m: nothing
+            Vector3 far = centre + new Vector3(-1f, 0f, -1f).normalized * 2.5f;
+            w.input.aim = new Ray(far, (centre - far).normalized);
+            Trigger(w);
+            Check(!w.game.lantern.Dimming && !w.game.lantern.IsDown, $"the trigger aimed at it from 2.5 m: nothing (reach {L.lanternAimReach} m; control for the reach)");
+            // on target: brighter, one buzz
+            int before = w.input.haptics;
+            w.input.aim = new Ray(hand, to);
+            Step(w, 0.2f);
+            Check(w.game.LanternTargeted(0) && w.game.lantern.Targeted && w.input.haptics == before + 1 && w.game.lantern.Glow > 1f,
+                $"the ray on it: targeted, brighter (x{w.game.lantern.Glow:F2}), one buzz ({w.input.haptics - before})");
+            // touched (the hand 0.1 m from its glass, aimed away): turns it down, not held
+            Vector3 side = centre + new Vector3(0f, 0f, -1f) * (box.size.z * 0.5f + 0.1f);
+            w.input.aim = new Ray(side, Vector3.back);
+            Check(w.game.LanternTargeted(0), "the hand 0.1 m from its box, aimed away: touching it");
+            Trigger(w);
+            Check(w.game.lantern.Dimming && !w.game.lanternGrab.IsHeld, "the trigger while touching it: it turns down, never held");
+            Step(w, L.lanternDimSeconds + 0.3f);
+            Check(w.game.State == SN_State.Stars && w.game.Progress.lanternDown && !w.game.lantern.Calling,
+                "down -> Stars; Progress.lanternDown (what StarryNightLink shares) set; it stops calling");
+            // and pointed at, from the seat, in a fresh world
+            var w2 = NewWorld("F2 the lantern pointed at from the seat");
+            WalkTo(w2, new Vector3(1.3f, 0f, -1.1f));
+            WalkTo(w2, L.playerSeat, eye: 0.96f);
+            var box2 = w2.game.lanternGrab.GetComponent<BoxCollider>();
+            Vector3 c2 = box2.transform.TransformPoint(box2.center);
+            LookAt(w2, c2);
+            Pull(w2, c2);
+            Check(w2.game.lantern.Dimming && !w2.game.lanternGrab.IsHeld, $"chair eye, the trigger with the ray on it ({(c2 - Hand(w2)).magnitude:F2} m): it turns down, never held");
+        }
+
+        static string V(Vector3 v) => $"({v.x:F3}, {v.y:F3}, {v.z:F3})";
+
         // ---------------------------------------------------------------------------------------------- the world
 
         static World NewWorld(string name)
@@ -283,9 +343,12 @@ namespace InnerFrame.StarryNight.EditorTools
 
         static void OnState(SN_State s, float t)
         {
-            // the hint each state sets; a side event (the letter) sets none: the one already shown stays
-            string hint = SN_Game.HintFor(s) ?? (current != null && current.game.ui != null ? "unchanged: " + current.game.ui.HintLine : "");
-            W($"  t={t,6:F1}  [SN] {s}  (hint: \"{hint}\")");
+            // the title and the hint each state sets; a side event (the letter) sets none: the ones already shown stay
+            var ui = current != null ? current.game.ui : null;
+            bool side = SN_Game.HintFor(s) == null;
+            string title = side ? (ui != null ? "unchanged: " + ShownTitle(ui) : "") : SN_Game.TitleFor(s) ?? (ui != null ? ui.settings.hintTitle : "");
+            string hint = SN_Game.HintFor(s) ?? (ui != null ? "unchanged: " + ui.HintLine : "");
+            W($"  t={t,6:F1}  [SN] {s}  (title: \"{title}\", hint: \"{hint}\")");
         }
 
         static void ToStars(World w)
@@ -298,10 +361,42 @@ namespace InnerFrame.StarryNight.EditorTools
             Check(w.game.State == SN_State.Stars, "set-up: in Stars");
         }
 
+        /// <summary>One step of the game, then the hint's title as the player sees it, for the state it is in.</summary>
+        static void Tick(World w)
+        {
+            w.game.Step(Dt);
+            if (w.game.ui == null) return;
+            if (!w.titles.TryGetValue(w.game.State, out var seen)) w.titles[w.game.State] = seen = new HashSet<string>();
+            seen.Add(ShownTitle(w.game.ui));
+        }
+
+        /// <summary>The hint's title as drawn (VG_Hint's Title label; empty when its row is hidden).</summary>
+        static string ShownTitle(VG_DialogueUI ui)
+        {
+            var t = ui.GetComponentsInChildren<UnityEngine.UI.Text>(true).FirstOrDefault(x => x.name == "Title");
+            return t != null && t.gameObject.activeSelf ? t.text : "";
+        }
+
+        /// <summary>Each state's title, sampled after every step, is exactly the table's (SN_LanternCheck.Table), and only it.</summary>
+        static bool TitlesRule(World w, bool quiet)
+        {
+            bool ok = true;
+            foreach (var (state, title, _) in SN_LanternCheck.Table)
+            {
+                // Dawn: its own title while the sky pales, then the page's (Cici, 2026-11-10)
+                var want = state == SN_State.Dawn ? new HashSet<string> { title, SN_LanternCheck.DawnPageTitle } : new HashSet<string> { title };
+                bool seen = w.titles.TryGetValue(state, out var set);
+                bool good = seen && set.SetEquals(want);
+                ok &= good;
+                if (!quiet || !good) W($"    {state}: shown {(seen ? string.Join(" / ", set.Select(x => $"\"{x}\"")) : "(never in it)")}; the table: {string.Join(" / ", want.Select(x => $"\"{x}\""))}");
+            }
+            return ok;
+        }
+
         static void Step(World w, float seconds)
         {
             int n = Mathf.Max(1, Mathf.CeilToInt(seconds / Dt));
-            for (int i = 0; i < n; i++) { w.game.Step(Dt); w.game.ui.Snap(); }
+            for (int i = 0; i < n; i++) { Tick(w); w.game.ui.Snap(); }
         }
 
         static void WalkTo(World w, Vector3 spot, float eye = -1f)
@@ -315,7 +410,7 @@ namespace InnerFrame.StarryNight.EditorTools
                 w.head.position = Vector3.Lerp(from, to, i / (float)n);
                 Vector3 flat = to - from; flat.y = 0f;
                 if (flat.sqrMagnitude > 1e-4f) w.head.rotation = Quaternion.LookRotation(flat);
-                w.game.Step(Dt);
+                Tick(w);
             }
             Step(w, 0.2f);
         }
@@ -327,9 +422,9 @@ namespace InnerFrame.StarryNight.EditorTools
         static void Trigger(World w)
         {
             w.input.SetTrigger(true);
-            w.game.Step(Dt);
+            Tick(w);
             w.input.SetTrigger(false);
-            w.game.Step(Dt);
+            Tick(w);
         }
 
         static void Pull(World w, Vector3 target)
@@ -360,11 +455,11 @@ namespace InnerFrame.StarryNight.EditorTools
                 LookAt(w, p);
                 Vector3 hand = Hand(w);
                 w.input.aim = new Ray(hand, (p - hand).normalized);
-                w.game.Step(Dt);
-                w.game.Step(Dt);
+                Tick(w);
+                Tick(w);
             }
             w.input.SetTrigger(false);
-            w.game.Step(Dt);
+            Tick(w);
             W($"  t={w.game.Clock,6:F1}  sweep done: wind progress {w.game.WindPassed}/{w.game.sky.PathLength}");
         }
 

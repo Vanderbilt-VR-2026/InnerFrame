@@ -24,7 +24,11 @@ namespace InnerFrame.StarryNight.EditorTools
     ///    SN_Rock, tilted MaxTilt or less; the sketchbook resting (where, and how far, reported).
     /// 6. The far ridge at least ridgeJunctionMargin under the painted strip's own ridge (horizon_ridge.json) over the strip's
     ///    faded ends (horizonEndFadeDeg) and ridgeJunctionDeg beyond, seen from the seat eye.
-    /// Positive controls (each must FAIL, then is put back): a bush moved onto the path, a cloud raised, the page 0.9 m from the seat.
+    /// 7. The rock's keep-off rim (SN_Hilltop/RockRim): convex, no renderer, layer Ignore Raycast; its top at least MinRimHeight
+    ///    above the ground everywhere along it (the rig climbs walls up to 0.55 m); at least RimClear from the seat and from
+    ///    the straight line from the player start to the seat; every prop's collider set to ignore it (SN_Grabbable.Ignored).
+    /// Positive controls (each must FAIL, then is put back): a bush moved onto the path, a cloud raised, the page 0.9 m from
+    /// the seat, the rim's top lowered to 0.3 m above the ground.
     /// Batch: -executeMethod InnerFrame.StarryNight.EditorTools.SN_LayoutCheck.RunBatch -snLog &lt;file&gt; (exit 0 = all passed).
     /// </summary>
     public static class SN_LayoutCheck
@@ -69,6 +73,7 @@ namespace InnerFrame.StarryNight.EditorTools
                 Scatters();
                 Props();
                 Ridge();
+                RockRim();
             }
             catch (Exception e) { failures++; W("EXCEPTION: " + e); }
             finally { Application.logMessageReceived -= onLog; }
@@ -82,6 +87,74 @@ namespace InnerFrame.StarryNight.EditorTools
             Debug.Log($"[SN LayoutCheck] {passes} passed, {failures} failed; log: {logPath}");
             EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             return failures;
+        }
+
+        // ---------------------------------------------------------------------------------------------- 7: the rock's rim
+
+        /// <summary>Over what the rig climbs, with a margin (measured 2026-11-09 on the scene's XR Origin: walls up to 0.55 m climbed,
+        /// 0.60 m and higher not; its CharacterController's step offset, 0.5, is not scaled with the 0.8 rig); and the room a
+        /// player needs round the seat and on the way to it (the rig's capsule: radius 0.08 m plus 0.064 m of skin, with a margin).</summary>
+        public const float MinRimHeight = 0.75f, RimClear = 0.25f;
+
+        static void RockRim()
+        {
+            W("");
+            W("== 7. The rock's keep-off rim (SN_Hilltop/RockRim), from its mesh (world space)");
+            var w = SN_TestWorld.New();
+            var L = w.L;
+            var rimT = w.World.Find("SN_Hilltop/RockRim");
+            var mc = rimT != null ? rimT.GetComponent<MeshCollider>() : null;
+            if (mc == null || mc.sharedMesh == null) { Check(false, "SN_Hilltop/RockRim has a MeshCollider with a mesh"); w.Close(); return; }
+            Check(mc.convex && mc.enabled && !mc.isTrigger && rimT.GetComponent<Renderer>() == null && rimT.gameObject.layer == LayerMask.NameToLayer("Ignore Raycast"),
+                $"convex {mc.convex}, solid {!mc.isTrigger}, no renderer {rimT.GetComponent<Renderer>() == null}, layer {LayerMask.LayerToName(rimT.gameObject.layer)}");
+            var verts = mc.sharedMesh.vertices.Select(v => rimT.TransformPoint(v)).ToList();
+            Check(RimRules(L, verts, false), "every rule");
+            var props = new[] { w.game.lanternGrab, w.game.sketchbook, w.game.page };
+            Check(props.All(g => g.Ignored.Contains(mc)), $"every prop ignores it: {string.Join(", ", props.Select(g => $"{g.name} {g.Ignored.Contains(mc)}"))}");
+            W("  -- positive control (must FAIL; a copy of its vertices)");
+            float top = verts.Max(v => v.y);
+            var lowered = verts.Select(v => v.y >= top - 1e-4f ? new Vector3(v.x, L.GroundHeight(v.x, v.z) + 0.3f, v.z) : v).ToList();
+            Check(!RimRules(L, lowered, true), "positive control: the rim's top lowered to 0.3 m above the ground -> FAIL");
+            w.Close();
+        }
+
+        static bool RimRules(SN_Layout L, List<Vector3> verts, bool quiet)
+        {
+            float top = verts.Max(v => v.y);
+            var topVerts = verts.Where(v => v.y >= top - 1e-4f).ToList();
+            float lowest = topVerts.Min(v => v.y - L.GroundHeight(v.x, v.z));
+            var outline = SN_MeshGen.RockRimOutline(topVerts.Select(v => new Vector2(v.x, v.z)).ToList(), 0f);
+            var seat = new Vector2(L.playerSeat.x, L.playerSeat.z);
+            var start = new Vector2(L.playerStart.x, L.playerStart.z);
+            float seatClear = PolygonDistance(outline, seat, seat), pathClear = PolygonDistance(outline, start, seat);
+            bool ok = lowest >= MinRimHeight && seatClear >= RimClear && pathClear >= RimClear;
+            if (!quiet || !ok)
+                W($"    the top over the ground {F(lowest)} m at the least (limit {F(MinRimHeight)}); {F(seatClear)} m from the seat and {F(pathClear)} m from the line start -> seat (limit {F(RimClear)}); {outline.Count} corners");
+            return ok;
+        }
+
+        /// <summary>The distance from the segment a-b to a convex polygon (0 if they touch or a is inside), seen from above.</summary>
+        static float PolygonDistance(List<Vector2> poly, Vector2 a, Vector2 b)
+        {
+            bool Inside(Vector2 p) { for (int i = 0; i < poly.Count; i++) { var e = poly[(i + 1) % poly.Count] - poly[i]; if (e.x * (p.y - poly[i].y) - e.y * (p.x - poly[i].x) < 0f) return false; } return true; }
+            if (Inside(a) || Inside(b)) return 0f;
+            float best = float.MaxValue;
+            for (int i = 0; i < poly.Count; i++) best = Mathf.Min(best, SegSeg(a, b, poly[i], poly[(i + 1) % poly.Count]));
+            return best;
+        }
+
+        static float SegSeg(Vector2 p1, Vector2 p2, Vector2 q1, Vector2 q2)
+        {
+            float Cr(Vector2 u, Vector2 v) => u.x * v.y - u.y * v.x;
+            Vector2 r = p2 - p1, s = q2 - q1;
+            float d = Cr(r, s);
+            if (Mathf.Abs(d) > 1e-9f)
+            {
+                float t = Cr(q1 - p1, s) / d, u = Cr(q1 - p1, r) / d;
+                if (t >= 0f && t <= 1f && u >= 0f && u <= 1f) return 0f;
+            }
+            float PS(Vector2 p, Vector2 a, Vector2 b) { var ab = b - a; float k = ab.sqrMagnitude > 0f ? Mathf.Clamp01(Vector2.Dot(p - a, ab) / ab.sqrMagnitude) : 0f; return (a + ab * k - p).magnitude; }
+            return Mathf.Min(Mathf.Min(PS(p1, q1, q2), PS(p2, q1, q2)), Mathf.Min(PS(q1, p1, p2), PS(q2, p1, p2)));
         }
 
         // ---------------------------------------------------------------------------------------------- 1, 2: the budget
@@ -345,7 +418,8 @@ namespace InnerFrame.StarryNight.EditorTools
                 var own = t.GetComponentsInChildren<Collider>().ToList();
                 own.ForEach(col => col.enabled = false);
                 Physics.SyncTransforms();
-                w.Phys.Raycast(t.position + Vector3.up * 0.5f, Vector3.down, out var hit, 2f, ~0, QueryTriggerInteraction.Ignore);
+                // (the default raycast layers: not the rock's rim, on Ignore Raycast, which the props pass through)
+                w.Phys.Raycast(t.position + Vector3.up * 0.5f, Vector3.down, out var hit, 2f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
                 own.ForEach(col => col.enabled = true);
                 on = hit.collider != null ? hit.collider.name : "nothing";
                 asleep = rb != null && rb.IsSleeping();

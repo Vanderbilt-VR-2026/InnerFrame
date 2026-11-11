@@ -293,6 +293,7 @@ namespace InnerFrame.Entrance
             {
                 case 0:
                     Sign("Begin",0,-230,450,215,() => Show(1),100);
+                    Text(root, "Point at Begin and pull Trigger to select", 34).rectTransform.anchoredPosition = new Vector2(0, -385);
                     break;
                 case 1:
                     Sign("Choose Who You'll Be",0,395,860,110,() => {},66);

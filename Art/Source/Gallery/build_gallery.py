@@ -18,6 +18,7 @@ from pathlib import Path
 
 import bmesh
 import bpy
+from mathutils import Vector
 
 # ---------------------------------------------------------------------------
 # Parameters. 1 Blender unit = 1 m. North = +Y, East = +X, up = +Z.
@@ -281,17 +282,42 @@ def build_frame():
     """Frame_Bedroom: the profile swept round the opening, with its ornaments, as one mesh at the world origin (as before)."""
     w2, h2, zc = PAINTING_W / 2, PAINTING_H / 2, PAINTING_BOTTOM + PAINTING_H / 2
     front = y1 - max(d for _, d in FRAME_PROFILE)        # the frame's front, as a y
+    # The gilt texture (GT_Frame, 3:1) runs along each rail: u along the rail, v up the profile from the inner edge (0)
+    # to the outer (1), so its strokes follow the moulding as a gilder's brush would. Each rail has its own vertices, so
+    # its u starts afresh at its corner; u is in units of the image's own width at the profile's arc length (no stretch).
+    arc = [0.0]
+    for (o0, d0), (o1, d1) in zip(FRAME_PROFILE, FRAME_PROFILE[1:]):
+        arc.append(arc[-1] + ((o1 - o0) ** 2 + (d1 - d0) ** 2) ** 0.5)
+    S = arc[-1]
+    repeat = 3.0 * S                                       # metres along the rail for one image width
+    rect = lambda out: [(-(w2 + out), -(h2 + out)), (w2 + out, -(h2 + out)), (w2 + out, h2 + out), (-(w2 + out), h2 + out)]
     bm = bmesh.new()
-    loops = []
-    for out, depth in FRAME_PROFILE:   # each profile point is a rectangle round the opening; corners meet on the diagonals
-        a, b, y = w2 + out, h2 + out, y1 - depth
-        loops.append([bm.verts.new((x, y, zc + z)) for x, z in ((-a, -b), (a, -b), (a, b), (-a, b))])
-    for i in range(len(loops)):
-        p, q = loops[i], loops[(i + 1) % len(loops)]
-        for k in range(4):
-            bm.faces.new([p[k], p[(k + 1) % 4], q[(k + 1) % 4], q[k]])
-    finish("Frame_Bedroom", mat["Mat_Frame"], bm)
-    frame = bpy.data.objects["Frame_Bedroom"]
+    uvl = bm.loops.layers.uv.new("UVMap")
+    for side in range(4):                                  # bottom, right, top, left
+        rows = []
+        for (out, depth), t in zip(FRAME_PROFILE, arc):
+            r = rect(out)
+            (xa, za), (xb, zb) = r[side], r[(side + 1) % 4]
+            y = y1 - depth
+            rows.append(((bm.verts.new((xa, y, zc + za)), bm.verts.new((xb, y, zc + zb))), (xa, za), (xb, zb), t / S))
+        horizontal = side in (0, 2)
+        for (pv, pa, pb, pt), (qv, qa, qb, qt) in zip(rows, rows[1:]):
+            f = bm.faces.new([pv[0], pv[1], qv[1], qv[0]])
+            for loop, (pos, v) in zip(f.loops, ((pa, pt), (pb, pt), (qb, qt), (qa, qt))):
+                along = pos[0] if horizontal else pos[1]
+                loop[uvl].uv = (along / repeat, v)
+            # outward: away from the middle of this rail's cross-section
+            c = f.calc_center_median()
+            inner = Vector((c.x, y1 - 0.06, c.z))
+            if horizontal: inner.z = zc + (1 if side == 2 else -1) * (h2 + FRAME_W / 2)
+            else: inner.x = (1 if side == 1 else -1) * (w2 + FRAME_W / 2)
+            f.normal_update()
+            if f.normal.dot(c - inner) < 0: f.normal_flip()
+    mesh = bpy.data.meshes.new("Frame_Bedroom")
+    bm.to_mesh(mesh); bm.free()
+    mesh.materials.append(mat["Mat_Frame"])
+    frame = bpy.data.objects.new("Frame_Bedroom", mesh)
+    bpy.context.scene.collection.objects.link(frame)
     parts = []
     mid = FRAME_W / 2
 
@@ -350,23 +376,28 @@ def build_frame():
             parts.append(o)
     shell(zc + h2 + FRAME_W - 0.02, SHELL_R, 1)   # only over the top: one under the bottom rail would reach the wainscot
 
-    for o in parts:
+    for n, o in enumerate(parts):   # each ornament part: a patch from the gilt's middle band, along its longer side
         o.data.materials.clear()
         o.data.materials.append(mat["Mat_Frame"])
+        bm2 = bmesh.new(); bm2.from_mesh(o.data)
+        uv = bm2.loops.layers.uv.verify()
+        xs, zs = [v.co.x for v in bm2.verts], [v.co.z for v in bm2.verts]
+        ax = 0 if max(xs) - min(xs) >= max(zs) - min(zs) else 2
+        lo_u = min(xs) if ax == 0 else min(zs)
+        lo_v, span_v = (min(zs), max(zs) - min(zs) or 1) if ax == 0 else (min(xs), max(xs) - min(xs) or 1)
+        for f in bm2.faces:
+            for loop in f.loops:
+                co = loop.vert.co
+                a, b = (co.x, co.z) if ax == 0 else (co.z, co.x)
+                loop[uv].uv = ((a - lo_u) / repeat + 0.137 * n, 0.3 + 0.4 * (b - lo_v) / span_v)
+        bm2.to_mesh(o.data); bm2.free()
     bpy.ops.object.select_all(action="DESELECT")
     for o in parts:
         o.select_set(True)
     frame.select_set(True)
     bpy.context.view_layer.objects.active = frame
     bpy.ops.object.join()
-    bm = bmesh.new(); bm.from_mesh(frame.data)                  # UVs in metres for the ornaments too
-    uv = bm.loops.layers.uv.verify()
-    for f in bm.faces:
-        n = [abs(c) for c in f.normal]
-        ka, kb = [k for k in range(3) if k != n.index(max(n))]
-        for loop in f.loops:
-            loop[uv].uv = (loop.vert.co[ka], loop.vert.co[kb])
-    bm.to_mesh(frame.data); bm.free()
+    # (each ornament part got its own patch of the gilt above, before the join)
 
 
 clear_scene()

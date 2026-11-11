@@ -36,6 +36,7 @@ SLOTS = {
     "sky":          [("Sky", "tile", (1024, 1024), 1.0)],   # seen through the skylight, on a card above it
     "floor":        [("Floor", "tile_turned", (1024, 1024), 1.0)],
     "wainscot":     [("Wainscot", "tile_x", (1536, 1024), 1.5)],
+    "frame":        [("Frame", "tile_x", (2048, 683), 3.0)],   # gilt, along the frame's rails; bottom = inner edge
     "cornice":      [("Cornice", "band", (1024, 1024), 1.0)],
     "trim":         [("Rail", "band", (1024, 1024), 1.0), ("Trim", "plain", (256, 256), 1.0)],
     "bench_wood":   [("BenchWood", "tile", (1024, 1024), 1.0)],

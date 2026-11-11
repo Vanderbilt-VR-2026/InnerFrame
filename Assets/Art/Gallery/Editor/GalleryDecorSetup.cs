@@ -103,6 +103,7 @@ namespace InnerFrame.Gallery.EditorTools
         // opening even from a far corner; the clouds repeat every 4 m. It casts no shadow, so the sun still falls
         // through the skylight.
         public const float SkyY = 6.4f, SkySize = 14f, SkyMetres = 4f;
+        public static readonly Color SkyTint = new Color(0.72f, 0.72f, 0.72f);   // unlit at full strength it glared against the warm room
         public const string SkyMat = Folder + "/GP_Sky.mat", SkyTex = "Assets/Art/Gallery/Textures/GT_Sky_BaseColor.jpg";
         public static IEnumerable<(string name, Vector3 at)> Spots()
         {
@@ -189,7 +190,7 @@ namespace InnerFrame.Gallery.EditorTools
             mats["LanternGlass"] = MakeGlass(GlassMat, Tex("Lantern"), GlassColour, changes);
             mats["Bulb"] = MakeGlass(BulbMat, null, BulbColour, changes, opaque: true);
             ImportTexture(SkyTex, 1024, changes);
-            mats["Sky"] = MakeGlass(SkyMat, SkyTex, Color.white, changes, opaque: true, tiling: Vector2.one * (SkySize / SkyMetres));
+            mats["Sky"] = MakeGlass(SkyMat, SkyTex, SkyTint, changes, opaque: true, tiling: Vector2.one * (SkySize / SkyMetres));
             mats["Marble"] = MakeMaterial(MarbleMat, null, MarbleColour, 0.45f, false, false, changes);
             mats["Halo"] = MakeHalo(HaloMat, HaloColour, changes);
             mats["Pool"] = MakeHalo(PoolMat, PoolColour, changes);

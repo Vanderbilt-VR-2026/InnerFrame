@@ -65,6 +65,9 @@ namespace InnerFrame.Gallery.EditorTools.Tests
 
             int tris = decor.GetComponentsInChildren<MeshFilter>(true).Sum(m => m.sharedMesh.triangles.Length / 3);
             Check(tris < 50000, $"the decor draws {tris} triangles (under 50,000)");
+            // what costs them: each mesh's triangles times how many times it is drawn, most first
+            foreach (var g in decor.GetComponentsInChildren<MeshFilter>(true).GroupBy(m => m.sharedMesh).OrderByDescending(g => g.Count() * g.Key.triangles.Length))
+                log.Add($"  {g.Key.name,-28} {g.Key.triangles.Length / 3,6} triangles x {g.Count(),2} = {g.Count() * g.Key.triangles.Length / 3,6}");
 
             // the lanterns' lights: one per lantern, warm, realtime, no shadows, and no more than URP's 4 per object anywhere
             var lights = decor.GetComponentsInChildren<Light>(true);

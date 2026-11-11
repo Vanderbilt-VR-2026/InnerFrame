@@ -53,13 +53,13 @@ namespace InnerFrame.Gallery.EditorTools
             ("Mat_BenchWood", Hex("3B2414"), "BenchWood", 0.6f, 0.6f,  0f,    0.35f, false),
             ("Mat_Cushion",   Hex("4A2A1E"), "Cushion",   0.5f, 0.5f,  0f,    0.2f,  false),
             ("Mat_Door",      Hex("4F5A36"), "Door",      0f,   0f,    0f,    0.2f,  true),
-            ("Mat_Frame",     Hex("B0612A"), "Trim",      0.4f, 0.4f,  0f,    0.3f,  false),
+            ("Mat_Frame",     Hex("C9973F"), "Trim",      0.4f, 0.4f,  0f,    0.45f, false),
         };
-        // A texture's tint where it isn't white. Mat_Frame: GT_Trim's median colour (linear 0.658, 0.337, 0.159) times this
-        // is GP_FrameCorner_BaseColor's (linear 0.597, 0.136, 0.011; its black gutters left out), measured 2026-11-10.
+        // A texture's tint where it isn't white. Mat_Frame (the carved frame build_gallery.py makes): GT_Trim's painted wood,
+        // its median colour linear (0.658, 0.337, 0.159), times this is a gilded ochre, about sRGB (0.83, 0.57, 0.26).
         public static readonly Dictionary<string, Color> Tints = new Dictionary<string, Color>
         {
-            ["Mat_Frame"] = Hex("F4AA4A"),   // (0.958, 0.667, 0.291) to the nearest 1/255
+            ["Mat_Frame"] = Hex("FFEB9E"),
         };
         public static string TexPath(string name) => $"{Textures}/GT_{name}_BaseColor.jpg";
 

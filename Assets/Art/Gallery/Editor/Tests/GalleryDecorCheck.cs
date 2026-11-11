@@ -140,21 +140,6 @@ namespace InnerFrame.Gallery.EditorTools.Tests
             foreach (var r in decor.GetComponentsInChildren<Renderer>(true))
                 if (r.bounds.Intersects(portrait)) Check(false, $"{PathOf(r.transform, decor.transform)} stands in front of Vincent's portrait");
 
-            // frame corners: on each frame's front, at its corners, covering at most 0.15 m of the painting
-            foreach (var (name, centre, yaw, hw, hh) in G.Frames)
-            {
-                var g = decor.transform.Find(name);
-                Check(g != null && g.childCount == 4, $"{name}: four corners");
-                if (g == null) continue;
-                foreach (Transform c in g)
-                {
-                    var local = g.InverseTransformPoint(c.GetComponentInChildren<Renderer>().bounds.center);
-                    float s = G.CornerScale;   // the corner's centre sits half its size in from the frame's outer corner (0.30 x 0.32 m at 1x)
-                    bool atCorner = Mathf.Abs(Mathf.Abs(local.x) - (hw - 0.14f * s)) < 0.06f * s && Mathf.Abs(Mathf.Abs(local.y) - (hh - 0.15f * s)) < 0.06f * s && local.z > 0f;
-                    Check(atCorner, $"{name}/{c.name}: its centre {local:F3} sits just inside the frame's corner, in front of it");
-                }
-            }
-
             // the view from the spawn point to The Bedroom is clear
             var spawn = roots.SelectMany(r => r.GetComponentsInChildren<Transform>(true)).First(t => t.name == "Spawn_Point");
             var painting = roots.SelectMany(r => r.GetComponentsInChildren<Transform>(true)).First(t => t.name == "Painting_TheBedroom");

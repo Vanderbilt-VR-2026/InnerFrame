@@ -53,7 +53,7 @@ namespace InnerFrame.Gallery.EditorTools
         static readonly (string name, int tex, float smooth, bool twoSided)[] Props =
         {
             ("Statue", 2048, 0.35f, false), ("Plant", 1024, 0.15f, true), ("Vase", 1024, 0.25f, true),
-            ("Lantern", 1024, 0.4f, false), ("FrameCorner", 1024, 0.3f, false),
+            ("Lantern", 1024, 0.4f, false),
         };
 
         // ------------------------------------------------------------------------------------------- the layout
@@ -122,10 +122,11 @@ namespace InnerFrame.Gallery.EditorTools
         };
         public static readonly (string name, Vector3 at, float yaw)[] Plants =
         {
-            // 0.65 m from both walls; the north two stay under Vincent's portrait (its bottom 1.15 m) and clear of the
-            // Bedroom's pedestal
+            // The north two, 0.65 m from both walls, stay under Vincent's portrait (its bottom 1.15 m) and clear of the Bedroom's
+            // pedestal. By the arch only one, on its east side, 0.65 m from the wall and clear of the arch's moulding (x -0.95):
+            // the south-west one, behind the statue, was taken out (2026-11-10).
             ("Plant_NorthEast", new Vector3(-2.85f, 0f, -3.85f), 20f), ("Plant_NorthWest", new Vector3(2.85f, 0f, -3.85f), -40f),
-            ("Plant_SouthEast", new Vector3(-2.85f, 0f, 3.85f), 160f), ("Plant_SouthWest", new Vector3(2.85f, 0f, 3.85f), 200f),
+            ("Plant_ByArch", new Vector3(-1.6f, 0f, 3.85f), 160f),
         };
         public static readonly (string name, Vector3 at, float yaw)[] Vases =
         {
@@ -140,15 +141,6 @@ namespace InnerFrame.Gallery.EditorTools
         {
             ("Lantern_ArchEast", new Vector3(-1.45f, 2.35f, 4.26f), 0.24f, 0f), ("Lantern_ArchWest", new Vector3(1.45f, 2.35f, 4.26f), 0.24f, 0f),
             ("Lantern_EastWall", new Vector3(-3.26f, 2.35f, 1.0f), 0.24f, -90f), ("Lantern_WestWall", new Vector3(3.26f, 2.35f, 1.0f), 0.24f, 90f),
-        };
-        // The carved corners, larger than their FBX (0.30 x 0.32 m) by this: 0.51 x 0.54 m, over the 0.18 m frame and
-        // about 0.35 m of the painting (1.4x still read small beside a 3 m painting).
-        public const float CornerScale = 1.7f;
-        // a frame's centre on its front face, its yaw (facing into the room), half its outer width and height
-        public static readonly (string name, Vector3 centre, float yaw, float hw, float hh)[] Frames =
-        {
-            ("FrameCorners_Bedroom", new Vector3(0f, 2f, -HalfL + 0.121f), 0f, 1.68f, 1.38f),
-            ("FrameCorners_StarryNight", new Vector3(-HalfW + 0.121f, 2f, -1.6f), 90f, 1.68f, 1.38f),
         };
 
         static string Fbx(string n) => $"{Folder}/GP_{n}.fbx";
@@ -496,7 +488,6 @@ namespace InnerFrame.Gallery.EditorTools
                 light.shadows = LightShadows.None;
                 light.lightmapBakeType = LightmapBakeType.Realtime;
             }
-            // GP_FrameCorner's origin is its outer top corner on the viewer's left, at its back; mirrored for the other three
             // Unity's Plane, facing up, turned over to face down into the room; scaled from its own size (it measured 1 m
             // here, not the 10 m Unity documents, so a fixed 1.4 made a 1.4 m card)
             var sky = Primitive("Plane.fbx", mats["Sky"], root, "Sky", new Vector3(0f, SkyY, 0f), Vector3.one, false, Quaternion.Euler(180f, 0f, 0f));
@@ -532,12 +523,6 @@ namespace InnerFrame.Gallery.EditorTools
                 pool.AddComponent<MeshRenderer>().sharedMaterial = mats["Pool"];
                 foreach (var r in new[] { halo, orb, pool }.Select(o => o.GetComponent<MeshRenderer>())) r.receiveShadows = false;
                 foreach (var r in g.GetComponentsInChildren<MeshRenderer>()) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            }
-            foreach (var (name, centre, yaw, hw, hh) in Frames)
-            {
-                var g = Group(root, name, centre, yaw).transform;
-                foreach (var (corner, sx, sy) in new[] { ("TopLeft", 1f, 1f), ("TopRight", -1f, 1f), ("BottomLeft", 1f, -1f), ("BottomRight", -1f, -1f) })
-                    Model("FrameCorner", mats["FrameCorner"], g, $"Corner_{corner}", new Vector3(sx * hw, sy * hh, 0f), Quaternion.identity, new Vector3(sx * CornerScale, sy * CornerScale, 1f));
             }
             return root.gameObject;
         }

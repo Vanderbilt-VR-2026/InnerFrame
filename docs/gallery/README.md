@@ -37,6 +37,7 @@ The room is 7 × 9 × 4 m: x from −3.5 (east wall) to 3.5 (west wall), z from 
 | Ceiling, with the 3 × 2.5 m skylight in its middle | | `Mat_Ceiling` (`ceiling.png`, 2 m) |
 | Floor | | `Mat_Floor` (`floor.png`, 2 m) |
 | Arch | 1.6 m wide, round-headed, 2.6 m to the crown; the door fills it at the wall's outer face | door: `Mat_Door` (`door.png`, once) |
+| Frame (`Frame_Bedroom`, and The Starry Night's copy of it) | A carved, gilt-style frame made in `build_gallery.py`: a moulded profile (sight bead, cove, rounded crown, outer step) swept round the opening, a run of carved leaves along the crown, a rosette at each corner and on each side rail, a fan shell with C-scrolls over the top. Still 0.18 m wide (its outer edge unchanged), up to 0.23 m off the wall; about 7,700 triangles | `Mat_Frame`: the trim's painted wood tinted gilded ochre (also Vincent's portrait's frame) |
 | Pedestals (`Pedestal_Bedroom`, and The Starry Night's copy of it) | A black reading stand: a moulded base, a slim post widening to its foot, and a head with the same tilted reading surface as before, filling the same 0.5 × 0.33 × 1 m box, so its button and placard did not move | `Mat_Bench` |
 | Bench (`Bench_01`) | 1.6 × 0.55 m, 0.48 m high, centred at z = 1.2: an upholstered top on a walnut frame with turned legs, on the rug, facing The Bedroom (0.5 m clear of where you stand at The Starry Night's pedestal) | `Mat_BenchWood` (`bench_wood.png`, 0.6 m), `Mat_Cushion` (`bench_fabric.png`, 0.5 m) |
 | Rug | 2 × 3 m under the bench, long side towards The Bedroom; you can teleport onto it | `Mat_Rug` (`rug.png`, once) |
@@ -49,12 +50,11 @@ ChatGPT sheet: 423 × 546 pixels, so it is soft up close; a full-size `door.png`
 | Prop | Count | Where |
 |---|---|---|
 | Marble statue on a cream marble plinth (0.7 m square, 0.6 m: base, step, die, cap, top slab) | 1 | West of the arch (1.9, 2.8), turned to the bench and The Bedroom |
-| Potted plant (0.7×, 0.9 m tall) | 4 | The room's four corners |
+| Potted plant (0.7×, 0.9 m tall) | 3 | The two north corners, and one on the east side of the arch, beside the door (the one behind the statue was taken out) |
 | Hydrangeas on a turned walnut column stand (top 0.45 m square at 0.9 m) | 2 | East wall by the arch (−3.0, 2.4); west wall (3.0, −1.0) |
 | Lantern with a lit candle inside, on a wall arm | 4 | Each side of the arch (x = ±1.45, its ring at 2.35 m), and one on each side wall at z = 1 (just south of The Starry Night's frame, so neither covers a painting) |
 | Sky | 1 | A painted sky card (`GT_Sky`, ChatGPT clouds) seen through the skylight: unlit at 72 % brightness (full glared against the warm room), facing down, 14 m square, 2 m above the ceiling, so its edge never shows; the clouds repeat every 4 m. It casts no shadow, so the sun still comes in |
 | Ceiling spotlight: a dark fitting, a warm bulb, a ball of light under it, a glow on the ceiling and a pool of light on the floor below | 16 | A ring 0.3 m outside the skylight's frame, five along each long side and three along each short one, as in the concept sheet. Not lights (the four lanterns use the four the Quest lights per object): the bulb is unlit; the ceiling glow (2 m), the ball (0.8 m) and the floor pool (1.8 m, just above the rug) are The Starry Night's glow shader and soft dot added on top. The ball is a card that `Scripts/GP_GlowBillboards.cs` turns to face each camera as it renders (and puts back after, so the scene never saves it turned); the ceiling hides its upper half. The floor pools brighten the floor, not the objects standing on it |
-| Carved frame corner, 1.7× (0.51 × 0.54 m) | 8 | The four corners of both paintings' frames. The frames (`Mat_Frame`, shared by The Bedroom, The Starry Night and Vincent's portrait) take the trim's painted wood tinted to the corners' colour, so frame and corners read as one carving |
 
 ### Lamp light
 
@@ -73,7 +73,7 @@ Four lamps use all four; the table lamp the concept sheet has (below) would have
 than 4.
 
 Only the plinths and plant pots (boxes) and the shell (Gallery.fbx's generated mesh colliders) stop you; the lanterns and
-frame corners have none. Nothing covers the spawn point's view of The Bedroom or Vincent's portrait.
+the frames' carving has its generated collider like the rest of the shell. Nothing covers the spawn point's view of The Bedroom or Vincent's portrait.
 
 ### Still to make (in the concept sheet, no model yet)
 
@@ -90,7 +90,7 @@ frame corners have none. Nothing covers the spawn point's view of The Bedroom or
 Don't move the props in the scene: the next run of the setup reverts any override. Change the spots in
 `GalleryDecorSetup.cs` (the `Statues`, `Plants`, `Vases`, `Lanterns` and `Frames` tables), then run
 **Tools > InnerFrame > Gallery > Add Decor** and **Tools > InnerFrame > Gallery > Check Decor**. The check also renders
-eight views (five from eye height; a side-wall lamp, a frame corner and the ceiling spots close up) to `Logs/GalleryDecor/`.
+eight views (five from eye height; a side-wall lamp, the frame's corner and the ceiling spots close up) to `Logs/GalleryDecor/`.
 
 To change the room itself, edit the parameters at the top of `build_gallery.py`, run it, then Add Decor. If the east
 wall or the north wall moves, move `SN_GallerySetup.RootPosition` and `BedroomWall` with it and run
@@ -116,7 +116,7 @@ Blender --background --factory-startup --python Art/Source/Gallery/make_tripo_pr
 - Spawn: The Bedroom and Vincent's portrait are in full view; nothing is in the way.
 - Teleport onto the rug and round the bench; you can't walk through the bench, the plinths, the pots or the door.
 - Look back at the arch: the door fills it; the four lanterns glow, you see each candle through the amber glass.
-- The wainscot stops cleanly at both paintings' frames; the frame corners sit on the frames with no flicker.
+- The wainscot stops cleanly at both paintings' frames; the frames' carving reads as one piece with the frame.
 - The plant leaves, hydrangea petals and lantern panes look solid from every side.
 - With textures in: no visible seam where the wall, floor, wainscot, wood or fabric repeat.
 - Frame rate stays steady looking down the room.

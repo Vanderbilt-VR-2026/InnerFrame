@@ -2,8 +2,8 @@
 
     Blender --background --factory-startup --python make_tripo_props.py -- <gallery-tripo dir>
 
-Input: the five raw Tripo GLBs (gallery-statue.glb, gallery-plant.glb, gallery-vase.glb, gallery-lantern.glb,
-gallery-frame-corner.glb). Each is one mesh and one material, 1.0 unit tall, Z up, base at z = 0, origin on the base
+Input: four of the raw Tripo GLBs (gallery-statue.glb, gallery-plant.glb, gallery-vase.glb, gallery-lantern.glb; the
+fifth, gallery-frame-corner.glb, was used until 2026-11-10, when build_gallery.py's carved frame replaced it). Each is one mesh and one material, 1.0 unit tall, Z up, base at z = 0, origin on the base
 plane, front facing -Y (see the zip's README.md).
 
 For each model: join and apply its transforms, scale it to the real size below (the frame corner is also flattened,
@@ -34,13 +34,12 @@ OUT = os.path.join(REPO, "Assets/Art/Gallery/Props")
 
 # name: (source GLB, height in m, depth (Y) in m or None for uniform, triangle budget, texture size, origin)
 # Heights are team choices: a statue a little under life size for its plinth, a floor plant, a vase of flowers for a
-# plinth, a hanging lantern, and a frame-corner ornament that covers the 0.18 m frame and 0.12 m of the painting
+# plinth, and a hanging lantern
 PROPS = {
     "Statue":      ("gallery-statue.glb",       1.70, None, 5000, 2048, "base"),
     "Plant":       ("gallery-plant.glb",        1.30, None, 3000, 1024, "base"),
     "Vase":        ("gallery-vase.glb",         0.60, None, 5000, 1024, "base"),  # 2,500 shredded the flowers
     "Lantern":     ("gallery-lantern.glb",      0.60, None, 2000, 1024, "top"),
-    "FrameCorner": ("gallery-frame-corner.glb", 0.32, 0.04, 1200, 1024, "corner"),
 }
 
 

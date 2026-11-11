@@ -52,18 +52,5 @@
     "origin": "top",
     "glass_triangles": 63,
     "candle_top_m": 0.417
-  },
-  "FrameCorner": {
-    "source": "gallery-frame-corner.glb",
-    "triangles_raw": 10870,
-    "triangles": 1200,
-    "budget": 1200,
-    "size_m_xyz": [
-      0.301,
-      0.041,
-      0.32
-    ],
-    "texture": "2048 -> 1024",
-    "origin": "corner"
   }
 }

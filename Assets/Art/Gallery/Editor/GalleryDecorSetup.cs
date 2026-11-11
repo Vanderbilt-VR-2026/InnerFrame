@@ -44,7 +44,9 @@ namespace InnerFrame.Gallery.EditorTools
         // The stands (Art/Source/Gallery/make_stands.py, 2026-11-10): a cream marble plinth for the statue, turned walnut
         // column stands for the flowers. They replace plain cubes; each keeps a box collider round its whole footprint.
         public const string MarbleMat = Folder + "/GP_Marble.mat";
-        public static readonly Color MarbleColour = new Color(0.91f, 0.88f, 0.82f);
+        public static readonly Color MarbleColour = new Color(0.91f, 0.88f, 0.82f);   // without its texture
+        public const string MarbleTex = "Assets/Art/Gallery/Textures/GT_Marble_BaseColor.jpg";
+        public const float MarbleMetres = 0.6f;   // GP_Plinth's UVs are in metres (make_stands.py)
         static readonly string[] Stands = { "Plinth", "FlowerStand" };
         const string MetalMat = "Assets/Art/Gallery/Materials/Mat_Metal.mat";
         const string Tag = "[GalleryDecor]";
@@ -183,7 +185,10 @@ namespace InnerFrame.Gallery.EditorTools
             mats["Bulb"] = MakeGlass(BulbMat, null, BulbColour, changes, opaque: true);
             ImportTexture(SkyTex, 1024, changes);
             mats["Sky"] = MakeGlass(SkyMat, SkyTex, SkyTint, changes, opaque: true, tiling: Vector2.one * (SkySize / SkyMetres));
-            mats["Marble"] = MakeMaterial(MarbleMat, null, MarbleColour, 0.45f, false, false, changes);
+            bool marble = System.IO.File.Exists(MarbleTex);
+            if (marble) ImportTexture(MarbleTex, 1024, changes);
+            mats["Marble"] = MakeMaterial(MarbleMat, marble ? MarbleTex : null, marble ? Color.white : MarbleColour, 0.45f, false, false, changes,
+                marble ? Vector2.one / MarbleMetres : (Vector2?)null);
             mats["Halo"] = MakeHalo(HaloMat, HaloColour, changes);
             mats["Pool"] = MakeHalo(PoolMat, PoolColour, changes);
             MakeHaloMesh(changes);

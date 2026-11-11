@@ -40,6 +40,8 @@ SLOTS = {
     "cornice":      [("Cornice", "band", (1024, 1024), 1.0)],
     "trim":         [("Rail", "band", (1024, 1024), 1.0), ("Trim", "plain", (256, 256), 1.0)],
     "bench_wood":   [("BenchWood", "tile", (1024, 1024), 1.0)],
+    "pedestal":     [("Pedestal", "tile", (1024, 1024), 1.0)],   # the button pedestals' ebonised wood
+    "marble":       [("Marble", "tile", (1024, 1024), 1.0)],     # the statue's plinth
     "bench_fabric": [("Cushion", "tile", (1024, 1024), 1.0)],
     "rug":          [("Rug", "fit", (683, 1024), 2.0 / 3.0)],
     "door":         [("Door", "stretch", (945, 1536), 1.6 / 2.6)],
@@ -96,6 +98,9 @@ def save(px, name, size):
     return os.path.relpath(path, os.path.join(HERE, "../../.."))
 
 
+# brightness lifts, for images too dark to show their strokes under the room's lights (linear colour times this)
+GAIN = {"Pedestal": 2.6}   # ChatGPT's ebonised wood: mean ~8 %; at 1.8 it still read black from 2 m
+
 os.makedirs(OUT, exist_ok=True)
 done = []
 for stem, outputs in SLOTS.items():
@@ -117,5 +122,7 @@ for stem, outputs in SLOTS.items():
             px = wrap(px, 1)
         if kind in ("tile", "tile_turned", "plain"):
             px = wrap(px, 0)
+        if name in GAIN:
+            px = px.copy(); px[:, :, :3] = np.clip(px[:, :, :3] * GAIN[name], 0.0, 1.0)
         done.append(f"{os.path.basename(found[0])} ({w} x {h}) -> {save(np.ascontiguousarray(px), name, size)} ({kind})")
 print("\n".join(done) if done else f"no textures found in {IN} (looked for {', '.join(SLOTS)})")

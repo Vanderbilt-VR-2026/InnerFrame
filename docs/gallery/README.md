@@ -38,7 +38,7 @@ The room is 7 × 9 × 4 m: x from −3.5 (east wall) to 3.5 (west wall), z from 
 | Floor | | `Mat_Floor` (`floor.png`, 2 m) |
 | Arch | 1.6 m wide, round-headed, 2.6 m to the crown; the door fills it at the wall's outer face | door: `Mat_Door` (`door.png`, once) |
 | Frame (`Frame_Bedroom`, and The Starry Night's copy of it) | A carved baroque frame made in `build_gallery.py`, after the team's reference: a moulded profile (stepped sight edge, inner bead, hollow, broad flat band, bold rounded outer rim) swept round the opening, and at each corner a cartouche: a raised cushion, a C-scroll curling along each rail, a fan of five acanthus leaves and a boss. 0.18 m wide (the cartouches stand 1.5 cm past its edge; the wainscot's cut-outs leave 3 cm round it), about 2,600 triangles | `Mat_Frame` (`frame.png`, ChatGPT gilt): its UVs run along each rail and up the profile from the inner edge, so the strokes follow the moulding; each ornament takes a patch of the gilt's middle band, smooth-shaded (also Vincent's portrait's frame) |
-| Pedestals (`Pedestal_Bedroom`, and The Starry Night's copy of it) | A black reading stand: a moulded base, a slim post widening to its foot, and a head with the same tilted reading surface as before, filling the same 0.5 × 0.33 × 1 m box, so its button and placard did not move | `Mat_Bench` |
+| Pedestals (`Pedestal_Bedroom`, and The Starry Night's copy of it) | A black reading stand: a moulded base, a slim post widening to its foot, and a head with the same tilted reading surface as before, filling the same 0.5 × 0.33 × 1 m box, so its button and placard did not move | `Mat_Bench` (`pedestal.png`, ChatGPT ebonised wood, 0.5 m; brightened 2.6× by `make_textures.py` so its grain shows) |
 | Bench (`Bench_01`) | 1.6 × 0.55 m, 0.48 m high, centred at z = 1.2: an upholstered top on a walnut frame with turned legs, on the rug, facing The Bedroom (0.5 m clear of where you stand at The Starry Night's pedestal) | `Mat_BenchWood` (`bench_wood.png`, 0.6 m), `Mat_Cushion` (`bench_fabric.png`, 0.5 m) |
 | Rug | 2 × 3 m under the bench, long side towards The Bedroom; you can teleport onto it | `Mat_Rug` (`rug.png`, once) |
 
@@ -49,7 +49,7 @@ ChatGPT sheet: 423 × 546 pixels, so it is soft up close; a full-size `door.png`
 
 | Prop | Count | Where |
 |---|---|---|
-| Marble statue on a cream marble plinth (0.7 m square, 0.6 m: base, step, die, cap, top slab) | 1 | West of the arch (1.9, 2.8), turned to the bench and The Bedroom |
+| Marble statue on a cream marble plinth (`marble.png`, ChatGPT, 0.6 m) (0.7 m square, 0.6 m: base, step, die, cap, top slab) | 1 | West of the arch (1.9, 2.8), turned to the bench and The Bedroom |
 | Potted plant (0.7×, 0.9 m tall) | 3 | The two north corners, and one on the east side of the arch, beside the door (the one behind the statue was taken out) |
 | Hydrangeas on a turned walnut column stand (top 0.45 m square at 0.9 m) | 2 | East wall by the arch (−3.0, 2.4); west wall (3.0, −1.0) |
 | Lantern with a lit candle inside, on a wall arm | 4 | Each side of the arch (x = ±1.45, its ring at 2.35 m), and one on each side wall at z = 1 (just south of The Starry Night's frame, so neither covers a painting) |

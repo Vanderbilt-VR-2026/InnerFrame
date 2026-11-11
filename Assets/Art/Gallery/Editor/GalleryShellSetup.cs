@@ -17,10 +17,9 @@ namespace InnerFrame.Gallery.EditorTools
     ///   - Assets/Art/Gallery/Materials/Mat_*.mat for every surface in Slots, and Gallery.fbx's remap of each FBX
     ///     material to its .mat. A surface with a ChatGPT texture (Assets/Art/Gallery/Textures/GT_&lt;Name&gt;_BaseColor.jpg,
     ///     made by Art/Source/Gallery/make_textures.py) gets it at its real-world size (Gallery.fbx's UVs are in metres;
-    ///     the rug and the door are mapped once); without one it keeps a plain colour. Mat_Frame (every painting's frame: The
-    ///     Bedroom's, and The Starry Night's and Vincent's portrait's, which share it) takes the trim's painted wood tinted
-    ///     to the carved frame corners' colour (Tints), so the frame and its corners read as one carving. Mat_Metal,
-    ///     Mat_Bench and Mat_Baseboard stay as they are;
+    ///     the rug and the door are mapped once); without one it keeps a plain colour. Mat_Frame (every painting's frame: The Bedroom's,
+    ///     and The Starry Night's and Vincent's portrait's, which share it) takes GT_Frame, the gilt, along the frame's own
+    ///     UVs; Mat_Bench (the button pedestals) GT_Pedestal. Mat_Metal and Mat_Baseboard stay as they are;
     ///   - Gallery.unity: the Rug gets a copy of the Floor's TeleportationArea (Gallery.fbx generates a mesh collider for
     ///     every object, so the rug's would otherwise stop teleports in the middle of the room); the Door keeps its
     ///     generated collider, so nobody walks out through the arch; the XR Origin at Spawn_Point; Slot_Bedroom and
@@ -55,6 +54,8 @@ namespace InnerFrame.Gallery.EditorTools
             ("Mat_Door",      Hex("4F5A36"), "Door",      0f,   0f,    0f,    0.2f,  true),
             // the carved frame's own gilt (GT_Frame); its UVs, made by build_gallery.py, already run along each rail and up its
             // profile, so the texture repeats once per UV unit
+            // the button pedestals (Pedestal_Bedroom, and The Starry Night's copy): ebonised wood, UVs in metres
+            ("Mat_Bench",     Hex("1C1B1A"), "Pedestal",  0.5f, 0.5f,  0f,    0.3f,  false),
             ("Mat_Frame",     Hex("C9973F"), "Frame",     1f,   1f,    0f,    0.45f, false),
         };
         // A texture's tint where it isn't white (none at the moment: Mat_Frame had one while it borrowed GT_Trim).

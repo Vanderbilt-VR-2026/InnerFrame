@@ -160,6 +160,8 @@ MonoBehaviour:
   vincentPrefab: {fileID: 6420064449198729876, guid: de7d49b7d388641e8afb5d6ba7c1ee81, type: 3}
   skyPrefab: {fileID: 5371594711493017759, guid: 8ca71066159d644f3b1987c3e5a24147, type: 3}
   beamPrefab: {fileID: 5515488106971740343, guid: dc42fd1b102544b8db8791fb32e70fa7, type: 3}
+  lanternPostPrefab: {fileID: 7515173108768796695, guid: b6a85314e60d04ecc829397d9b31cd93, type: 3}
+  blanketPrefab: {fileID: 3365857118409894469, guid: db92deddfb20046ed818851b70cc1021, type: 3}
   uiPrefab: {fileID: 718788160887856758, guid: 7dec7f57815ac467388af4b7b0b212dc, type: 3}
   uiSettings: {fileID: 11400000, guid: 31635d97d2171430f9f0ee35fc6e4ce2, type: 2}
   grading: {fileID: 11400000, guid: feb26a72c6808406c9ab9b369aa8c169, type: 2}

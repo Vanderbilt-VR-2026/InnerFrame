@@ -12,8 +12,8 @@ namespace InnerFrame.StarryNight
 {
     /// <summary>
     /// Every check of The Starry Night in one go: the playthrough test, the dialogue box check, the layout check, the
-    /// Vincent check and the Gallery entrance check (edit mode), then the Play-mode check and the Gallery way in and back
-    /// (Play mode, one after the other). One summary line per check; in batchmode the exit code is 0 only if all passed.
+    /// Vincent check, the Gallery entrance check and the lantern check (edit mode), then the Play-mode check, the props' spawn check, the rig
+    /// check and the Gallery way in and back (Play mode, one after the other). One summary line per check; in batchmode the exit code is 0 only if all passed.
     /// Menu: Tools > InnerFrame > Starry Night > Run all checks. Batch (without -quit, so the Play-mode checks can run):
     ///   Unity -batchmode -projectPath . -executeMethod InnerFrame.StarryNight.SN_Checks.RunAll [-snLogDir &lt;dir&gt;]
     /// With -quit the Play-mode checks can't run: they are skipped and the summary says so. Logs: Logs/SN_checks/ (or -snLogDir).
@@ -32,12 +32,15 @@ namespace InnerFrame.StarryNight
             ("layout and budget", "SN_layoutcheck.log", SN_LayoutCheck.Run),
             ("Vincent", "SN_vincentcheck.log", SN_VincentCheck.Run),
             ("gallery entrance", "SN_gallerycheck.log", SN_GalleryCheck.Run),
+            ("the lantern and the hints", "SN_lanterncheck.log", SN_LanternCheck.Run),
         };
 
         /// <summary>The Play-mode checks, run one after the other (each enters Play mode and reports to TakePlayResult).</summary>
         static readonly (string name, Action begin)[] PlayMode =
         {
             ("play mode", SN_PlayCheck.Begin),
+            ("props at their spots", SN_SpawnCheck.Begin),
+            ("the rig and the props", SN_RigCheck.Begin),
             ("gallery way in and back", SN_GalleryPlayCheck.Begin),
         };
 
@@ -71,7 +74,7 @@ namespace InnerFrame.StarryNight
             }
             if (batch && args.Contains("-quit"))
             {
-                lines.Add("[SN Checks] play mode, gallery way in and back: SKIPPED (-quit given; run without -quit to include them)");
+                lines.Add($"[SN Checks] {string.Join(", ", PlayMode.Select(m => m.name))}: SKIPPED (-quit given; run without -quit to include them)");
                 Finish(lines, failed, dir);
                 return;
             }
@@ -119,9 +122,19 @@ namespace InnerFrame.StarryNight
             PlayMode[SessionState.GetInt(PlayIndex, 0)].begin();
         }
 
+        /// <summary>The checks' logs that may hold SKIP lines (a check that couldn't test something here: not a pass).</summary>
+        static readonly string[] PlayLogs = { "SN_spawncheck.log", "SN_rigcheck.log", "SN_galleryplaycheck.log" };
+
         static void Finish(List<string> lines, bool failed, string dir)
         {
-            lines.Add($"[SN Checks] {(failed ? "FAIL: at least one check failed" : "PASS: every check passed")}");
+            var skips = new List<string>();
+            foreach (var file in EditMode.Select(m => m.file).Concat(PlayLogs))
+            {
+                string path = Path.Combine(dir, file);
+                if (File.Exists(path)) skips.AddRange(File.ReadLines(path).Where(l => l.StartsWith("SKIP")).Select(l => $"{file}: {l.Substring(4).Trim()}"));
+            }
+            foreach (var sk in skips) lines.Add($"[SN Checks] SKIP (not a pass): {sk}");
+            lines.Add($"[SN Checks] {(failed ? "FAIL: at least one check failed" : skips.Count > 0 ? $"PASS: every check that ran passed; {skips.Count} skipped (not a pass, listed above)" : "PASS: every check passed")}");
             foreach (var l in lines) Debug.Log(l);
             File.WriteAllLines(Path.Combine(dir, "SN_checks_summary.txt"), lines);
             if (Application.isBatchMode) { EditorApplication.Exit(failed ? 1 : 0); return; }

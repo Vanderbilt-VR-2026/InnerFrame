@@ -9,7 +9,7 @@ namespace InnerFrame.AlmondStudio
     /// Fitting the studio to its pictures (Editor only, no headset). P: a fixed camera for the chosen view
     /// (AS_Layout.compareViews), framed to its picture's shape. 1, 2, 3: which view (his painting, the S02 arrival
     /// concept, the S03 turned-round concept). C: lays the picture over the view, half see-through ([ and ] change how
-    /// much). Change AS_Layout's numbers in the Inspector in Play mode and watch them move: they stay after Play.
+    /// much). Arrows, Shift + arrows, Page Up / Down and - / = move the camera (see Nudge). Or change AS_Layout's numbers in the Inspector in Play mode and watch them move: they stay after Play.
     /// </summary>
     public class AS_Compare : MonoBehaviour
     {
@@ -73,9 +73,44 @@ namespace InnerFrame.AlmondStudio
                 painter = painter || compare;
                 Debug.Log("[AS] Comparison " + (compare ? "on ([ and ] change how much shows)" : "off"));
             }
+            if (painter) Nudge(kb);
             if (compare && kb.leftBracketKey.wasPressedThisFrame) layout.compareOpacity = Mathf.Clamp01(layout.compareOpacity - 0.1f);
             if (compare && kb.rightBracketKey.wasPressedThisFrame) layout.compareOpacity = Mathf.Clamp01(layout.compareOpacity + 0.1f);
         }
+
+        /// <summary>
+        /// Moves the view's camera from the keyboard, straight into AS_Layout (so it stays): arrows turn it, Shift +
+        /// arrows move it across and forward, Page Up / Page Down (or U / J) raise and lower it, - and = narrow and widen the view.
+        /// Hold Alt for fine steps. Prints the numbers when a key is let go.
+        /// </summary>
+        void Nudge(Keyboard kb)
+        {
+            var v = View;
+            float dt = Time.unscaledDeltaTime * (kb.altKey.isPressed ? 0.2f : 1f);
+            bool shift = kb.shiftKey.isPressed;
+            float turn = 20f * dt, move = 0.6f * dt;
+            Vector3 fwd = Quaternion.Euler(0f, v.yaw, 0f) * Vector3.forward, right = Quaternion.Euler(0f, v.yaw, 0f) * Vector3.right;
+            bool any = false;
+            if (kb.leftArrowKey.isPressed) { any = true; if (shift) v.position -= right * move; else v.yaw -= turn; }
+            if (kb.rightArrowKey.isPressed) { any = true; if (shift) v.position += right * move; else v.yaw += turn; }
+            if (kb.upArrowKey.isPressed) { any = true; if (shift) v.position += fwd * move; else v.pitch -= turn; }
+            if (kb.downArrowKey.isPressed) { any = true; if (shift) v.position -= fwd * move; else v.pitch += turn; }
+            if (kb.pageUpKey.isPressed || kb.uKey.isPressed) { any = true; v.position += Vector3.up * move; }
+            if (kb.pageDownKey.isPressed || kb.jKey.isPressed) { any = true; v.position -= Vector3.up * move; }
+            if (kb.minusKey.isPressed) { any = true; v.fov = Mathf.Clamp(v.fov - turn, 10f, 120f); }
+            if (kb.equalsKey.isPressed) { any = true; v.fov = Mathf.Clamp(v.fov + turn, 10f, 120f); }
+            if (any) nudging = true;
+            else if (nudging)
+            {
+                nudging = false;
+#if UNITY_EDITOR
+                UnityEditor.EditorUtility.SetDirty(layout);
+#endif
+                Debug.Log($"[AS] {v.name}: position ({v.position.x:0.00}, {v.position.y:0.00}, {v.position.z:0.00}), yaw {v.yaw:0.0}, pitch {v.pitch:0.0}, fov {v.fov:0.0}");
+            }
+        }
+
+        bool nudging;
 
         void LateUpdate()
         {

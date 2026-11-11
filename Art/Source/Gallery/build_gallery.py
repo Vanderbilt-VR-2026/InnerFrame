@@ -13,7 +13,7 @@ in the south wall with a closed door in it, and one upholstered bench on a rug i
 ChatGPT textures (docs/gallery/TEXTURE_PROMPTS.md): walls, floor and wood repeat by the metre (UVs in metres); the
 rug and the door are mapped once, edge to edge.
 """
-from math import cos, pi, radians, sin
+from math import atan2, cos, exp, pi, radians, sin
 from pathlib import Path
 
 import bmesh
@@ -258,59 +258,95 @@ def join(name, parts):
     return obj
 
 
-FRAME_PROFILE = [   # (out, depth) round the cross-section, back at the wall to the front and out
-    (0.000, 0.000), (0.000, 0.100), (0.004, 0.118), (0.012, 0.128), (0.022, 0.130), (0.030, 0.124), (0.034, 0.114),
-    (0.046, 0.104), (0.062, 0.100), (0.078, 0.104), (0.090, 0.116), (0.104, 0.132), (0.120, 0.142), (0.136, 0.145),
-    (0.150, 0.140), (0.160, 0.128), (0.166, 0.118), (0.172, 0.116), (0.180, 0.104), (0.180, 0.000),
+FRAME_PROFILE = [   # (out from the opening's edge, depth off the wall), inner at the wall round to outer at the wall
+    (0.000, 0.000), (0.000, 0.085), (0.006, 0.095), (0.014, 0.100),               # sight step
+    (0.020, 0.108), (0.026, 0.113), (0.032, 0.108),                               # inner bead
+    (0.038, 0.098), (0.046, 0.096),                                               # hollow
+    (0.052, 0.104), (0.110, 0.112),                                               # broad flat band
+    (0.118, 0.122), (0.128, 0.136), (0.140, 0.146), (0.154, 0.150), (0.166, 0.144), (0.175, 0.130),  # rounded rim
+    (0.180, 0.112), (0.180, 0.000),
 ]
-ROSETTE_R, ROSETTE_PETALS = 0.088, 8      # corner rosettes (they stay within the 0.18 m rail); the side ones are 0.75x
-# (coarse pieces: 10 petals of 64 triangles each made the rosettes 55 % of the frame, detail nobody sees from 2 m)
-LEAF_STEP, LEAF_SIZE = 0.085, (0.036, 0.016, 0.024)   # the run of carved leaves round the crown: spacing; half length, depth, width
-SHELL_R, SHELL_RIBS = 0.20, 9             # the fan shell over the top rail
+TUBE_SIDES = 6     # the C-scrolls' cross-section
 
 
-def ellipsoid(name, centre, radii, rot_y=0.0, rot_z=0.0, seg=8, rings=5):
+def ellipsoid(name, centre, radii, rot_y=0.0, seg=6, rings=3):
     bpy.ops.mesh.primitive_uv_sphere_add(segments=seg, ring_count=rings, radius=1, location=centre)
     o = bpy.context.active_object
     o.name = name
     o.scale = radii
-    o.rotation_euler = (0, rot_y, rot_z)
+    o.rotation_euler = (0, rot_y, 0)
     bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
     return o
 
 
+def tube(points, radii, name):
+    """A tube along points (x, y, z) in the frame's plane, its radius per point, capped."""
+    bm = bmesh.new()
+    rings = []
+    for i, (pt, r) in enumerate(zip(points, radii)):
+        a, b = Vector(points[max(i - 1, 0)]), Vector(points[min(i + 1, len(points) - 1)])
+        t = (b - a).normalized()
+        n = t.cross(Vector((0, 1, 0))).normalized()   # across the tube, in the frame's plane
+        up = Vector((0, -1, 0))                         # towards the room
+        rings.append([bm.verts.new(Vector(pt) + r * (cos(2 * pi * k / TUBE_SIDES) * n + sin(2 * pi * k / TUBE_SIDES) * up))
+                      for k in range(TUBE_SIDES)])
+    for p, q in zip(rings, rings[1:]):
+        for k in range(TUBE_SIDES):
+            bm.faces.new([p[k], p[(k + 1) % TUBE_SIDES], q[(k + 1) % TUBE_SIDES], q[k]])
+    bm.faces.new(list(reversed(rings[0]))); bm.faces.new(rings[-1])
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    bm.loops.layers.uv.new("UVMap")
+    mesh = bpy.data.meshes.new(name); bm.to_mesh(mesh); bm.free()
+    o = bpy.data.objects.new(name, mesh); bpy.context.scene.collection.objects.link(o)
+    return o
+
+
+def scroll(to_xz, y):
+    """A C-scroll in a rail's own coordinates (u along the rail from the corner, w across it, + outward): a tapering
+    tail along the rail, then a volute curling outward first, round towards the corner and in."""
+    pts, rad = [], []
+    for k in range(5):
+        f = k / 4
+        pts.append((0.36 - f * (0.36 - 0.19), -0.03 * sin(pi * f))); rad.append(0.010 + 0.020 * f)
+    C, R0, turns, n = (0.13, 0.0), 0.058, 1.15, 12
+    for k in range(1, n + 1):
+        f = k / n
+        th = 2 * pi * turns * f
+        r = R0 * exp(-1.3 * f * turns)
+        pts.append((C[0] + r * cos(th), C[1] + r * sin(th))); rad.append(0.030 * (1 - 0.5 * f))
+    return tube([(to_xz(u, w)[0], y, to_xz(u, w)[1]) for u, w in pts], rad, "scroll")
+
+
 def build_frame():
-    """Frame_Bedroom: the profile swept round the opening, with its ornaments, as one mesh at the world origin (as before)."""
+    """Frame_Bedroom (2026-11-10, after the team's baroque reference): FRAME_PROFILE swept round the opening with mitred
+    corners, and at each corner a cartouche: a raised cushion, a C-scroll along each rail, a fan of five acanthus leaves
+    and a boss on the mitre. About 2,600 triangles; 0.18 m wide, so its outer edge (the wainscot's gaps, Vincent's
+    portrait, The Starry Night's checks) is unchanged. The gilt (GT_Frame, 3:1) runs along each rail: u along it, one
+    image width per 3x the profile's arc length, v up the profile from the inner edge (0) to the outer (1). Each ornament
+    takes a patch of the gilt's middle band and is smooth-shaded."""
     w2, h2, zc = PAINTING_W / 2, PAINTING_H / 2, PAINTING_BOTTOM + PAINTING_H / 2
-    front = y1 - max(d for _, d in FRAME_PROFILE)        # the frame's front, as a y
-    # The gilt texture (GT_Frame, 3:1) runs along each rail: u along the rail, v up the profile from the inner edge (0)
-    # to the outer (1), so its strokes follow the moulding as a gilder's brush would. Each rail has its own vertices, so
-    # its u starts afresh at its corner; u is in units of the image's own width at the profile's arc length (no stretch).
     arc = [0.0]
     for (o0, d0), (o1, d1) in zip(FRAME_PROFILE, FRAME_PROFILE[1:]):
         arc.append(arc[-1] + ((o1 - o0) ** 2 + (d1 - d0) ** 2) ** 0.5)
     S = arc[-1]
-    repeat = 3.0 * S                                       # metres along the rail for one image width
-    rect = lambda out: [(-(w2 + out), -(h2 + out)), (w2 + out, -(h2 + out)), (w2 + out, h2 + out), (-(w2 + out), h2 + out)]
+    repeat = 3.0 * S
+    rect = lambda o: [(-(w2 + o), -(h2 + o)), (w2 + o, -(h2 + o)), (w2 + o, h2 + o), (-(w2 + o), h2 + o)]
     bm = bmesh.new()
     uvl = bm.loops.layers.uv.new("UVMap")
-    for side in range(4):                                  # bottom, right, top, left
+    for side in range(4):                                  # bottom, right, top, left: each rail its own vertices
         rows = []
-        for (out, depth), t in zip(FRAME_PROFILE, arc):
-            r = rect(out)
+        for (o, d), t in zip(FRAME_PROFILE, arc):
+            r = rect(o)
             (xa, za), (xb, zb) = r[side], r[(side + 1) % 4]
-            y = y1 - depth
-            rows.append(((bm.verts.new((xa, y, zc + za)), bm.verts.new((xb, y, zc + zb))), (xa, za), (xb, zb), t / S))
-        horizontal = side in (0, 2)
+            rows.append(((bm.verts.new((xa, y1 - d, zc + za)), bm.verts.new((xb, y1 - d, zc + zb))), (xa, za), (xb, zb), t / S))
+        horiz = side in (0, 2)
         for (pv, pa, pb, pt), (qv, qa, qb, qt) in zip(rows, rows[1:]):
             f = bm.faces.new([pv[0], pv[1], qv[1], qv[0]])
             for loop, (pos, v) in zip(f.loops, ((pa, pt), (pb, pt), (qb, qt), (qa, qt))):
-                along = pos[0] if horizontal else pos[1]
-                loop[uvl].uv = (along / repeat, v)
-            # outward: away from the middle of this rail's cross-section
-            c = f.calc_center_median()
+                loop[uvl].uv = ((pos[0] if horiz else pos[1]) / repeat, v)
+            c = f.calc_center_median()                     # outward: away from the middle of this rail's cross-section
             inner = Vector((c.x, y1 - 0.06, c.z))
-            if horizontal: inner.z = zc + (1 if side == 2 else -1) * (h2 + FRAME_W / 2)
+            if horiz: inner.z = zc + (1 if side == 2 else -1) * (h2 + FRAME_W / 2)
             else: inner.x = (1 if side == 1 else -1) * (w2 + FRAME_W / 2)
             f.normal_update()
             if f.normal.dot(c - inner) < 0: f.normal_flip()
@@ -319,78 +355,33 @@ def build_frame():
     mesh.materials.append(mat["Mat_Frame"])
     frame = bpy.data.objects.new("Frame_Bedroom", mesh)
     bpy.context.scene.collection.objects.link(frame)
+
     parts = []
     mid = FRAME_W / 2
-
-    def rosette(cx, cz, r):
-        parts.append(ellipsoid("ros", (cx, front - r * 0.45, cz), (r * 0.42, r * 0.5, r * 0.42), seg=6, rings=4))   # the domed centre
-        for k in range(ROSETTE_PETALS):
-            t = 2 * pi * k / ROSETTE_PETALS
-            parts.append(ellipsoid("pet", (cx + cos(t) * r * 0.6, front - r * 0.22, cz + sin(t) * r * 0.6),
-                                   (r * 0.4, r * 0.3, r * 0.24), rot_y=-t, seg=6, rings=3))
     for sx in (-1, 1):
         for sz in (-1, 1):
-            rosette(sx * (w2 + mid), zc + sz * (h2 + mid), ROSETTE_R)
-        rosette(sx * (w2 + mid), zc, ROSETTE_R * 0.75)
-
-    # leaves along the crown (out 0.13, its highest point), each lying along the rail, clear of the rosettes and the shell
-    crown_out, crown_depth = 0.13, max(d for _, d in FRAME_PROFILE)
-    ll, ld, lw = LEAF_SIZE
-    def leaf_run(x0, z0, x1, z1, skip):
-        n = int(((x1 - x0) ** 2 + (z1 - z0) ** 2) ** 0.5 / LEAF_STEP)
-        for k in range(n + 1):
-            f = k / n
-            x, z = x0 + (x1 - x0) * f, z0 + (z1 - z0) * f
-            if any(abs(x - sx_) < r_ and abs(z - sz_) < r_ for sx_, sz_, r_ in skip):
-                continue
-            along = 0.0 if abs(z1 - z0) < 1e-6 else pi / 2
-            parts.append(ellipsoid("leaf", (x, y1 - crown_depth - ld * 0.4, z), (ll, ld, lw), rot_y=along, seg=4, rings=3))
-    a, b = w2 + crown_out, h2 + crown_out
-    corners = [(sx * (w2 + mid), zc + sz * (h2 + mid), ROSETTE_R * 1.3) for sx in (-1, 1) for sz in (-1, 1)]
-    sides = [(sx * (w2 + mid), zc, ROSETTE_R * 1.0) for sx in (-1, 1)]
-    top_shell = [(0.0, zc + b, SHELL_R * 1.35)]
-    skip = corners + sides + top_shell
-    leaf_run(-a, zc + b, a, zc + b, skip)      # top
-    leaf_run(-a, zc - b, a, zc - b, skip)      # bottom
-    leaf_run(-a, zc - b, -a, zc + b, skip)     # sides
-    leaf_run(a, zc - b, a, zc + b, skip)
-
-    def shell(cz, r, up):
-        """A fan of ribs standing on the rail's outer edge, opening up (up=1) or down (-1), with a C-scroll each side."""
-        base = (0.0, cz)
-        for k in range(SHELL_RIBS):
-            t = pi * (0.08 + 0.84 * k / (SHELL_RIBS - 1))   # spread over most of a half circle
-            x, z = cos(t) * r * 0.55, sin(t) * r * 0.55 * up
-            parts.append(ellipsoid("rib", (base[0] + x, front - 0.025, base[1] + z), (r * 0.5, 0.035, r * 0.12),
-                                   rot_y=-t * up, seg=8, rings=4))
-        parts.append(ellipsoid("hub", (base[0], front - 0.035, base[1]), (r * 0.3, 0.05, r * 0.22)))
-        for sx in (-1, 1):   # C-scrolls: a torus arc lying on the frame each side of the shell
-            bpy.ops.mesh.primitive_torus_add(major_radius=r * 0.28, minor_radius=r * 0.06, major_segments=10, minor_segments=5,
-                                             location=(sx * r * 0.95, front - 0.015, base[1] + up * r * 0.12),
-                                             rotation=(pi / 2, 0, 0))
-            o = bpy.context.active_object
-            o.name = "scroll"
-            bm2 = bmesh.new(); bm2.from_mesh(o.data)
-            cut = [v for v in bm2.verts if (v.co.x * sx < -r * 0.08)]   # open the ring on the side towards the shell: a C
-            bmesh.ops.delete(bm2, geom=cut, context="VERTS")
-            bm2.to_mesh(o.data); bm2.free()
-            parts.append(o)
-    shell(zc + h2 + FRAME_W - 0.02, SHELL_R, 1)   # only over the top: one under the bottom rail would reach the wainscot
-
-    for n, o in enumerate(parts):   # each ornament part: a patch from the gilt's middle band, along its longer side
+            cx, cz = sx * (w2 + mid), zc + sz * (h2 + mid)   # the corner, mid-band
+            along_h = lambda u, w, sx=sx, sz=sz, cx=cx, cz=cz: (cx - sx * u, cz + sz * w)   # horizontal rail, w outward
+            along_v = lambda u, w, sx=sx, sz=sz, cx=cx, cz=cz: (cx + sx * w, cz - sz * u)   # vertical rail
+            parts += [scroll(along_h, y1 - 0.128), scroll(along_v, y1 - 0.128)]
+            parts.append(ellipsoid("cushion", (cx, y1 - 0.118, cz), (0.105, 0.03, 0.105), seg=8, rings=4))
+            for k, ang in enumerate((pi / 4, pi / 4 - 0.55, pi / 4 + 0.55, -0.05, pi / 2 + 0.05)):
+                d = Vector((sx * cos(ang), 0, sz * sin(ang)))
+                big = 1.0 if k == 0 else 0.8 if k < 3 else 0.65
+                c = Vector((cx, y1 - 0.142, cz)) + d * 0.06 * big
+                parts.append(ellipsoid("leaf", c, (0.06 * big, 0.022, 0.026 * big), rot_y=-atan2(d.z, d.x)))
+            parts.append(ellipsoid("boss", (cx, y1 - 0.158, cz), (0.034, 0.03, 0.034), seg=6, rings=4))
+    for n, o in enumerate(parts):
         o.data.materials.clear()
         o.data.materials.append(mat["Mat_Frame"])
         bm2 = bmesh.new(); bm2.from_mesh(o.data)
         uv = bm2.loops.layers.uv.verify()
         xs, zs = [v.co.x for v in bm2.verts], [v.co.z for v in bm2.verts]
-        ax = 0 if max(xs) - min(xs) >= max(zs) - min(zs) else 2
-        lo_u = min(xs) if ax == 0 else min(zs)
-        lo_v, span_v = (min(zs), max(zs) - min(zs) or 1) if ax == 0 else (min(xs), max(xs) - min(xs) or 1)
         for f in bm2.faces:
+            f.smooth = True
             for loop in f.loops:
                 co = loop.vert.co
-                a, b = (co.x, co.z) if ax == 0 else (co.z, co.x)
-                loop[uv].uv = ((a - lo_u) / repeat + 0.137 * n, 0.3 + 0.4 * (b - lo_v) / span_v)
+                loop[uv].uv = ((co.x - min(xs)) / repeat + 0.137 * n, 0.3 + 0.4 * (co.z - min(zs)) / ((max(zs) - min(zs)) or 1))
         bm2.to_mesh(o.data); bm2.free()
     bpy.ops.object.select_all(action="DESELECT")
     for o in parts:
@@ -398,8 +389,6 @@ def build_frame():
     frame.select_set(True)
     bpy.context.view_layer.objects.active = frame
     bpy.ops.object.join()
-    # (each ornament part got its own patch of the gilt above, before the join)
-
 
 clear_scene()
 scene = bpy.context.scene
@@ -473,22 +462,18 @@ make("Door_Handles", mat["Mat_Metal"], ("xzy", (-0.14, -0.06), (dz - 0.02, dz + 
 pz0, pz1 = PAINTING_BOTTOM, PAINTING_BOTTOM + PAINTING_H
 fx = PAINTING_W / 2 + FRAME_W
 assert pz0 - FRAME_W >= BASEBOARD_H, "frame's bottom rail must clear the baseboard"
-# 2026-11-10: a carved, gilt-style frame instead of a plain box (and instead of the Tripo corner ornaments, which never
-# matched it). FRAME_PROFILE is its cross-section, swept round the opening with mitred corners: each point (out, depth),
-# out from the opening's edge (0) to the frame's outer edge (FRAME_W), depth off the wall. From the inside: a sight bead,
-# a cove, a rounded crown, an outer step. On it: a rosette at each corner and one on each side rail, and a fan shell with
-# C-scrolls at the top centre (none under the bottom rail: it would reach into the wainscot). It keeps the 0.18 m width, so everything that knows the
-# frame's outer edge (the wainscot's gaps, Vincent's portrait, The Starry Night's copy) is unchanged.
+# 2026-11-10: a carved baroque frame (see build_frame), instead of a plain box and the Tripo corner ornaments.
 build_frame()
 
 # Wainscot, cap rail, cornice and baseboard: strips on the walls' inside faces. The wainscot and its rail stop at
 # the two paintings' frames (which stand on the wall from 0.62 m) and at the arch's moulding.
-fz = pz0 - FRAME_W                        # frames' bottom edge
-sn = (SN_FRAME_Y - fx, SN_FRAME_Y + fx)   # The Starry Night's frame along the east wall
+fz = pz0 - FRAME_W - 0.03                 # frames' bottom edge, less the corner cartouches' overhang
+gx = fx + 0.03                            # the frames' corner cartouches stand 1.5 cm past their outer edge
+sn = (SN_FRAME_Y - gx, SN_FRAME_Y + gx)   # The Starry Night's frame along the east wall
 gap = ARCH_R + ARCH_TRIM_W                # arch moulding's outer edge
 wd, rd = WAINSCOT_D, RAIL_D
 def strips(z0, z1, d, cut_frames):
-    north = [(-fx, fx, max(z0, fz), z1)] if cut_frames and z1 > fz else []
+    north = [(-gx, gx, max(z0, fz), z1)] if cut_frames and z1 > fz else []
     east = [(sn[0], sn[1], max(z0, fz), z1)] if cut_frames and z1 > fz else []
     return [
         ("xzy", (x0, x1), (z0, z1), (y1 - d, y1), north),

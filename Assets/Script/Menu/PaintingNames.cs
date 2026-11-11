@@ -6,6 +6,11 @@ public static class PaintingNames
 {
     public const string Gallery = "Gallery";
 
+    /// <summary>True for a scene that is a painting you step into (not the Gallery, an entrance or a test scene): the
+    /// arrival hint and the wrist tag show only there.</summary>
+    public static bool IsPainting(string scene) =>
+        scene == "PaintedBedroom" || scene == "Bedroom_StyleExperiment" || scene == "StarryNight";
+
     /// <summary>The painting's title, as on its plaque.</summary>
     public static string Title(string scene)
     {

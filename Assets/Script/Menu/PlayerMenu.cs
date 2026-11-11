@@ -11,7 +11,7 @@ using UnityEngine.XR.Interaction.Toolkit.UI;
 /// with an XR Origin; nothing needs to be added to a scene.
 /// Everywhere but the Gallery, the panel offers "Back to Gallery" (#160): one way back, the same in every scene,
 /// whatever path led here (guided mode chains paintings, so "the previous scene" would not be the Gallery).
-/// Outside the Gallery a small "Menu" tag on the left controller (MenuWristTag) says where the button is.
+/// Inside a painting a small "Menu" tag on the left controller (MenuWristTag) says where the button is.
 /// </summary>
 public class PlayerMenu : MonoBehaviour
 {
@@ -57,7 +57,7 @@ public class PlayerMenu : MonoBehaviour
     void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
         if (mode != LoadSceneMode.Single) return;
-        if (wristTag && BackFrom(scene.name, homeScene) != null) MenuWristTag.Attach();
+        if (wristTag && BackFrom(scene.name, homeScene) != null && PaintingNames.IsPainting(scene.name)) MenuWristTag.Attach();
     }
 
     /// <summary>The scene "Back" goes to, or null when there is nowhere to go back to (in the Gallery).</summary>

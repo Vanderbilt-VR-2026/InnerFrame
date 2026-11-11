@@ -40,6 +40,12 @@ namespace InnerFrame.Gallery.EditorTools
         public const string InstanceName = "GalleryDecor";
         public const string KeepLastRoot = "SN_GalleryEntrance";
         const string BenchMat = "Assets/Art/Gallery/Materials/Mat_Bench.mat";
+        const string WoodMat = "Assets/Art/Gallery/Materials/Mat_BenchWood.mat";   // the flower stands: the bench's walnut
+        // The stands (Art/Source/Gallery/make_stands.py, 2026-11-10): a cream marble plinth for the statue, turned walnut
+        // column stands for the flowers. They replace plain cubes; each keeps a box collider round its whole footprint.
+        public const string MarbleMat = Folder + "/GP_Marble.mat";
+        public static readonly Color MarbleColour = new Color(0.91f, 0.88f, 0.82f);
+        static readonly string[] Stands = { "Plinth", "FlowerStand" };
         const string MetalMat = "Assets/Art/Gallery/Materials/Mat_Metal.mat";
         const string Tag = "[GalleryDecor]";
 
@@ -172,9 +178,11 @@ namespace InnerFrame.Gallery.EditorTools
             var changes = new List<string>();
             GalleryShellSetup.Apply(changes);
             foreach (var p in Props) { ImportModel(p.name, changes); ImportTexture(Tex(p.name), p.tex, changes); }
+            foreach (var n in Stands) ImportModel(n, changes);
             var mats = Props.ToDictionary(p => p.name, p => MakeMaterial(Mat(p.name), Tex(p.name), Color.white, p.smooth, p.twoSided, false, changes));
             mats["LanternGlass"] = MakeGlass(GlassMat, Tex("Lantern"), GlassColour, changes);
             mats["Bulb"] = MakeGlass(BulbMat, null, BulbColour, changes, opaque: true);
+            mats["Marble"] = MakeMaterial(MarbleMat, null, MarbleColour, 0.45f, false, false, changes);
             mats["Halo"] = MakeHalo(HaloMat, HaloColour, changes);
             mats["Pool"] = MakeHalo(PoolMat, PoolColour, changes);
             MakeHaloMesh(changes);
@@ -401,6 +409,16 @@ namespace InnerFrame.Gallery.EditorTools
             return go;
         }
 
+        /// <summary>A stand model at the group's origin, with a box collider round its footprint, width w and height h.</summary>
+        static GameObject Stand(string n, Material mat, Transform parent, float w, float h)
+        {
+            var go = Model(n, mat, parent, "Plinth", Vector3.zero, Quaternion.identity, Vector3.one);
+            var box = go.AddComponent<BoxCollider>();
+            box.size = new Vector3(w, h, w);
+            box.center = new Vector3(0f, h / 2, 0f);
+            return go;
+        }
+
         static GameObject Group(Transform parent, string name, Vector3 pos, float yaw)
         {
             var go = new GameObject(name);
@@ -411,7 +429,7 @@ namespace InnerFrame.Gallery.EditorTools
 
         static GameObject Build(Dictionary<string, Material> mats)
         {
-            var bench = AssetDatabase.LoadAssetAtPath<Material>(BenchMat) ?? throw new Exception($"{Tag} {BenchMat} missing");
+            var wood = AssetDatabase.LoadAssetAtPath<Material>(WoodMat) ?? throw new Exception($"{Tag} {WoodMat} missing");
             var metal = AssetDatabase.LoadAssetAtPath<Material>(MetalMat) ?? throw new Exception($"{Tag} {MetalMat} missing");
             var flameMesh = AssetDatabase.LoadAssetAtPath<Mesh>(FlameMesh) ?? throw new Exception($"{Tag} {FlameMesh} missing");
             var flameMat = AssetDatabase.LoadAssetAtPath<Material>(FlameMat) ?? throw new Exception($"{Tag} {FlameMat} missing");
@@ -422,7 +440,7 @@ namespace InnerFrame.Gallery.EditorTools
             foreach (var (name, at, yaw) in Statues)
             {
                 var g = Group(root, name, at, yaw).transform;
-                Primitive("Cube.fbx", bench, g, "Plinth", new Vector3(0f, StatuePlinthH / 2, 0f), new Vector3(StatuePlinthW, StatuePlinthH, StatuePlinthW), true);
+                Stand("Plinth", mats["Marble"], g, StatuePlinthW, StatuePlinthH);
                 Model("Statue", mats["Statue"], g, "GP_Statue", new Vector3(0f, StatuePlinthH, 0f), Quaternion.identity, one);
             }
             foreach (var (name, at, yaw) in Plants)
@@ -435,7 +453,7 @@ namespace InnerFrame.Gallery.EditorTools
             foreach (var (name, at, yaw) in Vases)
             {
                 var g = Group(root, name, at, yaw).transform;
-                Primitive("Cube.fbx", bench, g, "Plinth", new Vector3(0f, VasePlinthH / 2, 0f), new Vector3(VasePlinthW, VasePlinthH, VasePlinthW), true);
+                Stand("FlowerStand", wood, g, VasePlinthW, VasePlinthH);
                 Model("Vase", mats["Vase"], g, "GP_Vase", new Vector3(0f, VasePlinthH, 0f), Quaternion.identity, one);
             }
             foreach (var (name, at, arm, yaw) in Lanterns)

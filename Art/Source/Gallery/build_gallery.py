@@ -49,6 +49,9 @@ PEDESTAL_TOP = (0.5, 0.35)   # reading surface: width, and length down the slope
 PEDESTAL_TILT = 20           # degrees the top slopes down toward the viewer
 PEDESTAL_OUT = 1.5           # painting wall to the centre of the pedestal
 PEDESTAL_GAP = 0.1           # frame's right edge to the side of the pedestal
+STAND_BASE_H, STAND_STEP, STAND_STEP_H = 0.05, 0.04, 0.03   # the stand's base slab, the step on it (inset), its height
+STAND_POST, STAND_POST_FOOT = 0.09, 1.5                       # the post's width at the top, and how much wider at its foot
+STAND_HEAD_Z = 0.80                                           # where the post meets the head (its front top edge is 0.88)
 
 # The Starry Night's frame on the east wall (placed in Unity by SN_GallerySetup, RootPosition z = -1.6, so its
 # centre is at Y = 1.6 here). Only used to leave its gap in the wainscot.
@@ -408,10 +411,25 @@ tilt = radians(PEDESTAL_TILT)
 pyc = y1 - PEDESTAL_OUT                                  # pedestal centre (Y)
 px = (fx + PEDESTAL_GAP, fx + PEDESTAL_GAP + top_w)
 py = (pyc - top_len * cos(tilt) / 2, pyc + top_len * cos(tilt) / 2)  # front, back
+# 2026-11-10, after the concept sheet's reading stand: a moulded base, a slim tapered post and a head whose top is the
+# same tilted reading surface. The whole still fills the old box (px, py, 0..PEDESTAL_H), so its centre (the object's
+# origin), the Placard and Button empties, and The Starry Night's copy of it stay where they were.
 bm = bmesh.new()
-add_box(bm, "xyz", px, py, (0, PEDESTAL_H))
-for v in bm.verts:
-    if v.co.z > PEDESTAL_H / 2 and v.co.y < pyc:   # the two top corners at the front
+cx, cy = sum(px) / 2, sum(py) / 2
+add_box(bm, "xyz", px, py, (0, STAND_BASE_H))                                               # base
+add_box(bm, "xyz", (px[0] + STAND_STEP, px[1] - STAND_STEP), (py[0] + STAND_STEP, py[1] - STAND_STEP),
+        (STAND_BASE_H, STAND_BASE_H + STAND_STEP_H))                                        # step
+post0 = len(bm.verts)
+add_box(bm, "xyz", (cx - STAND_POST / 2, cx + STAND_POST / 2), (cy - STAND_POST / 2, cy + STAND_POST / 2),
+        (STAND_BASE_H + STAND_STEP_H, STAND_HEAD_Z))                                        # post
+for v in bm.verts[post0:]:
+    if v.co.z < STAND_HEAD_Z / 2:   # wider at its foot
+        v.co.x = cx + (v.co.x - cx) * STAND_POST_FOOT
+        v.co.y = cy + (v.co.y - cy) * STAND_POST_FOOT
+head0 = len(bm.verts)
+add_box(bm, "xyz", px, py, (STAND_HEAD_Z, PEDESTAL_H))                                     # head
+for v in bm.verts[head0:]:
+    if v.co.z > (STAND_HEAD_Z + PEDESTAL_H) / 2 and v.co.y < pyc:   # the two top corners at the front
         v.co.z -= top_len * sin(tilt)
 finish("Pedestal_Bedroom", mat["Mat_Bench"], bm, centred=True)
 

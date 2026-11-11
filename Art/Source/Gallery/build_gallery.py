@@ -51,13 +51,14 @@ PEDESTAL_TILT = 20           # degrees the top slopes down toward the viewer
 PEDESTAL_OUT = 1.5           # painting wall to the centre of the pedestal
 PEDESTAL_GAP = 0.1           # frame's right edge to the side of the pedestal
 # The stand: rounded-rectangle rings (RR_SEG segments per corner) for its base and head, a turned column between.
-RR_SEG, RR_BASE, RR_HEAD = 4, 0.06, 0.035      # segments per corner; the base's and the head's corner radius
+RR_SEG, RR_BASE, RR_HEAD = 4, 0.06, 0.06       # segments per corner; the base's and the head's corner radius
 STAND_BASE_PROFILE = [(0.000, 0.000), (0.000, 0.035), (0.006, 0.048), (0.018, 0.054),   # (inset, height): plinth,
                       (0.040, 0.058), (0.050, 0.070), (0.062, 0.082), (0.070, 0.086)]     # rounded edge, cove, step
 STAND_SIDES = 12                                # the column's sides
 STAND_COLUMN = [(0.00, 0.090), (0.03, 0.098), (0.06, 0.076), (0.14, 0.064), (0.70, 0.052),   # (0..1 up, radius):
                 (0.88, 0.048), (0.91, 0.066), (0.95, 0.055), (1.00, 0.075)]                    # foot, shaft, collar
 STAND_HEAD_Z, STAND_HEAD_EASE = 0.80, 0.05       # where the column meets the head; how far its underside is eased in
+STAND_HEAD_ROUND = 0.02                          # the head's top edge, rounded over this much (its front is 5 cm tall)
 
 # The Starry Night's frame on the east wall (placed in Unity by SN_GallerySetup, RootPosition z = -1.6, so its
 # centre is at Y = 1.6 here). Only used to leave its gap in the wainscot.
@@ -559,8 +560,9 @@ hx, hy = (px[1] - px[0]) / 2, (py[1] - py[0]) / 2
 top_z = lambda y: PEDESTAL_H - (py[1] - y) / (py[1] - py[0]) * top_len * sin(tilt)   # the tilted reading plane
 
 
-def rr_ring(inset, z, radius, smooth_z=None):
-    """A rounded rectangle round (cx, cy), inset from the full footprint, at height z (or on the reading plane)."""
+def rr_ring(inset, z, radius, below=0.0):
+    """A rounded rectangle round (cx, cy), inset from the full footprint, at height z (or, z None, `below` metres under
+    the reading plane)."""
     # (never below 1 cm: the base's radius shrinks with its inset, and a negative one turned the corners inside out,
     # so the top cap crossed itself and was not drawn: the floor showed through, 2026-11-10)
     ax, ay = hx - inset, hy - inset
@@ -570,7 +572,7 @@ def rr_ring(inset, z, radius, smooth_z=None):
         for k in range(RR_SEG + 1):
             a = a0 + (pi / 2) * k / RR_SEG
             pts.append((cx + qx * (ax - r) + r * cos(a), cy + qy * (ay - r) + r * sin(a)))
-    return [bm.verts.new((x, y, top_z(y) if z is None else z)) for x, y in pts]
+    return [bm.verts.new((x, y, top_z(y) - below if z is None else z)) for x, y in pts]
 
 
 def stack(rings, smooth, cap_bottom=False, cap_top=False):
@@ -591,9 +593,12 @@ col = [[bm.verts.new((cx + r * cos(2 * pi * k / STAND_SIDES), cy + r * sin(2 * p
         for k in range(STAND_SIDES)] for f, r in STAND_COLUMN]
 stack(col, True)
 # head: eased up from a smaller ring under it to the full rounded outline, then straight up to the reading plane
+# and its top edge rounded over (a quarter round of STAND_HEAD_ROUND) into the reading plane
+e = STAND_HEAD_ROUND
 head = [rr_ring(STAND_HEAD_EASE, STAND_HEAD_Z, RR_HEAD - STAND_HEAD_EASE), rr_ring(STAND_HEAD_EASE * 0.35, STAND_HEAD_Z + 0.012, RR_HEAD),
-        rr_ring(0.0, STAND_HEAD_Z + 0.03, RR_HEAD), rr_ring(0.0, None, RR_HEAD)]
-stack(head, False, cap_bottom=True, cap_top=True)
+        rr_ring(0.0, STAND_HEAD_Z + 0.03, RR_HEAD)]
+head += [rr_ring(e * (1 - cos(a)), None, RR_HEAD - e * (1 - cos(a)), below=e * (1 - sin(a))) for a in (0.0, pi / 6, pi / 3, pi / 2)]
+stack(head, True, cap_bottom=True, cap_top=True)
 finish("Pedestal_Bedroom", mat["Mat_Bench"], bm, centred=True)
 
 # Attachment points. -Y is Unity's forward, so the slot needs no turn to face

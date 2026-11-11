@@ -125,7 +125,7 @@ namespace InnerFrame.AlmondStudio
             compare.layout = layout;
             compare.references = references;
             // S03: the door a little east of the middle of the south wall, the easel west of it (both seen facing south)
-            Box(world, "Door", new Vector3(0.3f, 1.075f, 0.02f), new Vector3(1.0f, 2.15f, 0.05f), wood);
+            Box(world, "Door", new Vector3(0.3f, 1.075f, 0.02f), new Vector3(1.0f, 2.15f, 0.05f), frame);   // grey-green, as in S03
             Easel(world, new Vector3(-1.15f, 0f, 0.35f));
             Box(world, "Chest", new Vector3(W / 2f - 0.3f, 0.3f, D - 0.4f), new Vector3(0.5f, 0.6f, 0.6f), wood);
             Box(world, "Boxes", new Vector3(W / 2f - 0.3f, 0.72f, D - 0.4f), new Vector3(0.4f, 0.24f, 0.45f), frame);
@@ -253,7 +253,7 @@ namespace InnerFrame.AlmondStudio
         static void ArchWall(Transform parent, string name, float spring, float cx, float r, float top, float zIn, float zOut, Material m)
         {
             const int n = 24;
-            var v = new List<Vector3>(); var tri = new List<int>();
+            var v = new List<Vector3>(); var tri = new List<int>(); var uv = new List<Vector2>();
             foreach (float z in new[] { zIn, zOut })
             {
                 int start = v.Count;
@@ -268,6 +268,7 @@ namespace InnerFrame.AlmondStudio
                     float t = Mathf.Min(tx, ty);
                     Vector3 onBox = new Vector3(cx + dir.x * t, spring + dir.y * t, z);
                     v.Add(onArc); v.Add(onBox);
+                    uv.Add(new Vector2(onArc.x, onArc.y)); uv.Add(new Vector2(onBox.x, onBox.y));   // metres, as MetricCube
                 }
                 for (int i = 0; i < n; i++)
                 {
@@ -279,7 +280,7 @@ namespace InnerFrame.AlmondStudio
             // the two corners above the springing line that the fan misses (x beyond the rectangle's corner rays): none, as the
             // rays from the centre reach every point of the rectangle; done
             var mesh = new Mesh { name = name + " (runtime)" };
-            mesh.SetVertices(v); mesh.SetTriangles(tri, 0); mesh.RecalculateNormals(); mesh.RecalculateBounds();
+            mesh.SetVertices(v); mesh.SetUVs(0, uv); mesh.SetTriangles(tri, 0); mesh.RecalculateNormals(); mesh.RecalculateBounds();
             var go = new GameObject(name);
             go.transform.SetParent(parent, false);
             go.AddComponent<MeshFilter>().sharedMesh = mesh;
@@ -296,10 +297,12 @@ namespace InnerFrame.AlmondStudio
             for (int side = 0; side < 2; side++)
             {
                 float sx = side == 0 ? -1f : 1f;
-                var v = new List<Vector3>(); var tri = new List<int>();
-                // the straight jamb
+                var v = new List<Vector3>(); var tri = new List<int>(); var uv = new List<Vector2>();
+                float depth = Vector2.Distance(new Vector2(sx * ww / 2f, zGlass), new Vector2(cx + sx * ro, zRoom));
+                // the straight jamb (UVs in metres: u from the glass toward the room, v up, then on round the soffit)
                 v.Add(new Vector3(sx * ww / 2f, bottom, zGlass)); v.Add(new Vector3(cx + sx * ro, bottom, zRoom));
                 v.Add(new Vector3(sx * ww / 2f, spring, zGlass)); v.Add(new Vector3(cx + sx * ro, spring, zRoom));
+                uv.Add(new Vector2(0f, bottom)); uv.Add(new Vector2(depth, bottom)); uv.Add(new Vector2(0f, spring)); uv.Add(new Vector2(depth, spring));
                 tri.AddRange(new[] { 0, 1, 2, 2, 1, 3 });
                 // the soffit's half on this side, from the springing line to the crown
                 int s0 = v.Count;
@@ -309,6 +312,8 @@ namespace InnerFrame.AlmondStudio
                     float c = Mathf.Cos(a), s = Mathf.Sin(a);
                     v.Add(new Vector3(sx * c * ww / 2f, spring + s * ww / 2f, zGlass));
                     v.Add(new Vector3(cx + sx * c * ro, spring + s * ro, zRoom));
+                    float along = spring + a * (ww + ro * 2f) / 4f;      // the arc's length so far, between glass and room
+                    uv.Add(new Vector2(0f, along)); uv.Add(new Vector2(depth, along));
                 }
                 for (int i = 0; i < n; i++)
                 {
@@ -316,7 +321,7 @@ namespace InnerFrame.AlmondStudio
                     tri.AddRange(new[] { a0, a0 + 1, b0, b0, a0 + 1, b0 + 1 });
                 }
                 var mesh = new Mesh { name = (side == 0 ? "Reveal L" : "Reveal R") + " (runtime)" };
-                mesh.SetVertices(v); mesh.SetTriangles(tri, 0); mesh.RecalculateNormals(); mesh.RecalculateBounds();
+                mesh.SetVertices(v); mesh.SetUVs(0, uv); mesh.SetTriangles(tri, 0); mesh.RecalculateNormals(); mesh.RecalculateBounds();
                 var go = new GameObject(side == 0 ? "Reveal L (blue)" : "Reveal R (green)");
                 go.transform.SetParent(parent, false);
                 go.AddComponent<MeshFilter>().sharedMesh = mesh;
@@ -424,8 +429,45 @@ namespace InnerFrame.AlmondStudio
         static GameObject Box(Transform parent, string name, Vector3 at, Vector3 size, Material m, bool collider = true)
         {
             var go = Prim(parent, PrimitiveType.Cube, name, at, size, m);
+            go.GetComponent<MeshFilter>().sharedMesh = MetricCube(size);
             if (!collider) DestroyImmediate(go.GetComponent<Collider>());
             return go;
+        }
+
+        static readonly Dictionary<Vector3, Mesh> metricCubes = new Dictionary<Vector3, Mesh>();
+
+        /// <summary>A unit cube like Unity's, but with UVs in metres for a box of this size, so a painted surface keeps its
+        /// stroke size on a long wall and a short leg alike (the material's tiling says how many metres one repeat is).
+        /// Side faces run u along the face and v up; top and bottom run u along x and v along z.</summary>
+        static Mesh MetricCube(Vector3 size)
+        {
+            if (metricCubes.TryGetValue(size, out var cached) && cached != null) return cached;
+            var v = new List<Vector3>(); var n = new List<Vector3>(); var uv = new List<Vector2>(); var tri = new List<int>();
+            Vector3[] normals = { Vector3.right, Vector3.left, Vector3.up, Vector3.down, Vector3.forward, Vector3.back };
+            foreach (var nn in normals)
+            {
+                // the face's two in-plane axes: u and v (v is up on the side faces)
+                Vector3 ua = nn.y != 0f ? Vector3.right : (nn.x != 0f ? Vector3.forward : Vector3.right);
+                Vector3 va = nn.y != 0f ? Vector3.forward : Vector3.up;
+                float us = Vector3.Scale(ua, size).magnitude, vs = Vector3.Scale(va, size).magnitude;
+                int b = v.Count;
+                for (int k = 0; k < 4; k++)
+                {
+                    float su = (k == 1 || k == 2) ? 0.5f : -0.5f, sv = k >= 2 ? 0.5f : -0.5f;
+                    v.Add(nn * 0.5f + ua * su + va * sv);
+                    n.Add(nn);
+                    uv.Add(new Vector2((su + 0.5f) * us, (sv + 0.5f) * vs));
+                }
+                // wind so the front is on the normal's side
+                bool front = Vector3.Dot(Vector3.Cross(v[b + 1] - v[b], v[b + 2] - v[b]), nn) > 0f;
+                if (front) tri.AddRange(new[] { b, b + 1, b + 2, b, b + 2, b + 3 });
+                else tri.AddRange(new[] { b, b + 2, b + 1, b, b + 3, b + 2 });
+            }
+            var mesh = new Mesh { name = $"AS box {size.x:0.##}x{size.y:0.##}x{size.z:0.##}" };
+            mesh.SetVertices(v); mesh.SetNormals(n); mesh.SetUVs(0, uv); mesh.SetTriangles(tri, 0);
+            mesh.RecalculateTangents(); mesh.RecalculateBounds();
+            metricCubes[size] = mesh;
+            return mesh;
         }
 
         static GameObject Prim(Transform parent, PrimitiveType type, string name, Vector3 at, Vector3 scale, Material m)

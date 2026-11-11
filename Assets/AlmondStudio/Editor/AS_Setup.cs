@@ -22,6 +22,7 @@ namespace InnerFrame.AlmondStudio.EditorTools
         const string Materials = Root + "/Materials";
         const string AtlasPath = Root + "/Textures/Blossom/AS_BlossomAtlas.png";
         const string ReferenceFolder = Root + "/Textures/Reference";
+        const string SurfaceFolder = Root + "/Textures/Surfaces";
         const string BedroomPrefab = "Assets/InnerFrameBedroomWeb/Generated/PaintedBedroom.prefab";
         const string ChairPrefab = Root + "/Prefabs/AS_Chair.prefab";
         const string ScenePath = Root + "/Scenes/AlmondStudio.unity";
@@ -148,6 +149,15 @@ namespace InnerFrame.AlmondStudio.EditorTools
             boot.groundMaterial = Lit("AS_Ground", lit, ColorUtility.ToHtmlStringRGB(layout.groundColour));
             boot.glow = Mat("AS_Glow", glowShader);
             boot.guideDot = Unlit("AS_GuideDot", unlit, "FFF2C8");
+            // the painted surfaces (ChatGPT, seamless, in his strokes); each repeats every so many metres, as the boxes
+            // and the arch carry their UVs in metres (AS_Bootstrap.MetricCube). Without a picture the flat colour stays.
+            Paint(boot.wall, "AS_Wall.jpg", 2.0f, "FFFFFF");
+            Paint(boot.floor, "AS_Floor.jpg", 2.4f, "FFFFFF");        // eight tiles a repeat: 0.3 m tiles
+            Paint(boot.ceiling, "AS_Ceiling.jpg", 1.5f, "FFFFFF");
+            Paint(boot.revealLeft, "AS_RevealBlue.jpg", 0.8f, "FFFFFF");
+            Paint(boot.revealRight, "AS_RevealGreen.jpg", 0.8f, "FFFFFF");
+            Paint(boot.frame, "AS_Wood.jpg", 0.8f, "8C9A8C");          // grey-green: casements, beams, door, boxes
+            Paint(boot.wood, "AS_Ceiling.jpg", 0.6f, "B5793A");       // the ivory strokes warmed to his yellow-brown wood
             boot.references = new Texture[layout.compareViews.Length];
             for (int i = 0; i < layout.compareViews.Length; i++)
             {
@@ -235,6 +245,25 @@ namespace InnerFrame.AlmondStudio.EditorTools
             m.SetColor("_BaseColor", Hex(hex));
             EditorUtility.SetDirty(m);
             return m;
+        }
+
+        /// <summary>Puts a seamless picture from Textures/Surfaces on a material, repeating every `metres`, tinted.</summary>
+        static void Paint(Material m, string file, float metres, string tint)
+        {
+            string path = SurfaceFolder + "/" + file;
+            var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            if (tex == null) { Debug.LogWarning("[AS Setup] No surface picture at " + path + "; " + m.name + " stays a flat colour."); return; }
+            var imp = (TextureImporter)AssetImporter.GetAtPath(path);
+            if (imp.wrapMode != TextureWrapMode.Repeat || imp.maxTextureSize != 1024 || !imp.mipmapEnabled)
+            {
+                imp.wrapMode = TextureWrapMode.Repeat; imp.maxTextureSize = 1024; imp.mipmapEnabled = true;
+                imp.anisoLevel = 4;
+                imp.SaveAndReimport();
+            }
+            m.SetTexture("_BaseMap", tex);
+            m.SetTextureScale("_BaseMap", Vector2.one / metres);
+            m.SetColor("_BaseColor", Hex(tint));
+            EditorUtility.SetDirty(m);
         }
 
         static Color Hex(string hex)

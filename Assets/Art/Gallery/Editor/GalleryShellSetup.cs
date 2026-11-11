@@ -83,14 +83,18 @@ namespace InnerFrame.Gallery.EditorTools
             var rug = all.First(t => t.name == "Rug");
             var rugArea = rug.GetComponent<TeleportationArea>();
             if (rugArea == null) { rugArea = rug.gameObject.AddComponent<TeleportationArea>(); why.Add("a TeleportationArea on the Rug"); }
-            // the Floor's settings (its colliders list is empty: each area finds its own object's collider on Awake)
-            if (EditorJsonUtility.ToJson(rugArea) != EditorJsonUtility.ToJson(floorArea))
+            // the Floor's settings (its colliders list is empty: each area finds its own object's collider on Awake): when it is
+            // first added, or on Reset to Built; Add Decor otherwise keeps the Rug's as they are
+            if ((GalleryDecorSetup.Reset || why.Any(w => w.Contains("on the Rug"))) && EditorJsonUtility.ToJson(rugArea) != EditorJsonUtility.ToJson(floorArea))
             {
                 EditorUtility.CopySerialized(floorArea, rugArea);
                 why.Add("the Rug's TeleportationArea set as the Floor's");
             }
 
             float wall = -GalleryDecorSetup.HalfL;
+            // the Bedroom's slot and button, and the XR Origin at the spawn point: only on Reset to Built (Add Decor keeps
+            // them where they are, should they be moved by hand)
+            if (GalleryDecorSetup.Reset)
             foreach (var (name, fromWall) in FromNorthWall)
             {
                 var t = all.First(x => x.name == name);
@@ -100,7 +104,7 @@ namespace InnerFrame.Gallery.EditorTools
 
             var spawn = all.FirstOrDefault(t => t.name == "Spawn_Point") ?? throw new Exception($"{Tag} no Spawn_Point");
             var origin = scene.GetRootGameObjects().FirstOrDefault(g => g.GetComponent<Unity.XR.CoreUtils.XROrigin>() != null);
-            if (origin != null && ((origin.transform.position - spawn.position).sqrMagnitude > 1e-8f || Quaternion.Angle(origin.transform.rotation, spawn.rotation) > 1e-3f))
+            if (GalleryDecorSetup.Reset && origin != null && ((origin.transform.position - spawn.position).sqrMagnitude > 1e-8f || Quaternion.Angle(origin.transform.rotation, spawn.rotation) > 1e-3f))
             {
                 origin.transform.SetPositionAndRotation(spawn.position, spawn.rotation);
                 why.Add($"XR Origin to Spawn_Point {spawn.position:F2}");

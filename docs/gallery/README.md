@@ -75,7 +75,7 @@ room, so they meet every light); the table lamp the concept sheet has (below) wo
 fails if the scene has more point and spot lights than the limit. (A fifth, hanging in front of The Bedroom, was tried on 2026-11-11 and
 taken out: it added little.)
 
-### Sun, shadows, fill and spotlights (`GalleryLightingSetup.cs`, run by Add Decor or Apply Lighting)
+### Sun, shadows, fill and spotlights (`GalleryLightingSetup.cs`, added by Add Decor, reset by Reset Lighting to Built)
 
 Three kinds of light, by colour temperature: the lanterns warmest (2800 K), the painting spotlights white (6600 K,
 `SpotKelvin`, so the paintings keep their true colours), the fill 3800 K (`AmbientKelvin`). `Kelvin()` turns a temperature into a colour.
@@ -98,8 +98,9 @@ Three kinds of light, by colour temperature: the lanterns warmest (2800 K), the 
   painting's diagonal; white (6600 K), intensity 5 (`SpotIntensity`), no shadows. Placed from the paintings' own positions in
   the scene, so they follow a painting that moves.
 
-Don't tune the light in Play mode: Unity throws away every change made in Play mode when you stop. Change the constants at
-the top of `GalleryLightingSetup.cs` and run **Tools > InnerFrame > Gallery > Apply Lighting**.
+Don't tune the light in Play mode: Unity throws away every change made in Play mode when you stop. Tune it in Edit mode
+and save (Add Decor keeps it), or change the constants at the top of `GalleryLightingSetup.cs` and run
+**Tools > InnerFrame > Gallery > Reset Lighting to Built**.
 
 Only the plinths and plant pots (boxes) and the shell (Gallery.fbx's generated mesh colliders) stop you; the lanterns and
 the frames' carving has its generated collider like the rest of the shell. Nothing covers the spawn point's view of The Bedroom or Vincent's portrait.
@@ -116,9 +117,16 @@ the frames' carving has its generated collider like the rest of the shell. Nothi
 
 ## Change the decoration
 
-Don't move the props in the scene: the next run of the setup reverts any override. Change the spots in
-`GalleryDecorSetup.cs` (the `Statues`, `Plants`, `Vases`, `Lanterns` and `Frames` tables), then run
-**Tools > InnerFrame > Gallery > Add Decor** and **Tools > InnerFrame > Gallery > Check Decor**. The check also renders
+**Hand edits stay.** Since 2026-11-11, **Tools > InnerFrame > Gallery > Add Decor** only adds what is missing (the decor,
+its prefab, a material, the painting spotlights, an empty texture slot) and leaves everything already there as it is. Move
+a lantern, tune the sun or a material in the editor, save, and Add Decor keeps it. Make those edits in **Edit mode**: Unity
+itself throws away changes made in Play mode when Play mode ends.
+
+To go back to the code's values, run **Tools > InnerFrame > Gallery > Reset to Built (discards hand edits)**. It reverts the
+decor instance's overrides, rebuilds the prefab, and rewrites the materials, the lighting and the render settings. It never
+deletes objects you added yourself. **Reset Lighting to Built** does the same for the lighting only. Changing the spots in
+`GalleryDecorSetup.cs` (the `Statues`, `Plants`, `Vases` and `Lanterns` tables) takes a Reset to Built to show. Then run
+**Tools > InnerFrame > Gallery > Check Decor**. The check also renders
 nine views (five from eye height; a side-wall lamp, the frame's corner, the ceiling spots and a pedestal close up) to `Logs/GalleryDecor/`.
 
 To change the room itself, edit the parameters at the top of `build_gallery.py`, run it, then Add Decor. If the east

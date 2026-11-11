@@ -155,6 +155,16 @@ namespace InnerFrame.Gallery.EditorTools
         public const string GlassMat = Folder + "/GP_LanternGlass.mat";
         public const string GlassPart = "GP_Lantern_Glass";
 
+        /// <summary>
+        /// Two ways to run (2026-11-11). Add Decor keeps what is there: it only adds what is missing (the decor instance,
+        /// the prefab, a material, the painting spotlights) and fills a material's empty texture slot, so whatever the
+        /// Gallery looks like after hand edits in the editor stays as it is. Reset to Built (Reset true) puts everything
+        /// back to this code's values: the decor instance's overrides reverted and the prefab rebuilt, the materials, the
+        /// sun, ambient, spotlights and the render pipeline assets rewritten. Edits made in Play mode are not kept by
+        /// Unity itself (they end with Play mode), so make them in Edit mode.
+        /// </summary>
+        public static bool Reset;
+
         [MenuItem("Tools/InnerFrame/Gallery/Add Decor")]
         public static void Run()
         {
@@ -162,6 +172,21 @@ namespace InnerFrame.Gallery.EditorTools
             var changes = Apply();
             Debug.Log($"{Tag} {(changes.Count == 0 ? "nothing to change" : string.Join("\n", changes))}");
         }
+
+        [MenuItem("Tools/InnerFrame/Gallery/Reset to Built (discards hand edits)")]
+        public static void RunReset()
+        {
+            if (!EditorUtility.DisplayDialog("Reset the Gallery to built",
+                    "This puts the decor, its materials, the lighting and the render settings back to the setup code's values, " +
+                    "discarding hand edits to them. Continue?", "Reset", "Cancel")) return;
+            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+            Reset = true;
+            try { var changes = Apply(); Debug.Log($"{Tag} reset: {(changes.Count == 0 ? "nothing to change" : string.Join("\n", changes))}"); }
+            finally { Reset = false; }
+        }
+
+        /// <summary>Batch: -executeMethod InnerFrame.Gallery.EditorTools.GalleryDecorSetup.RunBatchReset -quit</summary>
+        public static void RunBatchReset() { Reset = true; RunBatch(); }
 
         public static void RunBatch()
         {
@@ -259,11 +284,28 @@ namespace InnerFrame.Gallery.EditorTools
         /// <summary>URP Lit with a base map, no emission; opaque, or transparent (premultiplied) as SN_Setup's Lit does.
         /// Everything is set every run, exactly as URP's own material validation leaves it, so the file only changes when
         /// a value does.</summary>
+        /// <summary>Add Decor's rule for an existing material: leave it as it is, only filling an empty texture slot.
+        /// True when the caller should return it untouched.</summary>
+        static bool KeepMaterial(Material m, Texture tex, string path, List<string> changes)
+        {
+            if (Reset || m == null) return false;
+            if (tex != null && m.HasProperty("_BaseMap") && m.GetTexture("_BaseMap") == null)
+            {
+                m.SetTexture("_BaseMap", tex);
+                if (m.HasProperty("_MainTex")) m.SetTexture("_MainTex", tex);
+                EditorUtility.SetDirty(m);
+                AssetDatabase.SaveAssetIfDirty(m);
+                changes.Add($"{path}: its texture (it had none)");
+            }
+            return true;
+        }
+
         public static Material MakeMaterial(string path, string texPath, Color colour, float smooth, bool twoSided, bool transparent, List<string> changes, Vector2? tiling = null, Vector2? offset = null, Color? glow = null)
         {
             var shader = Shader.Find("Universal Render Pipeline/Lit") ?? throw new Exception($"{Tag} URP Lit shader not found");
             var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(texPath);
             var m = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (KeepMaterial(m, tex, path, changes)) return m;
             bool created = m == null;
             if (created) { m = new Material(shader) { name = System.IO.Path.GetFileNameWithoutExtension(path) }; AssetDatabase.CreateAsset(m, path); }
             string before = created ? "" : System.IO.File.ReadAllText(path);
@@ -332,6 +374,7 @@ namespace InnerFrame.Gallery.EditorTools
             var shader = Shader.Find("Universal Render Pipeline/Unlit") ?? throw new Exception($"{Tag} URP Unlit shader not found");
             var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(texPath);
             var m = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (KeepMaterial(m, tex, path, changes)) return m;
             bool created = m == null;
             if (created) { m = new Material(shader) { name = System.IO.Path.GetFileNameWithoutExtension(path) }; AssetDatabase.CreateAsset(m, path); }
             string before = created ? "" : System.IO.File.ReadAllText(path);
@@ -405,6 +448,7 @@ namespace InnerFrame.Gallery.EditorTools
             var shader = Shader.Find(GlowShader) ?? throw new Exception($"{Tag} {GlowShader} not found");
             var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(HaloTex) ?? throw new Exception($"{Tag} {HaloTex} missing");
             var m = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (KeepMaterial(m, tex, path, changes)) return m;
             bool created = m == null;
             if (created) { m = new Material(shader) { name = System.IO.Path.GetFileNameWithoutExtension(path) }; AssetDatabase.CreateAsset(m, path); }
             string before = created ? "" : System.IO.File.ReadAllText(path);
@@ -592,6 +636,8 @@ namespace InnerFrame.Gallery.EditorTools
 
         static GameObject MakePrefab(Dictionary<string, Material> mats, List<string> changes)
         {
+            var kept = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
+            if (!Reset && kept != null) return kept;   // Add Decor: the prefab as it is (hand edits in Prefab Mode stay)
             var built = Build(mats);
             try
             {
@@ -619,15 +665,17 @@ namespace InnerFrame.Gallery.EditorTools
             var found = Instances(scene, prefab);
             var keep = found.FirstOrDefault(g => g.transform.parent == null && PrefabUtility.IsAnyPrefabInstanceRoot(g)
                                                  && PrefabUtility.GetCorrespondingObjectFromOriginalSource(g) == prefab);
-            foreach (var g in found.Where(g => g != keep && g != null)) { why.Add($"removed an extra '{g.name}'"); Object.DestroyImmediate(g); }
+            if (Reset)
+                foreach (var g in found.Where(g => g != keep && g != null)) { why.Add($"removed an extra '{g.name}'"); Object.DestroyImmediate(g); }
             if (keep == null) { keep = (GameObject)PrefabUtility.InstantiatePrefab(prefab, scene); why.Add("added the decor"); }
-            if (PrefabUtility.HasPrefabInstanceAnyOverrides(keep, false))
+            var t = keep.transform;
+            // Add Decor keeps the instance's overrides and its place (hand edits in the scene); Reset to Built reverts them
+            if (Reset && PrefabUtility.HasPrefabInstanceAnyOverrides(keep, false))
             {
                 PrefabUtility.RevertPrefabInstance(keep, InteractionMode.AutomatedAction);
                 why.Add("reverted overrides");
             }
-            var t = keep.transform;
-            if (t.localPosition != Vector3.zero || t.localRotation != Quaternion.identity || t.localScale != Vector3.one)
+            if (Reset && (t.localPosition != Vector3.zero || t.localRotation != Quaternion.identity || t.localScale != Vector3.one))
             {
                 t.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
                 t.localScale = Vector3.one;

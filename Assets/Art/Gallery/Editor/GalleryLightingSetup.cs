@@ -11,7 +11,7 @@ using Object = UnityEngine.Object;
 namespace InnerFrame.Gallery.EditorTools
 {
     /// <summary>
-    /// Tools > InnerFrame > Gallery > Apply Lighting (also run by Add Decor, after the decor): the Gallery's light.
+    /// Tools > InnerFrame > Gallery > Reset Lighting to Built (and Add Decor, which only adds what is missing): the Gallery's light.
     /// What it writes, each only when it differs:
     ///   - Mobile_RPAsset (the Quest's, Android's quality level) and PC_RPAsset (the editor's): the sun's shadows. They were
     ///     50 m of shadow over one 1024 map with a 1-texel normal bias, about 5 cm per texel: blocky, and the bias ate the
@@ -83,25 +83,35 @@ namespace InnerFrame.Gallery.EditorTools
         public static Material MakePainting(string path, string imagePath, List<string> changes) =>
             GalleryDecorSetup.MakeMaterial(path, imagePath, Color.white, PaintingSmoothness, false, false, changes);
 
-        [MenuItem("Tools/InnerFrame/Gallery/Apply Lighting")]
+        /// <summary>Puts the lighting back to this code's values (the render settings, the sun, ambient, the spotlights and
+        /// the paintings' materials), discarding hand edits to them. Add Decor only adds what is missing.</summary>
+        [MenuItem("Tools/InnerFrame/Gallery/Reset Lighting to Built")]
         public static void Run()
         {
+            if (!EditorUtility.DisplayDialog("Reset the Gallery's lighting",
+                    "This puts the sun, ambient, the painting spotlights, the paintings' materials and the render settings back " +
+                    "to the setup code's values, discarding hand edits to them. Continue?", "Reset", "Cancel")) return;
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
             var changes = new List<string>();
             var scene = EditorSceneManager.OpenScene(GalleryDecorSetup.GalleryPath, OpenSceneMode.Single);
-            Apply(scene, changes);
+            bool was = GalleryDecorSetup.Reset;
+            GalleryDecorSetup.Reset = true;
+            try { Apply(scene, changes); } finally { GalleryDecorSetup.Reset = was; }
             AssetDatabase.SaveAssets();
             Debug.Log($"{Tag} {(changes.Count == 0 ? "nothing to change" : string.Join("\n", changes))}");
         }
 
+        /// <summary>On Reset (GalleryDecorSetup.Reset), everything to this code's values. Otherwise (Add Decor) only what is
+        /// missing: the painting spotlights if there are none; the render settings, the sun, other lights and ambient are
+        /// left as they are, and the paintings' materials too (MakeMaterial keeps an existing one).</summary>
         public static void Apply(Scene scene, List<string> changes)
         {
-            foreach (var path in RpAssets) Pipeline(path, changes);
+            bool reset = GalleryDecorSetup.Reset;
+            if (reset) foreach (var path in RpAssets) Pipeline(path, changes);
             Painting(changes);
             var why = new List<string>();
-            Sun(scene, why);
-            Ambient(why);
-            PaintingLights(scene, why);
+            if (reset) { Sun(scene, why); Ambient(why); }
+            if (reset || !scene.GetRootGameObjects().Any(r => r.name == SpotRoot)) PaintingLights(scene, why);
             if (why.Count > 0)
             {
                 EditorSceneManager.MarkSceneDirty(scene);

@@ -60,7 +60,10 @@ namespace InnerFrame.Gallery.EditorTools.Tests
             var decor = found[0];
             var roots = scene.GetRootGameObjects();
             Check(roots.Last().name == G.KeepLastRoot, $"{G.KeepLastRoot} is still the last root (last: {roots.Last().name})");
-            Check(!PrefabUtility.HasPrefabInstanceAnyOverrides(decor, false), "no overrides on the instance");
+            // hand edits on the instance are allowed (Add Decor keeps them since 2026-11-11): listed, not failed
+            var overrides = PrefabUtility.GetObjectOverrides(decor, false).Count + PrefabUtility.GetAddedComponents(decor).Count
+                            + PrefabUtility.GetRemovedComponents(decor).Count + PrefabUtility.GetAddedGameObjects(decor).Count;
+            log.Add($"  hand edits on the {G.InstanceName} instance: {overrides} (kept by Add Decor; Reset to Built reverts them)");
             Check(roots.Count(r => r.GetComponentsInChildren<Unity.XR.CoreUtils.XROrigin>(true).Any()) == 1, "one XR Origin in the scene");
 
             int tris = decor.GetComponentsInChildren<MeshFilter>(true).Sum(m => m.sharedMesh.triangles.Length / 3);

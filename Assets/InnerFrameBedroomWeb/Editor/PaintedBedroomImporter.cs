@@ -24,9 +24,9 @@ namespace InnerFrame.PaintedBedroom.EditorTools
         const string PrefabPath = GenDir + "/PaintedBedroom.prefab";
         static readonly string[] ShellParts = { "Room_Walls", "Room_Floor", "Room_Ceiling", "Room_Skirting", "Door_Frames", "Window_View" };
 
-        [Serializable] class RoomData { public int version; public ObjectData[] objects; public MarkerData[] markers; public MaterialData[] materials; public string[] textures; public int floatCount; public int intCount; public float painterFov; public float painterLensShiftY; }
-        [Serializable] class ObjectData { public string name; public float[] position; public MeshData[] meshes; }
-        [Serializable] class MeshData { public string name; public int material; public int vertexCount; public int positions; public int normals; public int uvs; public int indexCount; public int indices; }
+        [Serializable] class RoomData { public int version; public ObjectData[] objects; public MarkerData[] markers; public MaterialData[] materials; public string[] textures; public int floatCount; public int intCount; public float painterFov; public float painterLensShiftY; public float lightmapMax = 8f; }
+        [Serializable] class ObjectData { public string name; public float[] position; public MeshData[] meshes; public int lightmap = -1; }
+        [Serializable] class MeshData { public string name; public int material; public int vertexCount; public int positions; public int normals; public int uvs; public int indexCount; public int indices; public int uvs2 = -1; }
         [Serializable] class MaterialData { public string name; public int texture; public int height = -1; public float[] color; public bool unlit; public float emission; public bool doubleSided; public bool outline; public float opacity; }
         [Serializable] class MarkerData { public string name; public float[] position; }
 
@@ -70,6 +70,14 @@ namespace InnerFrame.PaintedBedroom.EditorTools
                 {
                     string p = DataDir + "/Textures/" + data.textures[i] + ".png";
                     var ti = AssetImporter.GetAtPath(p) as TextureImporter;
+                    bool lightmap = data.textures[i].StartsWith("lm_");   // baked in Blender (10/29): linear light, sqrt-encoded
+                    if (ti != null && lightmap && (ti.sRGBTexture || ti.wrapMode != TextureWrapMode.Clamp || ti.alphaIsTransparency || ti.alphaSource != TextureImporterAlphaSource.FromInput || ti.textureCompression != TextureImporterCompression.Uncompressed))
+                    {
+                        ti.textureType = TextureImporterType.Default; ti.sRGBTexture = false; ti.wrapMode = TextureWrapMode.Clamp;
+                        ti.alphaSource = TextureImporterAlphaSource.FromInput; ti.alphaIsTransparency = false;   // alpha = the sun's share of the light (11/10)
+                        ti.textureCompression = TextureImporterCompression.Uncompressed;   // block compression bands a smooth light gradient (the ceiling, 11/10)
+                        ti.maxTextureSize = 2048; ti.mipmapEnabled = true; ti.anisoLevel = 2; ti.SaveAndReimport();
+                    }
                     bool height = data.textures[i].EndsWith("_height");   // stroke relief, exported as grey: becomes a normal map
                     if (ti != null && height && (ti.textureType != TextureImporterType.NormalMap || !ti.convertToNormalmap))
                     {
@@ -83,7 +91,7 @@ namespace InnerFrame.PaintedBedroom.EditorTools
                         ti.mipmapEnabled = true;
                         ti.SaveAndReimport();
                     }
-                    else if (ti != null && !height && (ti.wrapMode != TextureWrapMode.Repeat || ti.maxTextureSize < 4096 || ti.anisoLevel < 4))
+                    else if (ti != null && !height && !lightmap && (ti.wrapMode != TextureWrapMode.Repeat || ti.maxTextureSize < 4096 || ti.anisoLevel < 4))
                     {
                         ti.textureType = TextureImporterType.Default;
                         ti.sRGBTexture = true;
@@ -103,6 +111,8 @@ namespace InnerFrame.PaintedBedroom.EditorTools
                 if (lit == null || unlit == null) throw new Exception("URP shaders not found: this project should use the Universal Render Pipeline.");
                 var mats = new Material[data.materials.Length];
                 for (int i = 0; i < data.materials.Length; i++) mats[i] = MakeMaterial(data.materials[i], textures, lit, unlit);
+                var lmShader = Shader.Find("InnerFrame/Painted Lightmapped");
+                var lmMats = new Dictionary<string, Material>();
 
                 // meshes, stored together in one asset
                 EditorUtility.DisplayProgressBar("Painted Bedroom", "Meshes", 0.5f);
@@ -124,6 +134,11 @@ namespace InnerFrame.PaintedBedroom.EditorTools
                         child.AddComponent<MeshFilter>().sharedMesh = mesh;
                         var mr = child.AddComponent<MeshRenderer>();
                         mr.sharedMaterial = mats[md.material];
+                        if (o.lightmap >= 0 && md.uvs2 >= 0 && lmShader != null)
+                        {
+                            var lm = LightmapMaterial(mats[md.material], data.materials[md.material], textures[o.lightmap], data.lightmapMax, o.name, lmShader, lmMats);
+                            if (lm != null) mr.sharedMaterial = lm;
+                        }
                         // everything casts and receives soft shadows, except the ink outlines, the glass and the view outside
                         var mat = data.materials[md.material];
                         // the room shell doesn't cast: a closed room would otherwise shade itself entirely from the sun
@@ -180,12 +195,45 @@ namespace InnerFrame.PaintedBedroom.EditorTools
             mesh.uv = uv;
             mesh.triangles = tris;
             mesh.RecalculateBounds();
+            if (md.uvs2 >= 0)
+            {
+                var uv2 = new Vector2[n];
+                for (int i = 0; i < n; i++) uv2[i] = new Vector2(F[md.uvs2 + i * 2], F[md.uvs2 + i * 2 + 1]);
+                mesh.uv2 = uv2;                                        // the Blender-baked lightmap's UVs (10/29)
+            }
+            else if (!md.name.EndsWith("_ink")) Unwrapping.GenerateSecondaryUVSet(mesh);   // for Unity's own lightmapper
             return mesh;
         }
 
         /// <summary>Use the exported stroke height maps as normal maps (paint relief). Off for now: it made
         /// the surfaces read as grainier than the painting (#50); the maps are still exported and imported.</summary>
         const bool Relief = false;
+
+        /// <summary>
+        /// A per-object copy of a material that shows albedo x the lightmap baked in Blender (10/29), instead of
+        /// Unity lighting. Only for opaque, lit, non-glass materials; the others keep their URP material.
+        /// </summary>
+        static Material LightmapMaterial(Material baseMat, MaterialData d, Texture2D lightmap, float lightmapMax, string objectName, Shader lmShader, Dictionary<string, Material> cache)
+        {
+            if (d.unlit || d.outline || d.name.StartsWith("glass") || (d.opacity > 0f && d.opacity < 0.999f) || lightmap == null) return null;
+            string key = d.name + "__lm_" + objectName;
+            if (cache.TryGetValue(key, out var cached)) return cached;
+            string path = GenMaterials + "/" + key + ".mat";
+            var m = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (m == null) { m = new Material(lmShader); AssetDatabase.CreateAsset(m, path); }
+            else m.shader = lmShader;
+            m.SetTexture("_BaseMap", baseMat.GetTexture("_BaseMap"));
+            m.SetTextureScale("_BaseMap", baseMat.GetTextureScale("_BaseMap")); m.SetTextureOffset("_BaseMap", baseMat.GetTextureOffset("_BaseMap"));
+            m.SetColor("_BaseColor", baseMat.GetColor("_BaseColor"));
+            m.SetTexture("_LightMap", lightmap);
+            m.SetFloat("_LightMax", lightmapMax);
+            m.SetFloat("_LightScale", 1.0f);
+            m.SetFloat("_Spec", 0.03f);              // base reflectance the DIFFUSE bake lacks; matched to Cycles per region (10/30)
+            m.SetFloat("_Cull", d.doubleSided ? (float)CullMode.Off : (float)CullMode.Back);
+            EditorUtility.SetDirty(m);
+            cache[key] = m;
+            return m;
+        }
 
         static Material MakeMaterial(MaterialData d, Texture2D[] textures, Shader lit, Shader unlit)
         {
@@ -213,10 +261,24 @@ namespace InnerFrame.PaintedBedroom.EditorTools
                 m.SetFloat("_SpecularHighlights", 0f); m.EnableKeyword("_SPECULARHIGHLIGHTS_OFF");
                 m.SetFloat("_EnvironmentReflections", 0f); m.EnableKeyword("_ENVIRONMENTREFLECTIONS_OFF");
                 float e = d.emission > 0f ? d.emission * PaintedBedroomBuilder.EmissionScale : PaintedBedroomBuilder.Emission;
-                m.EnableKeyword("_EMISSION");
-                m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
-                m.SetTexture("_EmissionMap", tex);
-                m.SetColor("_EmissionColor", (tex != null ? Color.white : col) * e);
+                float glow = d.name.StartsWith("glass") ? PaintedBedroomBuilder.TuningArg("-ifGlass", PaintedBedroomBuilder.GlassGlow) : 0f;
+                if (glow > 0f)
+                {
+                    // window panes: daylight glow baked into the room's lightmaps (10/29). The pane's own painted view
+                    // is the emission map, so the trees outside still show through (Charlyne: the glass stays translucent)
+                    m.EnableKeyword("_EMISSION");
+                    m.SetTexture("_EmissionMap", tex);
+                    m.SetColor("_EmissionColor", new Color(1f, 0.98f, 0.94f) * glow);
+                    m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.BakedEmissive;
+                }
+                else if (e > 0f)
+                {
+                    m.EnableKeyword("_EMISSION");
+                    m.SetTexture("_EmissionMap", tex);
+                    m.SetColor("_EmissionColor", (tex != null ? Color.white : col) * e);
+                    m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
+                }
+                else { m.DisableKeyword("_EMISSION"); m.SetTexture("_EmissionMap", null); m.SetColor("_EmissionColor", Color.black); m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None; }
                 // the paint's relief: the exported stroke height map, imported as a normal map (#50)
                 Texture2D bump = Relief && d.height >= 0 && d.height < textures.Length ? textures[d.height] : null;
                 m.SetTexture("_BumpMap", bump);

@@ -261,7 +261,7 @@ The Gallery entrance check (`Editor/Tests/SN_GalleryCheck.cs`, edit mode;
    its top, no Gallery collider crossing the frame or the pedestal (physics), the gap to the nearest bench (0.42 m);
 4. the same offsets, meshes, materials and button settings as The Bedroom's (in the same scene);
 5. the build list (enabled, after the Gallery, not first); the image (2048 × 1622, imported 2048 × 2048, ASTC 6×6 on
-   Android) and its material (URP Unlit, white);
+   Android) and its material (URP Lit, white, matte, so the Gallery's lamps light it);
 6. `SN_GallerySetup` run again changes nothing (the files' hashes are equal); with the entrance moved in memory it puts it
    back and saves `Gallery.unity` byte for byte as it was.
 Controls that must fail: a button aimed at PaintedBedroom, no persistent call, a second entrance, the entrance moved

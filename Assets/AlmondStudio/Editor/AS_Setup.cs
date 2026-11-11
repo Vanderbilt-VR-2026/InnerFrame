@@ -26,6 +26,9 @@ namespace InnerFrame.AlmondStudio.EditorTools
         const string BedroomPrefab = "Assets/InnerFrameBedroomWeb/Generated/PaintedBedroom.prefab";
         const string ChairPrefab = Root + "/Prefabs/AS_Chair.prefab";
         const string ScenePath = Root + "/Scenes/AlmondStudio.unity";
+        // Vincent's easel (Cici's Tripo model, read only; see its docs/ASSETS.md row)
+        const string EaselModel = "Assets/VanGogh/Art/Props/VG_Easel.fbx";
+        const string EaselMaterial = "Assets/VanGogh/Art/Props/M_Easel.mat";
         const string XrOriginPrefab = "Assets/Samples/XR Interaction Toolkit/3.3.2/Starter Assets/Prefabs/XR Origin (XR Rig).prefab";
         const string XrOriginName = "XR Origin (XR Rig)";
         const string DialoguePrefab = "Assets/VanGogh/Prefabs/VG_DialogueUI.prefab";
@@ -166,6 +169,10 @@ namespace InnerFrame.AlmondStudio.EditorTools
                 if (boot.references[i] == null) Debug.LogWarning("[AS Setup] No comparison picture at " + path + " (view " + (i + 1) + ").");
             }
             boot.chairPrefab = ChairFromBedroom();
+            boot.easelModel = AssetDatabase.LoadAssetAtPath<GameObject>(EaselModel);
+            boot.easelMaterial = AssetDatabase.LoadAssetAtPath<Material>(EaselMaterial);
+            if (boot.easelModel == null || boot.easelMaterial == null)
+                Debug.LogWarning("[AS Setup] Vincent's easel (" + EaselModel + ", " + EaselMaterial + ") not found (git lfs pull? or moved by the VanGogh tool); the easel stays boxes.");
             boot.uiPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(DialoguePrefab);
             boot.uiSettings = AssetDatabase.LoadAssetAtPath<VG_DialogueSettings>(DialogueSettings);
             if (boot.branchesJson == null) Debug.LogError("[AS Setup] No branch paths at " + BranchesPath);
@@ -205,21 +212,54 @@ namespace InnerFrame.AlmondStudio.EditorTools
         /// </summary>
         static GameObject ChairFromBedroom()
         {
+            // a copy from an earlier Build is kept, unless it came out empty (no mesh), which is rebuilt
             var existing = AssetDatabase.LoadAssetAtPath<GameObject>(ChairPrefab);
-            if (existing != null) return existing;
+            if (existing != null)
+            {
+                if (HasMesh(existing)) return existing;
+                Debug.LogWarning("[AS Setup] " + ChairPrefab + " has no mesh; copying the Bedroom chair again.");
+                AssetDatabase.DeleteAsset(ChairPrefab);
+            }
             var bedroom = AssetDatabase.LoadAssetAtPath<GameObject>(BedroomPrefab);
-            var src = bedroom != null ? bedroom.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == "Chair_Front") : null;
-            if (src == null) { Debug.LogWarning("[AS Setup] No Chair_Front in " + BedroomPrefab + "; the chairs stay boxes."); return null; }
+            if (bedroom == null)
+            {
+                Debug.LogWarning("[AS Setup] Chairs: no prefab at " + BedroomPrefab + " (is the Bedroom folder in this checkout?); the chairs stay boxes.");
+                return null;
+            }
+            var all = bedroom.GetComponentsInChildren<Transform>(true);
+            // Chair_Front is an empty parent with the mesh on its child Chair_Front_00; take any chair with a mesh if the names change
+            var src = all.FirstOrDefault(t => t.name == "Chair_Front" && HasMesh(t.gameObject))
+                   ?? all.FirstOrDefault(t => t.name.StartsWith("Chair") && t.GetComponent<MeshFilter>() == null && HasMesh(t.gameObject))
+                   ?? all.FirstOrDefault(t => t.name.StartsWith("Chair") && HasMesh(t.gameObject));
+            if (src == null)
+            {
+                var names = string.Join(", ", all.Where(t => t.name.ToLowerInvariant().Contains("chair")).Select(t => t.name));
+                Debug.LogWarning("[AS Setup] Chairs: no chair with a mesh in " + BedroomPrefab + " (objects named like a chair: "
+                                 + (names.Length > 0 ? names : "none") + "); the chairs stay boxes.");
+                return null;
+            }
             EnsureFolder(Root + "/Prefabs");
-            var copy = Object.Instantiate(src.gameObject);
-            copy.name = "AS_Chair";
-            copy.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+            // AS_Chair (at the origin, unturned) > the Bedroom chair, moved so its feet's centre sits on the origin: the
+            // Bedroom's meshes may carry the room's offset in their vertices
+            var root = new GameObject("AS_Chair");
+            var copy = Object.Instantiate(src.gameObject, root.transform);
+            copy.name = src.name;
+            copy.transform.localPosition = Vector3.zero;
+            copy.transform.localRotation = src.rotation;      // its turn in the Bedroom, so chairYawOffset starts from that
             copy.transform.localScale = src.lossyScale;
-            var prefab = PrefabUtility.SaveAsPrefabAsset(copy, ChairPrefab);
-            Object.DestroyImmediate(copy);
-            Debug.Log("[AS Setup] Saved the Bedroom chair as " + ChairPrefab + ".");
+            var rs = copy.GetComponentsInChildren<Renderer>(true);
+            var b = rs[0].bounds;
+            foreach (var r in rs) b.Encapsulate(r.bounds);
+            copy.transform.localPosition = -new Vector3(b.center.x, b.min.y, b.center.z);
+            var prefab = PrefabUtility.SaveAsPrefabAsset(root, ChairPrefab, out bool ok);
+            Object.DestroyImmediate(root);
+            if (!ok || prefab == null) { Debug.LogWarning("[AS Setup] Chairs: could not save " + ChairPrefab + "; the chairs stay boxes."); return null; }
+            Debug.Log($"[AS Setup] Saved the Bedroom chair ({src.name}, {b.size.x:0.00} x {b.size.y:0.00} x {b.size.z:0.00} m) as {ChairPrefab}.");
             return prefab;
         }
+
+        static bool HasMesh(GameObject g) =>
+            g.GetComponentsInChildren<MeshFilter>(true).Any(f => f.sharedMesh != null) && g.GetComponentsInChildren<Renderer>(true).Length > 0;
 
         static Material Mat(string name, Shader shader)
         {

@@ -87,6 +87,14 @@ namespace InnerFrame.AlmondStudio
         [Header("Chairs reused from the Bedroom (Chair_Front of PaintedBedroom.prefab)")]
         [Tooltip("Turns the Bedroom chair so its seat faces the table.")] public float chairYawOffset = 0f;
 
+        [Header("Easel (Vincent's, VG_Easel.fbx), door, paint box")]
+        [Tooltip("Turns the easel; 0 = its ledge toward the room (north).")] public float easelYaw = 0f;
+        [Tooltip("Shows the easel's blank canvas (VG_Canvas). Off: Act 4 has no canvas to paint.")] public bool easelCanvas = false;
+        [Tooltip("The door's panels: columns x rows.")] public Vector2Int doorPanels = new Vector2Int(2, 3);
+        [Tooltip("Where the paint box stands on the table (x, z), and its turn.")] public Vector2 paintBoxSpot = new Vector2(-0.3f, 1.9f);
+        public float paintBoxYaw = 12f;
+        [Tooltip("Where the pot of brushes stands on the table (x, z).")] public Vector2 brushPotSpot = new Vector2(0.38f, 1.65f);
+
         [Header("Blossoms on the Tripo tree (AS_Blossoms)")]
         [Tooltip("A blossom's petal length, metres.")] public float blossomSize = 0.07f;
         [Tooltip("Share of the buds that never open, as in the painting.")] [Range(0f, 1f)] public float blossomStayBud = 0.2f;

@@ -26,6 +26,8 @@ namespace InnerFrame.AlmondStudio
         public VG_DialogueSettings uiSettings;
         [Tooltip("The comparison pictures, one per AS_Layout.compareViews entry (Textures/Reference), set by Build.")] public Texture[] references = new Texture[0];
         [Tooltip("The Bedroom's chair, saved for this scene by AS_Setup (Prefabs/AS_Chair.prefab). Boxes if missing.")] public GameObject chairPrefab;
+        [Tooltip("Vincent's easel (VanGogh/Art/Props/VG_Easel.fbx) and its painted material M_Easel. Boxes if missing.")] public GameObject easelModel;
+        public Material easelMaterial;
 
         public AS_Game Game { get; private set; }
         AS_InputXR xrInput;
@@ -120,12 +122,15 @@ namespace InnerFrame.AlmondStudio
                 Box(world, "Table leg", new Vector3(p.x, 0.36f, p.y), new Vector3(0.05f, 0.72f, 0.05f), wood);
             Chair(world, new Vector3(-1.05f, 0f, 1.8f), 90f);
             Chair(world, new Vector3(1.05f, 0f, 1.8f), -90f);
+            // on the table: his paint box, lid open, and a pot of brushes
+            PaintBox(world, new Vector3(layout.paintBoxSpot.x, TableTop, layout.paintBoxSpot.y), layout.paintBoxYaw);
+            BrushPot(world, new Vector3(layout.brushPotSpot.x, TableTop, layout.brushPotSpot.y));
 
             var compare = world.gameObject.AddComponent<AS_Compare>();
             compare.layout = layout;
             compare.references = references;
             // S03: the door a little east of the middle of the south wall, the easel west of it (both seen facing south)
-            Box(world, "Door", new Vector3(0.3f, 1.075f, 0.02f), new Vector3(1.0f, 2.15f, 0.05f), frame);   // grey-green, as in S03
+            Door(world, new Vector3(0.3f, 0f, 0f), 1.0f, 2.15f);   // grey-green, as in S03
             Easel(world, new Vector3(-1.15f, 0f, 0.35f));
             Box(world, "Chest", new Vector3(W / 2f - 0.3f, 0.3f, D - 0.4f), new Vector3(0.5f, 0.6f, 0.6f), wood);
             Box(world, "Boxes", new Vector3(W / 2f - 0.3f, 0.72f, D - 0.4f), new Vector3(0.4f, 0.24f, 0.45f), frame);
@@ -411,8 +416,140 @@ namespace InnerFrame.AlmondStudio
                 Box(c, "Leg", new Vector3(p.x, 0.21f, p.y), new Vector3(0.03f, 0.42f, 0.03f), wood, collider: false);
         }
 
+        const float TableTop = 0.765f;   // the table top's upper face (0.74 + half its 0.05)
+
+        /// <summary>The door in the south wall: a casing on the wall, the leaf, raised mouldings round
+        /// layout.doorPanels panels, and a knob; merged into one mesh with one collider.</summary>
+        void Door(Transform parent, Vector3 at, float dw, float dh)
+        {
+            var d = new GameObject("Door").transform;
+            d.SetParent(parent, false);
+            d.localPosition = at;                               // x across, y up, z into the room; the wall's face is z = 0
+            const float casing = 0.07f, leafDepth = 0.03f, bead = 0.025f, proud = 0.012f;
+            const float stile = 0.12f, topRail = 0.12f, bottomRail = 0.22f, midRail = 0.1f;
+            Box(d, "Leaf", new Vector3(0f, dh / 2f, leafDepth / 2f), new Vector3(dw, dh, leafDepth), frame, collider: false);
+            Box(d, "Casing L", new Vector3(-dw / 2f - casing / 2f, (dh + casing) / 2f, 0.02f), new Vector3(casing, dh + casing, 0.04f), frame, collider: false);
+            Box(d, "Casing R", new Vector3(dw / 2f + casing / 2f, (dh + casing) / 2f, 0.02f), new Vector3(casing, dh + casing, 0.04f), frame, collider: false);
+            Box(d, "Casing top", new Vector3(0f, dh + casing / 2f, 0.02f), new Vector3(dw + 2f * casing, casing, 0.04f), frame, collider: false);
+            int cols = Mathf.Max(1, layout.doorPanels.x), rows = Mathf.Max(1, layout.doorPanels.y);
+            float pw = (dw - 2f * stile - (cols - 1) * midRail) / cols, ph = (dh - topRail - bottomRail - (rows - 1) * midRail) / rows;
+            float z = leafDepth + proud / 2f;
+            for (int c = 0; c < cols; c++)
+                for (int r = 0; r < rows; r++)
+                {
+                    float x = -dw / 2f + stile + pw / 2f + c * (pw + midRail), y = bottomRail + ph / 2f + r * (ph + midRail);
+                    Box(d, "Bead", new Vector3(x, y + ph / 2f - bead / 2f, z), new Vector3(pw, bead, proud), frame, collider: false);
+                    Box(d, "Bead", new Vector3(x, y - ph / 2f + bead / 2f, z), new Vector3(pw, bead, proud), frame, collider: false);
+                    Box(d, "Bead", new Vector3(x - pw / 2f + bead / 2f, y, z), new Vector3(bead, ph - 2f * bead, proud), frame, collider: false);
+                    Box(d, "Bead", new Vector3(x + pw / 2f - bead / 2f, y, z), new Vector3(bead, ph - 2f * bead, proud), frame, collider: false);
+                }
+            Box(d, "Knob", new Vector3(dw / 2f - 0.08f, 1.0f, leafDepth + 0.025f), new Vector3(0.035f, 0.035f, 0.05f), wood, collider: false);
+            Merge(d);
+            var col = d.gameObject.AddComponent<BoxCollider>();
+            col.center = new Vector3(0f, dh / 2f, leafDepth / 2f);
+            col.size = new Vector3(dw, dh, leafDepth);
+        }
+
+        /// <summary>His paint box on the table: a shallow wooden tray with its lid open past upright and a row of tin tubes.</summary>
+        void PaintBox(Transform parent, Vector3 at, float yaw)
+        {
+            var g = new GameObject("Paint box").transform;
+            g.SetParent(parent, false);
+            g.SetLocalPositionAndRotation(at, Quaternion.Euler(0f, yaw, 0f));
+            const float w = 0.36f, dp = 0.26f, h = 0.055f, t = 0.01f;
+            Box(g, "Bottom", new Vector3(0f, t / 2f, 0f), new Vector3(w, t, dp), wood, collider: false);
+            Box(g, "Side F", new Vector3(0f, h / 2f, dp / 2f - t / 2f), new Vector3(w, h, t), wood, collider: false);
+            Box(g, "Side B", new Vector3(0f, h / 2f, -dp / 2f + t / 2f), new Vector3(w, h, t), wood, collider: false);
+            Box(g, "Side L", new Vector3(-w / 2f + t / 2f, h / 2f, 0f), new Vector3(t, h, dp - 2f * t), wood, collider: false);
+            Box(g, "Side R", new Vector3(w / 2f - t / 2f, h / 2f, 0f), new Vector3(t, h, dp - 2f * t), wood, collider: false);
+            // the lid, hinged on the back's top edge and swung up and a little back
+            var hinge = new GameObject("Lid hinge").transform;
+            hinge.SetParent(g, false);
+            hinge.SetLocalPositionAndRotation(new Vector3(0f, h, -dp / 2f), Quaternion.Euler(-105f, 0f, 0f));
+            Box(hinge, "Lid", new Vector3(0f, t / 2f, dp / 2f), new Vector3(w, t, dp), wood, collider: false);
+            // the tubes, lying across the tray, each with a dark cap
+            var tin = new Material(brushHead) { name = "AS_Tin (runtime)" };
+            tin.SetColor("_BaseColor", new Color(0.74f, 0.74f, 0.7f));
+            for (int i = 0; i < 6; i++)
+            {
+                float x = -0.14f + i * 0.055f, turn = (i % 3 - 1) * 6f;
+                var tube = new GameObject("Tube").transform;
+                tube.SetParent(g, false);
+                tube.SetLocalPositionAndRotation(new Vector3(x, t + 0.011f, 0.01f), Quaternion.Euler(90f, 0f, turn));
+                Prim(tube, PrimitiveType.Cylinder, "Body", Vector3.zero, new Vector3(0.022f, 0.045f, 0.022f), tin);
+                Prim(tube, PrimitiveType.Cylinder, "Cap", new Vector3(0f, 0.052f, 0f), new Vector3(0.012f, 0.008f, 0.012f), frame);
+            }
+            Merge(g);
+        }
+
+        /// <summary>An earthenware pot on the table with five brushes standing in it, leaning out.</summary>
+        void BrushPot(Transform parent, Vector3 at)
+        {
+            var p = new GameObject("Brush pot").transform;
+            p.SetParent(parent, false);
+            p.localPosition = at;
+            Prim(p, PrimitiveType.Cylinder, "Pot", new Vector3(0f, 0.06f, 0f), new Vector3(0.09f, 0.06f, 0.09f), ceiling);
+            var tin = new Material(brushHead) { name = "AS_Ferrule (runtime)" };
+            tin.SetColor("_BaseColor", new Color(0.62f, 0.6f, 0.55f));
+            for (int i = 0; i < 5; i++)
+            {
+                var b = new GameObject("Brush").transform;
+                b.SetParent(p, false);
+                float lean = 8f + (i % 3) * 3f;
+                b.SetLocalPositionAndRotation(new Vector3(0f, 0.02f, 0f), Quaternion.Euler(0f, 15f + i * 72f, 0f) * Quaternion.Euler(lean, 0f, 0f));
+                float len = 0.24f + (i % 2) * 0.04f;
+                Prim(b, PrimitiveType.Cylinder, "Handle", new Vector3(0f, len / 2f, 0f), new Vector3(0.008f, len / 2f, 0.008f), wood);
+                Prim(b, PrimitiveType.Cylinder, "Ferrule", new Vector3(0f, len + 0.012f, 0f), new Vector3(0.009f, 0.012f, 0.009f), tin);
+                Prim(b, PrimitiveType.Cube, "Bristles", new Vector3(0f, len + 0.04f, 0f), new Vector3(0.007f + i * 0.002f, 0.03f, 0.004f), brushHead);
+            }
+            Merge(p);
+        }
+
+        /// <summary>Merges every mesh under `group` into one mesh on `group` (one submesh per material) and removes the
+        /// children with their colliders: one renderer instead of dozens, for the headset's draw calls.</summary>
+        static void Merge(Transform group)
+        {
+            var toLocal = group.worldToLocalMatrix;
+            var byMaterial = new Dictionary<Material, List<CombineInstance>>();
+            foreach (var f in group.GetComponentsInChildren<MeshFilter>(true))
+            {
+                if (f.transform == group || f.sharedMesh == null) continue;
+                var m = f.GetComponent<MeshRenderer>().sharedMaterial;
+                if (!byMaterial.TryGetValue(m, out var list)) byMaterial[m] = list = new List<CombineInstance>();
+                list.Add(new CombineInstance { mesh = f.sharedMesh, transform = toLocal * f.transform.localToWorldMatrix });
+            }
+            var parts = new List<CombineInstance>();
+            var materials = new List<Material>();
+            foreach (var kv in byMaterial)
+            {
+                var sub = new Mesh();
+                sub.CombineMeshes(kv.Value.ToArray(), true, true);
+                parts.Add(new CombineInstance { mesh = sub, transform = Matrix4x4.identity });
+                materials.Add(kv.Key);
+            }
+            var mesh = new Mesh { name = group.name + " (merged)" };
+            mesh.CombineMeshes(parts.ToArray(), false, true);
+            foreach (var part in parts) Destroy(part.mesh);
+            mesh.RecalculateBounds();
+            for (int i = group.childCount - 1; i >= 0; i--) DestroyImmediate(group.GetChild(i).gameObject);
+            group.gameObject.AddComponent<MeshFilter>().sharedMesh = mesh;
+            group.gameObject.AddComponent<MeshRenderer>().sharedMaterials = materials.ToArray();
+        }
+
         void Easel(Transform parent, Vector3 at)
         {
+            if (easelModel != null)
+            {
+                // Vincent's easel (Cici's Tripo model): origin between its feet, ledge toward +z, i.e. into the room here
+                var model = Instantiate(easelModel, parent);
+                model.name = "Easel (Vincent's)";
+                model.transform.SetPositionAndRotation(at, Quaternion.Euler(0f, layout.easelYaw, 0f));
+                var r = model.GetComponent<Renderer>();
+                if (r != null && easelMaterial != null) r.sharedMaterial = easelMaterial;
+                var blank = model.transform.Find("VG_Canvas");
+                if (blank != null) blank.gameObject.SetActive(layout.easelCanvas);
+                return;
+            }
             var e = new GameObject("Easel").transform;
             e.SetParent(parent, false);
             e.SetPositionAndRotation(at, Quaternion.identity);   // its ledge toward the room, as S03 shows it

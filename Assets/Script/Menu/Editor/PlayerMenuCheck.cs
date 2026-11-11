@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using System.IO;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -7,10 +6,10 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Edit-mode checks for the player menu (#160, #161): Back goes to the Gallery from every other scene and is hidden in the
-/// Gallery; the panel names where you are, uses the dialogue box's font, and fits inside the controllers' reach; the
-/// wrist tag builds. With -menuShots &lt;folder&gt; it also renders the panel (in a painting and in the Gallery) and the
-/// wrist tag to PNGs, for eyes on the layout before a headset build.
+/// Edit-mode checks for the player menu (#160): Back goes to the Gallery from every other scene and is hidden in the
+/// Gallery; the panel opens inside the controllers' reach; the wrist tag builds with the dialogue box's font and sprites.
+/// (The panel's own look is the plain one until the menu style, #161, is redone.) With -menuShots &lt;folder&gt; it also
+/// renders the panel and the wrist tag to PNGs.
 /// Menu: InnerFrame > Menu > Run Checks. Batch: -executeMethod PlayerMenuCheck.RunBatch [-menuShots &lt;folder&gt;] -quit
 /// </summary>
 public static class PlayerMenuCheck
@@ -59,33 +58,21 @@ public static class PlayerMenuCheck
         camera.fieldOfView = 60f;
 
         var panel = PlayerMenuPanel.Create(camera);
-        panel.ShowInFrontOf(camera.transform, "PaintedBedroom", PaintingNames.Gallery);
-        Check(panel.ShownBackLabel == PlayerMenuPanel.BackLabel, $"in the Bedroom the button reads '{panel.ShownBackLabel}'");
-        Check(panel.ShownPlace == "The Bedroom, 1888", $"in the Bedroom 'You are in' reads '{panel.ShownPlace}'");
-        Check(MenuLook.Font != null && MenuLook.Font.name.Contains("Baskerville"), $"the menu uses the dialogue font ({(MenuLook.Font != null ? MenuLook.Font.name : "none")})");
-        Check(MenuLook.PlateSprite != null && MenuLook.KeySprite != null, "the plate and button-circle sprites load from VG_Caption");
-        var size = panel.Size;
-        Check(size.x > 0.3f && size.x < 0.5f && size.y > 0.15f && size.y < 0.35f, $"the panel is {size.x:F2} x {size.y:F2} m");
+        panel.ShowInFrontOf(camera.transform, PaintingNames.Gallery);
+        Check(panel.ShownBackLabel == PlayerMenuPanel.BackLabel, $"in a painting the button reads '{panel.ShownBackLabel}'");
         float distance = Vector3.Distance(camera.transform.position, panel.transform.position);
         Check(distance < 2f, $"it opens {distance:F2} m from the eyes, inside the 2 m ray");
         Check(Count<Button>(panel) == 2, $"two buttons (X and Back): {Count<Button>(panel)}");
-        Check(panel.GetComponentInChildren<BoxCollider>() != null, "the top bar has a collider to grab");
-        Check(Overflowing(panel).Count == 0, $"no label runs past the panel's edge {string.Join(", ", Overflowing(panel))}");
-        var widths = panel.IconLineWidths;
-        Check(widths.All(w => w > 0.05f && w <= PlayerMenuPanel.InnerWidth), $"the lines with button icons fit inside the panel ({string.Join(", ", widths.Select(w => w.ToString("F3")))} of {PlayerMenuPanel.InnerWidth:F2} m)");
-        Check(panel.GetComponentsInChildren<Transform>(true).Count(t => t.name == "Key Grip") == 2 && panel.GetComponentsInChildren<Transform>(true).Count(t => t.name == "Key Menu") == 1,
-            "the panel draws the grip button twice and the Menu button once, as icons");
-        Check(!panel.GetComponentsInChildren<Text>(true).Any(t => t.text.Contains("{") || t.text.Contains("Menu button") || t.text.Contains("grip ")),
-            "no line spells out a button's name or shows a raw token");
+        Check(panel.GetComponentInChildren<BoxCollider>() != null, "the title bar has a collider to grab");
         if (shots != null) Shot(camera, Path.Combine(shots, "menu-painting.png"));
 
-        panel.ShowInFrontOf(camera.transform, PaintingNames.Gallery, null);
+        panel.ShowInFrontOf(camera.transform, null);
         Check(panel.ShownBackLabel == null, "in the Gallery the Back button is hidden");
-        Check(panel.ShownPlace == "The Gallery", $"in the Gallery 'You are in' reads '{panel.ShownPlace}'");
-        if (shots != null) Shot(camera, Path.Combine(shots, "menu-gallery.png"));
         panel.Hide();
 
         // ---- the wrist tag ----
+        Check(MenuLook.Font != null && MenuLook.Font.name.Contains("Baskerville"), $"the wrist tag and hints use the dialogue font ({(MenuLook.Font != null ? MenuLook.Font.name : "none")})");
+        Check(MenuLook.PlateSprite != null && MenuLook.KeySprite != null, "the plate and button-circle sprites load from VG_Caption");
         var tag = new GameObject("Menu Wrist Tag").AddComponent<MenuWristTag>().Preview(camera);
         tag.transform.position = camera.transform.position + Vector3.forward * 0.25f;
         tag.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
@@ -109,16 +96,6 @@ public static class PlayerMenuCheck
     }
 
     static int Count<T>(Component root) where T : Component => root.GetComponentsInChildren<T>(true).Length;
-
-    // Active one-line labels wider than the panel (a wrapped label is allowed to fill its box).
-    static List<string> Overflowing(PlayerMenuPanel panel)
-    {
-        var wide = new List<string>();
-        float limit = VG_UI.U(panel.Size.x);
-        foreach (var t in panel.GetComponentsInChildren<Text>(false))
-            if (t.horizontalOverflow == HorizontalWrapMode.Overflow && t.preferredWidth > limit) wide.Add(t.name);
-        return wide;
-    }
 
     static void Shot(Camera camera, string path)
     {

@@ -56,10 +56,30 @@ namespace InnerFrame.AlmondStudio.EditorTools
                 // version 3 (2026-11-11): the arched window with a splayed reveal, after Window in the Studio
                 var d3 = ScriptableObject.CreateInstance<AS_Layout>();
                 layout.windowTop = d3.windowTop;
-                layout.revealSplay = d3.revealSplay;
                 layout.glassDepth = d3.glassDepth;
                 Object.DestroyImmediate(d3);
                 layout.layoutVersion = 3;
+                EditorUtility.SetDirty(layout);
+            }
+            if (layout.layoutVersion < 4)
+            {
+                // version 4 (2026-11-11): window, room, arrival and the S02 / S03 views solved from the concept images
+                var d4 = ScriptableObject.CreateInstance<AS_Layout>();
+                layout.roomWidth = d4.roomWidth;
+                layout.windowWidth = d4.windowWidth;
+                layout.windowBottom = d4.windowBottom;
+                layout.windowTop = d4.windowTop;
+                layout.revealSplayLeft = d4.revealSplayLeft;
+                layout.revealSplayRight = d4.revealSplayRight;
+                layout.playerStart = d4.playerStart;
+                layout.playerStartYaw = d4.playerStartYaw;
+                foreach (var v in d4.compareViews)
+                {
+                    int i = System.Array.FindIndex(layout.compareViews, x => x.file == v.file);
+                    if (i >= 0) layout.compareViews[i] = v; else layout.compareViews = layout.compareViews.Append(v).ToArray();
+                }
+                Object.DestroyImmediate(d4);
+                layout.layoutVersion = 4;
                 EditorUtility.SetDirty(layout);
             }
 

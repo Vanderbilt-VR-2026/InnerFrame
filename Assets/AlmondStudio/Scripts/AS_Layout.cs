@@ -15,6 +15,7 @@ namespace InnerFrame.AlmondStudio
         public Vector3 position;
         [Tooltip("Degrees round from north (+z) toward east (+x).")] public float yaw;
         [Tooltip("Degrees; negative looks up.")] public float pitch;
+        [Tooltip("Degrees round the line of sight; positive tips the picture anticlockwise.")] public float roll;
         [Tooltip("Vertical field of view, degrees.")] public float fov = 60f;
     }
 
@@ -25,20 +26,28 @@ namespace InnerFrame.AlmondStudio
         public int layoutVersion;
 
         [Header("Room (the floor plan S10: window north, door and easel south)")]
-        public float roomWidth = 3.5f;
+        [Tooltip("4.6 m: the concept S03 shows a wide, low room (its back wall is about twice as wide as high, more than a real door allows); this is between the two.")]
+        public float roomWidth = 4.6f;
         public float roomDepth = 4f;
         public float roomHeight = 3.2f;
         public float wallThickness = 0.35f;
 
         [Header("Window, centred on the north wall")]
-        public float windowWidth = 1.2f;
-        public float windowBottom = 0.95f;
-        [Tooltip("The arch's crown; the arch is a half circle, so the casements end at Springing = windowTop - windowWidth / 2.")] public float windowTop = 3.0f;
-        [Tooltip("How much wider the opening is at the room face than at the glass, each side, metres.")] public float revealSplay = 0.18f;
+        [Tooltip("At the glass. 1.0 x 0.9..3.03 is solved from the concept S02 (the window is half again as tall as wide below the arch).")]
+        public float windowWidth = 1.0f;
+        public float windowBottom = 0.9f;
+        [Tooltip("The arch's crown; the arch is a half circle, so the casements end at Springing = windowTop - windowWidth / 2.")] public float windowTop = 3.03f;
+        [Tooltip("How much wider the opening is at the room face than at the glass, on the left (the pale blue jamb; S02 shows almost none of it).")] public float revealSplayLeft = 0.04f;
+        [Tooltip("The same on the right (the green jamb, wide in S02 and in the painting).")] public float revealSplayRight = 0.23f;
         [Tooltip("Where the glass sits in the wall's thickness (0 = room face, 1 = outer face).")] [Range(0.1f, 0.95f)] public float glassDepth = 0.6f;
         [Tooltip("How far the sill board reaches into the room.")] public float sillOverhang = 0.08f;
         public float casementOpenDegrees = 105f;
         public float casementOpenSeconds = 1.2f;
+
+        [Header("Ceiling beams, across the room (S03)")]
+        public int beamCount = 3;
+        public float beamDepth = 0.2f;
+        public float beamWidth = 0.22f;
 
         [Header("The tree outside, fitted to Almond Blossom from the paint viewpoint")]
         [Tooltip("Off while the Tripo tree is being placed by hand in the scene: the generated tree and its guides are not built.")]
@@ -69,8 +78,9 @@ namespace InnerFrame.AlmondStudio
         public AS_View[] compareViews =
         {
             new AS_View { name = "Window in the Studio (his view)", file = "AS_WindowInTheStudio.jpg", position = new Vector3(-1.0f, 1.35f, 2.4f), yaw = 22f, pitch = -10f, fov = 62f },
-            new AS_View { name = "S02 arrival (concept)", file = "AS_Ref_S02.jpg", position = new Vector3(-0.8f, 1.45f, 2.3f), yaw = 15f, pitch = -8f, fov = 60f },
-            new AS_View { name = "S03 turned round (concept)", file = "AS_Ref_S03.jpg", position = new Vector3(0f, 1.6f, 3.5f), yaw = 180f, pitch = 3f, fov = 55f },
+            // S02 and S03 are solved from the concept images (glass corners, transom, sill; the back wall's corners), not nudged by eye
+            new AS_View { name = "S02 arrival (concept)", file = "AS_Ref_S02.jpg", position = new Vector3(-0.31f, 1.43f, 2.52f), yaw = 15.7f, pitch = -4.9f, roll = -3.3f, fov = 80f },
+            new AS_View { name = "S03 turned round (concept)", file = "AS_Ref_S03.jpg", position = new Vector3(0f, 1.15f, 3.6f), yaw = 180.3f, pitch = -2.4f, fov = 66f },
         };
         [Range(0f, 1f)] public float compareOpacity = 0.5f;
 
@@ -87,8 +97,8 @@ namespace InnerFrame.AlmondStudio
         [Tooltip("How long the wave from the trunk out takes, seconds.")] public float blossomWaveSeconds = 2.5f;
 
         [Header("People")]
-        [Tooltip("Where the player arrives (step 2 will move this to his viewpoint for Window in the Studio).")] public Vector3 playerStart = new Vector3(0.3f, 0f, 1.1f);
-        public float playerStartYaw = -5f;
+        [Tooltip("Where the player arrives: the S02 viewpoint, a little left of the window, looking at it.")] public Vector3 playerStart = new Vector3(-0.31f, 0f, 2.52f);
+        public float playerStartYaw = 15.7f;
         public Vector3 vincentSpot = new Vector3(0.95f, 0f, 3.2f);
         public float vincentYaw = 200f;
 

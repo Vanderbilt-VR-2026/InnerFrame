@@ -86,16 +86,21 @@ namespace InnerFrame.AlmondStudio
             // the north wall round an arched opening, after Window in the Studio: the opening widens into the room (the
             // splayed reveal, pale blue on the left, green on the right), round-arched above the springing line; the
             // casements and the fanlight sit deeper, at the glass plane
-            float sp = layout.revealSplay, zg = D + T * layout.glassDepth;
-            float wo = ww + 2f * sp;                             // the opening's width at the room face
+            float sL = layout.revealSplayLeft, sR = layout.revealSplayRight, zg = D + T * layout.glassDepth;
+            // at the room face the opening runs from -ww/2 - sL to ww/2 + sR: centre cx, half-width ro (S02 shows the
+            // green right jamb wide and the blue left one barely, so the splay is uneven)
+            float cx = (sR - sL) / 2f, ro = ww / 2f + (sL + sR) / 2f;
             float spring = layout.Springing;                     // where the arch starts
-            float side = (W + 2 * T - wo) / 2f, zN = D + T / 2f;
-            Box(world, "Wall N left", new Vector3(-(wo / 2f + side / 2f), H / 2f, zN), new Vector3(side, H, T), wall);
-            Box(world, "Wall N right", new Vector3(wo / 2f + side / 2f, H / 2f, zN), new Vector3(side, H, T), wall);
-            Box(world, "Wall N below", new Vector3(0f, wb / 2f, zN), new Vector3(wo, wb, T), wall);
-            ArchWall(world, "Wall N arch", spring, wo / 2f, H, D, D + T, wall);
-            Reveal(world, ww, wo, wb, spring, D, zg, revealLeft, revealRight);
-            Box(world, "Sill", new Vector3(0f, wb + 0.02f, (D - layout.sillOverhang + zg) / 2f), new Vector3(wo + 0.06f, 0.04f, zg - D + layout.sillOverhang), wood);
+            float xL = -(W / 2f + T), xR = W / 2f + T, zN = D + T / 2f;
+            Box(world, "Wall N left", new Vector3((xL + cx - ro) / 2f, H / 2f, zN), new Vector3(cx - ro - xL, H, T), wall);
+            Box(world, "Wall N right", new Vector3((cx + ro + xR) / 2f, H / 2f, zN), new Vector3(xR - cx - ro, H, T), wall);
+            Box(world, "Wall N below", new Vector3(cx, wb / 2f, zN), new Vector3(2f * ro, wb, T), wall);
+            ArchWall(world, "Wall N arch", spring, cx, ro, H, D, D + T, wall);
+            Reveal(world, ww, cx, ro, wb, spring, D, zg, revealLeft, revealRight);
+            Box(world, "Sill", new Vector3(cx, wb + 0.02f, (D - layout.sillOverhang + zg) / 2f), new Vector3(2f * ro + 0.06f, 0.04f, zg - D + layout.sillOverhang), wood);
+            // the ceiling's beams, across the room (S03)
+            for (int i = 0; i < layout.beamCount; i++)
+                Box(world, "Beam", new Vector3(0f, H - layout.beamDepth / 2f, D * (i + 1f) / (layout.beamCount + 1f)), new Vector3(W, layout.beamDepth, layout.beamWidth), frame, collider: false);
 
             // the sill's five objects (stand-ins), in his order: tall jar, small bottle, tall bottle, glass, cup
             float y0 = wb + 0.04f, zs = (D + zg) / 2f;
@@ -108,23 +113,25 @@ namespace InnerFrame.AlmondStudio
                 DestroyImmediate(c.GetComponent<Collider>());
             }
 
-            // furniture from the floor plan: table and two rush chairs in the middle, door and easel south, chest east
-            // the table along the west side, its chairs at either end, so the way from the arrival spot to the window is clear
-            Box(world, "Table top", new Vector3(-0.8f, 0.74f, 1.9f), new Vector3(0.75f, 0.05f, 1.1f), wood);
-            foreach (var p in new[] { new Vector2(-1.1f, 1.45f), new Vector2(-0.5f, 1.45f), new Vector2(-1.1f, 2.35f), new Vector2(-0.5f, 2.35f) })
+            // furniture after the concept S03 (looking south): the table in the middle, a rush chair at each end facing it;
+            // its near edge stays 0.3 m short of the arrival spot (S02's viewpoint, z 2.52)
+            Box(world, "Table top", new Vector3(0f, 0.74f, 1.8f), new Vector3(1.3f, 0.05f, 0.8f), wood);
+            foreach (var p in new[] { new Vector2(-0.6f, 1.45f), new Vector2(0.6f, 1.45f), new Vector2(-0.6f, 2.15f), new Vector2(0.6f, 2.15f) })
                 Box(world, "Table leg", new Vector3(p.x, 0.36f, p.y), new Vector3(0.05f, 0.72f, 0.05f), wood);
-            Chair(world, new Vector3(-0.8f, 0f, 1.05f), 0f);
-            Chair(world, new Vector3(-0.8f, 0f, 2.75f), 180f);
+            Chair(world, new Vector3(-1.05f, 0f, 1.8f), 90f);
+            Chair(world, new Vector3(1.05f, 0f, 1.8f), -90f);
 
             var compare = world.gameObject.AddComponent<AS_Compare>();
             compare.layout = layout;
             compare.references = references;
-            Box(world, "Door", new Vector3(-0.6f, 1.05f, 0.02f), new Vector3(0.9f, 2.1f, 0.05f), wood);
-            Easel(world, new Vector3(0.9f, 0f, 0.35f));
+            // S03: the door a little east of the middle of the south wall, the easel west of it (both seen facing south)
+            Box(world, "Door", new Vector3(0.3f, 1.075f, 0.02f), new Vector3(1.0f, 2.15f, 0.05f), wood);
+            Easel(world, new Vector3(-1.15f, 0f, 0.35f));
             Box(world, "Chest", new Vector3(W / 2f - 0.3f, 0.3f, D - 0.4f), new Vector3(0.5f, 0.6f, 0.6f), wood);
             Box(world, "Boxes", new Vector3(W / 2f - 0.3f, 0.72f, D - 0.4f), new Vector3(0.4f, 0.24f, 0.45f), frame);
             // his works: two each side of the window on the north wall, as in the painting; two on the west wall
-            foreach (var (x, y, w2, h2) in new[] { (-1.35f, 2.25f, 0.55f, 0.45f), (-1.4f, 1.35f, 0.38f, 0.5f), (1.2f, 2.3f, 0.32f, 0.4f), (1.3f, 1.6f, 0.55f, 0.42f) })
+            // placed where S02 shows them, seen from its viewpoint (two left of the window, two right)
+            foreach (var (x, y, w2, h2) in new[] { (-1.0f, 1.9f, 0.7f, 0.67f), (-0.95f, 1.12f, 0.5f, 0.56f), (1.52f, 2.08f, 0.46f, 0.64f), (1.27f, 1.19f, 0.7f, 0.76f) })
                 Box(world, "Canvas N", new Vector3(x, y, D - 0.02f), new Vector3(w2, h2, 0.03f), canvas);
             foreach (var (z, w2, h2) in new[] { (1.5f, 0.6f, 0.5f), (2.7f, 0.45f, 0.6f) })
                 Box(world, "Canvas W", new Vector3(-W / 2f + 0.02f, 1.7f, z), new Vector3(0.03f, h2, w2), canvas);
@@ -242,8 +249,8 @@ namespace InnerFrame.AlmondStudio
             return hinge;
         }
 
-        /// <summary>The wall above the springing line, across the opening's width, with a half-round hole of radius `r`.</summary>
-        static void ArchWall(Transform parent, string name, float spring, float r, float top, float zIn, float zOut, Material m)
+        /// <summary>The wall above the springing line, across the opening's width, with a half-round hole of radius `r` centred at x = `cx`.</summary>
+        static void ArchWall(Transform parent, string name, float spring, float cx, float r, float top, float zIn, float zOut, Material m)
         {
             const int n = 24;
             var v = new List<Vector3>(); var tri = new List<int>();
@@ -253,13 +260,13 @@ namespace InnerFrame.AlmondStudio
                 for (int i = 0; i <= n; i++)
                 {
                     float a = Mathf.PI * i / n;                                  // from the right (0) over to the left (pi)
-                    Vector3 onArc = new Vector3(Mathf.Cos(a) * r, spring + Mathf.Sin(a) * r, z);
+                    Vector3 onArc = new Vector3(cx + Mathf.Cos(a) * r, spring + Mathf.Sin(a) * r, z);
                     Vector3 dir = new Vector3(Mathf.Cos(a), Mathf.Sin(a), 0f);
                     // the same direction out to the rectangle round the arch (x = +-r, y = top)
                     float tx = Mathf.Abs(dir.x) > 1e-4f ? r / Mathf.Abs(dir.x) : float.MaxValue;
                     float ty = dir.y > 1e-4f ? (top - spring) / dir.y : float.MaxValue;
                     float t = Mathf.Min(tx, ty);
-                    Vector3 onBox = new Vector3(dir.x * t, spring + dir.y * t, z);
+                    Vector3 onBox = new Vector3(cx + dir.x * t, spring + dir.y * t, z);
                     v.Add(onArc); v.Add(onBox);
                 }
                 for (int i = 0; i < n; i++)
@@ -280,9 +287,10 @@ namespace InnerFrame.AlmondStudio
             go.AddComponent<MeshCollider>().sharedMesh = mesh;
         }
 
-        /// <summary>The splayed reveal: from the glass (width ww, at zGlass) out to the room face (width wo, at zRoom); the
-        /// straight sides up to the springing line and the arch's soffit above, left half pale blue, right half green.</summary>
-        static void Reveal(Transform parent, float ww, float wo, float bottom, float spring, float zRoom, float zGlass, Material left, Material right)
+        /// <summary>The splayed reveal: from the glass (width ww, centred on x = 0, at zGlass) out to the room face (half-width
+        /// ro, centred on cx, at zRoom); the straight sides up to the springing line and the arch's soffit above, left half
+        /// pale blue, right half green.</summary>
+        static void Reveal(Transform parent, float ww, float cx, float ro, float bottom, float spring, float zRoom, float zGlass, Material left, Material right)
         {
             const int n = 12;
             for (int side = 0; side < 2; side++)
@@ -290,8 +298,8 @@ namespace InnerFrame.AlmondStudio
                 float sx = side == 0 ? -1f : 1f;
                 var v = new List<Vector3>(); var tri = new List<int>();
                 // the straight jamb
-                v.Add(new Vector3(sx * ww / 2f, bottom, zGlass)); v.Add(new Vector3(sx * wo / 2f, bottom, zRoom));
-                v.Add(new Vector3(sx * ww / 2f, spring, zGlass)); v.Add(new Vector3(sx * wo / 2f, spring, zRoom));
+                v.Add(new Vector3(sx * ww / 2f, bottom, zGlass)); v.Add(new Vector3(cx + sx * ro, bottom, zRoom));
+                v.Add(new Vector3(sx * ww / 2f, spring, zGlass)); v.Add(new Vector3(cx + sx * ro, spring, zRoom));
                 tri.AddRange(new[] { 0, 1, 2, 2, 1, 3 });
                 // the soffit's half on this side, from the springing line to the crown
                 int s0 = v.Count;
@@ -300,7 +308,7 @@ namespace InnerFrame.AlmondStudio
                     float a = Mathf.PI / 2f * i / n;                             // 0 at the springing line, pi/2 at the crown
                     float c = Mathf.Cos(a), s = Mathf.Sin(a);
                     v.Add(new Vector3(sx * c * ww / 2f, spring + s * ww / 2f, zGlass));
-                    v.Add(new Vector3(sx * c * wo / 2f, spring + s * wo / 2f, zRoom));
+                    v.Add(new Vector3(cx + sx * c * ro, spring + s * ro, zRoom));
                 }
                 for (int i = 0; i < n; i++)
                 {
@@ -402,7 +410,7 @@ namespace InnerFrame.AlmondStudio
         {
             var e = new GameObject("Easel").transform;
             e.SetParent(parent, false);
-            e.SetPositionAndRotation(at, Quaternion.Euler(0f, 180f, 0f));
+            e.SetPositionAndRotation(at, Quaternion.identity);   // its ledge toward the room, as S03 shows it
             foreach (var x in new[] { -0.25f, 0.25f })
             {
                 var leg = Box(e, "Leg", new Vector3(x, 0.85f, 0f), new Vector3(0.04f, 1.75f, 0.04f), wood);

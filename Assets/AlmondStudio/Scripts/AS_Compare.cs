@@ -80,7 +80,8 @@ namespace InnerFrame.AlmondStudio
 
         /// <summary>
         /// Moves the view's camera from the keyboard, straight into AS_Layout (so it stays): arrows turn it, Shift +
-        /// arrows move it across and forward, Page Up / Page Down (or U / J) raise and lower it, - and = narrow and widen the view.
+        /// arrows move it across and forward, Page Up / Page Down (or U / J) raise and lower it, - and = narrow and widen the view,
+        /// comma and full stop tip it (roll).
         /// Hold Alt for fine steps. Prints the numbers when a key is let go.
         /// </summary>
         void Nudge(Keyboard kb)
@@ -99,6 +100,8 @@ namespace InnerFrame.AlmondStudio
             if (kb.pageDownKey.isPressed || kb.jKey.isPressed) { any = true; v.position -= Vector3.up * move; }
             if (kb.minusKey.isPressed) { any = true; v.fov = Mathf.Clamp(v.fov - turn, 10f, 120f); }
             if (kb.equalsKey.isPressed) { any = true; v.fov = Mathf.Clamp(v.fov + turn, 10f, 120f); }
+            if (kb.commaKey.isPressed) { any = true; v.roll += turn; }
+            if (kb.periodKey.isPressed) { any = true; v.roll -= turn; }
             if (any) nudging = true;
             else if (nudging)
             {
@@ -106,7 +109,7 @@ namespace InnerFrame.AlmondStudio
 #if UNITY_EDITOR
                 UnityEditor.EditorUtility.SetDirty(layout);
 #endif
-                Debug.Log($"[AS] {v.name}: position ({v.position.x:0.00}, {v.position.y:0.00}, {v.position.z:0.00}), yaw {v.yaw:0.0}, pitch {v.pitch:0.0}, fov {v.fov:0.0}");
+                Debug.Log($"[AS] {v.name}: position ({v.position.x:0.00}, {v.position.y:0.00}, {v.position.z:0.00}), yaw {v.yaw:0.0}, pitch {v.pitch:0.0}, roll {v.roll:0.0}, fov {v.fov:0.0}");
             }
         }
 
@@ -120,7 +123,7 @@ namespace InnerFrame.AlmondStudio
             if (!painter) return;
 
             var v = View;
-            cam.transform.SetPositionAndRotation(v.position, Quaternion.Euler(v.pitch, v.yaw, 0f));
+            cam.transform.SetPositionAndRotation(v.position, Quaternion.Euler(v.pitch, v.yaw, v.roll));
             cam.fieldOfView = v.fov;
             var pic = Picture;
             float aspect = pic != null ? pic.width / (float)pic.height : 1.5f;

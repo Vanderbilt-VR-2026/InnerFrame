@@ -11,14 +11,16 @@ public static class VanGoghSpawner
     // The portrait at The Bedroom's scale: The Bedroom hangs 3.0 m wide (build_gallery.py PAINTING_W; its quad measures
     // 3.000 m) and is 92.3 cm wide (AIC 1926.417); the 1887 self-portrait is 32.5 x 41 cm (AIC 1954.326).
     const float Enlargement = 3.0f / 0.923f;   // 3.25
-    static readonly Vector2 PortraitSize = new Vector2(0.325f, 0.41f) * Enlargement;   // 1.06 x 1.33 m
+    public static readonly Vector2 PortraitSize = new Vector2(0.325f, 0.41f) * Enlargement;   // 1.06 x 1.33 m
     // Framed like The Bedroom (FRAME_W, FRAME_D): the frame stands on the wall, 2 cm proud of the picture.
     const float FrameBorder = 0.18f, FrameDepth = 0.12f, WallFace = -0.10f;   // WallFace: the wall, in Slot_Bedroom's z
-    const float BedroomFrameEdge = 1.5f + FrameBorder, FrameGap = 1.2f;       // The Bedroom frame's outer edge; the gap
+    // FrameGap was 1.2 m in the 10 m Gallery; the 7 m one (2026-11-10, build_gallery.py) leaves 1.82 m from The Bedroom's
+    // frame to the corner, so the portrait's 1.42 m frame hangs 0.2 m from each.
+    const float BedroomFrameEdge = 1.5f + FrameBorder, FrameGap = 0.2f;       // The Bedroom frame's outer edge; the gap
     // Centre in Slot_Bedroom's space (x right, y up, z into the room): on +x, the side away from Placard_Bedroom
     // (Rowling's plaque, #14, at x = -2.03), at The Bedroom's centre height, its face where The Bedroom's is. The
-    // frame's far edge is then at x = 4.30, 0.70 m from the corner (x = 5.0); nothing else hangs on that wall.
-    static readonly Vector3 PortraitOffset = new Vector3(BedroomFrameEdge + FrameGap + FrameBorder + PortraitSize.x / 2f, 0f, 0f);
+    // frame's far edge is then at x = 3.30, 0.20 m from the corner (x = 3.5); nothing else hangs on that wall.
+    public static readonly Vector3 PortraitOffset = new Vector3(BedroomFrameEdge + FrameGap + FrameBorder + PortraitSize.x / 2f, 0f, 0f);
     const float CaptionOut = 0.25f;   // its caption hangs this far out from the wall's frame, so turning keeps it off the wall
 
     // Vincent in PaintedBedroom: on the floor by the left wall, between the front corner and Chair_Front,

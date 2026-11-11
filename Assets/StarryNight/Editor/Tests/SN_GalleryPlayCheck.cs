@@ -60,7 +60,7 @@ namespace InnerFrame.StarryNight.EditorTools
             DirectPrint = "SN_GalleryPlay.directPrint", DirectRender = "SN_GalleryPlay.directRender";
         const float GiveUpSeconds = 420f;
         const float OriginTolerance = 0.01f, DesktopRigTolerance = 0.10f;   // as SN_PlayCheck
-        static readonly Vector3 GalleryStart = new Vector3(0f, 0f, 6f);
+        static readonly Vector3 GalleryStart = new Vector3(0f, 0f, 3.5f);   // Spawn_Point in the 7 x 9 m Gallery (was z = 6)
         const float GalleryStartYaw = 180f;
         static readonly CultureInfo C = CultureInfo.InvariantCulture;
 

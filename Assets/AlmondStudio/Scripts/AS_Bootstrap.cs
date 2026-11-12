@@ -127,12 +127,23 @@ namespace InnerFrame.AlmondStudio
 
             // furniture after the concept S03 (looking south): the table in the middle, a rush chair at each end facing it;
             // its near edge stays 0.3 m short of the arrival spot (S02's viewpoint, z 2.52)
+            // the chairs stand off the table's real ends (the Tripo table is longer than the built one)
+            float tableHalf = 0.65f;
             if (tableModel != null)
-                PropModel(world, "Table (Tripo)", tableModel, layout.tableModelEuler, TableTop, new Vector3(0f, 0f, 1.8f));
+            {
+                var tbl = PropModel(world, "Table (Tripo)", tableModel, layout.tableModelEuler, TableTop, new Vector3(0f, 0f, 1.8f));
+                var trs = tbl.GetComponentsInChildren<Renderer>();
+                if (trs.Length > 0)
+                {
+                    var tb = trs[0].bounds;
+                    foreach (var r in trs) tb.Encapsulate(r.bounds);
+                    tableHalf = tb.extents.x;
+                }
+            }
             else
                 Table(world, new Vector3(0f, 0f, 1.8f), 1.3f, 0.8f);
-            Chair(world, new Vector3(-1.05f, 0f, 1.8f), 90f);
-            Chair(world, new Vector3(1.05f, 0f, 1.8f), -90f);
+            Chair(world, new Vector3(-(tableHalf + layout.chairGap), 0f, 1.8f), 90f);
+            Chair(world, new Vector3(tableHalf + layout.chairGap, 0f, 1.8f), -90f);
             // on the table: his paint box, lid open, and a pot of brushes
             if (paintBoxModel != null)
                 PropModel(world, "Paint box (Tripo)", paintBoxModel, layout.paintBoxModelEuler + new Vector3(0f, layout.paintBoxYaw, 0f), layout.paintBoxModelHeight, new Vector3(layout.paintBoxSpot.x, TableTop, layout.paintBoxSpot.y));

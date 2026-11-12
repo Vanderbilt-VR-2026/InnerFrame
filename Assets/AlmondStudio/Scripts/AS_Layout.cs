@@ -110,6 +110,7 @@ namespace InnerFrame.AlmondStudio
 
         [Header("Chairs reused from the Bedroom (Chair_Front of PaintedBedroom.prefab)")]
         [Tooltip("Turns the Bedroom chair so its seat faces the table.")] public float chairYawOffset = 0f;
+        [Tooltip("From the table's end to the chair's middle, metres (the seat's front edge tucks just under the top).")] public float chairGap = 0.3f;
 
         [Header("Easel (Vincent's, VG_Easel.fbx), door, paint box")]
         [Tooltip("Turns the easel; 0 = its ledge toward the room (north).")] public float easelYaw = 0f;

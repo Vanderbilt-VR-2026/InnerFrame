@@ -2,7 +2,7 @@
 
     python make_caption_sprites.py
 
-Writes the PNGs to Assets/VanGogh/Art/UI/, then run Tools > InnerFrame > Van Gogh > Rebuild assets (it sets the
+Writes the PNGs to Assets/VanGogh/Art/UI/ (the button to Assets/Shared/UI/Art/, with the dialogue box's sprites), then run Tools > InnerFrame > Van Gogh > Rebuild assets (it sets the
 9-slice borders):
   VG_Caption_Parchment.png  the parchment his words sit on, over the sign's panel, darker toward its edges (9-slice)
   VG_Caption_Pill.png       the dark-brown rounded hint pill (9-slice)
@@ -16,6 +16,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 
 OUT = Path(__file__).resolve().parents[3] / "Assets/VanGogh/Art/UI"
+SHARED_OUT = Path(__file__).resolve().parents[3] / "Assets/Shared/UI/Art"   # the button circle, used by the dialogue box
 SS = 2            # drawn at 2x, then downsampled: smooth edges
 SEED = 1888
 
@@ -96,7 +97,8 @@ def button():
 
 
 if __name__ == "__main__":
-    OUT.mkdir(parents=True, exist_ok=True)
-    for name, make in (("VG_Caption_Parchment", parchment), ("VG_Caption_Pill", pill), ("VG_Caption_Button", button)):
-        make().save(OUT / f"{name}.png", optimize=True)
-        print(OUT / f"{name}.png")
+    for name, make, out in (("VG_Caption_Parchment", parchment, OUT), ("VG_Caption_Pill", pill, OUT),
+                            ("VG_Caption_Button", button, SHARED_OUT)):
+        out.mkdir(parents=True, exist_ok=True)
+        make().save(out / f"{name}.png", optimize=True)
+        print(out / f"{name}.png")

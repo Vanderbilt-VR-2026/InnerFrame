@@ -150,6 +150,10 @@ namespace InnerFrame.AlmondStudio
             new AS_SideCanvas { name = "First Steps, after Millet (Met 64.165.2, Open Access)", file = "AS_Canvas_FirstSteps", wall = 1, centre = new Vector2(1.2f, 1.6f), height = 0.58f, blankAspect = 1.26f },
         };
 
+        [Header("Vincent v2 (Cici's, from The Starry Night)")]
+        [Tooltip("The letter in his right hand: position in the hand bone's space, metres.")] public Vector3 vincentLetterOffset = new Vector3(0.02f, 0.12f, 0.04f);
+        [Tooltip("The letter's turn in the hand bone's space.")] public Vector3 vincentLetterEuler = new Vector3(0f, 90f, 0f);
+
         [Header("Theo's letter and the birth card on the table (Textures/Table)")]
         [Tooltip("The letter's middle on the table (x, z), and its turn.")] public Vector2 letterSpot = new Vector2(0.1f, 1.95f);
         public float letterYaw = -8f;

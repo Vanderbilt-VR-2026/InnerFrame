@@ -32,6 +32,10 @@ namespace InnerFrame.AlmondStudio
         [Tooltip("The Tripo casement, left leaf (Art/Props/AS_Casement.fbx); the right leaf is its mirror.")] public GameObject casementModel;
         [Tooltip("His closed paint box (Art/Props/AS_PaintBox.fbx). The built open box if missing.")] public GameObject paintBoxModel;
         [Tooltip("The door with its frame (Art/Props/AS_Door.fbx). The built door if missing.")] public GameObject doorModel;
+        [Tooltip("Vincent v2 (Cici's, StarryNight/Models/Vincent/VincentV2.fbx, read only), his material and our Animator controller. The capsule if missing.")]
+        public GameObject vincentModel;
+        public Material vincentModelMaterial;
+        public RuntimeAnimatorController vincentController;
         [Tooltip("The work table (Art/Props/AS_Table.fbx). The built table if missing.")] public GameObject tableModel;
         [Tooltip("One per AS_Layout.sideCanvases entry (null = blank), made by Build from Textures/Canvases.")] public Material[] sideCanvasMaterials = new Material[0];
         public Material easelMaterial;
@@ -266,18 +270,8 @@ namespace InnerFrame.AlmondStudio
             brushHome = new Pose(brushT.position, brushT.rotation);
             brush.selectExited.AddListener(_ => ReturnBrush());
 
-            // Vincent (stand-in until Vincent v2)
-            var v = new GameObject("Vincent (stand-in)").transform;
-            v.SetParent(world, false);
-            v.SetPositionAndRotation(layout.vincentSpot, Quaternion.Euler(0f, layout.vincentYaw, 0f));
-            var body = Prim(v, PrimitiveType.Capsule, "Body", new Vector3(0f, 0.8f, 0f), new Vector3(0.42f, 0.8f, 0.3f), vincent);
-            body.transform.localPosition = new Vector3(0f, 0.8f, 0f);
-            var head = Prim(v, PrimitiveType.Sphere, "Head", Vector3.zero, Vector3.one * 0.22f, wood);
-            head.transform.localPosition = new Vector3(0f, 1.68f, 0f);
-            var letter = Prim(v, PrimitiveType.Cube, "Letter", Vector3.zero, new Vector3(0.21f, 0.27f, 0.005f), ceiling);
-            letter.transform.localPosition = new Vector3(0.12f, 1.2f, 0.32f);
-            letter.transform.localRotation = Quaternion.Euler(-20f, 0f, 0f);
-            DestroyImmediate(letter.GetComponent<Collider>());
+            if (vincentModel != null) VincentV2(world);
+            else VincentStandIn(world);
 
             // outside: the painted sky all round, the ground, and the almond tree fitted to the painting
             var sky = Prim(world, PrimitiveType.Sphere, "Sky", layout.WindowCentreOuter, Vector3.one * layout.skyRadius * 2f, skyMaterial);
@@ -959,6 +953,54 @@ namespace InnerFrame.AlmondStudio
                 }
                 r.sharedMaterials = dst;
             }
+        }
+
+        /// <summary>The capsule stand-in, until Vincent v2 is found.</summary>
+        void VincentStandIn(Transform world)
+        {
+            var v = new GameObject("Vincent (stand-in)").transform;
+            v.SetParent(world, false);
+            v.SetPositionAndRotation(layout.vincentSpot, Quaternion.Euler(0f, layout.vincentYaw, 0f));
+            var body = Prim(v, PrimitiveType.Capsule, "Body", new Vector3(0f, 0.8f, 0f), new Vector3(0.42f, 0.8f, 0.3f), vincent);
+            body.transform.localPosition = new Vector3(0f, 0.8f, 0f);
+            var head = Prim(v, PrimitiveType.Sphere, "Head", Vector3.zero, Vector3.one * 0.22f, wood);
+            head.transform.localPosition = new Vector3(0f, 1.68f, 0f);
+            var letter = Prim(v, PrimitiveType.Cube, "Letter", Vector3.zero, new Vector3(0.21f, 0.27f, 0.005f), ceiling);
+            letter.transform.localPosition = new Vector3(0.12f, 1.2f, 0.32f);
+            letter.transform.localRotation = Quaternion.Euler(-20f, 0f, 0f);
+            DestroyImmediate(letter.GetComponent<Collider>());
+        }
+
+        /// <summary>Vincent v2 (Cici's Tripo model on Mixamo's rig, as in The Starry Night): standing at vincentSpot, our
+        /// controller (standing idle; talking first if that clip is there), his texture on an AS_Painted copy, and Theo's
+        /// letter in his right hand.</summary>
+        void VincentV2(Transform world)
+        {
+            var vin = Instantiate(vincentModel, world);
+            vin.name = "Vincent (v2)";
+            vin.transform.SetPositionAndRotation(layout.vincentSpot, Quaternion.Euler(0f, layout.vincentYaw, 0f));
+            var anim = vin.GetComponent<Animator>();
+            if (anim == null) anim = vin.AddComponent<Animator>();
+            anim.runtimeAnimatorController = vincentController;
+            anim.applyRootMotion = false;
+            anim.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
+            var rs = vin.GetComponentsInChildren<Renderer>(true);
+            if (vincentModelMaterial != null) foreach (var r in rs) r.sharedMaterial = vincentModelMaterial;
+            ToPainted(rs, "Vincent");
+            // the letter in his right hand (the hand bone, so it moves with him)
+            var hand = anim.isHuman ? anim.GetBoneTransform(HumanBodyBones.RightHand) : null;
+            if (hand != null)
+            {
+                var paper = Quad(hand, "Theo's letter (in his hand)", 0.21f, 0.27f, letterSheet != null ? letterSheet : ceiling);
+                paper.localPosition = layout.vincentLetterOffset;
+                paper.localRotation = Quaternion.Euler(layout.vincentLetterEuler);
+                // Quad culls its back: draw both sides with a two-sided copy
+                var mr = paper.GetComponent<MeshRenderer>();
+                var two = new Material(mr.sharedMaterial) { name = "Letter (two-sided)" };
+                two.SetFloat("_Cull", 0f);
+                mr.sharedMaterial = two;
+            }
+            else Debug.LogWarning("[AS] Vincent v2 has no humanoid right hand: the letter is left out.");
         }
 
         const float TableTop = 0.765f;   // the table top's upper face (0.74 + half its 0.05)

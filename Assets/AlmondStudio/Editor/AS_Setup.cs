@@ -1,6 +1,7 @@
 using System.IO;
 using System.Linq;
 using UnityEditor;
+using UnityEditor.Animations;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -35,6 +36,13 @@ namespace InnerFrame.AlmondStudio.EditorTools
         const string PaintBoxModel = Root + "/Art/Props/AS_PaintBox.fbx";    // Serena's Tripo paint box, 11 Nov
         const string TableModel = Root + "/Art/Props/AS_Table.fbx";          // the Tripo work table, when it is made
         const string DoorModel = Root + "/Art/Props/AS_Door.fbx";            // the Tripo door, when it is made
+        // Vincent v2: Cici's, imported by SN_Setup (The Starry Night); read only here. Our own clips (Mixamo, standing)
+        // go in Art/Vincent as VincentV2@<Clip>.fbx and are imported here against his avatar.
+        const string VincentDir = "Assets/StarryNight/Models/Vincent";
+        const string VincentFbx = VincentDir + "/VincentV2.fbx", VincentAvatarClip = VincentDir + "/VincentV2@BreathingIdle.fbx";
+        const string VincentMat = "Assets/StarryNight/Materials/SN_VincentV2.mat";
+        const string VincentClipsDir = Root + "/Art/Vincent";
+        const string VincentController = Root + "/Prefabs/AS_Vincent.controller";
         const string WindowFolder = Root + "/Textures/Window";               // the painted window (ChatGPT, panes cut out)
         const string XrOriginPrefab = "Assets/Samples/XR Interaction Toolkit/3.3.2/Starter Assets/Prefabs/XR Origin (XR Rig).prefab";
         const string XrOriginName = "XR Origin (XR Rig)";
@@ -221,6 +229,10 @@ namespace InnerFrame.AlmondStudio.EditorTools
             boot.paintBoxModel = AssetDatabase.LoadAssetAtPath<GameObject>(PaintBoxModel);
             boot.tableModel = AssetDatabase.LoadAssetAtPath<GameObject>(TableModel);
             boot.doorModel = AssetDatabase.LoadAssetAtPath<GameObject>(DoorModel);
+            boot.vincentModel = AssetDatabase.LoadAssetAtPath<GameObject>(VincentFbx);
+            boot.vincentModelMaterial = AssetDatabase.LoadAssetAtPath<Material>(VincentMat);
+            boot.vincentController = boot.vincentModel != null ? VincentControllerAsset() : null;
+            if (boot.vincentModel == null) Debug.LogWarning("[AS Setup] No Vincent v2 at " + VincentFbx + " (git lfs pull?): the capsule stands in.");
             boot.chestModel = AssetDatabase.LoadAssetAtPath<GameObject>(ChestModel);
             if (boot.chestModel == null) Debug.Log("[AS Setup] No chest at " + ChestModel + "; the corner keeps its boxes.");
             boot.casementLeft = Cutout("AS_CasementL", surface, "AS_CasementL.png");
@@ -321,6 +333,64 @@ namespace InnerFrame.AlmondStudio.EditorTools
 
         static bool HasMesh(GameObject g) =>
             g.GetComponentsInChildren<MeshFilter>(true).Any(f => f.sharedMesh != null) && g.GetComponentsInChildren<Renderer>(true).Length > 0;
+
+        /// <summary>
+        /// Our Animator controller for Vincent v2 (Prefabs/AS_Vincent.controller, rebuilt each Build): "Idle" (his
+        /// BreathingIdle, from The Starry Night's files) and, if Art/Vincent/VincentV2@Talking.fbx is there, "Talking" first,
+        /// once, then Idle. Any other VincentV2@*.fbx in Art/Vincent is imported against his avatar and added as a state
+        /// (for later use by AS_Game). His own importer settings are SN_Setup's and aren't touched here.
+        /// </summary>
+        static RuntimeAnimatorController VincentControllerAsset()
+        {
+            var avatar = AssetDatabase.LoadAllAssetsAtPath(VincentAvatarClip).OfType<Avatar>().FirstOrDefault();
+            AnimationClip ClipIn(string path) => AssetDatabase.LoadAllAssetsAtPath(path).OfType<AnimationClip>().FirstOrDefault(c => !c.name.StartsWith("__preview"));
+            var idle = ClipIn(VincentAvatarClip);
+            if (avatar == null || idle == null) { Debug.LogWarning("[AS Setup] Vincent's BreathingIdle (" + VincentAvatarClip + ") isn't imported yet: open The Starry Night's Build once, or git lfs pull."); return null; }
+            // our extra clips: Humanoid, his avatar, his scale, loops that stay in place
+            var scaleFrom = AssetImporter.GetAtPath(VincentAvatarClip) as ModelImporter;
+            var extra = new System.Collections.Generic.List<(string name, AnimationClip clip)>();
+            if (Directory.Exists(VincentClipsDir))
+                foreach (var f in Directory.GetFiles(VincentClipsDir, "VincentV2@*.fbx"))
+                {
+                    string path = f.Replace('\\', '/'), name = Path.GetFileNameWithoutExtension(path).Substring("VincentV2@".Length);
+                    if (AssetImporter.GetAtPath(path) is ModelImporter c)
+                    {
+                        string was = EditorJsonUtility.ToJson(c);
+                        c.animationType = ModelImporterAnimationType.Human;
+                        c.avatarSetup = ModelImporterAvatarSetup.CopyFromOther; c.sourceAvatar = avatar;
+                        c.materialImportMode = ModelImporterMaterialImportMode.None;
+                        c.importCameras = c.importLights = c.importVisibility = false;
+                        if (scaleFrom != null) { c.useFileScale = scaleFrom.useFileScale; c.globalScale = scaleFrom.globalScale; }
+                        c.importAnimation = true; c.resampleCurves = true;
+                        var take = (c.clipAnimations != null && c.clipAnimations.Length > 0 ? c.clipAnimations : c.defaultClipAnimations).First();
+                        take.name = name; take.loopTime = true; take.loopPose = true;
+                        take.lockRootRotation = true; take.keepOriginalOrientation = true;
+                        take.lockRootHeightY = true; take.keepOriginalPositionY = true;
+                        take.lockRootPositionXZ = true; take.keepOriginalPositionXZ = false;
+                        c.clipAnimations = new[] { take };
+                        if (EditorJsonUtility.ToJson(c) != was) c.SaveAndReimport();
+                    }
+                    var clip = ClipIn(path);
+                    if (clip != null) extra.Add((name, clip));
+                }
+            EnsureFolder(Root + "/Prefabs");
+            AssetDatabase.DeleteAsset(VincentController);
+            var ctrl = AnimatorController.CreateAnimatorControllerAtPath(VincentController);
+            var sm = ctrl.layers[0].stateMachine;
+            var idleState = sm.AddState("Idle"); idleState.motion = idle;
+            sm.defaultState = idleState;
+            foreach (var (name, clip) in extra)
+            {
+                var st = sm.AddState(name); st.motion = clip;
+                if (name == "Talking")
+                {
+                    sm.defaultState = st;                       // he is speaking his line when you arrive
+                    var t = st.AddTransition(idleState); t.hasExitTime = true; t.exitTime = 1f; t.duration = 0.4f;
+                }
+            }
+            Debug.Log($"[AS Setup] Vincent v2: controller {VincentController} with Idle{string.Concat(extra.Select(e => ", " + e.name))}.");
+            return ctrl;
+        }
 
         /// <summary>A material showing one picture whole (a canvas, a sheet of paper): `file` (.jpg/.png/.jpeg) in `folder`, or
         /// null (logged) if it isn't there yet.</summary>

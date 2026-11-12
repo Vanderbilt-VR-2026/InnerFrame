@@ -29,15 +29,17 @@ blender -b /tmp/lm/uv.blend -P room_io.py -- export --lightmaps /tmp/lm
 cp /tmp/lm/probes.json ../../../../Assets/InnerFrameBedroomWeb/Data/probes.json
 ```
 
-Then in Unity: **Tools > InnerFrame > Painted Bedroom > Import and Build**, then
-**Tools > InnerFrame > Painted Bedroom > Import Cycles Probes** (it bakes once, then writes the Cycles
-values), then **InnerFrame > Multiplayer > Make Painted Bedroom Objects Shared** and
-**Tools > InnerFrame > Apply XR Rig Settings** (Import and Build drops those), and save the scene.
+Then in Unity: **Tools > InnerFrame > Painted Bedroom > Import and Build (no Blender)**, then
+**Tools > InnerFrame > Painted Bedroom > Import Cycles Probes** (it runs Unity's own bake once to create
+the probe set, then writes the Cycles values), then **InnerFrame > Multiplayer > Make Painted Bedroom
+Objects Shared** and **Tools > InnerFrame > Apply XR Rig Settings (2 m ray, 0.8 scale, teleport floor)**
+(Import and Build drops those), and save the scene.
 About 35 min for the bake, 10 for the probes, 10 for Unity, on an M-series Mac (CPU: Metal crashed).
 
-`--verify` renders the painter's view twice, Cycles against albedo x lightmap; the two should be within
-about 10/255 on average. The lightmap PNGs import uncompressed (block compression bands the smooth
-ceiling); 19 of them are about 11 MB of texture memory.
+`--verify` renders the painter's view twice, Cycles against albedo x lightmap; the two have been within
+10-13/255 on average (the lightmap carries no specular and is 8-bit). The lightmap PNGs import
+uncompressed (block compression bands the smooth ceiling) with mipmaps: 19 textures, 14.5 MB of RGBA32,
+19.4 MB with the mip chain, on the headset.
 
 ## Files
 

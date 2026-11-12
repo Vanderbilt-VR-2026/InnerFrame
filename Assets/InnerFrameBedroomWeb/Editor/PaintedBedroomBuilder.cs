@@ -369,7 +369,6 @@ namespace InnerFrame.PaintedBedroom.EditorTools
             sun.intensity = SunIntensity;              // = RIG sun energy / pi: Cycles irradiance E gives radiance E/pi, Unity gives intensity x albedo
             sun.shadows = LightShadows.Soft;
             sun.shadowStrength = 1f;                   // the shader scales it by the sun's baked share, so full strength is right
-            sun.shadowAngle = SunShadowAngle;
             sun.lightmapBakeType = LightmapBakeType.Realtime;
             sun.shadowBias = 0.03f;
             sun.shadowNormalBias = 0.25f;
@@ -380,30 +379,8 @@ namespace InnerFrame.PaintedBedroom.EditorTools
             foreach (var r in UnityEngine.Object.FindObjectsByType<MeshRenderer>(FindObjectsSortMode.None))
                 if (r.name.StartsWith("Window_View") || (r.sharedMaterial != null && r.sharedMaterial.name.StartsWith("glass")))
                     r.shadowCastingMode = ShadowCastingMode.Off;
-            var fill = new GameObject("Fill Light").AddComponent<Light>();  // soft light from the painter's side, no shadows
-            fill.type = LightType.Directional;
-            fill.color = new Color(0.86f, 0.9f, 1f);
-            fill.intensity = 0f;
-            fill.shadows = LightShadows.None;
-            fill.transform.rotation = Quaternion.Euler(25f, 20f, 0f);
-
-            // Sky through the window (baked only, so it costs nothing at runtime): a large soft area light filling the
-            // window opening, facing into the room. It is what lifts the whole room, as in the target, instead of only
-            // the sun patch.
-            var win = GameObject.Find("Window");
-            if (win != null)
-            {
-                var b = new Bounds(win.transform.position, Vector3.zero);
-                foreach (var r in win.GetComponentsInChildren<Renderer>()) b.Encapsulate(r.bounds);
-                var sky = new GameObject("Window Sky Light").AddComponent<Light>();
-                sky.type = LightType.Rectangle;
-                sky.lightmapBakeType = LightmapBakeType.Baked;
-                sky.areaSize = new Vector2(Mathf.Max(b.size.x, 0.6f) * 1.1f, Mathf.Max(b.size.y, 1f) * 1.05f);
-                sky.color = new Color(0.86f, 0.93f, 1f);   // cool-neutral sky: with the room lit by Blender's lightmaps, this light only feeds the probes for the objects you pick up; matched to how Cycles lit the pillows and chairs (11/8)
-                sky.intensity = SkyIntensity;
-                sky.transform.position = new Vector3(b.center.x, b.center.y, b.min.z - 0.05f);   // just inside the window
-                sky.transform.rotation = Quaternion.LookRotation(Vector3.back);                    // into the room
-            }
+            // No fill light and no Unity sky light any more (11/12 review): the probes carry the Cycles sky and bounce,
+            // and Unity's own bake only produces the probe set (PaintedBedroomProbeImport overwrites its values).
         }
 
         /// <summary>
@@ -439,25 +416,24 @@ namespace InnerFrame.PaintedBedroom.EditorTools
         {
             var prof = AssetDatabase.LoadAssetAtPath<VolumeProfile>(LookProfilePath);
             if (prof == null) { prof = ScriptableObject.CreateInstance<VolumeProfile>(); AssetDatabase.CreateAsset(prof, LookProfilePath); }
-            if (!prof.TryGet(out Tonemapping tm)) tm = prof.Add<Tonemapping>(true);
+            prof.components.RemoveAll(c => c == null);   // earlier builds saved the components as null (they were never added to the asset, review 11/12)
+            if (!prof.TryGet(out Tonemapping tm)) { tm = prof.Add<Tonemapping>(true); AssetDatabase.AddObjectToAsset(tm, prof); }   // a component must live inside the profile asset, or it saves as null
             tm.active = true; tm.mode.overrideState = true; tm.mode.value = TonemappingMode.None;   // Blender-baked light: no tonemapping, like Blender's Standard view (10/29)
-            if (!prof.TryGet(out ColorAdjustments ca)) ca = prof.Add<ColorAdjustments>(true);
+            if (!prof.TryGet(out ColorAdjustments ca)) { ca = prof.Add<ColorAdjustments>(true); AssetDatabase.AddObjectToAsset(ca, prof); }
             ca.active = true; ca.postExposure.overrideState = true; ca.postExposure.value = Exposure;
-            EditorUtility.SetDirty(prof);
+            EditorUtility.SetDirty(tm); EditorUtility.SetDirty(ca); EditorUtility.SetDirty(prof);
+            AssetDatabase.SaveAssets();
             var go = new GameObject("Look Volume");
             var v = go.AddComponent<Volume>(); v.isGlobal = true; v.priority = 10; v.sharedProfile = prof;
         }
 
         // Daylight tuning (10/29): matched to the target sheet's brightness in the fixed painter view.
         static float SunIntensity = 9.9f / Mathf.PI;   // RIG sun energy 9.9 (W/m2) -> Unity directional intensity (11/11, x1.65)
-        static float SkyIntensity = 10f;
-        static float IndirectBoost = 1.4f;
         static float Exposure = 0.0f;   // 0 with the Blender-baked lightmaps
-        static float SunShadowAngle = 7f;   // degrees; the real sun is 0.53; a wide angle gives the feathered window patch of hazy daylight, as in the target
         /// <summary>The window panes glow white and feed the bake (10/29): daylight through glass is overexposed
         /// and spills onto the reveal and the wall around the window, as in the target. HDR emission strength.</summary>
         public static float GlassGlow = 1.2f;
-        /// <summary>For tuning in batch mode only: -ifSun, -ifSky, -ifBounce, -ifGlass... override the values above.</summary>
+        /// <summary>For tuning in batch mode only: -ifSun, -ifExposure, -ifGlass override the values above.</summary>
         public static float TuningArg(string k, float d)
         {
             var a = Environment.GetCommandLineArgs();
@@ -467,8 +443,8 @@ namespace InnerFrame.PaintedBedroom.EditorTools
         static void ReadTuningArgs()
         {
             float Get(string k, float d) => TuningArg(k, d);
-            SunIntensity = Get("-ifSun", SunIntensity); SkyIntensity = Get("-ifSky", SkyIntensity); IndirectBoost = Get("-ifBounce", IndirectBoost); Exposure = Get("-ifExposure", Exposure); SunShadowAngle = Get("-ifShadowAngle", SunShadowAngle);
-        }     // LightingSettings.indirectScale: more bounce, the room glows softly
+            SunIntensity = Get("-ifSun", SunIntensity); Exposure = Get("-ifExposure", Exposure);
+        }
 
         static Transform FindDeep(Transform t, string name)
         {
@@ -491,10 +467,13 @@ namespace InnerFrame.PaintedBedroom.EditorTools
         const string LightingSettingsPath = "Assets/InnerFrameBedroomWeb/Generated/PaintedBedroom_Lighting.lighting";
 
         /// <summary>
-        /// The parts of the room that never move get baked lightmaps: the shell, and every object the physics
-        /// table does not let you pick up. Only ContributeGI is set (no static batching): the Builder still gives
-        /// these objects kinematic bodies. The view outside the window is left out (a 50 m dome of sky).
-        /// Liftable objects are lit by light probes instead.
+        /// The parts of the room that never move: the shell, and every object the physics table does not let you
+        /// pick up. Their light comes from the Blender-baked lightmaps (Importer, InnerFrame/Painted Lightmapped),
+        /// not from Unity's lightmapper, so they are NOT ContributeGI any more (11/12 review: Unity baked three
+        /// lightmaps nothing sampled, 6 LFS files per re-bake). Unity's bake only has to produce the light probe set
+        /// (PaintedBedroomProbeImport then writes the Cycles values into it), so the settings below keep it quick.
+        /// Only ReflectionProbeStatic is set (no static batching): the Builder still gives these objects kinematic
+        /// bodies. The view outside the window is left out. Liftable objects are lit by the probes.
         /// </summary>
         static int MarkStaticForLightmaps(GameObject room)
         {
@@ -509,19 +488,19 @@ namespace InnerFrame.PaintedBedroom.EditorTools
                 foreach (var r in obj.GetComponentsInChildren<MeshRenderer>(true))
                 {
                     if (r.name.EndsWith("_ink")) continue;
-                    GameObjectUtility.SetStaticEditorFlags(r.gameObject, StaticEditorFlags.ContributeGI | StaticEditorFlags.ReflectionProbeStatic);
-                    r.receiveGI = ReceiveGI.Lightmaps;
+                    GameObjectUtility.SetStaticEditorFlags(r.gameObject, StaticEditorFlags.ReflectionProbeStatic);
+                    r.receiveGI = ReceiveGI.LightProbes;   // ignored by the lightmapped shader; keeps Unity from allocating lightmap charts
                     n++;
                 }
             }
             var ls = AssetDatabase.LoadAssetAtPath<LightingSettings>(LightingSettingsPath);
             if (ls == null) { ls = new LightingSettings(); AssetDatabase.CreateAsset(ls, LightingSettingsPath); }
             ls.bakedGI = true; ls.realtimeGI = false;
-            ls.mixedBakeMode = MixedLightingMode.Subtractive;       // Subtractive: the sun's direct light and its 7° soft shadows are baked; Baked Indirect was tried (M2, 10/29) and lost the floor shadows
+            ls.mixedBakeMode = MixedLightingMode.Subtractive;       // no Mixed lights are left; kept so an old scene opens unchanged
             ls.lightmapper = LightingSettings.Lightmapper.ProgressiveGPU;   // the CPU lightmapper is not available on Apple-silicon Macs; filtering Auto picks the denoiser (OpenImageDenoise here)
-            ls.lightmapResolution = 24f;                            // texels per metre
+            ls.lightmapResolution = 4f;                             // texels per metre; nothing contributes GI, this only matters for the probe bake's speed
             ls.lightmapMaxSize = 1024; ls.lightmapPadding = 4; ls.lightmapCompression = LightmapCompression.NormalQuality;
-            ls.maxBounces = 4; ls.indirectScale = IndirectBoost; ls.albedoBoost = 1.0f;
+            ls.maxBounces = 4; ls.indirectScale = 1f; ls.albedoBoost = 1.0f;
             ls.directSampleCount = 32; ls.indirectSampleCount = 256; ls.environmentSampleCount = 128;
             ls.ao = true; ls.aoMaxDistance = 0.8f; ls.aoExponentIndirect = 2f; ls.aoExponentDirect = 0f;   // corners and the seams stay darker, as in the target   // AO darkens bounce light only
             ls.filteringMode = LightingSettings.FilterMode.Auto;
@@ -531,17 +510,17 @@ namespace InnerFrame.PaintedBedroom.EditorTools
             return n;
         }
 
-        /// <summary>Bakes the lightmaps of the Painted Bedroom scene. Run it after every Import and Build (which rebuilds the scene).</summary>
+        /// <summary>
+        /// Lights the Painted Bedroom scene after an Import and Build: Unity's bake makes the light probe set, then the
+        /// Cycles values are written into it (PaintedBedroomProbeImport). A plain Lightmapping.Bake() here would throw
+        /// those values away, which is why this menu delegates (11/12 review).
+        /// </summary>
         [MenuItem("Tools/InnerFrame/Painted Bedroom/Bake Lighting", false, 12)]
         public static void BakeLighting()
         {
-            var scene = EditorSceneManager.OpenScene(ScenePath);
             var ls = AssetDatabase.LoadAssetAtPath<LightingSettings>(LightingSettingsPath);
             if (ls != null) Lightmapping.lightingSettings = ls;
-            bool ok = Lightmapping.Bake();
-            EditorSceneManager.MarkSceneDirty(scene);
-            EditorSceneManager.SaveScene(scene);
-            Debug.Log("[PaintedBedroom] Bake Lighting " + (ok ? "done" : "FAILED") + ": " + LightmapSettings.lightmaps.Length + " lightmaps");
+            PaintedBedroomProbeImport.Import();
         }
 
         public static void EnsureFolder(string path)

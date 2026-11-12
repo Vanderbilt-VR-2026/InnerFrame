@@ -22,6 +22,8 @@ namespace InnerFrame.PaintedBedroom.EditorTools
     public static class PaintedBedroomProbeImport
     {
         const string JsonPath = "Assets/InnerFrameBedroomWeb/Data/probes.json";
+        const string ScenePath = "Assets/InnerFrameBedroomWeb/Scenes/PaintedBedroom.unity";
+        public static bool LastImportOk { get; private set; }
 
         [System.Serializable] class Probe { public float[] position; public float[] radiance; }        // radiance: r,g,b per pixel, flat
         [System.Serializable] class File { public int width, height; public float[] directions; public float[] solidAngles; public Probe[] probes; }   // directions: x,y,z per pixel, flat
@@ -29,9 +31,11 @@ namespace InnerFrame.PaintedBedroom.EditorTools
         [MenuItem("Tools/InnerFrame/Painted Bedroom/Import Cycles Probes")]
         public static void Import()
         {
+            LastImportOk = false;
             if (!System.IO.File.Exists(JsonPath)) { Debug.LogError($"[ProbeImport] no {JsonPath}: run bake_probes.py first"); return; }
             var data = JsonUtility.FromJson<File>(System.IO.File.ReadAllText(JsonPath));
             var scene = SceneManager.GetActiveScene();
+            if (scene.path != ScenePath) scene = UnityEditor.SceneManagement.EditorSceneManager.OpenScene(ScenePath);   // always the Bedroom, whatever is open
 
             var group = Object.FindAnyObjectByType<LightProbeGroup>();
             if (group == null)
@@ -68,9 +72,11 @@ namespace InnerFrame.PaintedBedroom.EditorTools
                 sh[i] = FromPanorama(data, data.probes[best]);
                 matched++;
             }
+            if (matched < lp.count) { Debug.LogError($"[ProbeImport] only {matched}/{lp.count} probes matched probes.json: not written. Rebuild the scene (Import and Build) and re-run."); return; }
             lp.bakedProbes = sh;
             EditorUtility.SetDirty(lp);
             EditorSceneManager_Save(scene);
+            LastImportOk = true;
             Debug.Log($"[ProbeImport] {matched}/{lp.count} probes now carry the Cycles light ({data.width}x{data.height} px each)");
         }
 
@@ -97,7 +103,7 @@ namespace InnerFrame.PaintedBedroom.EditorTools
         public static void ImportFromCommandLine()
         {
             Import();
-            EditorApplication.Exit(0);
+            EditorApplication.Exit(LastImportOk ? 0 : 1);
         }
     }
 }

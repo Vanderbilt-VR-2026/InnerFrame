@@ -112,6 +112,7 @@ namespace InnerFrame.PaintedBedroom.EditorTools
                 var mats = new Material[data.materials.Length];
                 for (int i = 0; i < data.materials.Length; i++) mats[i] = MakeMaterial(data.materials[i], textures, lit, unlit);
                 var lmShader = Shader.Find("InnerFrame/Painted Lightmapped");
+                if (lmShader == null) Debug.LogError("[PaintedBedroom] Shader InnerFrame/Painted Lightmapped not found (compile error?): the fixed objects get Unity-lit materials instead of the Blender bake.");
                 var lmMats = new Dictionary<string, Material>();
 
                 // meshes, stored together in one asset

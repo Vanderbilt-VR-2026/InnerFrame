@@ -550,7 +550,7 @@ def verify(scene, baked, liftables, out_png, samples):
 
 def main():
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
-    opt = lambda k, d=None: argv[argv.index(k) + 1] if k in argv else d
+    opt = lambda k, d=None: argv[argv.index(k) + 1] if k in argv and argv.index(k) + 1 < len(argv) else d
     out = opt("--out")
     if not out:
         raise SystemExit(__doc__)

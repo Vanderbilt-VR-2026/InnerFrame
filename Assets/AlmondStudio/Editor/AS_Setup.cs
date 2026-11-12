@@ -302,6 +302,9 @@ namespace InnerFrame.AlmondStudio.EditorTools
             if (boot.uiPrefab == null || boot.uiSettings == null) Debug.LogWarning("[AS Setup] The shared dialogue box was not found; the scene runs without hints and lines.");
             EditorUtility.SetDirty(boot);
 
+            // the painting game: the Tripo almond tree outside the window, with the buds you open with the brush
+            AS_TripoTreeTools.EnsureOnScene(scene, layout);
+
             AssetDatabase.SaveAssets();
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, ScenePath);

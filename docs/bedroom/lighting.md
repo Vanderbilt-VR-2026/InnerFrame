@@ -51,3 +51,11 @@ ceiling); 19 of them are about 11 MB of texture memory.
 | Probe import | `Editor/PaintedBedroomProbeImport.cs` |
 | Sun, probe grid, look volume | `Editor/PaintedBedroomBuilder.cs` (`SetUpLighting`) |
 | Review renders, before/after sheets | `notes/painterly-research/unity_light/`, `blender_light/` |
+
+## What it looks like (Unity, 11/11, fixed views)
+
+![Unity overview](images/lighting-unity-overview.png)
+
+A chair moved into the floor's sun patch, shadows on and off:
+
+![Shadow test](images/lighting-shadow-test.png)

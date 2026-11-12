@@ -985,6 +985,7 @@ namespace InnerFrame.AlmondStudio
             anim.applyRootMotion = false;
             anim.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
             vin.AddComponent<AS_VincentLook>();   // he looks at you when you're near, as in The Starry Night
+            vin.AddComponent<AS_FeetOnFloor>().floorY = layout.vincentSpot.y;   // his clips sink him to the hips: stand him up
             var rs = vin.GetComponentsInChildren<Renderer>(true);
             if (vincentModelMaterial != null) foreach (var r in rs) r.sharedMaterial = vincentModelMaterial;
             ToPainted(rs, "Vincent");

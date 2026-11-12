@@ -365,9 +365,16 @@ namespace InnerFrame.AlmondStudio.EditorTools
         /// <summary>Puts a seamless picture from Textures/Surfaces on a material, repeating every `metres`, tinted.</summary>
         static void Paint(Material m, string file, float metres, string tint)
         {
+            // the named file, or the same name as .png / .jpg / .jpeg (pictures get saved either way)
             string path = SurfaceFolder + "/" + file;
             var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
-            if (tex == null) { Debug.LogWarning("[AS Setup] No surface picture at " + path + "; " + m.name + " stays a flat colour."); return; }
+            foreach (var ext in new[] { ".png", ".jpg", ".jpeg" })
+            {
+                if (tex != null) break;
+                path = Path.ChangeExtension(SurfaceFolder + "/" + file, ext);
+                tex = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            }
+            if (tex == null) { Debug.LogWarning("[AS Setup] No surface picture " + Path.GetFileNameWithoutExtension(file) + " (.jpg/.png) in " + SurfaceFolder + "; " + m.name + " stays a flat colour."); return; }
             var imp = (TextureImporter)AssetImporter.GetAtPath(path);
             if (imp.wrapMode != TextureWrapMode.Repeat || imp.maxTextureSize != 1024 || !imp.mipmapEnabled)
             {

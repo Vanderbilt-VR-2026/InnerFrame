@@ -332,9 +332,12 @@ namespace InnerFrame.AlmondStudio.EditorTools
             if (tex == null) { Debug.Log("[AS Setup] No " + file + " (.jpg/.png) in " + folder + " yet: it stays blank."); return null; }
             // museum downloads are often 4000+ pixels: 1024 is plenty for a canvas on the wall, and Quest's memory thanks us
             var imp = (TextureImporter)AssetImporter.GetAtPath(AssetDatabase.GetAssetPath(tex));
-            if (imp != null && (imp.maxTextureSize > 1024 || imp.wrapMode != TextureWrapMode.Clamp))
+            // keep the picture's own shape (Unity otherwise stretches a non-power-of-two picture to a square, and the
+            // canvas takes its width from the picture)
+            if (imp != null && (imp.maxTextureSize > 1024 || imp.wrapMode != TextureWrapMode.Clamp || imp.npotScale != TextureImporterNPOTScale.None))
             {
                 imp.maxTextureSize = 1024; imp.wrapMode = TextureWrapMode.Clamp; imp.mipmapEnabled = true;
+                imp.npotScale = TextureImporterNPOTScale.None;
                 imp.SaveAndReimport();
             }
             var m = Mat(name, shader);

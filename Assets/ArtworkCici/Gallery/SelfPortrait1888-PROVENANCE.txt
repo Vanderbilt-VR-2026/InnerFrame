@@ -1,0 +1,35 @@
+Vincent van Gogh — Self-Portrait Dedicated to Paul Gauguin (1888)
+Downloaded 2026-11-12 for the Cafe Terrace at Night detail card.
+
+File: VanGogh_SelfPortrait_DedicatedToGauguin_1888.jpg
+Dimensions: 4748 x 5800 pixels; original reproduction downloaded unchanged.
+SHA-256: 6a6fc35364c8a577ce3701614530516925e93e16711404ace8b0632a6761e9a7
+
+Work: Self-Portrait Dedicated to Paul Gauguin
+Artist: Vincent van Gogh
+Date: 1888 (Commons specifies Arles, September 1888)
+Medium: Oil on canvas
+Physical size: 61.5 x 50.3 cm (height x width)
+Collection: Harvard Art Museums/Fogg Museum
+Accession: 1951.65
+Credit: Harvard Art Museums/Fogg Museum, Bequest from the Collection of Maurice Wertheim, Class of 1906
+
+Authoritative metadata:
+Harvard Art Museums collection object (direct request returned 403; linked from Commons and museum's Google Arts & Culture page):
+https://harvardartmuseums.org/collections/object/299843
+Harvard Art Museums contribution to Google Arts & Culture (title, year, dimensions, medium, credit verified):
+https://artsandculture.google.com/asset/self-portrait-dedicated-to-paul-gauguin/0QEgNCpCSJfkUQ
+Harvard Scalar institutional IIIF example (title and year verified):
+https://scalar.fas.harvard.edu/scalar-users-guide-harvard/self-portrait-dedicated-to-paul-gauguin
+
+Downloaded reproduction:
+https://upload.wikimedia.org/wikipedia/commons/8/8e/Van_Gogh_self-portrait_dedicated_to_Gauguin.jpg
+File page, provenance and public-domain declaration:
+https://commons.wikimedia.org/wiki/File:Van_Gogh_self-portrait_dedicated_to_Gauguin.jpg
+Commons describes this as a faithful reproduction of a public-domain two-dimensional work, PD-Art (PD-old-100-expired), Public Domain Mark 1.0. Current full-resolution file was uploaded 2016-11-29 and cites the Google Art Project/museum contribution above.
+
+Suggested compact on-card caption:
+Self-Portrait Dedicated to Paul Gauguin, 1888
+Vincent van Gogh | Harvard Art Museums/Fogg Museum
+
+Keep the portrait's 1888 date distinct from the artwork metadata. This is an artist portrait used as context, not the Cafe Terrace painting itself.

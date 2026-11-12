@@ -137,7 +137,7 @@ and teleport (the hilltop is a teleport area out to 5.5 m; low invisible walls s
 | 1 / 2 | jump to the player start / the player seat |
 
 Vincent's words and the hint use the shared dialogue box, the same as in every scene: `VG_DialogueUI`
-(`Assets/VanGogh/Prefabs/VG_DialogueUI.prefab`, spawned by `SN_Bootstrap` like everything else) with this scene's
+(`Assets/Shared/UI/Prefabs/VG_DialogueUI.prefab`, spawned by `SN_Bootstrap` like everything else) with this scene's
 settings, `VG_Dialogue_StarryNight.asset`: 1.6 m ahead, its top edge 22° below the gaze (at a level gaze the box spans
 −29° to −22° and the hint's plate −19° to −14°, under the village's lowest windows; looking 25° up the hint's top is at
 10°, under the swirl), 33° wide, 4.0 cm capitals for his line, the hint (the step's title and its line, see "The story";
@@ -212,7 +212,7 @@ avatars appear, but the night isn't shared.
 | Colour grading (off by default) | `SN_Layout.colourGrading`: on, `SN_Bootstrap` adds a global Volume with `SN_Grading.asset` (Color Adjustments: post exposure 0.35, contrast 14, saturation 20, a warm filter) and turns post-processing on for the scene's camera at runtime (the rig prefab is not changed). Off by default until its cost is measured on a Quest | `SN_Setup` (the profile), `SN_Bootstrap` |
 | Dialogue box and hint | the shared `VG_DialogueUI` with `VG_Dialogue_StarryNight` (above) | `Assets/VanGogh` (VanGoghAssetSetup) |
 | Vincent | Vincent v2: Cici's Tripo model (10,619 triangles, one 2048² texture), rigged by Mixamo (33 bones, 28 skinned; mitten hands), 1.70 m, sitting on the rock (his root at (−0.17, 0, 0.19), facing the valley); SittingIdle, SittingTalking, SitToStand, BreathingIdle; look and point by Humanoid IK (`SN_VincentDriver`); see "Vincent" | `Models/Vincent` (Mixamo files, unchanged), `make_vincent_texture.py`, `SN_Setup` |
-| Still placeholder | Vincent's lines (macOS `say`, voice Daniel) | |
+| Still placeholder | Vincent's lines (Piper, voice `en_US-norman-medium`) | |
 
 ## Checks
 
@@ -261,7 +261,7 @@ The Gallery entrance check (`Editor/Tests/SN_GalleryCheck.cs`, edit mode;
    its top, no Gallery collider crossing the frame or the pedestal (physics), the gap to the nearest bench (0.42 m);
 4. the same offsets, meshes, materials and button settings as The Bedroom's (in the same scene);
 5. the build list (enabled, after the Gallery, not first); the image (2048 × 1622, imported 2048 × 2048, ASTC 6×6 on
-   Android) and its material (URP Unlit, white);
+   Android) and its material (URP Lit, white, matte, so the Gallery's lamps light it);
 6. `SN_GallerySetup` run again changes nothing (the files' hashes are equal); with the entrance moved in memory it puts it
    back and saves `Gallery.unity` byte for byte as it was.
 Controls that must fail: a button aimed at PaintedBedroom, no persistent call, a second entrance, the entrance moved

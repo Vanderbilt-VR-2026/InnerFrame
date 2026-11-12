@@ -4,7 +4,7 @@ using UnityEditor;
 using UnityEngine;
 
 /// <summary>
-/// (Re)creates Van Gogh's assets from the files in Assets/VanGogh/Art and Audio: import settings, materials, the
+/// (Re)creates Van Gogh's assets from the files in Assets/VanGogh/Art and Audio (the dialogue box's in Assets/Shared/UI): import settings, materials, the
 /// baked sign, the caption sprites and font with the VG_Caption prefab, and the VG_Vincent prefab, with the mirror scene's canvas
 /// stages and lines. Safe to run again: it only reimports what differs. Tools > InnerFrame > Van Gogh > Rebuild assets,
 /// or -executeMethod VanGoghAssetSetup.Rebuild.
@@ -28,15 +28,17 @@ public static class VanGoghAssetSetup
     const string MirrorAudio = "Assets/VanGogh/Audio/";  // from Art/Source/VanGogh/make_mirror_lines.sh
     const string MirrorLines = "Art/Source/VanGogh/mirror_lines.txt";   // relative to the project folder
     const string CaptionUI = Art + "/UI/";              // from Art/Source/VanGogh/make_caption_sprites.py
-    const string CaptionFont = Art + "/Fonts/LibreBaskerville-Regular.ttf";
-    const string CaptionPrefab = ResourcesDir + "/VG_Caption.prefab";
+    // the shared dialogue box set (prefab, scripts, sprites, font, Resources/VG_Caption), used by every scene
+    const string SharedUI = "Assets/Shared/UI", SharedArt = SharedUI + "/Art/";   // sprites: make_box_sprites.py, and make_caption_sprites.py's button
+    const string CaptionFont = SharedUI + "/Fonts/LibreBaskerville-Regular.ttf";
+    const string CaptionPrefab = SharedUI + "/Resources/VG_Caption.prefab";
     const string SignUnlit = CaptionUI + "VG_Sign_A.png", SignLit = CaptionUI + "VG_Sign_B.png";   // from Art/Source/VanGogh/Caption/bake_sign.py
     // the 9-slice borders drawn by make_caption_sprites.py (PARCHMENT_BORDER, PILL_H / 2)
     const int ParchmentBorderPixels = 96, PillBorderPixels = 64;
     // the dialogue box's sprites, from Art/Source/VanGogh/make_box_sprites.py (SLICE)
     const int BoxBorderPixels = 64;
-    // the reusable dialogue UI (Scripts/UI): its prefab, and one settings asset per scene that uses it
-    const string Prefabs = "Assets/VanGogh/Prefabs/", DialoguePrefab = Prefabs + "VG_DialogueUI.prefab";
+    // the reusable dialogue UI (Assets/Shared/UI): its prefab there, and here one settings asset per scene that uses it
+    const string Prefabs = "Assets/VanGogh/Prefabs/", DialoguePrefab = SharedUI + "/Prefabs/VG_DialogueUI.prefab";
     const string OutlineMaterial = CaptionUI + "VG_Outline.mat";   // the mirror's outlines (VG_MirrorOutline)
     static readonly Color Chrome = new Color32(0xE9, 0xC1, 0x4A, 0xFF);
     const float VincentHeight = 1.70f;
@@ -119,7 +121,7 @@ public static class VanGoghAssetSetup
         caption.lit = true;
         caption.parchment = ImportSprite(CaptionUI + "VG_Caption_Parchment.png", ParchmentBorderPixels);
         caption.pill = ImportSprite(CaptionUI + "VG_Caption_Pill.png", PillBorderPixels);
-        caption.button = ImportSprite(CaptionUI + "VG_Caption_Button.png", 0);
+        caption.button = ImportSprite(SharedArt + "VG_Caption_Button.png", 0);
         caption.font = AssetDatabase.LoadAssetAtPath<Font>(CaptionFont);
         caption.style = VG_CaptionStyle.Box;
         caption.dialogue = BuildDialogueUI(caption.font, caption.button);
@@ -127,7 +129,7 @@ public static class VanGoghAssetSetup
         Object.DestroyImmediate(root);
     }
 
-    // Prefabs/VG_DialogueUI: the dialogue UI with its sprites, font and the Bedroom's settings; it builds itself at runtime.
+    // Shared/UI/Prefabs/VG_DialogueUI: the dialogue UI with its sprites, font and the Bedroom's settings; it builds itself at runtime.
     static VG_DialogueUI BuildDialogueUI(Font font, Sprite key)
     {
         if (!AssetDatabase.IsValidFolder(Prefabs.TrimEnd('/'))) AssetDatabase.CreateFolder("Assets/VanGogh", "Prefabs");
@@ -140,11 +142,11 @@ public static class VanGoghAssetSetup
         ui.settings = bedroom;
         ui.font = font;
         ui.key = key;
-        ui.box = ImportSprite(CaptionUI + "VG_Box.png", BoxBorderPixels);
-        ui.nameTab = ImportSprite(CaptionUI + "VG_NameTab.png", BoxBorderPixels);
-        ui.hintPlate = ImportSprite(CaptionUI + "VG_HintPlate.png", BoxBorderPixels);
-        ui.star = ImportSprite(CaptionUI + "VG_Star.png", 0);
-        ui.starRing = ImportSprite(CaptionUI + "VG_StarRing.png", 0);
+        ui.box = ImportSprite(SharedArt + "VG_Box.png", BoxBorderPixels);
+        ui.nameTab = ImportSprite(SharedArt + "VG_NameTab.png", BoxBorderPixels);
+        ui.hintPlate = ImportSprite(SharedArt + "VG_HintPlate.png", BoxBorderPixels);
+        ui.star = ImportSprite(SharedArt + "VG_Star.png", 0);
+        ui.starRing = ImportSprite(SharedArt + "VG_StarRing.png", 0);
         var prefab = PrefabUtility.SaveAsPrefabAsset(root, DialoguePrefab).GetComponent<VG_DialogueUI>();
         Object.DestroyImmediate(root);
         return prefab;

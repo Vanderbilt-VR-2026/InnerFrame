@@ -1,0 +1,7 @@
+Unity 6000.3.23f1 — live Convai speech and music priority check
+Local credentials only; synthetic 16 kHz mono question, no microphone capture.
+[ConvaiDirectTest] Asking VanGogh_Portrait through Convai (143380 bytes of WAV)
+[VanGogh] Convai: release->answer 7838 ms, 5.3 s of voice; said "I love to capture the light and the soul of a thing through color. It brings a certain peace to my heart."
+[ConvaiDirectTest] Voice priority PASS: BGM at 0.10 gain
+[ConvaiDirectTest] PASSED: Vincent said "I love to capture the light and the soul of a thing through color. It brings a certain peace to my heart." with 5.3 s of his Convai voice (44100 Hz, 1 ch)
+Exit code: 0

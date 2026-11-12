@@ -1,0 +1,8 @@
+[SN Checks] playthrough: PASS (50 passed, 0 failed); log EditorTests/GitHub/Starry/SN_playthrough.log
+[SN Checks] dialogue box: PASS (9 passed, 0 failed); log EditorTests/GitHub/Starry/SN_uicheck.log
+[SN Checks] layout and budget: PASS (17 passed, 0 failed); log EditorTests/GitHub/Starry/SN_layoutcheck.log
+[SN Checks] Vincent: PASS (25 passed, 0 failed); log EditorTests/GitHub/Starry/SN_vincentcheck.log
+[SN Checks] gallery entrance: PASS (41 passed, 0 failed); log EditorTests/GitHub/Starry/SN_gallerycheck.log
+[SN Checks] the lantern and the hints: PASS (15 passed, 0 failed); log EditorTests/GitHub/Starry/SN_lanterncheck.log
+[SN Checks] play mode, props at their spots, the rig and the props, gallery way in and back: SKIPPED (-quit given; run without -quit to include them)
+[SN Checks] PASS: every check passed

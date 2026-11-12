@@ -1,0 +1,18 @@
+{
+  "name": "CafeParisianLoop",
+  "source_sha256": "b8098a3b4fa1b58df46b280d6e4e6e8c847301a26d69a6cec8111b7338a020ec",
+  "source_seconds": [
+    0,
+    40.5
+  ],
+  "crossfade_seconds": 4,
+  "loop_seconds": 36.5,
+  "sample_rate": 48000,
+  "channels": 2,
+  "format": "PCM 16-bit stereo",
+  "loudness_before_lufs": -17.2,
+  "loudness_after_lufs": -27.0,
+  "gain_db": -9.8,
+  "peak_dbfs": -10.60765803618434,
+  "boundary_sample_difference": 0
+}

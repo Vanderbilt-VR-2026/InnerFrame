@@ -32,7 +32,7 @@ October 1888, text-to-speech), and his answer plays from the portrait.
     is not yet confirmed (see `docs/ASSETS.md`).
 - Why B and not A: A is already bound to XRI's Jump on the right hand.
 - **Captions:** `Scripts/VanGoghCaption.cs`, made by `SpeechToProxy`, in one of two styles, chosen by the `style` field
-  on `Resources/VG_Caption` (the asset tool sets **Box**; switch back to **Sign** with that one field).
+  on `Resources/VG_Caption` (in `Assets/Shared/UI/Resources/`; the asset tool sets **Box**; switch back to **Sign** with that one field).
 - **Box style** (the default, from Cici's concepts V1–V3, 2026-11-04; after the 11/03 playtest found the sign and the
   pill too easy to miss and VR text too small):
   - His words sit in a dark dialogue box low in your view: night blue at 88 % with a 4 mm chrome-yellow border, his
@@ -47,7 +47,7 @@ October 1888, text-to-speech), and his answer plays from the portrait.
     shows, first, his state (*Listening…*, *Vincent is thinking…*, *Vincent can't hear you right now*, or who else is
     asking); else the mirror's next step (*Take the mirror off the wall*, *Hold the mirror up to Vincent*, *Let go: the
     mirror stays here*, *Hang the mirror back on the wall*, from `MirrorScene.Now`); else *Hold (B) to ask Vincent*
-    with the B in its circle (T in the Editor).
+    with the B in its circle (B in the Editor; T also accepted).
   - The hint shows within 4 m of Vincent or the portrait; the box whenever he speaks. Both fade over 0.2 s.
   - Both hang 1.3 m ahead of your eyes, 15° below your gaze (`VG_FollowGroup`). They stay put until your gaze is 20°
     away, then ease after it (98 % in 0.5 s); they follow pitch between −30° and +45° of gaze and stay upright. When they
@@ -57,10 +57,10 @@ October 1888, text-to-speech), and his answer plays from the portrait.
     judge on the Quest whether that feels wrong.
   - Pages, timing and fades are the same rules as the sign's (below), at one size: a sentence that needs more than three
     lines splits at the comma nearest its middle.
-  - Code: `Scripts/UI/` (`VG_DialogueUI` and its parts `VG_FollowGroup`, `VG_DialogueBox`, `VG_Hint`, `VG_Paging`,
+  - Code: `Assets/Shared/UI/Scripts/` (`VG_DialogueUI` and its parts `VG_FollowGroup`, `VG_DialogueBox`, `VG_Hint`, `VG_Paging`,
     `VG_UI`, with `VG_DialogueSettings`). They know nothing about Vincent or the mirror; `VanGoghCaption` tells them
     what to show. See *Use the dialogue UI in another scene* below.
-  - Sprites: `VG_Box.png`, `VG_NameTab.png`, `VG_HintPlate.png` (9-slice, 64 px borders), `VG_Star.png`,
+  - Sprites (`Assets/Shared/UI/Art/`): `VG_Box.png`, `VG_NameTab.png`, `VG_HintPlate.png` (9-slice, 64 px borders), `VG_Star.png`,
     `VG_StarRing.png`, drawn by `Art/Source/VanGogh/make_box_sprites.py` (Pillow); the asset tool imports them (borders,
     mipmaps, max 1024). The key circle is the sign's `VG_Caption_Button.png`.
 - **Sign style** (2026-10-27, storybook style, from Cici's concept):
@@ -72,17 +72,17 @@ October 1888, text-to-speech), and his answer plays from the portrait.
     2.8 cm to 2.2 cm capitals to stay on two lines, then takes a third line at the size that fits the panel, then splits
     at the comma nearest its middle. The v1.3 parchment lies over the panel, because the ink's contrast on the bake alone
     falls to 4.4:1 in its darkest strokes. They fade out a second after his voice stops.
-  - Hints appear on a small dark pill: *Hold B to ask Vincent* (*T* in the Editor) with the key in a circle,
+  - Hints appear on a small dark pill: *Hold B to ask Vincent* (*B* on the keyboard; *T* also accepted) with the key in a circle,
     *Listening…*, *Vincent is thinking…*, or *Vincent can't hear you right now* for 3 s. The pill hides while he
     speaks.
   - Over Vincent the pill sits 8 cm above his head and his words above it. Under the portrait his words hang below
     the frame, with the pill below them. Both turn to face your head and fade in and out over 0.2 s.
   - Sizes are world metres, named at the top of `VanGoghCaption`: the sign 1.00 m wide (its panel gives a 0.76 × 0.10 m
     text area), 2.8 cm capitals shrinking to 2.2 cm; a 6 cm pill. They are guesses until tried on a Quest.
-  - The text is uGUI Text in Libre Baskerville (`Art/Fonts`, OFL), laid out at a large font size and scaled down so it
+  - The text is uGUI Text in Libre Baskerville (`Assets/Shared/UI/Fonts`, OFL), laid out at a large font size and scaled down so it
     stays sharp. TextMesh Pro's Essential Resources aren't in the project, and importing them would be a shared change.
   - The parchment, pill and button sprites are drawn by `Art/Source/VanGogh/make_caption_sprites.py`. The asset tool
-    imports the baked sign and sets the sprites' 9-slice borders, and builds `Resources/VG_Caption`, which holds them
+    imports the baked sign and sets the sprites' 9-slice borders, and builds `Resources/VG_Caption` (in `Assets/Shared/UI/`), which holds them
     and the font.
 - Each question logs one line starting with `[VanGogh]` (times in ms, plus the proxy's
   own timings).
@@ -91,7 +91,7 @@ October 1888, text-to-speech), and his answer plays from the portrait.
 
 ## Use the dialogue UI in another scene
 
-The box and hint are one prefab, `Assets/VanGogh/Prefabs/VG_DialogueUI.prefab` (made by the asset tool), with no tie to
+The box and hint are one prefab, `Assets/Shared/UI/Prefabs/VG_DialogueUI.prefab` (made by the asset tool), with no tie to
 Vincent, the mirror or the Bedroom.
 
 1. Put the prefab in the scene (or `Instantiate` it), anywhere; it follows the main camera.
@@ -197,9 +197,9 @@ Start the proxy, `adb reverse tcp:8000 tcp:8000`, build to the Quest, then press
 
 Gallery:
 
-1. Hold B in the headset and ask something. The Editor's hint shows *Player N is asking Vincent…*; T does nothing there.
+1. Hold B in the headset and ask something. The Editor's hint shows *Player N is asking Vincent…*; B does nothing there.
 2. The answer plays in both, from the portrait; the Editor's hint shows the question.
-3. When he stops, ask from the Editor (T): the same, the other way round.
+3. When he stops, ask from the Editor (B; T also accepted): the same, the other way round.
 4. Press B and T at the same moment: only the lower player number's question is answered.
 
 Painted Bedroom (both players go there through the menu or the door):
@@ -280,7 +280,7 @@ until his voice is free. B stops a scripted line, as it stops any of his answers
   mirror.
 - **Canvas images:** `Assets/VanGogh/Art/Canvas/`, made from the portrait by `Art/Source/VanGogh/make_canvas_stages.py`
   (Pillow).
-- **Lines:** `Art/Source/VanGogh/mirror_lines.txt`, made into WAVs by `make_mirror_lines.sh` (macOS `say`, voice Daniel)
+- **Lines:** `Art/Source/VanGogh/mirror_lines.txt`, made into WAVs by `make_mirror_lines.sh` (Piper, voice `en_US-norman-medium`, set in `Art/Source/Voice/piper_lines.sh`)
   in `Assets/VanGogh/Audio/`. Rowling may rewrite the lines (#75).
 - After changing the images or the lines, run **Tools > InnerFrame > Van Gogh > Rebuild assets**.
 

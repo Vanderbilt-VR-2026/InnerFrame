@@ -9,18 +9,22 @@ using UnityEngine.XR.Interaction.Toolkit.UI;
 /// The player's menu. Left controller Menu button (or M in the Editor) opens a panel in front
 /// of the player; pressing again closes it. Creates itself on startup and works in every scene
 /// with an XR Origin; nothing needs to be added to a scene.
-/// Remembers the scene you came from, so the panel can offer "Back to ...".
+/// Everywhere but the Gallery, the panel offers "Back to Gallery" (#160): one way back, the same in every scene,
+/// whatever path led here (guided mode chains paintings, so "the previous scene" would not be the Gallery).
+/// Inside a painting a small "Menu" tag on the left controller (MenuWristTag) says where the button is.
 /// </summary>
 public class PlayerMenu : MonoBehaviour
 {
-    [Tooltip("Where \"Back\" goes when you didn't come from another scene.")]
-    public string homeScene = "Gallery";
+    [Tooltip("Where \"Back\" goes, from every other scene.")]
+    public string homeScene = PaintingNames.Gallery;
+
+    [Tooltip("Show the \"Menu\" tag on the left controller outside the Gallery.")]
+    public bool wristTag = true;
 
     public static PlayerMenu Instance { get; private set; }
 
     InputAction toggle;
     PlayerMenuPanel panel;
-    string previousScene;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Bootstrap()
@@ -39,31 +43,32 @@ public class PlayerMenu : MonoBehaviour
         toggle.AddBinding("<Keyboard>/m");
         toggle.performed += _ => Toggle();
         toggle.Enable();
-        SceneManager.activeSceneChanged += OnSceneChanged;
+        SceneManager.sceneLoaded += OnSceneLoaded;
+        OnSceneLoaded(SceneManager.GetActiveScene(), LoadSceneMode.Single);   // created after the first scene loaded
     }
 
     void OnDestroy()
     {
         toggle?.Dispose();
-        SceneManager.activeSceneChanged -= OnSceneChanged;
+        SceneManager.sceneLoaded -= OnSceneLoaded;
         if (Instance == this) Instance = null;
     }
 
-    void OnSceneChanged(Scene from, Scene to)
+    void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        if (!string.IsNullOrEmpty(from.name) && from.name != to.name) previousScene = from.name;
+        if (mode != LoadSceneMode.Single) return;
+        if (wristTag && BackFrom(scene.name, homeScene) != null && PaintingNames.IsPainting(scene.name)) MenuWristTag.Attach();
     }
 
-    /// <summary>The scene "Back" goes to, or null when there is nowhere to go back to.</summary>
-    public string BackScene
-    {
-        get
-        {
-            string current = SceneManager.GetActiveScene().name;
-            if (!string.IsNullOrEmpty(previousScene) && previousScene != current) return previousScene;
-            return current != homeScene ? homeScene : null;
-        }
-    }
+    /// <summary>The scene "Back" goes to, or null when there is nowhere to go back to (in the Gallery).</summary>
+    public string BackScene => BackFrom(SceneManager.GetActiveScene().name, homeScene);
+
+    /// <summary>The rule behind BackScene: the home scene from anywhere else, nothing from home itself.</summary>
+    public static string BackFrom(string current, string home) =>
+        string.IsNullOrEmpty(home) || current == home ? null : home;
+
+    /// <summary>True while the menu panel is open (headset or desktop). Hints step aside while it is.</summary>
+    public static bool MenuOpen => Instance != null && Instance.IsOpen;
 
     /// <summary>
     /// True while the menu is open without a headset. The mouse is then free for the menu's buttons;

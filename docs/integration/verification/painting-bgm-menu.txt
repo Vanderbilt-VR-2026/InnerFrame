@@ -1,0 +1,26 @@
+[PlayerMenuCheck] PASS Back from PaintedBedroom goes to the Gallery
+[PlayerMenuCheck] PASS Back from StarryNight goes to the Gallery
+[PlayerMenuCheck] PASS Back from Bedroom_StyleExperiment goes to the Gallery
+[PlayerMenuCheck] PASS Back from SomeFuturePainting goes to the Gallery
+[PlayerMenuCheck] PASS no Back in the Gallery
+[PlayerMenuCheck] PASS in a painting the button reads 'Back to Gallery'
+[PlayerMenuCheck] PASS it opens 0.56 m from the eyes, inside the 2 m ray
+[PlayerMenuCheck] PASS two buttons (X and Back): 2
+[PlayerMenuCheck] PASS the title bar has a collider to grab
+[PlayerMenuCheck] PASS menu text uses the shared Gallery font: Menu
+[PlayerMenuCheck] PASS menu text uses the shared Gallery font: ×
+[PlayerMenuCheck] PASS menu text uses the shared Gallery font: Explore InnerFrame
+[PlayerMenuCheck] PASS menu text uses the shared Gallery font: Return to the exhibition
+[PlayerMenuCheck] PASS menu text uses the shared Gallery font: Back to Gallery
+[PlayerMenuCheck] PASS menu text uses the shared Gallery font: Grip the title to move
+[PlayerMenuCheck] PASS Gallery-style rounded frame is present
+[PlayerMenuCheck] rendered /private/tmp/innerframe-painting-menu/menu-painting.png
+[PlayerMenuCheck] PASS in the Gallery the Back button is hidden
+[PlayerMenuCheck] PASS the wrist tag and hints use the dialogue font (LibreBaskerville-Regular)
+[PlayerMenuCheck] PASS the plate and button-circle sprites load from VG_Caption
+[PlayerMenuCheck] PASS the wrist tag reads 'Menu'
+[PlayerMenuCheck] PASS the wrist tag shows the Menu button's icon
+[PlayerMenuCheck] rendered /private/tmp/innerframe-painting-menu/wrist-tag.png
+[PlayerMenuCheck] PASS the grip icon is drawn
+[PlayerMenuCheck] rendered /private/tmp/innerframe-painting-menu/icons.png
+[PlayerMenuCheck] ALL PASSED

@@ -1,0 +1,11 @@
+Small-fix self-review, 2026-11-11 (America/Chicago)
+
+Removed the three post-title immersion cards from Entrance playback.
+The final video frame stays visible until gold is opaque; replace it with the gold texture before releasing its render buffer.
+Brightened gold edges. Gold prelude 2.2 -> 1.1 s; exit/reveal 1.2 -> 0.6 s each.
+Music crossfades 0.3 s; no clip speed or pitch changes.
+Entrance passes a 13.9 s remaining budget after its 1.1 s prelude, including loading and reveal. If required load/shutdown exceeds the budget, safely finish it without additional connection waiting.
+Default arguments preserve timing of other SceneFader callers. Gallery/Bedroom scenes, shared settings and XR assets were not changed by this follow-up.
+Fixed loading label path handling so the Gallery scene path says Gallery rather than Bedroom.
+
+Read-only open-PR overlap refresh against bcc94e7: #189/#190/#191/#192 and #176/#177/#178/#180 clean. Existing #187 Gallery, #184 docs/ASSETS.md, #112 older Entrance/card and #109 generated Bedroom conflicts remain. None of those branches was merged or changed. This PR stays draft, pending merge-order coordination.

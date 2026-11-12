@@ -119,6 +119,16 @@ public class DesktopTestRig : MonoBehaviour
         var mouse = Mouse.current;
         if (kb == null) return;
 
+        // Let a free mouse click the Gallery cards before the left button captures
+        // the camera. This also avoids selecting a second button via the centre ray.
+        if (!PlayerMenu.OpenOnDesktop && Cursor.lockState != CursorLockMode.Locked
+            && mouse != null && mouse.leftButton.wasPressedThisFrame
+            && InnerFrame.ArtworkCici.GalleryCardButton.TryPressPointer(cam.GetComponent<Camera>(), mouse.position.ReadValue()))
+        {
+            if (ray != null) ray.selectInput.QueueManualState(false, 0f);
+            return;
+        }
+
         // press: E, or the left button once the mouse is captured (the click that captures it doesn't press)
         bool captured = Cursor.lockState == CursorLockMode.Locked;
         bool press = !PlayerMenu.OpenOnDesktop && (kb.eKey.isPressed || (captured && mouse != null && mouse.leftButton.isPressed));
@@ -135,6 +145,12 @@ public class DesktopTestRig : MonoBehaviour
                 yaw += d.x;
                 pitch = Mathf.Clamp(pitch - d.y, -85f, 85f);
             }
+        }
+        // Keyboard look also works when a remote desktop cannot deliver relative mouse motion.
+        if (!PlayerMenu.OpenOnDesktop)
+        {
+            yaw += ((kb.lKey.isPressed ? 1f : 0f) - (kb.jKey.isPressed ? 1f : 0f)) * 60f * Time.deltaTime;
+            pitch = Mathf.Clamp(pitch + ((kb.kKey.isPressed ? 1f : 0f) - (kb.iKey.isPressed ? 1f : 0f)) * 45f * Time.deltaTime, -85f, 85f);
         }
         transform.rotation = Quaternion.Euler(0f, yaw, 0f);
         cam.localRotation = Quaternion.Euler(pitch, 0f, 0f);

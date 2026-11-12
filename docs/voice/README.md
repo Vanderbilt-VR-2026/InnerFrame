@@ -37,7 +37,7 @@ paid plan.
 | Button | Does |
 |---|---|
 | X (left), V in the Editor | Hold to talk to other players |
-| B (right), T in the Editor | Ask Vincent (`Assets/VanGogh`, on main). Voice chat pauses while held |
+| B (right), B in the Editor; T also accepted | Ask Vincent (`Assets/VanGogh`, on main). Voice chat pauses while held |
 | A (right) | Jump (XRI) |
 | Menu (left), M in the Editor | Player menu |
 

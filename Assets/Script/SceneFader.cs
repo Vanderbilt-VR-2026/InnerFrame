@@ -32,6 +32,69 @@ public class SceneFader : MonoBehaviour
     Camera cam;
     Color tint = Color.whiteSmoke;
     bool busy;
+    public bool IsTransitioning => busy;
+    public static bool IsFading => instance != null && instance.busy;
+    public float Coverage => mat != null && sphereRenderer.enabled ? mat.color.a : 0f;
+    public string LastCompletedScene { get; private set; }
+    public string LastFailure { get; private set; }
+    public static System.Func<string, IEnumerator> BeforeSceneChange;
+    Texture2D ownedImage;
+    TMPro.TextMeshPro loadingLabel;
+    float holdStarted;
+    bool holdingGold;
+
+    void LateUpdate()
+    {
+        if (!holdingGold || mat == null) return;
+        float pulse = Mathf.FloorToInt((Time.unscaledTime-holdStarted)*8f)%4 < 2 ? 1f : .9f;
+        mat.color = new Color(pulse,pulse,pulse,1f);
+        FollowCamera();
+        if (loadingLabel != null && cam != null)
+            loadingLabel.transform.SetPositionAndRotation(cam.transform.position + cam.transform.forward * .7f,
+                cam.transform.rotation);
+    }
+
+    void ShowLoading(string destination)
+    {
+        if (ownedImage == null) return;
+        holdingGold = true;
+        holdStarted = Time.unscaledTime;
+        var go = new GameObject("Entrance loading status");
+        go.transform.SetParent(transform,false);
+        loadingLabel = go.AddComponent<TMPro.TextMeshPro>();
+        var font = Resources.Load<TMPro.TMP_FontAsset>("Entrance/BrushFont");
+        if (font != null) loadingLabel.font = font;
+        loadingLabel.text = System.IO.Path.GetFileNameWithoutExtension(destination) == "Gallery" ? "Loading the gallery…" : "Loading The Bedroom…";
+        loadingLabel.fontSize = 2;
+        loadingLabel.alignment = TMPro.TextAlignmentOptions.Center;
+        loadingLabel.rectTransform.sizeDelta = new Vector2(1.1f,.15f);
+        loadingLabel.color = new Color(.12f,.07f,.02f);
+        loadingLabel.fontSharedMaterial = new Material(loadingLabel.fontSharedMaterial);
+        loadingLabel.fontSharedMaterial.renderQueue = 5010;
+        loadingLabel.fontSharedMaterial.SetFloat("_ZTestMode",8);
+    }
+
+    void HideLoading()
+    {
+        holdingGold = false;
+        if (loadingLabel != null)
+        {
+            Destroy(loadingLabel.fontSharedMaterial);
+            Destroy(loadingLabel.gameObject);
+            loadingLabel = null;
+        }
+    }
+
+
+    public void SetTransitionImage(Texture2D image)
+    {
+        if (ownedImage != null) Destroy(ownedImage);
+        ownedImage = image != null ? Instantiate(image) : null;
+    }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetState() { instance = null; BeforeSceneChange = null; }
+
 
     void OnEnable()  { Application.onBeforeRender += FollowCamera; }
     void OnDisable() { Application.onBeforeRender -= FollowCamera; }
@@ -72,33 +135,98 @@ public class SceneFader : MonoBehaviour
     }
 
     /// <param name="fadeImage">Optional. Leave null for plain black.</param>
-    public void FadeToScene(string sceneName, float fadeTime = 1f, Texture2D fadeImage = null)
+    public void FadeToScene(string sceneName, float fadeTime = 1f, Texture2D fadeImage = null, float revealTime = 1.2f, float transitionBudget = 0f)
     {
         if (busy) return;
-        StartCoroutine(FadeRoutine(sceneName, fadeTime, fadeImage));
+        if (!Application.CanStreamedLevelBeLoaded(sceneName))
+        {
+            LastFailure = "Scene is not enabled in Build Settings: " + sceneName;
+            Debug.LogError("[SceneFader] " + LastFailure);
+            return;
+        }
+        busy = true;
+        LastFailure = null;
+        LastCompletedScene = null;
+        SetTransitionImage(fadeImage);
+        StartCoroutine(Guard(FadeRoutine(sceneName, Mathf.Max(.01f, fadeTime), fadeImage, Mathf.Max(.01f, revealTime), Mathf.Max(0f, transitionBudget))));
     }
 
-    IEnumerator FadeRoutine(string sceneName, float fadeTime, Texture2D fadeImage)
+    IEnumerator FadeRoutine(string sceneName, float fadeTime, Texture2D fadeImage, float revealTime, float transitionBudget)
     {
-        busy = true;
+        float transitionStarted = Time.realtimeSinceStartup;
+        if (BeforeSceneChange != null) yield return BeforeSceneChange(sceneName);
 
         // Image: white tint so it shows true colours. No image: black.
-        mat.mainTexture = fadeImage;
-        tint = fadeImage != null ? Color.white : Color.black;
+        mat.mainTexture = ownedImage;
+        tint = ownedImage != null ? Color.white : Color.black;
 
         yield return Fade(0f, 1f, fadeTime);              // fade out
+
+        ShowLoading(sceneName);
 
         if (NetworkSession.Instance != null)              // leave this scene's multiplayer room
             yield return NetworkSession.Instance.Leave();
 
         var op = SceneManager.LoadSceneAsync(sceneName);  // load new scene
+        if (op == null) throw new System.InvalidOperationException("Scene load did not start: " + sceneName);
         while (!op.isDone) yield return null;
 
         cam = null;                                       // find the new scene's camera
         yield return null;
 
-        yield return Fade(1f, 0f, fadeTime);              // fade in
+        // Let the destination choose its XR/desktop rig before revealing it.
+        yield return null;
+        float cameraDeadline = Time.realtimeSinceStartup + 10f;
+        while (Camera.main == null && Time.realtimeSinceStartup < cameraDeadline) yield return null;
+        if (Camera.main == null) throw new System.InvalidOperationException("Destination has no Main Camera: " + sceneName);
+        cam = Camera.main;
+        if (ownedImage != null && NetworkSession.Instance != null)
+        {
+            // Entrance budgets the whole transition, including scene load and reveal,
+            // so slow loading does not add another full connection wait.
+            float deadline = transitionBudget > 0f
+                ? transitionStarted + transitionBudget - Mathf.Max(fadeTime, revealTime)
+                : Time.realtimeSinceStartup + 30f;
+            while ((NetworkSession.Instance.Runner == null || !NetworkSession.Instance.Runner.IsRunning)
+                && Time.realtimeSinceStartup < deadline) yield return null;
+            if (NetworkSession.Instance.Runner == null || !NetworkSession.Instance.Runner.IsRunning)
+                Debug.LogWarning("[Entrance] Connection wait limit reached. Revealing the loaded local scene; this is NOT a multiplayer pass.");
+        }
+        HideLoading();
+        FollowCamera();
+        yield return Fade(1f, 0f, Mathf.Max(fadeTime,revealTime));              // fade in
+        LastCompletedScene = sceneName;
+        Debug.Log("[Entrance] Land complete: " + sceneName + ". Physical Quest validation remains pending.");
+        mat.mainTexture = null;
+        if (ownedImage != null) Destroy(ownedImage);
+        ownedImage = null;
         busy = false;
+    }
+
+    IEnumerator Guard(IEnumerator routine)
+    {
+        var stack = new System.Collections.Generic.Stack<IEnumerator>();
+        stack.Push(routine);
+        while (stack.Count > 0)
+        {
+            bool more = false;
+            object next = null;
+            System.Exception failure = null;
+            try { more = stack.Peek().MoveNext(); if (more) next = stack.Peek().Current; }
+            catch (System.Exception error) { failure = error; }
+            if (failure != null)
+            {
+                LastFailure = failure.ToString();
+                busy = false;
+                HideLoading();
+                sphereRenderer.enabled = false;
+                Debug.LogException(failure);
+                yield break;
+            }
+            if (!more) { stack.Pop(); continue; }
+            if (next is IEnumerator nested) stack.Push(nested);
+            else yield return next;
+        }
     }
 
     IEnumerator Fade(float from, float to, float duration)

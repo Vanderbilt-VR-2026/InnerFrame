@@ -43,8 +43,25 @@ namespace InnerFrame.StarryNight
         /// <summary>Drops the queued story lines (not Keep ones, not the one playing).</summary>
         public void DropQueued() => queue.RemoveAll(q => !q.Value);
 
+        public bool ConversationPaused { get; private set; }
+
+        public void PauseForConversation(bool paused)
+        {
+            if (ConversationPaused == paused) return;
+            ConversationPaused = paused;
+            if (paused) { if (source != null) source.Pause(); return; }
+            if (source != null) source.UnPause();
+            if (ui != null)
+            {
+                ui.Voice = source;
+                if (current != null) ui.Say(Speaker, current.text, current.clip);
+                else ui.Clear();
+            }
+        }
+
         public void Step(float dt)
         {
+            if (ConversationPaused) return;
             if (current != null)
             {
                 t += dt;

@@ -6,10 +6,12 @@ label (number and time of day): 1 The Bedroom (Afternoon), 2 Café Terrace at Ni
 (Evening), 4 Almond Blossom (Morning). You enter a painting by pointing at it and pulling the trigger: a small menu opens
 beside it (Enter, Back). There are no stands (2026-11-12, Part B; until then each painting had a pedestal with a button).
 
-Since 2026-11-10 the room follows the team's concept sheet (a small, warm 19th-century gallery): red walls over a grey
-wood wainscot, a cornice, a skylight in the middle of the ceiling, an arched entrance with a closed door and lanterns,
-one upholstered bench on a rug, a statue, plants and flowers. Its textures come from ChatGPT:
-[TEXTURE_PROMPTS.md](TEXTURE_PROMPTS.md) has the prompts and how to bring the images in.
+Since 2026-11-10 the room follows the team's concept sheet (a small, warm 19th-century gallery): painted walls over a grey
+wood wainscot, a cornice, a skylight in the middle of the ceiling, an arched entrance with lanterns, one upholstered
+bench on a rug, a statue, plants and flowers. Its textures come from ChatGPT:
+[TEXTURE_PROMPTS.md](TEXTURE_PROMPTS.md) has the prompts and how to bring the images in. Since 2026-11-12 the walls are
+yellow and the arch looks into a corridor, after the yellow concept photo
+(`Art/Source/Gallery/textures/concept_yellow.png`); until then they were red and a closed double door filled the arch.
 
 ## Open it
 
@@ -70,20 +72,35 @@ artworks" (`CafeGallerySetup`) now hand the placing to Build Layout.
 
 | Part | What | Material (texture slot) |
 |---|---|---|
-| Walls, arch spandrels | 0.2 m thick | `Mat_Wall` (`wall.png`, 2 m per repeat; shifted from crimson to orange-red by `make_textures.py`'s `GAIN`) |
+| Walls, arch spandrels | 0.2 m thick | `Mat_Wall` (`wall.png`, yellow, 2 m per repeat, colours as ChatGPT made them; the red wall before 2026-11-12 was shifted from crimson to orange-red by `make_textures.py`'s `GAIN`) |
 | Wainscot | 1.0 m panelling on every wall, unbroken except at the arch (the frames hang above it) | `Mat_Wainscot` (`wainscot.png`, 1.5 m per repeat, once upwards) |
 | Cornice (0.25 m under the ceiling) | | `Mat_Cornice` (`cornice.png`, a moulding profile mapped once up the band, 0.5 m across) |
 | Wainscot rail (0.06 m) | | `Mat_Rail` (`trim.png`, mapped once up the band) |
 | Arch moulding, skylight frame | | `Mat_Trim` (a plain panel cut from `trim.png`, 0.5 m) |
 | Ceiling, with the 3 × 2.5 m skylight in its middle | | `Mat_Ceiling` (`ceiling.png`, 2 m; lightened to cream by `GAIN`) |
 | Floor | | `Mat_Floor` (`floor.png`, 2 m) |
-| Arch | 1.6 m wide, round-headed, 2.6 m to the crown; the door fills it at the wall's outer face | door: `Mat_Door` (`door.png`, once) |
+| Arch | 1.6 m wide, round-headed, 2.6 m to the crown; a slab (still named `Door`, with its collider, so nobody walks out) closes it at the wall's outer face and shows the corridor beyond | `Mat_Door` (`corridor.png`, once: cropped to the arch's 1.6 × 2.6 m, blurred and darkened by `make_textures.py`'s `backdrop`) |
 | Frame (`Frame_Bedroom`; every other painting's frame is a copy of it, scaled to its canvas) | A carved baroque frame made in `build_gallery.py`, after the team's reference: a moulded profile (stepped sight edge, inner bead, hollow, broad flat band, bold rounded outer rim) swept round the opening, and at each corner a cartouche: a raised cushion, a C-scroll curling along each rail, a fan of five acanthus leaves and a boss. 0.18 m wide (the cartouches stand 1.5 cm past its edge; the wainscot's cut-outs leave 3 cm round it), about 2,600 triangles | `Mat_Frame` (`frame.png`, ChatGPT gilt): its UVs run along each rail and up the profile from the inner edge, so the strokes follow the moulding; each ornament takes a patch of the gilt's middle band, smooth-shaded (also Vincent's portrait's frame) |
 | Bench (`Bench_01`) | 1.6 × 0.55 m, 0.48 m high, in the middle of the room (`GalleryLayout.bench`): an upholstered top on a walnut frame with turned legs, on the rug | `Mat_BenchWood` (`bench_wood.png`, 0.6 m), `Mat_Cushion` (`bench_fabric.png`, 0.5 m) |
 | Rug | 2 × 3 m under the bench, long side towards The Bedroom; you can teleport onto it | `Mat_Rug` (`rug.png`, once) |
 
-Without its texture a surface keeps a plain colour from the concept sheet. All eleven are in (2026-11-10). The door came as one quarter of a
-ChatGPT sheet: 423 × 546 pixels, so it is soft up close; a full-size `door.png` (1024 × 1536) would sharpen it.
+Without its texture a surface keeps a plain colour from the concept sheet. All eleven are in (2026-11-10).
+
+**The yellow wall and the corridor (2026-11-12).** Their source images are in the repo, in
+`Art/Source/Gallery/textures/` (`wall.png`, `corridor.png`, and the concept photo they follow, `concept_yellow.png`);
+`make_textures.py -- Art/Source/Gallery/textures` remakes `GT_Wall` and `GT_Corridor` from them, then **Add Decor**.
+- Seams: ChatGPT's wall was nearly seamless already. `make_textures.py` prints the step across each repeat over the
+  99th percentile of the steps inside the image: left to right 1.00, top to bottom 1.17 (a faint seam). It cross-fades
+  12 % of each edge into the opposite one, as for every tiling texture, and now scales the image with a margin wrapped
+  round from the opposite edge (scaled on its own, the edges resampled differently and brought a faint seam back):
+  0.95 and 0.91 after. The 90 % JPEG adds a little at the edge (about 1.1 measured on the file, the red wall's was 1.08);
+  no line shows in a full-size crop where four repeats meet.
+- Brightness: the yellow is used as it came (mean sRGB 246, 185, 55; the red was 179, 63, 35), with no `GAIN`. Above
+  every painting the wall stays yellow where its spotlight's cone grazes it: no point as white as 235 in all three
+  channels; red clips on about 1 to 3 % of the 60 cm above the frame (The Starry Night most, 3 %, as with the red wall),
+  which shows as a light yellow (255, 200, 80), not white.
+- The corridor: `corridor.png` cropped from its centre to the arch's shape, blurred (sigma 0.4 % of its width) and darkened
+  (× 0.7) so it reads as further off than the lit room; the old `GT_Door` is gone, and so are the door's two handles.
 
 ### Decoration (`GalleryDecor.prefab`; where each stands: `GalleryLayout.asset`'s decor list, set by Build Layout)
 
@@ -207,7 +224,9 @@ Blender --background --factory-startup --python Art/Source/Gallery/make_tripo_pr
   beside it (or in front of you from afar), readable; Enter fades into the right scene; Almond Blossom says Coming soon.
 - The menu closes when you walk away or turn round; the grip and A do nothing new; B still asks Vincent.
 - Teleport onto the rug and round the bench; you can't walk through the bench, the plinths, the pots or the door.
-- Look back at the arch: the door fills it; the four lanterns glow, you see each candle through the amber glass.
+- Look back at the arch: you look into a dim corridor, not a flat poster; the four lanterns glow, you see each candle
+  through the amber glass.
+- The wall just above each painting, where its spotlight grazes it, stays yellow, not white.
 - Look up at the skylight: its bars throw crisp shadows on the floor, no light leaks between the bars and the frame.
   The Bedroom is lit, not dim and blue.
 - Every frame hangs above the wainscot's rail; the frames' carving reads as one piece with the frame.

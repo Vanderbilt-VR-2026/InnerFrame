@@ -12,6 +12,9 @@ wainscot (dado) with a cap rail, a cornice, a coffered skylight in the middle of
 in the south wall with a closed door in it, and one upholstered bench on a rug in the middle. The surfaces take
 ChatGPT textures (docs/gallery/TEXTURE_PROMPTS.md): walls, floor and wood repeat by the metre (UVs in metres); the
 rug and the door are mapped once, edge to edge.
+
+2026-11-12: the walls turn yellow (a texture: make_textures.py), and the slab that closes the arch shows the corridor
+behind it instead of a door, so it has no handles any more.
 """
 import re
 from math import atan2, cos, degrees, exp, pi, radians, sin
@@ -30,7 +33,8 @@ from mathutils import Matrix, Vector
 WALL_T = 0.2         # thickness of the walls and the floor
 CEILING_T = 0.4      # ceiling thickness, which is also the depth of the skylight
 
-# The arched entrance in the middle of Wall_South, closed by a door set at the wall's outer face.
+# The arched entrance in the middle of Wall_South, closed at the wall's outer face by a slab ("Door") that shows the
+# corridor beyond (GT_Corridor).
 ARCH_W, ARCH_SPRING = 1.6, 1.8      # opening width; height where the arch starts to curve
 ARCH_R = ARCH_W / 2                 # a round (semicircular) arch: crown at ARCH_SPRING + ARCH_R = 2.6 m
 ARCH_SEGMENTS = 16                  # straight pieces in the curve
@@ -86,7 +90,7 @@ RUG = (2.0, 3.0)        # along X, along Y; centred under the bench
 RUG_T = 0.008
 
 COLORS = {  # plain colours, linear RGB (the numbers Blender's colour picker shows); Unity has its own materials
-    "Mat_Wall": (0.32, 0.06, 0.04),        # deep Pompeian red
+    "Mat_Wall": (0.92, 0.48, 0.04),        # warm yellow (the yellow wall texture's mean; Pompeian red until 2026-11-12)
     "Mat_Ceiling": (0.45, 0.38, 0.30),     # warm grey-beige
     "Mat_Wainscot": (0.30, 0.27, 0.23),    # weathered grey wood
     "Mat_Trim": (0.55, 0.45, 0.33),        # warm stone / pale wood: the arch's moulding, the skylight's frame
@@ -96,10 +100,10 @@ COLORS = {  # plain colours, linear RGB (the numbers Blender's colour picker sho
     "Mat_Rug": (0.30, 0.05, 0.05),         # red rug
     "Mat_BenchWood": (0.05, 0.025, 0.012), # dark walnut
     "Mat_Cushion": (0.12, 0.06, 0.04),     # dark leather
-    "Mat_Door": (0.10, 0.12, 0.06),        # olive-painted wood
+    "Mat_Door": (0.10, 0.06, 0.02),        # the corridor beyond the arch, dim (its texture: GT_Corridor)
     "Mat_Bench": (0.01, 0.01, 0.01),       # near-black (the pedestals)
     "Mat_Frame": (0.17, 0.10, 0.025),      # dark gold
-    "Mat_Metal": (0.05, 0.05, 0.05),       # dark grey, skylight bars, door handles
+    "Mat_Metal": (0.05, 0.05, 0.05),       # dark grey, skylight bars
     "Mat_Baseboard": (0.13, 0.05, 0.02),   # dark wood
 }
 
@@ -479,16 +483,14 @@ for k in range(ARCH_SEGMENTS):
     bm.faces.new([bi[k], fi[k], fi[k + 1], bi[k + 1]])      # inner edge (the soffit's lip)
 finish("Arch_Moulding", mat["Mat_Trim"], bm)
 
-# The door: one slab the shape of the opening, at the wall's outer face, seen down the 0.2 m reveal; its picture is
-# mapped once, edge to edge (uv_fit). Two brass handles on the room side.
+# The "door": one slab the shape of the opening, at the wall's outer face, seen down the 0.2 m reveal; its picture (the
+# corridor beyond, since 2026-11-12; a pair of doors before) is mapped once, edge to edge (uv_fit). No handles: the
+# corridor's doors are painted at its far end.
 bm = bmesh.new()
 door_outline = [(-ARCH_R, 0.0), (ARCH_R, 0.0)] + arc(0, ARCH_SPRING, ARCH_R, 0, pi, ARCH_SEGMENTS)
 prism_xz(bm, door_outline, (y0 - T, y0 - T + DOOR_T), fan_from=(0.0, ARCH_SPRING))
 finish("Door", mat["Mat_Door"], bm)
 uv_fit(bpy.data.objects["Door"])
-dz, dy = 1.0, y0 - T + DOOR_T
-make("Door_Handles", mat["Mat_Metal"], ("xzy", (-0.14, -0.06), (dz - 0.02, dz + 0.02), (dy, dy + 0.06)),
-     ("xzy", (0.06, 0.14), (dz - 0.02, dz + 0.02), (dy, dy + 0.06)))
 
 # Picture frame around the painting opening, standing FRAME_D off the north wall.
 # The Bedroom's canvas as GalleryLayout.asset hangs it (Build Layout works the sizes out): its frame is built here, on

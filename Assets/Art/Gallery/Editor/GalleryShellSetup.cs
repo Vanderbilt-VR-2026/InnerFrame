@@ -37,11 +37,13 @@ namespace InnerFrame.Gallery.EditorTools
         // material, plain colour (no texture), texture name; metres per repeat across (u) and up (v), 0 = once across the
         // object (the rug and the door are UV-mapped 0..1); v0: the height (m) where the image's bottom edge sits, for a
         // band mapped once up its height (Gallery.fbx's wall UVs are (along the wall, height) in metres); smoothness; both
-        // faces. Colours from the concept sheet: Pompeian red walls, grey wood wainscot, warm stone trim, honey oak floor.
+        // faces. Colours from the concept sheet: yellow walls (Pompeian red until 2026-11-12), grey wood wainscot, warm stone
+        // trim, honey oak floor. The slab that closes the arch ("Door", Mat_Door) shows the corridor beyond it (GT_Corridor,
+        // blurred and darkened by make_textures.py; a pair of doors, GT_Door, until 2026-11-12).
         // The band heights are build_gallery.py's: cornice 0.25 m under the 4 m ceiling, rail 0.06 m round the 1 m wainscot.
         public static readonly (string mat, Color plain, string tex, float mu, float mv, float v0, float smooth, bool twoSided)[] Slots =
         {
-            ("Mat_Wall",      Hex("8E2A1F"), "Wall",      2.0f, 2.0f,  0f,    0.05f, false),
+            ("Mat_Wall",      Hex("F6B937"), "Wall",      2.0f, 2.0f,  0f,    0.05f, false),
             ("Mat_Ceiling",   Hex("A8957E"), "Ceiling",   2.0f, 2.0f,  0f,    0.05f, false),
             ("Mat_Wainscot",  Hex("7C766C"), "Wainscot",  1.5f, 1.0f,  0f,    0.15f, false),
             ("Mat_Cornice",   Hex("B49A78"), "Cornice",   0.5f, 0.25f, 3.75f, 0.15f, false),
@@ -51,7 +53,7 @@ namespace InnerFrame.Gallery.EditorTools
             ("Mat_Rug",       Hex("7A1E1E"), "Rug",       0f,   0f,    0f,    0.0f,  false),
             ("Mat_BenchWood", Hex("3B2414"), "BenchWood", 0.6f, 0.6f,  0f,    0.35f, false),
             ("Mat_Cushion",   Hex("4A2A1E"), "Cushion",   0.5f, 0.5f,  0f,    0.2f,  false),
-            ("Mat_Door",      Hex("4F5A36"), "Door",      0f,   0f,    0f,    0.2f,  true),
+            ("Mat_Door",      Hex("3A2412"), "Corridor",  0f,   0f,    0f,    0.2f,  true),
             // the carved frame's own gilt (GT_Frame); its UVs, made by build_gallery.py, already run along each rail and up its
             // profile, so the texture repeats once per UV unit
             // the button pedestals (Pedestal_Bedroom, and The Starry Night's copy): ebonised wood, UVs in metres

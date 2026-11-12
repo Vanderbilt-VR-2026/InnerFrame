@@ -141,6 +141,10 @@ namespace InnerFrame.AlmondStudio
         [Tooltip("The half-round hub the fanlight's bars radiate from.")] public float windowHub = 0.075f;
         [Tooltip("Use the painted window (Textures/Window: AS_CasementL.png, AS_CasementR.png, AS_Fanlight.png, panes cut out by alpha) when the three pictures are there; else the built one.")]
         public bool paintedWindow = true;
+        [Tooltip("Use the Tripo casement (Art/Props/AS_Casement.fbx, the left leaf; the right one is its mirror) when it is there.")]
+        public bool casementFromModel = true;
+        [Tooltip("Turns the Tripo casement upright with its front toward the room, as for the other Tripo props.")] public Vector3 casementModelEuler = new Vector3(270f, 180f, 0f);
+        [Tooltip("The Tripo casement's thickness after fitting, metres.")] public float casementModelDepth = 0.05f;
 
         [Header("Chest with its boxes (Tripo model Art/Props/AS_ChestBoxes.fbx)")]
         [Tooltip("Turns the model upright with its front toward the room, as for the sill still life.")] public Vector3 chestModelEuler = new Vector3(270f, 180f, 0f);

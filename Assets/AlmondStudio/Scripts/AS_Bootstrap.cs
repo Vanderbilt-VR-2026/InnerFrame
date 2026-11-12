@@ -29,6 +29,7 @@ namespace InnerFrame.AlmondStudio
         [Tooltip("Vincent's easel (VanGogh/Art/Props/VG_Easel.fbx) and its painted material M_Easel. Boxes if missing.")] public GameObject easelModel;
         [Tooltip("The sill's five objects as one Tripo model (Art/Props/AS_SillStillLife.fbx). Cylinders if missing.")] public GameObject sillModel;
         [Tooltip("The chest with its boxes (Art/Props/AS_ChestBoxes.fbx). Boxes if missing.")] public GameObject chestModel;
+        [Tooltip("The Tripo casement, left leaf (Art/Props/AS_Casement.fbx); the right leaf is its mirror.")] public GameObject casementModel;
         public Material easelMaterial;
 
         public AS_Game Game { get; private set; }
@@ -175,14 +176,31 @@ namespace InnerFrame.AlmondStudio
             float fw = layout.windowFrameWidth, tr = layout.windowTransom, zc = zg;
             // the painted window (three ChatGPT pictures, panes cut out) when it is there: each casement is one picture
             // that swings on its hinge, the fanlight one picture above; their own painted frames replace the built ones
-            bool painted = layout.paintedWindow && casementLeft != null && casementRight != null && fanlightPainted != null;
+            // the casements, in order of preference: the Tripo leaf (3D), the painted pictures, the built ones; the
+            // fanlight: painted if its picture is there, else built. Tripo or painted leaves bring their own frames.
+            bool modelLeaves = layout.casementFromModel && casementModel != null;
+            bool paintedLeaves = !modelLeaves && layout.paintedWindow && casementLeft != null && casementRight != null;
+            bool paintedFan = layout.paintedWindow && fanlightPainted != null;
+            bool painted = modelLeaves || paintedLeaves;
             float inner = painted ? ww / 2f : ww / 2f - fw, bottom = painted ? wb : wb + fw, top = spring - tr / 2f, hgt = top - bottom, yc = (top + bottom) / 2f;
             if (painted)
             {
-                var fan = Quad(win.transform, "Fanlight (painted)", 2f * (ww / 2f), spring + ww / 2f - top, fanlightPainted);
-                fan.localPosition = new Vector3(0f, (top + spring + ww / 2f) / 2f, zg);
-                win.hingeLeft = PaintedCasement(win.transform, "Hinge L", new Vector3(-inner, yc, zc), +1f, inner, hgt, casementLeft);
-                win.hingeRight = PaintedCasement(win.transform, "Hinge R", new Vector3(inner, yc, zc), -1f, inner, hgt, casementRight);
+                if (paintedFan)
+                {
+                    var fan = Quad(win.transform, "Fanlight (painted)", 2f * (ww / 2f), spring + ww / 2f - top, fanlightPainted);
+                    fan.localPosition = new Vector3(0f, (top + spring + ww / 2f) / 2f, zg);
+                }
+                else Fanlight(win.transform, ww / 2f, spring, zg);
+                if (modelLeaves)
+                {
+                    win.hingeLeft = ModelCasement(win.transform, "Hinge L", new Vector3(-inner, yc, zc), +1f, inner, hgt);
+                    win.hingeRight = ModelCasement(win.transform, "Hinge R", new Vector3(inner, yc, zc), -1f, inner, hgt);
+                }
+                else
+                {
+                    win.hingeLeft = PaintedCasement(win.transform, "Hinge L", new Vector3(-inner, yc, zc), +1f, inner, hgt, casementLeft);
+                    win.hingeRight = PaintedCasement(win.transform, "Hinge R", new Vector3(inner, yc, zc), -1f, inner, hgt, casementRight);
+                }
             }
             else
             {
@@ -284,6 +302,54 @@ namespace InnerFrame.AlmondStudio
             hinge.localPosition = hingeAt;
             var leaf = Quad(hinge, "Leaf (painted)", width, height, m);
             leaf.localPosition = new Vector3(dir * width / 2f, 0f, 0f);
+            var col = leaf.gameObject.AddComponent<BoxCollider>();
+            col.size = new Vector3(width, height, 0.09f);
+            col.isTrigger = true;
+            leaf.gameObject.AddComponent<XRSimpleInteractable>();
+            return hinge;
+        }
+
+        /// <summary>A Tripo casement on its hinge: the model turned upright (casementModelEuler), stretched to the leaf's
+        /// width, height and casementModelDepth, mirrored for the right leaf (dir -1), with the built casement's grab
+        /// collider; with flat shading its texture goes on an AS_Painted copy.</summary>
+        Transform ModelCasement(Transform parent, string name, Vector3 hingeAt, float dir, float width, float height)
+        {
+            var hinge = new GameObject(name).transform;
+            hinge.SetParent(parent, false);
+            hinge.localPosition = hingeAt;
+            var leaf = new GameObject("Leaf (Tripo)").transform;
+            leaf.SetParent(hinge, false);
+            leaf.localPosition = new Vector3(dir * width / 2f, 0f, 0f);
+            var fit = new GameObject("Fit").transform;   // stretched along the room's axes; the model turns inside it
+            fit.SetParent(leaf, false);
+            var m = Instantiate(casementModel, fit);
+            m.name = casementModel.name;
+            m.transform.localRotation = Quaternion.Euler(layout.casementModelEuler);
+            foreach (var c in m.GetComponentsInChildren<Collider>(true)) Destroy(c);
+            var rs = m.GetComponentsInChildren<Renderer>(true);
+            if (rs.Length == 0) { Debug.LogWarning("[AS] The Tripo casement has no renderer."); return hinge; }
+            Bounds Measure() { var bb = rs[0].bounds; foreach (var r in rs) bb.Encapsulate(r.bounds); return bb; }
+            var b = Measure();
+            if (b.size.y < b.size.x || b.size.y < b.size.z)
+                Debug.LogWarning($"[AS] The Tripo casement is {b.size.x:0.00} x {b.size.y:0.00} x {b.size.z:0.00} (x y z) before fitting: it may be lying down. Change AS_Layout.casementModelEuler (try X 270 or X 90).");
+            // centre it on the leaf, then stretch it to the opening (the right leaf mirrored)
+            m.transform.position += leaf.position - b.center;
+            fit.localScale = new Vector3(dir * width / Mathf.Max(b.size.x, 1e-4f), height / Mathf.Max(b.size.y, 1e-4f), layout.casementModelDepth / Mathf.Max(b.size.z, 1e-4f));
+            if (layout.flatShading && wall != null)
+                foreach (var r in rs)
+                {
+                    var src = r.sharedMaterials;
+                    var dst = new Material[src.Length];
+                    for (int i = 0; i < src.Length; i++)
+                    {
+                        dst[i] = new Material(wall.shader) { name = (src[i] != null ? src[i].name : "Casement") + " (painted)" };
+                        var tex = src[i] != null ? src[i].mainTexture : null;
+                        if (tex != null) dst[i].SetTexture("_BaseMap", tex);
+                        dst[i].SetColor("_BaseColor", Color.white);
+                        dst[i].SetFloat("_Cull", 0f);   // the mirrored leaf turns its faces inside out
+                    }
+                    r.sharedMaterials = dst;
+                }
             var col = leaf.gameObject.AddComponent<BoxCollider>();
             col.size = new Vector3(width, height, 0.09f);
             col.isTrigger = true;

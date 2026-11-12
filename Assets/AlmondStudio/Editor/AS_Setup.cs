@@ -31,6 +31,7 @@ namespace InnerFrame.AlmondStudio.EditorTools
         const string EaselMaterial = "Assets/VanGogh/Art/Props/M_Easel.mat";
         const string SillModel = Root + "/Art/Props/AS_SillStillLife.fbx";   // Serena's Tripo model, 11 Nov
         const string ChestModel = Root + "/Art/Props/AS_ChestBoxes.fbx";     // Serena's Tripo model, 11 Nov
+        const string CasementModel = Root + "/Art/Props/AS_Casement.fbx";    // Serena's Tripo casement (left leaf), 11 Nov
         const string WindowFolder = Root + "/Textures/Window";               // the painted window (ChatGPT, panes cut out)
         const string XrOriginPrefab = "Assets/Samples/XR Interaction Toolkit/3.3.2/Starter Assets/Prefabs/XR Origin (XR Rig).prefab";
         const string XrOriginName = "XR Origin (XR Rig)";
@@ -206,6 +207,8 @@ namespace InnerFrame.AlmondStudio.EditorTools
             boot.chairPrefab = ChairFromBedroom();
             // the still life is cut into its objects at runtime, so its mesh must be readable
             if (AssetImporter.GetAtPath(SillModel) is ModelImporter sillImp && !sillImp.isReadable) { sillImp.isReadable = true; sillImp.SaveAndReimport(); }
+            boot.casementModel = AssetDatabase.LoadAssetAtPath<GameObject>(CasementModel);
+            if (boot.casementModel == null) Debug.Log("[AS Setup] No Tripo casement at " + CasementModel + "; the painted or built casements are used.");
             boot.chestModel = AssetDatabase.LoadAssetAtPath<GameObject>(ChestModel);
             if (boot.chestModel == null) Debug.Log("[AS Setup] No chest at " + ChestModel + "; the corner keeps its boxes.");
             boot.casementLeft = Cutout("AS_CasementL", surface, "AS_CasementL.png");

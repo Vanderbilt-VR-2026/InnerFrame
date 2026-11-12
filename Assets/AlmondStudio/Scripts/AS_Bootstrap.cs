@@ -653,6 +653,7 @@ namespace InnerFrame.AlmondStudio
                 var ch = Instantiate(chairPrefab, parent);
                 ch.name = "Chair (Bedroom)";
                 ch.transform.SetPositionAndRotation(at, Quaternion.Euler(0f, yaw + layout.chairYawOffset, 0f));
+                chairs.Add((ch.transform, yaw));
                 ToPainted(ch.GetComponentsInChildren<Renderer>(true), "Chair");
                 return;
             }
@@ -797,6 +798,7 @@ namespace InnerFrame.AlmondStudio
         }
 
         Vector3? brushStand;   // where the brush stands, if the still life was cut (SplitSill)
+        readonly List<(Transform t, float yaw)> chairs = new List<(Transform, float)>();   // turned live by chairYawOffset in the Editor
 
         /// <summary>A picture pinned on the north wall, showing its own part of the painting: a 2 cm slab whose front face
         /// maps the four corners in AS_Layout.wallPictures onto AS_WindowInTheStudio.jpg; its width follows that part's shape.</summary>
@@ -1177,6 +1179,8 @@ namespace InnerFrame.AlmondStudio
         {
 #if UNITY_EDITOR
             ApplyShade();   // so shadeDirection and shadeMin can be tuned in AS_Layout during Play
+            foreach (var (t, yaw) in chairs)   // and chairYawOffset: the chairs turn as you change it
+                if (t != null) t.rotation = Quaternion.Euler(0f, yaw + layout.chairYawOffset, 0f);
 #endif
             if (XRSettings.isDeviceActive) return;
             var kb = Keyboard.current;

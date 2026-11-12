@@ -190,6 +190,7 @@ public class SpeechToProxy : MonoBehaviour
         spokenText = spokenText.Length == 0 ? next.Value : spokenText + " " + next.Value;
         LastReply = spokenText;   // what he has said so far
         SetState(State.Playing);
+        if (dialogueUI != null) dialogueUI.Say("Vincent", next.Value, next.Key);   // a scene's shared box (Starry Night)
         if (caption == null) return;
         caption.Words(next.Value);
         if (answerHint != null) caption.Hint(answerHint);

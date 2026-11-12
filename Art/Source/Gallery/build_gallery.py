@@ -13,20 +13,20 @@ in the south wall with a closed door in it, and one upholstered bench on a rug i
 ChatGPT textures (docs/gallery/TEXTURE_PROMPTS.md): walls, floor and wood repeat by the metre (UVs in metres); the
 rug and the door are mapped once, edge to edge.
 """
-from math import atan2, cos, exp, pi, radians, sin
+import re
+from math import atan2, cos, degrees, exp, pi, radians, sin
 from pathlib import Path
 
 import bmesh
 import bpy
-from mathutils import Vector
+from mathutils import Matrix, Vector
 
 # ---------------------------------------------------------------------------
 # Parameters. 1 Blender unit = 1 m. North = +Y, East = +X, up = +Z.
 # (In Unity: x = -X, z = -Y. The entrance is in the south wall; The Bedroom hangs on the north wall.)
 # ---------------------------------------------------------------------------
-ROOM_LENGTH = 9.0    # inside, south wall to north wall (Y)
-ROOM_WIDTH = 7.0     # inside, west wall to east wall (X)
-ROOM_HEIGHT = 4.0    # inside, floor to ceiling
+# ROOM_LENGTH (inside, south wall to north wall, Y), ROOM_WIDTH (inside, west to east, X) and ROOM_HEIGHT (floor to
+# ceiling) come from GalleryLayout.asset (read_layout, below), as do the bench's place and the paintings' frames.
 WALL_T = 0.2         # thickness of the walls and the floor
 CEILING_T = 0.4      # ceiling thickness, which is also the depth of the skylight
 
@@ -77,7 +77,7 @@ BASEBOARD_H, BASEBOARD_D = 0.12, 0.04        # in front of the wainscot
 
 # One bench on the rug in the middle, facing The Bedroom: an upholstered top on a dark wood frame with turned legs.
 BENCH_L, BENCH_D, BENCH_H = 1.6, 0.55, 0.48
-BENCH_AT = (0.0, -1.2)   # centre; Unity z 1.2
+# BENCH_AT (its centre) comes from GalleryLayout.asset.
 BENCH_ALONG_ROOM = True  # long side north-south, along the rug: 0.55 m across the room, so the floor in front of
                          # The Starry Night's pedestal and the walk past it stay clear
 CUSHION_T, APRON_H, LEG_INSET = 0.10, 0.08, 0.07
@@ -104,6 +104,31 @@ COLORS = {  # plain colours, linear RGB (the numbers Blender's colour picker sho
 }
 
 HERE = Path(__file__).resolve().parent                       # Art/Source/Gallery
+LAYOUT_PATH = HERE.parents[2] / "Assets/Art/Gallery/Layout/GalleryLayout.asset"
+
+
+def read_layout(path):
+    """The Gallery's one source of truth is GalleryLayout.asset (edited in Unity, built into the scene by
+    Tools > InnerFrame > Gallery > Build Layout). This reads the few fields the shell needs from Unity's YAML, read
+    only: the room size, the bench, and each painting's wall, place and size (for the wainscot's gaps)."""
+    text = path.read_text(encoding="utf-8")
+    num = lambda key: float(re.search(rf"^  {key}: (-?[0-9.eE+-]+)$", text, re.M).group(1))
+    bench = re.search(r"^  bench: \{x: (-?[0-9.eE+-]+), y: (-?[0-9.eE+-]+)\}$", text, re.M)
+    block = re.search(r"^  paintings:\n((?:  [- ] .*\n|    .*\n)*)", text, re.M).group(1)
+    paintings = []
+    for item in re.split(r"^  - ", block, flags=re.M)[1:]:
+        fields = dict(re.findall(r"^(?:    )?(\w+): (.*)$", item, re.M))
+        paintings.append({k: fields[k] for k in ("key", "wall", "along", "width", "height", "bottom")})
+    return {"width": num("roomWidth"), "length": num("roomLength"), "height": num("roomHeight"),
+            "bench": (float(bench.group(1)), float(bench.group(2))),
+            "paintings": [dict(p, wall=int(p["wall"]), **{k: float(p[k]) for k in ("along", "width", "height", "bottom")})
+                          for p in paintings]}
+
+
+LAYOUT = read_layout(LAYOUT_PATH)
+ROOM_WIDTH, ROOM_LENGTH, ROOM_HEIGHT = LAYOUT["width"], LAYOUT["length"], LAYOUT["height"]
+BENCH_AT = (-LAYOUT["bench"][0], -LAYOUT["bench"][1])   # Unity (x, z) -> Blender (X, Y)
+NORTH, EAST, WEST, SOUTH = 0, 1, 2, 3                   # GalleryLayout.Wall
 BLEND_PATH = HERE / "gallery.blend"
 FBX_PATH = HERE.parents[2] / "Assets/Art/Gallery/Gallery.fbx"  # parents[2] = repo root
 
@@ -412,6 +437,7 @@ y0, y1 = -ROOM_LENGTH / 2, ROOM_LENGTH / 2   # south (entrance), north (painting
 H, T = ROOM_HEIGHT, WALL_T
 outer_x, outer_y = (x0 - T, x1 + T), (y0 - T, y1 + T)
 assert BENCH_AT[1] + (BENCH_L if BENCH_ALONG_ROOM else BENCH_D) / 2 <= y1 - GATHER_DEPTH, "bench in the gathering area"
+assert abs(BENCH_AT[0]) + BENCH_D < x1 and abs(BENCH_AT[1]) + BENCH_L < y1, "bench inside the room"
 assert ARCH_SPRING + ARCH_R + ARCH_TRIM_W < H - CORNICE_H, "the arch reaches the cornice"
 
 # Floor and ceiling; the skylight in the middle of the ceiling, with a moulded frame round it.
@@ -465,26 +491,38 @@ make("Door_Handles", mat["Mat_Metal"], ("xzy", (-0.14, -0.06), (dz - 0.02, dz + 
      ("xzy", (0.06, 0.14), (dz - 0.02, dz + 0.02), (dy, dy + 0.06)))
 
 # Picture frame around the painting opening, standing FRAME_D off the north wall.
+# The Bedroom's canvas as GalleryLayout.asset hangs it (Build Layout works the sizes out): its frame is built here, on
+# the north wall first (build_frame), then turned and moved to its wall (wall_pose). The other paintings' frames are
+# copies of it, made in Unity.
+bedroom = next(p for p in LAYOUT["paintings"] if p["key"] == "Bedroom")
+PAINTING_W, PAINTING_H, PAINTING_BOTTOM = bedroom["width"], bedroom["height"], bedroom["bottom"]
+
+
+def wall_pose(p):
+    """Blender (X, Y) of a painting's centre on its wall's face, and the turn (degrees about Z) from the north wall."""
+    a = -p["along"]                                    # Unity x (north/south walls) or z (east/west walls) -> Blender X or Y
+    return {NORTH: ((a, y1), 0), SOUTH: ((a, y0), 180), EAST: ((x1, a), -90), WEST: ((x0, a), 90)}[p["wall"]]
+
+
 pz0, pz1 = PAINTING_BOTTOM, PAINTING_BOTTOM + PAINTING_H
 fx = PAINTING_W / 2 + FRAME_W
-assert pz0 - FRAME_W >= BASEBOARD_H, "frame's bottom rail must clear the baseboard"
+assert pz0 - FRAME_W >= WAINSCOT_H + RAIL_H / 2 + 0.05, "The Bedroom's frame must hang above the wainscot's rail"
 # 2026-11-10: a carved baroque frame (see build_frame), instead of a plain box and the Tripo corner ornaments.
 build_frame()
+(bx_, by_), turn_ = wall_pose(bedroom)
+frame_obj = bpy.data.objects["Frame_Bedroom"]
+frame_obj.matrix_world = (Matrix.Translation((bx_, by_, 0)) @ Matrix.Rotation(radians(turn_), 4, "Z")
+                          @ Matrix.Translation((0, -y1, 0)) @ frame_obj.matrix_world)
 
-# Wainscot, cap rail, cornice and baseboard: strips on the walls' inside faces. The wainscot and its rail stop at
-# the two paintings' frames (which stand on the wall from 0.62 m) and at the arch's moulding.
-fz = pz0 - FRAME_W - 0.03                 # frames' bottom edge, less the corner cartouches' overhang
-gx = fx + 0.03                            # the frames' corner cartouches stand 1.5 cm past their outer edge
-sn = (SN_FRAME_Y - gx, SN_FRAME_Y + gx)   # The Starry Night's frame along the east wall
+# Wainscot, cap rail, cornice and baseboard: strips on the walls' inside faces, unbroken except at the arch's
+# moulding: every painting hangs with its frame above the rail (2026-11-12), so none of them cuts the wainscot.
 gap = ARCH_R + ARCH_TRIM_W                # arch moulding's outer edge
 wd, rd = WAINSCOT_D, RAIL_D
-def strips(z0, z1, d, cut_frames):
-    north = [(-gx, gx, max(z0, fz), z1)] if cut_frames and z1 > fz else []
-    east = [(sn[0], sn[1], max(z0, fz), z1)] if cut_frames and z1 > fz else []
+def strips(z0, z1, d, _cut_frames=None):   # (frames no longer cut the wainscot)
     return [
-        ("xzy", (x0, x1), (z0, z1), (y1 - d, y1), north),
+        ("xzy", (x0, x1), (z0, z1), (y1 - d, y1)),
         ("xzy", (x0, x1), (z0, z1), (y0, y0 + d), [(-gap, gap, z0, z1)] if z0 < crown + ARCH_TRIM_W else []),
-        ("yzx", (y0 + d, y1 - d), (z0, z1), (x1 - d, x1), east),
+        ("yzx", (y0 + d, y1 - d), (z0, z1), (x1 - d, x1)),
         ("yzx", (y0 + d, y1 - d), (z0, z1), (x0, x0 + d)),
     ]
 make("Wainscot", mat["Mat_Wainscot"], *strips(0, WAINSCOT_H, wd, True))
@@ -542,75 +580,14 @@ rw, rl = RUG
 make("Rug", mat["Mat_Rug"], ("xyz", (bx - rw / 2, bx + rw / 2), (by - rl / 2, by + rl / 2), (0.002, 0.002 + RUG_T)))
 uv_fit(bpy.data.objects["Rug"])
 
-# Placard stand: a box whose top is tilted toward the viewer (who stands to the
-# south) by lowering its front edge. It stands just right (east) of the frame,
-# inside the gathering area but not in front of the painting.
-top_w, top_len = PEDESTAL_TOP
-tilt = radians(PEDESTAL_TILT)
-pyc = y1 - PEDESTAL_OUT                                  # pedestal centre (Y)
-px = (fx + PEDESTAL_GAP, fx + PEDESTAL_GAP + top_w)
-py = (pyc - top_len * cos(tilt) / 2, pyc + top_len * cos(tilt) / 2)  # front, back
-# 2026-11-10, after the concept sheet's reading stand, then softened: a moulded base and a head with rounded corners
-# (rounded-rectangle rings, RR_*), joined by a turned round column (STAND_COLUMN). The whole still fills the old box
-# (px, py, 0..PEDESTAL_H) and its top is the same tilted plane, so its centre (the object's origin), the Placard and
-# Button empties, and The Starry Night's copy of it stay where they were.
-bm = bmesh.new()
-cx, cy = sum(px) / 2, sum(py) / 2
-hx, hy = (px[1] - px[0]) / 2, (py[1] - py[0]) / 2
-top_z = lambda y: PEDESTAL_H - (py[1] - y) / (py[1] - py[0]) * top_len * sin(tilt)   # the tilted reading plane
-
-
-def rr_ring(inset, z, radius, below=0.0):
-    """A rounded rectangle round (cx, cy), inset from the full footprint, at height z (or, z None, `below` metres under
-    the reading plane)."""
-    # (never below 1 cm: the base's radius shrinks with its inset, and a negative one turned the corners inside out,
-    # so the top cap crossed itself and was not drawn: the floor showed through, 2026-11-10)
-    ax, ay = hx - inset, hy - inset
-    r = max(0.01, min(radius, ax, ay))
-    pts = []
-    for qx, qy, a0 in ((1, 1, 0), (-1, 1, pi / 2), (-1, -1, pi), (1, -1, 3 * pi / 2)):
-        for k in range(RR_SEG + 1):
-            a = a0 + (pi / 2) * k / RR_SEG
-            pts.append((cx + qx * (ax - r) + r * cos(a), cy + qy * (ay - r) + r * sin(a)))
-    return [bm.verts.new((x, y, top_z(y) - below if z is None else z)) for x, y in pts]
-
-
-def stack(rings, smooth, cap_bottom=False, cap_top=False):
-    n = len(rings[0])
-    for a, b in zip(rings, rings[1:]):
-        for k in range(n):
-            f = bm.faces.new([a[k], a[(k + 1) % n], b[(k + 1) % n], b[k]])
-            f.smooth = smooth
-    if cap_bottom: bm.faces.new(list(reversed(rings[0])))
-    if cap_top: bm.faces.new(rings[-1])
-
-
-# base: (inset, height), a plinth with a rounded top edge and a cove up to a smaller step
-stack([rr_ring(i_, z, RR_BASE - i_) for i_, z in STAND_BASE_PROFILE], True, cap_bottom=True, cap_top=True)
-# column: turned, round
-z0 = STAND_BASE_PROFILE[-1][1]
-col = [[bm.verts.new((cx + r * cos(2 * pi * k / STAND_SIDES), cy + r * sin(2 * pi * k / STAND_SIDES), z0 + (STAND_HEAD_Z - z0) * f))
-        for k in range(STAND_SIDES)] for f, r in STAND_COLUMN]
-stack(col, True)
-# head: eased up from a smaller ring under it to the full rounded outline, then straight up to the reading plane
-# and its top edge rounded over (a quarter round of STAND_HEAD_ROUND) into the reading plane
-e = STAND_HEAD_ROUND
-head = [rr_ring(STAND_HEAD_EASE, STAND_HEAD_Z, RR_HEAD - STAND_HEAD_EASE), rr_ring(STAND_HEAD_EASE * 0.35, STAND_HEAD_Z + 0.012, RR_HEAD),
-        rr_ring(0.0, STAND_HEAD_Z + 0.03, RR_HEAD)]
-head += [rr_ring(e * (1 - cos(a)), None, RR_HEAD - e * (1 - cos(a)), below=e * (1 - sin(a))) for a in (0.0, pi / 6, pi / 3, pi / 2)]
-stack(head, True, cap_bottom=True, cap_top=True)
-finish("Pedestal_Bedroom", mat["Mat_Bench"], bm, centred=True)
+# (2026-11-12) No placard stand: the team asked for the stands to go; a painting is entered by pointing at it.
 
 # Attachment points. -Y is Unity's forward, so the slot needs no turn to face
-# into the room, and the spawn point turns 180 degrees to face the painting.
-empty("Slot_Bedroom", (0, y1, pz0 + PAINTING_H / 2))
-empty("Spawn_Point", (0, y0 + SPAWN_INSET, 0), turn_deg=180)
-# On the pedestal's top, facing the viewer like Slot_Bedroom: forward sticks
-# straight out of the tilted top (90 - tilt degrees up from horizontal) and up
-# points up the slope. f = how far up the slope, from front edge (0) to back (1).
-for name, f in (("Placard_Bedroom", 0.65), ("Button_Bedroom", 0.2)):  # title text, Enter button
-    spot = (sum(px) / 2, py[0] + f * (py[1] - py[0]), PEDESTAL_H - (1 - f) * top_len * sin(tilt))
-    empty(name, spot, up_deg=90 - PEDESTAL_TILT)
+# into the room; the spawn point turns to face The Bedroom (below).
+empty("Slot_Bedroom", (bx_, by_, pz0 + PAINTING_H / 2), turn_deg=turn_)
+# the visitor starts inside the arch, facing The Bedroom (the walk's first painting with a scene, 2026-11-12)
+spawn_y = y0 + SPAWN_INSET
+empty("Spawn_Point", (0, spawn_y, 0), turn_deg=round(degrees(atan2(bx_, -(by_ - spawn_y))), 1))
 
 tris = sum(len(p.vertices) - 2 for o in scene.objects if o.type == "MESH" for p in o.data.polygons)
 print(f"Triangles: {tris} (budget 20000)")

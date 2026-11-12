@@ -1,0 +1,141 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a4b03a2bf705441278ce4a57f7fb9ede, type: 3}
+  m_Name: GalleryLayout
+  m_EditorClassIdentifier: Assembly-CSharp::InnerFrame.Gallery.GalleryLayout
+  roomWidth: 9
+  roomLength: 12
+  roomHeight: 4
+  bench: {x: 0, y: 0}
+  bedroomWidth: 2.2
+  railTop: 1.03
+  frameAboveRail: 0.1
+  maxCentre: 2.2
+  frameBorder: 0.18
+  scale: 2.1627
+  paintings:
+  - key: SelfPortrait
+    title: Self-Portrait
+    caption: "Vincent van Gogh \xB7 1887"
+    number: 
+    time: 
+    image: {fileID: 2800000, guid: cfeeb65ac6bc04736a0379f2135e685f, type: 3}
+    material: {fileID: 2100000, guid: 258cc35ba2d744a0faadd4f10362e7a2, type: 2}
+    scene: 
+    menu: 0
+    wall: 2
+    along: 2.5
+    canvasCm: {x: 32.5, y: 41}
+    width: 0.7029
+    height: 0.8867
+    bottom: 1.2303
+  - key: Bedroom
+    title: The Bedroom
+    caption: "Vincent van Gogh \xB7 1889"
+    number: 1
+    time: Afternoon
+    image: {fileID: 2800000, guid: aa8412b8701be4b40948b6b46381de03, type: 3}
+    material: {fileID: 2100000, guid: 06e6e6f0949fa47dbab7d768a7ef2183, type: 2}
+    scene: PaintedBedroom
+    menu: 1
+    wall: 2
+    along: -2.5
+    canvasCm: {x: 92.3, y: 73.6}
+    width: 1.9962
+    height: 1.5917
+    bottom: 1.31
+  - key: CafeTerrace
+    title: "Caf\xE9 Terrace at Night"
+    caption: "Vincent van Gogh \xB7 1888"
+    number: 2
+    time: Late afternoon
+    image: {fileID: 2800000, guid: f722b5cb4545d4e789676a92ae275497, type: 3}
+    material: {fileID: 2100000, guid: 15cc90c09b82048f6bf3a1ba48843ddd, type: 2}
+    scene: CafeTerrace
+    menu: 1
+    wall: 0
+    along: 0
+    canvasCm: {x: 65.3, y: 80.7}
+    width: 1.4122
+    height: 1.7453
+    bottom: 1.3274
+  - key: StarryNight
+    title: The Starry Night
+    caption: "Vincent van Gogh \xB7 1889"
+    number: 3
+    time: Evening
+    image: {fileID: 2800000, guid: 898d0b253d4aa4033b4c70e2f03d9bfb, type: 3}
+    material: {fileID: 2100000, guid: f9cc2274584ec4e268494720fcdb2e80, type: 2}
+    scene: StarryNight
+    menu: 1
+    wall: 1
+    along: -2.5
+    canvasCm: {x: 92.1, y: 73.7}
+    width: 1.9918
+    height: 1.5939
+    bottom: 1.3102
+  - key: AlmondBlossom
+    title: Almond Blossom
+    caption: "Vincent van Gogh \xB7 1890"
+    number: 4
+    time: Morning
+    image: {fileID: 2800000, guid: 648cb3cea4bf14cf8882ea01ed90648f, type: 3}
+    material: {fileID: 2100000, guid: d8a7713c18c5e4829997f8f397423015, type: 2}
+    scene: 
+    menu: 1
+    wall: 1
+    along: 2.5
+    canvasCm: {x: 92.4, y: 73.3}
+    width: 1.9983
+    height: 1.5853
+    bottom: 1.3093
+  decor:
+  - name: Statue_Arch
+    position: {x: 3.45, y: 0, z: -5.05}
+    yaw: -135
+    lit: 1
+  - name: Plant_NorthEast
+    position: {x: -3.9, y: 0, z: -5.4}
+    yaw: 20
+    lit: 1
+  - name: Plant_NorthWest
+    position: {x: 3.9, y: 0, z: 0}
+    yaw: -40
+    lit: 1
+  - name: Plant_ByArch
+    position: {x: -1.9, y: 0, z: 5.45}
+    yaw: 160
+    lit: 1
+  - name: Vase_EastWall
+    position: {x: -3.95, y: 0, z: -0.3}
+    yaw: 90
+    lit: 1
+  - name: Vase_WestWall
+    position: {x: 2.9, y: 0, z: 5.5}
+    yaw: 180
+    lit: 1
+  - name: Lantern_ArchEast
+    position: {x: -1.45, y: 2.35, z: 5.76}
+    yaw: 0
+    lit: 0
+  - name: Lantern_ArchWest
+    position: {x: 1.45, y: 2.35, z: 5.76}
+    yaw: 0
+    lit: 0
+  - name: Lantern_EastWall
+    position: {x: -4.26, y: 2.35, z: -0.3}
+    yaw: -90
+    lit: 0
+  - name: Lantern_WestWall
+    position: {x: 4.26, y: 2.35, z: 0}
+    yaw: 90
+    lit: 0

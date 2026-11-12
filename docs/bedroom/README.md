@@ -45,6 +45,17 @@ Without an active XR display, Play mode uses the scene's comparison camera. Hold
 - Check tracking after removing/replacing the headset and after brief sleep. Play for several minutes and report stuttering or discomfort.
 - Report the object, action and observed issue; screenshots or short videos help reproduce failures.
 
+## Painted Bedroom sounds
+
+Footsteps and object sounds are added when the Painted Bedroom starts (`PaintedBedroomSounds`), so Import and Build can't remove them. They are local: each player hears only their own actions.
+
+- **Footsteps:** one per stride while stick walking, one when a teleport lands. Really walking in the play space is silent on purpose.
+- **Objects:** a sound on pick-up, and a landing sound on impact, louder the faster it hit. The Mirror has none, because it is Cici's logic.
+- **To add a variation:** drop a clip into `Assets/InnerFrameBedroomWeb/Resources/BedroomSounds/<set>/` and record it in `docs/ASSETS.md`.
+- **To tune:** the volumes and thresholds are the constants at the top of `PaintedBedroomObjectSound.cs` and `PaintedBedroomFootsteps.cs`.
+
+On a Quest, please check: one step per stride, not machine-gun or looped; a teleport landing gives one step; each of the four material groups sounds like what it is; setting an object down gently and dropping it both sound right; nothing chatters while an object rolls or is pressed on a table; no sounds in the first seconds after the room opens; and Vincent stays clearly audible over all of it.
+
 ## Verification and limits
 
 Unity opened this scene successfully after transfer. The editor reference check found **597 GameObjects, 8 grab objects, 2 hinged doors, 8 XR interactors, and 0 reference issues**. The Unity Console showed **0 errors and 0 warnings** after opening and compiling the transferred scene.

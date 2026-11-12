@@ -8,10 +8,14 @@ using UnityEngine.XR.Interaction.Toolkit.UI;
 /// <summary>
 /// The menu panel, built in code (see <see cref="PlayerMenu"/>). It stays where it is in the world.
 /// Grab the title bar (grip) to drag it; it turns to face you while you move it.
-/// Buttons: X (close) and Back to the previous scene. (Talking to Vincent is hold-B, see Assets/VanGogh/.)
+/// Buttons: X (close) and Back to Gallery, everywhere but the Gallery (#160; the rule is PlayerMenu.BackFrom).
+/// (Talking to Vincent is hold-B, see Assets/VanGogh/.) Its look is the plain one on purpose: the menu style (#161) is
+/// to be redone with Rowling's artwork panel, on Cici's text frame prefab.
 /// </summary>
 public class PlayerMenuPanel : MonoBehaviour
 {
+    public const string BackLabel = "Back to Gallery";   // the Starry Night checks and docs use these words
+
     const float SpawnDistance = 0.55f;   // metres in front of the eyes: inside the controllers' 2 m ray
     const float SpawnDrop = 0.12f;       // a little below eye level, like a lectern
     const float DesktopDistance = 0.7f;  // on a monitor: far enough back to fit the screen, at eye level
@@ -47,6 +51,9 @@ public class PlayerMenuPanel : MonoBehaviour
         if (backLabel != null) backLabel.text = "Back to " + back;
         gameObject.SetActive(true);
     }
+
+    /// <summary>The Back button's words while it shows, or null when it is hidden (PlayerMenuCheck).</summary>
+    public string ShownBackLabel => backButton != null && backButton.gameObject.activeSelf && backLabel != null ? backLabel.text : null;
 
     public void Hide()
     {

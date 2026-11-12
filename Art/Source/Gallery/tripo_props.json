@@ -1,0 +1,56 @@
+{
+  "Statue": {
+    "source": "gallery-statue.glb",
+    "triangles_raw": 10294,
+    "triangles": 5000,
+    "budget": 5000,
+    "size_m_xyz": [
+      0.502,
+      0.486,
+      1.704
+    ],
+    "texture": "4096 -> 2048",
+    "origin": "base"
+  },
+  "Plant": {
+    "source": "gallery-plant.glb",
+    "triangles_raw": 8333,
+    "triangles": 2999,
+    "budget": 3000,
+    "size_m_xyz": [
+      1.299,
+      1.086,
+      1.303
+    ],
+    "texture": "2048 -> 1024",
+    "origin": "base"
+  },
+  "Vase": {
+    "source": "gallery-vase.glb",
+    "triangles_raw": 10586,
+    "triangles": 5000,
+    "budget": 5000,
+    "size_m_xyz": [
+      0.55,
+      0.564,
+      0.61
+    ],
+    "texture": "2048 -> 1024",
+    "origin": "base"
+  },
+  "Lantern": {
+    "source": "gallery-lantern.glb",
+    "triangles_raw": 9304,
+    "triangles": 2000,
+    "budget": 2000,
+    "size_m_xyz": [
+      0.333,
+      0.302,
+      0.601
+    ],
+    "texture": "2048 -> 1024",
+    "origin": "top",
+    "glass_triangles": 63,
+    "candle_top_m": 0.417
+  }
+}

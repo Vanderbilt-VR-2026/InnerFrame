@@ -66,7 +66,9 @@ namespace InnerFrame.Gallery.EditorTools
         // as its distance into the room from the north wall's face, so it follows the wall (z -7 then, -4.5 now). The
         // painting's slot stands 0.1 m off the wall (Slot_Bedroom z -6.9 then); the button sits 1.518 m out (z -5.482
         // then), lower and smaller than Gallery.fbx's. SN_GallerySetup copies both onto The Starry Night.
-        public static readonly (string name, float fromWall)[] FromNorthWall = { ("Slot_Bedroom", 0.1f), ("Button_Bedroom", 1.518f) };
+        // (2026-11-12, Part B: Button_Bedroom went with the stands, and Slot_Bedroom hangs where GalleryLayout.asset says,
+        // set by GalleryLayoutSetup; nothing is kept to the north wall here any more.)
+        public static readonly (string name, float fromWall)[] FromNorthWall = { };
 
         public static void Apply(List<string> changes)
         {

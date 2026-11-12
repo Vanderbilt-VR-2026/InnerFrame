@@ -63,7 +63,10 @@ namespace InnerFrame.Gallery.EditorTools
         public const float VasePlinthH = 0.9f, VasePlinthW = 0.45f;
         // The room (Gallery.fbx, 2026-11-10): x from -3.5 (east wall) to 3.5 (west), z from -4.5 (north wall, The Bedroom)
         // to 4.5 (south wall, the arch), 4 m tall.
-        public const float HalfW = 3.5f, HalfL = 4.5f, CeilingY = 4f;
+        // The room's size comes from GalleryLayout.asset (Part B, 2026-11-12; it was 3.5 / 4.5 / 4 here, the 7 x 9 x 4 m room).
+        public static float HalfW => GalleryLayoutSetup.RoomWidth / 2f;
+        public static float HalfL => GalleryLayoutSetup.RoomLength / 2f;
+        public static float CeilingY => GalleryLayoutSetup.RoomHeight;
         public const float BracketRadius = 0.012f, BracketRise = 0.06f;   // a wall lantern's arm, above its ring
         public const float PlantScale = 0.7f;   // 0.91 m tall, 0.6 m from the pot's centre to a leaf tip: room for the corners
         static readonly Vector3 PotBox = new Vector3(0.6f, 0.55f, 0.6f);   // a plant's collider, round its pot (before PlantScale)

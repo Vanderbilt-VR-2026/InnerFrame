@@ -984,6 +984,7 @@ namespace InnerFrame.AlmondStudio
             anim.runtimeAnimatorController = vincentController;
             anim.applyRootMotion = false;
             anim.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
+            vin.AddComponent<AS_VincentLook>();   // he looks at you when you're near, as in The Starry Night
             var rs = vin.GetComponentsInChildren<Renderer>(true);
             if (vincentModelMaterial != null) foreach (var r in rs) r.sharedMaterial = vincentModelMaterial;
             ToPainted(rs, "Vincent");

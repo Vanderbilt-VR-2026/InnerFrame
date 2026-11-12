@@ -376,6 +376,9 @@ namespace InnerFrame.AlmondStudio.EditorTools
             EnsureFolder(Root + "/Prefabs");
             AssetDatabase.DeleteAsset(VincentController);
             var ctrl = AnimatorController.CreateAnimatorControllerAtPath(VincentController);
+            var layers = ctrl.layers;
+            layers[0].iKPass = true;                            // AS_VincentLook turns his head to the player
+            ctrl.layers = layers;
             var sm = ctrl.layers[0].stateMachine;
             var idleState = sm.AddState("Idle"); idleState.motion = idle;
             sm.defaultState = idleState;

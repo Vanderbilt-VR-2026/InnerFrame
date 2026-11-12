@@ -96,6 +96,10 @@
 *.[pP][rR][iI] filter=lfs diff=lfs merge=lfs -text
 *.[wW][iI][nN][mM][dD] filter=lfs diff=lfs merge=lfs -text
 
+
+# Embedded portrait texture serialized by Unity; keep this 69 MB asset in LFS.
+"Assets/ArtworkCici/OtherArtworks/StarryNight Orsay Portrait.asset" filter=lfs diff=lfs merge=lfs -text
+
 # Unity binaries (LightingData.asset must stay below *.asset so LFS wins)
 *.[uU][nN][iI][tT][yY][pP][aA][cC][kK][aA][gG][eE] filter=lfs diff=lfs merge=lfs -text
 *.[bB][yY][tT][eE][sS] filter=lfs diff=lfs merge=lfs -text

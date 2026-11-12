@@ -1,0 +1,65 @@
+PASS  the entrance prefab Assets/StarryNight/Gallery/SN_GalleryEntrance.prefab exists
+# Gallery.unity
+PASS  exactly one entrance in the Gallery (1: SN_GalleryEntrance)
+PASS  the entrance stands at (-3.500, 0.000, -1.600), yaw 90.000 (approved: (-3.500, 0.000, -1.600), yaw 90.000) 
+PASS  no overrides on the instance beyond its pose and name 
+PASS  only the newer Cici artwork cards may follow the painting entrance: Cici Artwork Cards
+PASS  four children: Painting_TheStarryNight, Frame_TheStarryNight, Pedestal_TheStarryNight, Button_TheStarryNight
+PASS  one interactable in the entrance (1), so nothing is stacked
+PASS  Painting_TheStarryNight: one collider (MeshCollider)
+PASS  Frame_TheStarryNight: one collider (MeshCollider)
+PASS  Pedestal_TheStarryNight: one collider (MeshCollider)
+PASS  Button_TheStarryNight: one collider (BoxCollider)
+PASS  the button: Select Entered -> SceneChangeButton.Activate on itself, target 'StarryNight', fade 1.000 s, a 1 m box (0.4 m in the room), not a trigger 
+painting centre (-3.400, 2.000, -1.600), size (0.000, 2.376, 3.000), facing (1.000, 0.000, 0.000); frame (-3.500, 0.605, -3.295)..(-3.312, 3.395, 0.095); pedestal (-2.164, 0.000, 0.180)..(-1.836, 0.994, 0.680); button (-1.982, 0.934, 0.430)
+PASS  the painting's centre is at (-3.400, 2.000, -1.600), facing into the room (+X)
+PASS  the painting is 3.000 x 2.376 m (3 m wide at the image's ratio)
+PASS  its bottom edge is 0.812 m up (The Bedroom's: 0.8 m)
+PASS  the frame's back is on the east wall's face (x -3.500, wall -3.500)
+PASS  the painting sits inside the frame, 0.088 m behind its front
+PASS  the pedestal stands on the floor (bottom 0.000 m)
+PASS  the button is on the pedestal's top (centre (-1.982, 0.934, 0.430), top 0.994)
+PASS  control: the pedestal's box moved onto the bench finds Rug, Bench_01
+PASS  no collider in the Gallery overlaps the frame or the pedestal (OverlapBox, 5 mm in) 
+  gap from the pedestal to Bench_01: 1.561 m
+# against The Bedroom (in the same scene), its offsets from the north wall's face
+PASS  Frame_TheStarryNight sits as Frame_Bedroom does: (0.000, 0.000, 4.500) vs (0.000, 0.000, 4.500), 0.000 deg apart, scale (1.000, 1.000, 1.000) vs (1.000, 1.000, 1.000)
+PASS  Frame_TheStarryNight draws Frame_Bedroom's own mesh and material (Frame_Bedroom, Mat_Frame)
+PASS  Pedestal_TheStarryNight sits as Pedestal_Bedroom does: (-2.030, 0.497, 1.500) vs (-2.030, 0.497, 1.500), 0.000 deg apart, scale (1.000, 1.000, 1.000) vs (1.000, 1.000, 1.000)
+PASS  Pedestal_TheStarryNight draws Pedestal_Bedroom's own mesh and material (Pedestal_Bedroom, Mat_Bench)
+PASS  Button_TheStarryNight sits as Button_Bedroom does: (-2.030, 0.934, 1.518) vs (-2.030, 0.934, 1.518), 0.000 deg apart, scale (0.400, 0.400, 0.400) vs (0.400, 0.400, 0.400)
+PASS  Painting_TheStarryNight sits as Painting_TheBedroom does: (0.000, 2.000, 0.100) vs (0.000, 2.000, 0.100), 0.000 deg apart, scale (3.000, 2.376, 1.000) vs (3.000, 2.340, 0.070) (width only)
+PASS  the button's settings are the Bedroom button's, except the target
+# EditorBuildSettings
+  0: on  Assets/Entrance/Scenes/Entrance.unity
+  1: on  Assets/Scenes/Gallery.unity
+  2: on  Assets/InnerFrameBedroomWeb/Scenes/PaintedBedroom.unity
+  3: on  Assets/StarryNight/Scenes/StarryNight.unity
+PASS  StarryNight is in the build list, enabled, after the scenes that were there, and doesn't start the game 
+# the image and its material
+source 2048 x 1622; imported 2048 x 2048 DXT1, 12 mips (active target StandaloneOSX; the Editor reports 5.33 MB)
+PASS  the image is 2048 x 1622, imported as 2048 x 2048 with mipmaps (the quad keeps its 1622/2048 ratio)
+PASS  import: power of two (to larger), mipmaps, sRGB, max 2048, Android ASTC 6x6 at 2048
+  (the Editor's target is StandaloneOSX, so the Android format is checked from the importer only)
+PASS  the painting draws Assets/StarryNight/Gallery/SN_GalleryPainting.mat: URP Unlit, the image, white
+# controls (in memory; nothing is saved)
+PASS  control: a button whose target is PaintedBedroom -> the check fails, as it should [target 'PaintedBedroom']
+PASS  control: a button with no persistent call -> the check fails, as it should [0 persistent calls]
+PASS  control: a second entrance in the scene -> the check fails, as it should [2 entrances]
+PASS  control: the entrance moved 0.5 m -> the check fails, as it should [position (-3.000, 0.000, -1.600)]
+PASS  control: a build list without StarryNight -> the check fails, as it should [StarryNight is not listed]
+PASS  control: a build list with StarryNight switched off -> the check fails, as it should [StarryNight is off]
+# SN_GallerySetup run again
+PASS  a second run changes nothing (it reports 0 change(s); 0 of 8 files differ) 
+  941a43ece88ee2c3 Assets/Scenes/Gallery.unity
+  cb5012f7a7fbe9a4 Assets/StarryNight/Gallery/SN_GalleryEntrance.prefab
+  631e9bb5b9253bee Assets/StarryNight/Gallery/SN_GalleryPainting.mat
+  d09f96f01434639f Assets/StarryNight/Gallery/SN_GalleryPainting.jpg
+  9d6117307541a39c Assets/StarryNight/Gallery/SN_GalleryPainting.jpg.meta
+  87da4edce0479197 Assets/StarryNight/Gallery/SN_GalleryPainting.mat.meta
+  0f8918b345a5a666 Assets/StarryNight/Gallery/SN_GalleryEntrance.prefab.meta
+  a433d2cd2f2bac92 ProjectSettings/EditorBuildSettings.asset
+PASS  control: the entrance moved 0.5 m in memory is off its spot
+PASS  the tool puts it back (Assets/Scenes/Gallery.unity: moved to the approved spot) and Gallery.unity matches the normalized repair baseline (1e3b572eea9f063a)
+Errors logged during the run: 0
+RESULT: 41 passed, 0 failed

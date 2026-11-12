@@ -7,7 +7,7 @@ using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// Talk to Vincent: hold the right controller's B button (T in the Editor), speak, let go.
+/// Talk to Vincent: hold the right controller's B button (B on the keyboard too), speak, let go.
 /// The recording goes to the AI proxy as a WAV file:
 ///   POST {serverUrl}/npc/vincent/talk   (multipart form, field "audio"; "scene" too when SceneContext is set)
 /// The proxy answers with JSON; his voice (audio_url) then plays from this object's AudioSource, and its text shows
@@ -26,6 +26,10 @@ public class SpeechToProxy : MonoBehaviour
 
     [Tooltip("Where his voice plays from.")]
     public AudioSource voice;
+    // Optional: Starry Night shares its existing dialogue box instead of spawning another caption.
+    public VG_DialogueUI dialogueUI;
+    public event Action<bool> ConversationChanged;
+    public bool ConversationActive => state != State.Idle;
 
     [Tooltip("Where the caption attaches, in this object's space: above it, the caption stands on this point; below it, the caption hangs from it.")]
     public Vector3 labelOffset = new Vector3(0f, -0.5f, 0f);
@@ -96,7 +100,7 @@ public class SpeechToProxy : MonoBehaviour
     AudioClip recording;
     Coroutine autoStop;
 
-    static string ButtonKey => Application.isEditor ? "T" : "B";
+    public const string ButtonKey = "B";
 
     [Serializable] class Timings { public int stt, llm, tts; }
     [Serializable] class TalkReply { public string transcript, reply, audio_url; public Timings timings_ms; }
@@ -105,7 +109,8 @@ public class SpeechToProxy : MonoBehaviour
     {
         talk = new InputAction("Ask Vincent", InputActionType.Button);
         talk.AddBinding("<XRController>{RightHand}/secondaryButton");   // B: A is XRI's Jump
-        talk.AddBinding("<Keyboard>/t");
+        talk.AddBinding("<Keyboard>/b");
+        talk.AddBinding("<Keyboard>/t"); // Compatibility for earlier desktop walkthroughs.
         talk.performed += _ => OnPress();
         talk.canceled += _ => OnRelease();
     }
@@ -114,7 +119,7 @@ public class SpeechToProxy : MonoBehaviour
     void Start()
     {
         if (voice == null) voice = GetComponentInChildren<AudioSource>();
-        caption = VanGoghCaption.Make(transform, labelOffset);
+        if (dialogueUI == null) caption = VanGoghCaption.Make(transform, labelOffset);
         SetState(State.Idle);
         string why = ConvaiDirectSettings.WhyNotReady();
         Debug.Log(why == null ? $"[VanGogh] {name}: talking through Convai's web API"
@@ -138,6 +143,7 @@ public class SpeechToProxy : MonoBehaviour
         voice.Play();
         SetState(State.Playing);
         if (caption != null) caption.Words(text);
+        if (dialogueUI != null) dialogueUI.Say("Vincent", text, clip);
     }
 
     /// <summary>Stops a recording or a question in progress (the scene is changing).</summary>
@@ -367,7 +373,18 @@ public class SpeechToProxy : MonoBehaviour
 
     void SetState(State next)
     {
+        bool wasActive = ConversationActive;
         state = next;
+        if (wasActive != ConversationActive) ConversationChanged?.Invoke(ConversationActive);
+        if (dialogueUI != null && next != State.Idle)
+        {
+            string hint = next == State.Recording ? "Listening… Release B to send" :
+                next == State.Waiting ? "Vincent is thinking…" :
+                next == State.Error ? "Vincent can't hear you right now" : null;
+            dialogueUI.SetHint("Talk to Vincent", hint);
+            if (next != State.Playing) dialogueUI.Clear();
+        }
+        Debug.Log($"[VanGogh Talk] {name}: {next} (hold B / release to send)");
         if (next == State.Error) errorUntil = Time.time + ErrorSeconds;
         if (caption == null) return;   // not built yet (edit-mode tests)
         switch (next)

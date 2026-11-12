@@ -1,0 +1,47 @@
+InnerFrame — Starry Night / B / Menu verification
+Date: 2026-11-11
+Unity: 6000.3.23f1, macOS Editor, no headset.
+
+Latest Gallery: Assets/Scenes/Gallery.unity is byte-identical to downloads/GalleryIntegration/Assets/Scenes/Gallery.unity.
+SHA256: 941a43ece88ee2c3442d39d7013075c94531c39dd9c114c3319e1b394816b0e9
+
+Compilation: no C# compiler errors in the menu-check, conversation-check or final manual Editor logs. The updated project enters Play mode.
+Editor checks: 157 Starry Night checks + 22 menu checks + 14 conversation integration checks passed (193 assertions total).
+The batch Starry suite explicitly skips its additional Play-mode suites when -quit is supplied. Do not count these as rerun.
+
+Manual test, recorded in Gallery-StarryNight-B-Menu-Return.mp4:
+1. Start in the latest Gallery with its red walls and panel cards.
+2. Open The Starry Night More card and click ENTER.
+3. Confirm StarryNight scene and Hold B hint.
+4. Walk to Vincent; hold keyboard B for 2.2 seconds, then release.
+5. Recording -> Waiting -> Error -> Idle. Error handling restores story flow.
+6. Open M menu, verify navy/gold/cream styling and matching Gallery typography.
+7. Click Back to Gallery from directly in front of Vincent; return to latest Gallery.
+8. Unity left in Play mode in Gallery for the user.
+
+B key/controller behavior: keyboard B and right-controller B bindings use hold to record and release to send. Keyboard path was manually exercised. Controller binding is implemented but physical Quest/controller testing was not performed.
+AI answer limitation: local http://localhost:8000/npc/vincent/talk is unavailable and no Convai key is bundled. The test did not receive an AI answer. The automated conversation checks simulate conversation phases and do not verify microphone transcription or live AI responses.
+Other limitation: Photon reports InvalidAuthentication; multiplayer was not validated.
+An earlier manual attempt had missed Back clicks while other apps obscured Unity. Final foreground retest succeeded at Vincent without repositioning; no scene-occlusion defect was reproduced.
+Video: desktop-independent Unity window capture, no audio, continuous sequence; unrelated windows excluded. Delivery copy is re-encoded for smaller size without cutting time.
+No deployment to Quest 3 and no merge to main.
+
+Runtime evidence:
+[VanGogh Talk] SN_Vincent: Idle (hold B / release to send)
+[Entrance] Land complete: StarryNight. Physical Quest validation remains pending.
+[VanGogh Talk] SN_Vincent: Recording (hold B / release to send)
+[VanGogh Talk] SN_Vincent: Waiting (hold B / release to send)
+[VanGogh Talk] SN_Vincent: Error (hold B / release to send)
+[VanGogh] http://localhost:8000/npc/vincent/talk: 0 Cannot connect to destination host
+[VanGogh Talk] SN_Vincent: Idle (hold B / release to send)
+[Entrance] Land complete: Gallery. Physical Quest validation remains pending.
+[VanGogh Talk] SN_Vincent: Idle (hold B / release to send)
+[Entrance] Land complete: StarryNight. Physical Quest validation remains pending.
+[VanGogh Talk] SN_Vincent: Recording (hold B / release to send)
+[VanGogh Talk] SN_Vincent: Waiting (hold B / release to send)
+[VanGogh Talk] SN_Vincent: Error (hold B / release to send)
+[VanGogh] http://localhost:8000/npc/vincent/talk: 0 Cannot connect to destination host
+[VanGogh Talk] SN_Vincent: Idle (hold B / release to send)
+[Entrance] Land complete: Gallery. Physical Quest validation remains pending.
+
+Delivered MP4: 104.875 seconds, 1920x1080, 24 fps, 13,067,499 bytes. Full decode verification completed without errors.

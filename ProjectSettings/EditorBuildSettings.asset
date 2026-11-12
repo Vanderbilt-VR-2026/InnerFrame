@@ -5,15 +5,12 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
-  - enabled: 0
-    path: Assets/Scenes/SampleScene.unity
-    guid: 99c9720ab356a0642a771bea13969a05
+  - enabled: 1
+    path: Assets/Entrance/Scenes/Entrance.unity
+    guid: 3a3ce1308e8fc4b418ed181b7b9d4a5a
   - enabled: 1
     path: Assets/Scenes/Gallery.unity
     guid: 6965f3a96ee4244d8ba9f97ba2b3dc88
-  - enabled: 0
-    path: Assets/Scenes/Bedroom_StyleExperiment.unity
-    guid: aa645715bd794448599a19029986abbf
   - enabled: 1
     path: Assets/InnerFrameBedroomWeb/Scenes/PaintedBedroom.unity
     guid: f6be3ba1f7c884aacbe4b22c391dd471

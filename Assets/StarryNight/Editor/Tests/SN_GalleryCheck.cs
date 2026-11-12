@@ -48,9 +48,19 @@ namespace InnerFrame.StarryNight.EditorTools
             var errors = new List<string>();
             Application.LogCallback onLog = (msg, stack, type) => { if (type == LogType.Error || type == LogType.Exception || type == LogType.Assert) errors.Add($"{type}: {msg}"); };
             Application.logMessageReceived += onLog;
+            // The repair control saves through Unity, which normalizes TMP fields.
+            // Keep the user's serialized Gallery untouched after this test.
+            string snapshot = Path.GetTempFileName();
+            File.Copy(G.GalleryPath, snapshot, true);
             try { Checks(); }
             catch (Exception e) { failures++; W("EXCEPTION: " + e); }
-            finally { Application.logMessageReceived -= onLog; }
+            finally {
+                Application.logMessageReceived -= onLog;
+                EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+                File.Copy(snapshot, G.GalleryPath, true);
+                File.Delete(snapshot);
+                AssetDatabase.ImportAsset(G.GalleryPath);
+            }
             W($"Errors logged during the run: {errors.Count}");
             foreach (var e in errors) W("  " + e);
             if (errors.Count > 0) failures++;
@@ -79,7 +89,9 @@ namespace InnerFrame.StarryNight.EditorTools
             Check(PoseErrors(root).Count == 0, $"the entrance stands at {V(root.position)}, yaw {F(root.eulerAngles.y)} (approved: {V(G.RootPosition)}, yaw {F(G.RootYaw)}) {Errs(PoseErrors(root))}");
             var drift = G.Drift(entrance);
             Check(drift.Count == 0, $"no overrides on the instance beyond its pose and name {Errs(drift)}");
-            Check(root.GetSiblingIndex() == scene.rootCount - 1, $"it is the scene's last root ({root.GetSiblingIndex() + 1} of {scene.rootCount}), so it was appended");
+            var laterRoots = scene.GetRootGameObjects().Skip(root.GetSiblingIndex() + 1).ToArray();
+            Check(laterRoots.All(g => g.name == "Cici Artwork Cards"),
+                "only the newer Cici artwork cards may follow the painting entrance: " + string.Join(", ", laterRoots.Select(g => g.name)));
 
             // ------------------------------------------------------------------ what it is made of
             var children = root.Cast<Transform>().Select(t => t.name).ToArray();
@@ -230,15 +242,19 @@ namespace InnerFrame.StarryNight.EditorTools
             var changed = files.Where(f => before[f] != after[f]).ToList();
             Check(changes.Count == 0 && changed.Count == 0, $"a second run changes nothing (it reports {changes.Count} change(s); {changed.Count} of {files.Length} files differ) {Errs(changes.Concat(changed).ToList())}");
             foreach (var f in files) W($"  {before[f].Substring(0, 16)} {f}");
-            // control: drift in memory; the tool must see it, fix it, and save the scene back to the same bytes
+            // Normalize Unity's serialization before comparing repair output. TMP UGUI
+            // normalizes its orthographic flag on save; this isn't entrance drift.
+            if (!EditorSceneManager.SaveScene(scene)) throw new Exception("Could not establish serialized repair baseline");
+            string repairBaseline = Hash(G.GalleryPath);
+            // control: drift in memory; repair must reproduce this normalized baseline.
             var entranceNow = G.Instances(scene, prefab).Single();
             entranceNow.transform.position += new Vector3(0.5f, 0f, 0f);
             Check(PoseErrors(entranceNow.transform).Count > 0, "control: the entrance moved 0.5 m in memory is off its spot");
             var fixes = G.Apply();
             string galleryAfterFix = Hash(G.GalleryPath);
             Check(fixes.Any(c => c.StartsWith(G.GalleryPath) && c.Contains("moved")) && PoseErrors(G.Instances(scene, prefab).Single().transform).Count == 0
-                  && galleryAfterFix == before[G.GalleryPath],
-                $"the tool puts it back ({string.Join("; ", fixes)}) and Gallery.unity is byte for byte as before ({galleryAfterFix.Substring(0, 16)})");
+                  && galleryAfterFix == repairBaseline,
+                $"the tool puts it back ({string.Join("; ", fixes)}) and Gallery.unity matches the normalized repair baseline ({galleryAfterFix.Substring(0, 16)})");
         }
 
         // ---------------------------------------------------------------------------------------------- the checks' rules

@@ -1,0 +1,42 @@
+== 1. The lantern's home
+  PASS  its handle 0.5 m above the grass, 0.45 m from the seat at yaw 24.971 (want 0.5, 0.45, 25; 1 cm, 1 deg)
+  PASS  on its hook: the post's lowest point over the handle 0.01 m from it (limit 0.02)
+  PASS  kinematic True, its home where it hangs True
+
+== 2, 3. Reach, view, and the dialogue box (looking at the lantern's centre)
+    floor eye: the handle 0.471 m away, the lantern 29.095 deg from a gaze at the valley 15 deg down; looking at its centre (pitch -33.332), the box covers 2.133 % and the hint 13.413 % of it
+  PASS  floor eye: within reach (0.471 <= 0.65 m) and in view (29.095 <= 45 deg)
+  PASS  floor eye: the dialogue box over the lantern 2.133 % (limit 10 %)
+  PASS  floor eye: the hint over the lantern 13.413 % (limit 15 %)
+    chair eye: the handle 0.644 m away, the lantern 43.485 deg from a gaze at the valley 15 deg down; looking at its centre (pitch -53.847), the box covers 0 % and the hint 0 % of it
+  PASS  chair eye: within reach (0.644 <= 0.65 m) and in view (43.485 <= 45 deg)
+  PASS  chair eye: the dialogue box over the lantern 0 % (limit 10 %)
+  PASS  chair eye: the hint over the lantern 0 % (limit 10 %)
+  -- positive control (must FAIL): the lantern on its old spot on the grass (SN_Layout.lantern)
+    floor eye: the handle 0.62 m away, 49.704 deg from the gaze; the box 0 %, the hint 5.661 %
+    chair eye: the handle 0.832 m away, 55.342 deg from the gaze; the box 0 %, the hint 0 %
+  PASS  positive control: the lantern on the grass at its old spot -> FAIL
+
+== 4. The bushes round the post and the lantern
+    the nearest bush vertex: SN_LanternPost 1.026 m, SN_Lantern 1.094 m (limit 0.1)
+  PASS  no bush within the limit of either
+  -- positive control (must FAIL): a bush vertex put on the post
+    the nearest bush vertex: SN_LanternPost 0 m, SN_Lantern 0 m (limit 0.1)
+  PASS  positive control: a bush vertex on the post -> FAIL
+
+== 5. The hints (title | line)
+  Arrive: "Walk up to Vincent" | "Walk up the path to Vincent"
+  Sit: "Sit beside Vincent" | "Sit on the blanket next to him."
+  Lantern: "Dim the lantern" | "Point at it, pull the trigger (index finger)."
+  Stars: "Wake the stars" | "Point at the star he names, pull the trigger."
+  Wind: "Trace the wind" | "Hold the trigger and follow the dots."
+  Dawn: "Dawn" | "Wait for dawn"
+  Done: "A Night with Vincent" | "The night is painted"
+  Dawn, once the page is there: "Take his page" | "Take the page"
+  PASS  every state's title and line as the table says; no "grab"; the trigger's finger named in the Lantern line; no grip without its finger
+  -- positive controls (must FAIL)
+  PASS  positive control: the old Lantern hint ("Grab the lantern ...") -> FAIL
+  PASS  positive control: the Stars step titled "A Night with Vincent" -> FAIL
+
+Errors logged during the run: 0
+RESULT: 15 passed, 0 failed

@@ -130,3 +130,24 @@ sample, re-import it from Package Manager instead of editing it here.
 | `Assets/Samples` | The folder Package Manager creates for imported samples | Unity | n/a | See the rows below |
 | `Assets/Samples/XR Interaction Toolkit` | Starter Assets; Hands Interaction Demo | `com.unity.xr.interaction.toolkit` | 3.3.2 | [Unity Companion License](http://www.unity3d.com/legal/licenses/Unity_Companion_License). The package's *Third Party Notices.md* lists Apache-2.0 components (gesture code from Google's ARCore Unity SDK). |
 | `Assets/Samples/XR Hands` | HandVisualizer | `com.unity.xr.hands` | 1.9.0 | [Unity Package Distribution License](https://unity3d.com/legal/licenses/Unity_Package_Distribution_License). The package's *Third Party Notices.md* lists Apache-2.0 components (Khronos OpenXR-SDK-Source). |
+
+## Cici Gallery introduction cards
+
+
+| Asset | Source | License / provenance |
+|---|---|---|
+| Assets/ArtworkCici | User-approved card layouts and interaction scripts from the standalone Cici UI preview | Project-authored UI and code; reuses existing VanGogh sprites and Libre Baskerville font GUIDs |
+| StarryNight Orsay Portrait | https://commons.wikimedia.org/wiki/File:Vincent_van_Gogh_-_Self-Portrait_-_Google_Art_Project.jpg | Public-domain painting and faithful reproduction; 1889 Orsay self-portrait, Google Art Project |
+| Bedroom portrait inset | Existing approved Portrait.jpg / AIC Self-Portrait, 1887, accession 1954.326 | Public-domain artwork; retains original approved image |
+| Assets/TextMesh Pro (missing essential resources) | Unity com.unity.ugui 2.0.0 / TextMesh Pro Essential Resources; copied from the existing Unity preview | Unity package license; Liberation Sans font SIL OFL (Fonts/LiberationSans - OFL.txt); EmojiOne attribution in Sprites/EmojiOne Attribution.txt |
+| Gallery LibreBaskerville font atlas | Generated from existing LibreBaskerville-Regular.ttf | SIL Open Font License; existing Assets/VanGogh/Art/Fonts/OFL.txt |
+
+## Entrance and controller tutorial
+
+| Asset | Source | License / provenance |
+|---|---|---|
+| `Assets/Entrance` | Project-supplied opening paintings, portraits, UI, intro video and original scripts | InnerFrame team artwork and code; font, music and Foley credits below |
+| `Assets/ControllerTutorial` | Project-supplied controller diagram and world-space guide prefabs | InnerFrame team tutorial assets |
+| Entrance B soundtrack and UI sounds | Original InnerFrame score and click, GeneralUser GS instrument samples (https://www.schristiancollins.com/generaluser.php) | Original composition; music-production license in `Assets/Entrance/Resources/Entrance/Audio/Soundfont-LICENSE.txt` |
+| Entrance handwriting Foley | Stephan / PDSounds, https://commons.wikimedia.org/wiki/File:Writing_with_inkpen.ogg | Public domain; edited to lettering timing |
+| Caveat Brush font | Bundled CaveatBrush-Regular.ttf | SIL Open Font License, `Assets/Entrance/Resources/Entrance/OFL.txt` |

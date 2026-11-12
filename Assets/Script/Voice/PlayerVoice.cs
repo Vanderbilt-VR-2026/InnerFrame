@@ -9,7 +9,7 @@ using UnityEngine.InputSystem;
 /// Hold X on the left controller (V in the Editor) to talk to everyone in the room.
 /// Others hear you from your avatar's head (see the Speaker on Head/Voice).
 ///
-/// The microphone only records while X is held. Asking Vincent (hold B, or T in the Editor)
+/// The microphone only records while X is held. Asking Vincent (hold B on the controller or keyboard)
 /// also uses the microphone, so while B is held voice chat stays off: your question to
 /// Vincent is not broadcast to the other players, and the two never fight over the mic.
 ///
@@ -52,6 +52,7 @@ public class PlayerVoice : NetworkBehaviour
         // Same bindings as Ask Vincent (Assets/VanGogh/Scripts/SpeechToProxy.cs on main).
         askVincent = new InputAction("Ask Vincent (voice chat pauses)", InputActionType.Button);
         askVincent.AddBinding("<XRController>{RightHand}/secondaryButton"); // B
+        askVincent.AddBinding("<Keyboard>/b");
         askVincent.AddBinding("<Keyboard>/t");
 
         talk.Enable();

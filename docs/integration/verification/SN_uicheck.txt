@@ -1,0 +1,60 @@
+# VG_DialogueUI (Assets/VanGogh/Prefabs/VG_DialogueUI.prefab) with Assets/VanGogh/Prefabs/VG_Dialogue_StarryNight.asset
+settings: 1.6 m, 22 deg under the gaze, dead zone 20, gaze pitch -60..45, box 33.07 deg, words cap 1.432 deg, plate #FFFFFFFF, title 'A Night with Vincent', hint fade-in 0.5 s
+  PASS  the UI is stepped by SN_Game (autoStep off)
+L01 (56 chars, clip 4.029 s) -> 2 page(s)
+    "Ah, a visitor. Sit with me.": 1 line(s), size 208, 0-1.978 s
+    "The night is just beginning.": 1 line(s), size 208, 1.978-4.029 s
+    the box at its tallest: 0.168 m (three lines: 0.297 m)
+L02 (35 chars, clip 2.171 s) -> 1 page(s)
+    "Too much light. Let the stars come.": 2 line(s), size 208, 0-2.171 s
+    the box at its tallest: 0.233 m (three lines: 0.297 m)
+L03 (28 chars, clip 1.695 s) -> 1 page(s)
+    "There. Now they can find us.": 1 line(s), size 208, 0-1.695 s
+    the box at its tallest: 0.168 m (three lines: 0.297 m)
+L04 (38 chars, clip 2.426 s) -> 1 page(s)
+    "Wake that one for me, above the hills.": 2 line(s), size 208, 0-2.426 s
+    the box at its tallest: 0.233 m (three lines: 0.297 m)
+L05 (28 chars, clip 1.579 s) -> 1 page(s)
+    "Now the one over the church.": 1 line(s), size 208, 0-1.579 s
+    the box at its tallest: 0.168 m (three lines: 0.297 m)
+L06 (60 chars, clip 3.402 s) -> 2 page(s)
+    "And the brightest, just right of the cypress.": 2 line(s), size 208, 0-2.595 s
+    "Do you see it?": 1 line(s), size 208, 2.595-3.402 s
+    the box at its tallest: 0.233 m (three lines: 0.297 m)
+L07 (47 chars, clip 2.612 s) -> 2 page(s)
+    "Do you feel the wind?": 1 line(s), size 208, 0-1.193 s
+    "Follow it across the sky.": 1 line(s), size 208, 1.193-2.612 s
+    the box at its tallest: 0.168 m (three lines: 0.297 m)
+L08 (53 chars, clip 5.515 s) -> 1 page(s)
+    "Yes. That is how it moves, when you look long enough.": 2 line(s), size 208, 0-5.515 s
+    the box at its tallest: 0.233 m (three lines: 0.297 m)
+L09 (64 chars, clip 3.355 s) -> 2 page(s)
+    "The morning star is always the last to go.": 2 line(s), size 208, 0-2.237 s
+    "This page is for you.": 1 line(s), size 208, 2.237-3.355 s
+    the box at its tallest: 0.233 m (three lines: 0.297 m)
+L10 (62 chars, clip 4.098 s) -> 3 page(s)
+    "You found my sketch.": 1 line(s), size 208, 0-1.366 s
+    "The hills are right.": 1 line(s), size 208, 1.366-2.732 s
+    "The sky is not, yet.": 1 line(s), size 208, 2.732-4.098 s
+    the box at its tallest: 0.168 m (three lines: 0.297 m)
+  PASS  all 10 lines: 16 pages, each in at most 3 lines at full size (the most: 2)
+  PASS  Clear, then 2 s: the words are gone
+hint Arrive: "Walk up to Vincent" | "Walk up the path to Vincent": the plate 71.132 % of the box's width (23.523 of 33.07 deg)
+hint Sit: "Sit beside Vincent" | "Sit on the blanket next to him.": the plate 73.789 % of the box's width (24.402 of 33.07 deg)
+hint Lantern: "Dim the lantern" | "Point at it, pull the trigger (index finger).": the plate 94.947 % of the box's width (31.399 of 33.07 deg)
+hint Stars: "Wake the stars" | "Point at the star he names, pull the trigger.": the plate 99.184 % of the box's width (32.8 of 33.07 deg)
+hint Wind: "Trace the wind" | "Hold the trigger and follow the dots.": the plate 86.421 % of the box's width (28.579 of 33.07 deg)
+hint Dawn: "Dawn" | "Wait for dawn": the plate 40.263 % of the box's width (13.315 of 33.07 deg)
+hint Done: "A Night with Vincent" | "The night is painted": the plate 76.579 % of the box's width (25.324 of 33.07 deg)
+hint Dawn, the page there: "Take his page" | "Take the page": the plate 53.368 % of the box's width (17.649 of 33.07 deg)
+  PASS  every hint fits: its plate no wider than the box
+  PASS  positive control: the Arrive line twice over is 129.658 % of the box -> too wide
+a level gaze (yaw 6, pitch 0): the box from -28.937 to -22 deg pitch, its top edge 33.07 deg wide and 1.6 m from the eye; the hint's plate from -19.367 to -13.889 deg
+  PASS  level gaze: the box's top edge -22 deg = -22 under the gaze, 1.6 m away, 33.07 deg wide (settings: 1.6 m, 33.07 deg)
+25 deg up (yaw 25, pitch 25): the box from -5.069 to 3 deg pitch, its top edge 33.07 deg wide and 1.6 m from the eye; the hint's plate from 4.592 to 10.09 deg
+first frame, gaze (0, 0): group at yaw 0, pitch -22, 1.6 m, roll 0
+  PASS  head turned 15 deg, 1 s later: group yaw 0 (inside the 20 deg dead zone: unmoved)
+  PASS  head turned 30 deg: within 1 deg after 0.431 s (the Bedroom's reuse test: 0.431 s); group at yaw 29.042, pitch -22, 1.6 m, roll 0
+  PASS  the beam's queue 2999 is below the UI's (3000..3000), same sorting layer, order 0 <= 0
+Errors logged during the run: 0
+RESULT: 9 passed, 0 failed

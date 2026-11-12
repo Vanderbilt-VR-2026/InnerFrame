@@ -131,7 +131,7 @@ public static class GalleryCardInstaller {
  var font=AssetDatabase.LoadAssetAtPath<TMPro.TMP_FontAsset>(path);
  bool created=!font;
  if(created){
- var source=AssetDatabase.LoadAssetAtPath<Font>("Assets/VanGogh/Art/Fonts/LibreBaskerville-Regular.ttf");
+ var source=AssetDatabase.LoadAssetAtPath<Font>("Assets/Shared/UI/Fonts/LibreBaskerville-Regular.ttf");
  font=TMPro.TMP_FontAsset.CreateFontAsset(source,90,9,UnityEngine.TextCore.LowLevel.GlyphRenderMode.SDFAA,2048,2048,TMPro.AtlasPopulationMode.Dynamic);
  }
  string chars="";foreach(var key in Keys)foreach(var t in AssetDatabase.LoadAssetAtPath<GameObject>(CardPath(key)).GetComponentsInChildren<TMPro.TMP_Text>(true))chars+=t.text;

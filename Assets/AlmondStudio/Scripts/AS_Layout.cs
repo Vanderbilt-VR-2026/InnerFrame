@@ -203,6 +203,11 @@ namespace InnerFrame.AlmondStudio
         [Tooltip("...or within this distance of the beam's line, metres.")] public float blossomBeamMetres = 0.12f;
         [Tooltip("Once this share has opened, the rest open in a wave and the act ends.")] [Range(0.1f, 1f)] public float blossomFinish = 0.75f;
         [Tooltip("How long the wave from the trunk out takes, seconds.")] public float blossomWaveSeconds = 2.5f;
+        [Tooltip("Blossoms per scattered point: a small cluster, as on a real almond branch (1 = single flowers).")] [Range(1, 6)] public int blossomCluster = 3;
+        [Tooltip("How far round a point its cluster spreads, metres.")] public float blossomClusterSpread = 0.07f;
+        [Tooltip("Only buds you can see through the window from paintEye count toward blossomFinish; this much slack (metres) round the opening, for leaning.")] public float blossomReachMargin = 0.25f;
+        [Tooltip("The ending's petal shower: extra petals per blossom opening in the wave, drifting in through the window.")] [Range(0f, 3f)] public float blossomShower = 1.2f;
+        [Tooltip("Seconds a shower petal drifts before it fades.")] public float blossomShowerSeconds = 4.5f;
 
         [Header("People")]
         [Tooltip("Where the player arrives: the S02 viewpoint, a little left of the window, looking at it.")] public Vector3 playerStart = new Vector3(-0.31f, 0f, 2.52f);

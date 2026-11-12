@@ -21,12 +21,12 @@ namespace InnerFrame.AlmondStudio
         {
             public Vector3 pos, axis, e1, e2;
             public float size, rot, openAt = -1f, sway;
-            public bool stayBud;
+            public bool stayBud, reachable = true;
             public float[] petalScale = new float[5];
             public float Openness(float now, float dur) => openAt < 0f ? 0f : Mathf.Clamp01((now - openAt) / dur);
         }
 
-        class Drift { public Vector3 pos, vel; public float born, rot, spin, size; }
+        class Drift { public Vector3 pos, vel; public float born, rot, spin, size, life = 2.4f; }
 
         AS_Layout layout;
         readonly List<Blossom> blossoms = new List<Blossom>();
@@ -51,27 +51,49 @@ namespace InnerFrame.AlmondStudio
             rnd = new System.Random(tree.seed);
             var t = tree.transform;
             trunkBase = t.position;
+            // the window's opening, to know which buds can be reached from where you paint
+            var room = transform.parent;
+            Vector3 eye = room != null ? room.TransformPoint(l.paintEye) : l.paintEye;
+            int cluster = Mathf.Max(1, l.blossomCluster);
             for (int i = 0; i < tree.positions.Length; i++)
             {
-                var b = new Blossom
-                {
-                    pos = t.TransformPoint(tree.positions[i]),
-                    size = l.blossomSize * Mathf.Lerp(0.75f, 1.25f, (float)rnd.NextDouble()),
-                    rot = (float)rnd.NextDouble() * 72f,
-                    stayBud = rnd.NextDouble() < l.blossomStayBud,
-                    sway = (float)rnd.NextDouble() * 10f,
-                };
-                // facing out from the branch, lifted toward the sky and a little random, as in the painting
+                Vector3 centre = t.TransformPoint(tree.positions[i]);
                 Vector3 n = i < tree.normals.Length ? t.TransformDirection(tree.normals[i]).normalized : Vector3.up;
-                Vector3 jitter = new Vector3((float)rnd.NextDouble() - 0.5f, (float)rnd.NextDouble() - 0.5f, (float)rnd.NextDouble() - 0.5f);
-                b.axis = (n + Vector3.up * 0.5f + jitter * 0.9f).normalized;
-                b.pos += n * b.size * 0.15f;
-                b.e1 = Vector3.Cross(Mathf.Abs(b.axis.y) < 0.9f ? Vector3.up : Vector3.right, b.axis).normalized;
-                b.e2 = Vector3.Cross(b.axis, b.e1);
-                for (int k = 0; k < 5; k++) b.petalScale[k] = Mathf.Lerp(0.85f, 1.15f, (float)rnd.NextDouble());
-                blossoms.Add(b);
-                if (!b.stayBud) Total++;
+                Vector3 u = Vector3.Cross(Mathf.Abs(n.y) < 0.9f ? Vector3.up : Vector3.right, n).normalized, w = Vector3.Cross(n, u);
+                for (int c = 0; c < cluster; c++)
+                {
+                    // the first at the point, the others round it on the branch's surface
+                    Vector3 offset = Vector3.zero;
+                    if (c > 0)
+                    {
+                        float a = (float)rnd.NextDouble() * Mathf.PI * 2f, r = l.blossomClusterSpread * Mathf.Lerp(0.45f, 1f, (float)rnd.NextDouble());
+                        offset = (u * Mathf.Cos(a) + w * Mathf.Sin(a)) * r;
+                    }
+                    var b = new Blossom
+                    {
+                        pos = centre + offset,
+                        size = l.blossomSize * Mathf.Lerp(0.75f, 1.25f, (float)rnd.NextDouble()),
+                        rot = (float)rnd.NextDouble() * 72f,
+                        stayBud = rnd.NextDouble() < l.blossomStayBud,
+                        sway = (float)rnd.NextDouble() * 10f,
+                    };
+                    // facing out from the branch, lifted toward the sky and a little random, as in the painting
+                    Vector3 jitter = new Vector3((float)rnd.NextDouble() - 0.5f, (float)rnd.NextDouble() - 0.5f, (float)rnd.NextDouble() - 0.5f);
+                    b.axis = (n + Vector3.up * 0.5f + jitter * 0.9f).normalized;
+                    b.pos += n * b.size * 0.15f;
+                    b.e1 = Vector3.Cross(Mathf.Abs(b.axis.y) < 0.9f ? Vector3.up : Vector3.right, b.axis).normalized;
+                    b.e2 = Vector3.Cross(b.axis, b.e1);
+                    for (int k = 0; k < 5; k++) b.petalScale[k] = Mathf.Lerp(0.85f, 1.15f, (float)rnd.NextDouble());
+                    b.reachable = ThroughWindow(room, eye, b.pos, l);
+                    blossoms.Add(b);
+                }
             }
+            // what counts toward the finish: the buds you can see through the window (all, if none can be: a misplaced tree)
+            int reach = 0;
+            foreach (var b in blossoms) if (b.reachable && !b.stayBud) reach++;
+            if (reach == 0) foreach (var b in blossoms) b.reachable = true;
+            foreach (var b in blossoms) if (b.reachable && !b.stayBud) Total++;
+            Debug.Log($"[AS] Blossoms: {blossoms.Count} on the tree ({tree.positions.Length} points x {cluster}), {Total} to paint through the window; the rest open in the final wave.");
             mesh = new Mesh { name = "AS_Blossoms (runtime)" };
             mesh.MarkDynamic();
             gameObject.AddComponent<MeshFilter>().sharedMesh = mesh;
@@ -117,13 +139,47 @@ namespace InnerFrame.AlmondStudio
             foreach (var b in blossoms) maxD = Mathf.Max(maxD, Vector3.Distance(b.pos, trunkBase));
             float now = Time.time;
             foreach (var b in blossoms)
-                if (!b.stayBud && b.openAt < 0f) Open(b, now + seconds * Vector3.Distance(b.pos, trunkBase) / maxD);
+            {
+                if (b.stayBud) continue;
+                float at = b.openAt < 0f ? now + seconds * Vector3.Distance(b.pos, trunkBase) / maxD : now + (float)rnd.NextDouble() * seconds;
+                if (b.openAt < 0f) Open(b, at);
+                // the shower: petals let go all over the tree as the wave passes and drift in through the window
+                float extra = layout.blossomShower;
+                int count = (int)extra + (rnd.NextDouble() < extra - (int)extra ? 1 : 0);
+                for (int k = 0; k < count; k++)
+                    drifts.Add(new Drift
+                    {
+                        pos = b.pos, born = at + 0.2f + (float)rnd.NextDouble() * 0.8f,
+                        // a breeze into the room (-z), a little lift, then they fall
+                        vel = new Vector3(((float)rnd.NextDouble() - 0.5f) * 0.5f, 0.15f + (float)rnd.NextDouble() * 0.2f, -0.35f - (float)rnd.NextDouble() * 0.5f),
+                        rot = (float)rnd.NextDouble() * 360f, spin = 60f + (float)rnd.NextDouble() * 160f,
+                        size = b.size * Mathf.Lerp(0.6f, 0.9f, (float)rnd.NextDouble()),
+                        life = layout.blossomShowerSeconds * Mathf.Lerp(0.7f, 1.1f, (float)rnd.NextDouble()),
+                    });
+            }
+        }
+
+        /// <summary>True if the line from the painter's eye to p passes through the window's opening (the rectangle and
+        /// its half-round arch, on the wall's inner and outer faces), with blossomReachMargin of slack.</summary>
+        static bool ThroughWindow(Transform room, Vector3 eye, Vector3 p, AS_Layout l)
+        {
+            Vector3 e = room != null ? room.InverseTransformPoint(eye) : eye, q = room != null ? room.InverseTransformPoint(p) : p;
+            if (q.z - e.z <= 0.01f) return false;
+            float half = l.windowWidth * 0.5f + l.blossomReachMargin;
+            foreach (float z in new[] { l.roomDepth, l.roomDepth + l.wallThickness })
+            {
+                if (q.z < z) return false;   // in front of the wall: not outside
+                Vector3 at = e + (q - e) * ((z - e.z) / (q.z - e.z));
+                if (Mathf.Abs(at.x) > half || at.y < l.windowBottom - l.blossomReachMargin) return false;
+                if (at.y > l.Springing && new Vector2(at.x, at.y - l.Springing).magnitude > half) return false;
+            }
+            return true;
         }
 
         void Open(Blossom b, float at)
         {
             b.openAt = at;
-            Opened++;
+            if (b.reachable) Opened++;
             int petals = rnd.NextDouble() < 0.6 ? 1 : 2;
             for (int k = 0; k < petals; k++)
                 drifts.Add(new Drift
@@ -175,12 +231,14 @@ namespace InnerFrame.AlmondStudio
             {
                 var d = drifts[i];
                 float age = now - d.born;
-                if (age > 2.4f) { drifts.RemoveAt(i); continue; }
+                if (age > d.life) { drifts.RemoveAt(i); continue; }
                 if (age < 0f) continue;
-                Vector3 p = d.pos + d.vel * age + Vector3.down * (0.35f * age + 0.08f * age * age)
+                // long-lived shower petals fall slower (they float on the breeze)
+                float fall = d.life > 3f ? 0.5f : 1f;
+                Vector3 p = d.pos + d.vel * age + Vector3.down * fall * (0.35f * age + 0.08f * age * age)
                             + new Vector3(Mathf.Sin(age * 3f + d.rot), 0f, Mathf.Cos(age * 2.3f + d.rot)) * 0.06f;
                 Quaternion q = Quaternion.Euler(d.rot + age * d.spin, d.rot * 0.7f + age * d.spin * 0.6f, 0f);
-                float fade = 1f - Mathf.InverseLerp(1.8f, 2.4f, age);
+                float fade = 1f - Mathf.InverseLerp(d.life * 0.75f, d.life, age);
                 CentredQuad(p, q * Vector3.forward, q * Vector3.right, d.size * fade, Petal, 0.9f);
             }
             mesh.Clear();

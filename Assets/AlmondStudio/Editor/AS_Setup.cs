@@ -330,6 +330,13 @@ namespace InnerFrame.AlmondStudio.EditorTools
             foreach (var ext in new[] { ".jpg", ".png", ".jpeg" })
                 if (tex == null) tex = AssetDatabase.LoadAssetAtPath<Texture2D>(folder + "/" + file + ext);
             if (tex == null) { Debug.Log("[AS Setup] No " + file + " (.jpg/.png) in " + folder + " yet: it stays blank."); return null; }
+            // museum downloads are often 4000+ pixels: 1024 is plenty for a canvas on the wall, and Quest's memory thanks us
+            var imp = (TextureImporter)AssetImporter.GetAtPath(AssetDatabase.GetAssetPath(tex));
+            if (imp != null && (imp.maxTextureSize > 1024 || imp.wrapMode != TextureWrapMode.Clamp))
+            {
+                imp.maxTextureSize = 1024; imp.wrapMode = TextureWrapMode.Clamp; imp.mipmapEnabled = true;
+                imp.SaveAndReimport();
+            }
             var m = Mat(name, shader);
             m.SetTexture("_BaseMap", tex);
             m.SetTextureScale("_BaseMap", Vector2.one);

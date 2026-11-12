@@ -1,0 +1,5 @@
+<!-- Keep sherpa-onnx's C# wrapper whole in IL2CPP builds: VincentVoice reads OfflineTts._handle by reflection,
+     and the native structs it marshals must keep every field. -->
+<linker>
+  <assembly fullname="sherpa-onnx" preserve="all" />
+</linker>

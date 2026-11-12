@@ -60,7 +60,7 @@ public class VincentLink : NetworkBehaviour
 
     void OnDisable()
     {
-        if (talker != null) talker.Answered -= OnAnswered;
+        if (talker != null) { talker.Answered -= OnAnswered; talker.ThinkingStarted -= OnThinking; }
     }
 
     void Update()
@@ -77,9 +77,9 @@ public class VincentLink : NetworkBehaviour
         }
         if (current != talker)
         {
-            if (talker != null) talker.Answered -= OnAnswered;
+            if (talker != null) { talker.Answered -= OnAnswered; talker.ThinkingStarted -= OnThinking; }
             talker = current;
-            if (talker != null) talker.Answered += OnAnswered;
+            if (talker != null) { talker.Answered += OnAnswered; talker.ThinkingStarted += OnThinking; }
             holding = false;
         }
         if (talker == null || !Shared(talker)) return;
@@ -96,16 +96,28 @@ public class VincentLink : NetworkBehaviour
         }
     }
 
-    void OnAnswered(string transcript, string reply, string audioUrl)
+    // One part of his answer: the whole answer from the proxy, or a sentence or two from Convai's stream (#157), which
+    // every headset speaks as it arrives. `last`: no more parts (its text may be empty).
+    void OnAnswered(string transcript, string reply, string audioUrl, int part, bool last)
     {
         if (!holding || !Shared(talker)) return;
-        int id = ++sentId;
-        var q = Pieces(transcript);
-        var r = Pieces(reply);
-        RPC_Begin(id, (byte)q.Length, (byte)r.Length);
-        for (int i = 0; i < q.Length; i++) RPC_Piece(id, 0, (byte)i, q[i]);
-        for (int i = 0; i < r.Length; i++) RPC_Piece(id, 1, (byte)i, r[i]);
-        RPC_Answer(id, audioUrl ?? "");
+        if (!string.IsNullOrEmpty(reply))
+        {
+            int id = ++sentId;
+            var q = Pieces(part == 0 ? transcript : "");   // the question travels once, with the first part
+            var r = Pieces(reply);
+            RPC_Begin(id, (byte)q.Length, (byte)r.Length);
+            for (int i = 0; i < q.Length; i++) RPC_Piece(id, 0, (byte)i, q[i]);
+            for (int i = 0; i < r.Length; i++) RPC_Piece(id, 1, (byte)i, r[i]);
+            RPC_Answer(id, audioUrl ?? "", (byte)Mathf.Min(part, 255));
+        }
+        if (last) RPC_End();
+    }
+
+    // The asker sent the question: everyone hears the same "Hmm, let me think." (VincentVoice.ThinkingLines).
+    void OnThinking(int line)
+    {
+        if (holding && Shared(talker)) RPC_Thinking((byte)line);
     }
 
     // ---- messages (sent by your own avatar, run on everyone else's copy of it) ----
@@ -152,7 +164,7 @@ public class VincentLink : NetworkBehaviour
     }
 
     [Rpc(RpcSources.StateAuthority, RpcTargets.All, InvokeLocal = false)]
-    void RPC_Answer(int id, string audioUrl)
+    void RPC_Answer(int id, string audioUrl, byte part)
     {
         if (id != incomingId) return;
         if (holder != PlayerRef.None && holder != owner) return;   // someone else holds him (e.g. a late joiner asked)
@@ -161,7 +173,23 @@ public class VincentLink : NetworkBehaviour
         string transcript = Join(questionParts), reply = Join(replyParts);
         if (string.IsNullOrEmpty(reply)) return;
         holderUntil = Time.time + LockSeconds;   // he speaks now; the asker releases when he stops
-        t.SayRemote(Name(owner), transcript, reply, audioUrl);
+        t.SayRemote(Name(owner), transcript, reply, audioUrl, part);
+    }
+
+    [Rpc(RpcSources.StateAuthority, RpcTargets.All, InvokeLocal = false)]
+    void RPC_End()
+    {
+        if (holder != PlayerRef.None && holder != owner) return;
+        var t = FindTalker();
+        if (t != null && Shared(t)) t.EndRemote();
+    }
+
+    [Rpc(RpcSources.StateAuthority, RpcTargets.All, InvokeLocal = false)]
+    void RPC_Thinking(byte line)
+    {
+        if (holder != PlayerRef.None && holder != owner) return;
+        var t = FindTalker();
+        if (t != null && Shared(t)) t.ThinkRemote(line);
     }
 
     // ---- helpers ----
@@ -178,7 +206,7 @@ public class VincentLink : NetworkBehaviour
     {
         holder = PlayerRef.None;
         var t = FindTalker();
-        if (t != null) t.BlockedBy = null;
+        if (t != null) { t.BlockedBy = null; t.EndRemote(); }   // whatever came of the answer, no more is coming
     }
 
     /// <summary>Every Vincent is shared (the Painted Bedroom's since MirrorLink shares its mirror scene).</summary>

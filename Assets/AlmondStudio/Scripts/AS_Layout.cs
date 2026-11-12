@@ -100,6 +100,18 @@ namespace InnerFrame.AlmondStudio
         public Vector3 sillModelEuler = new Vector3(0f, 180f, 0f);
         [Tooltip("The tallest object (the lidded jar), metres: sets the model's scale.")] public float sillModelHeight = 0.32f;
         [Tooltip("Moves the model from the sill's middle (x across, y up, z toward the glass).")] public Vector3 sillModelOffset = new Vector3(-0.03f, 0f, 0.01f);
+        [Tooltip("Cut the model into its objects and place each as in the painting (off: the row as generated).")] public bool sillSplit = true;
+        [Tooltip("A gap across x wider than this (metres, after scaling) separates two objects.")] public float sillSplitGap = 0.008f;
+        [Tooltip("Each object's spot, left to right as seen from the room: x across (0 = the glass's middle), y = how far from the room face toward the glass (the sill runs from -sillOverhang to about 0.21). After Window in the Studio: the jar alone at the front left; the others grouped right, staggered.")]
+        public Vector2[] sillItemSpots = { new Vector2(-0.36f, 0.01f), new Vector2(-0.02f, 0.08f), new Vector2(0.12f, 0.14f), new Vector2(0.25f, 0.05f), new Vector2(0.37f, 0.14f) };
+        [Tooltip("Each object's turn, degrees.")] public float[] sillItemYaw = { 0f, 20f, -10f, 15f, 0f };
+
+        [Header("Window frame (after the painting)")]
+        [Tooltip("The broad frame round the opening at the glass, and the fanlight's arc.")] public float windowFrameWidth = 0.065f;
+        [Tooltip("The transom on the springing line.")] public float windowTransom = 0.075f;
+        [Tooltip("The casements' stiles and rails.")] public float windowStile = 0.05f;
+        [Tooltip("The glazing bars between the small panes.")] public float windowBar = 0.026f;
+        [Tooltip("The half-round hub the fanlight's bars radiate from.")] public float windowHub = 0.075f;
 
         [Header("Blossoms on the Tripo tree (AS_Blossoms)")]
         [Tooltip("A blossom's petal length, metres.")] public float blossomSize = 0.07f;

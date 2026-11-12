@@ -167,6 +167,11 @@ namespace InnerFrame.AlmondStudio.EditorTools
             Paint(boot.revealRight, "AS_RevealGreen.jpg", 0.8f, "FFFFFF");
             Paint(boot.frame, "AS_Wood.jpg", 0.8f, "8C9A8C");          // grey-green: casements, beams, door, boxes
             Paint(boot.wood, "AS_Ceiling.jpg", 0.6f, "B5793A");       // the ivory strokes warmed to his yellow-brown wood
+            // the window's frame and the sill, after Window in the Studio: a lighter grey-green frame, a pale sill
+            boot.windowFrame = Lit("AS_WindowFrame", surface, "8FA08A");
+            Paint(boot.windowFrame, "AS_Ceiling.jpg", 0.8f, "8FA08A");
+            boot.sillTop = Lit("AS_Sill", surface, "EEE8DA");
+            Paint(boot.sillTop, "AS_Ceiling.jpg", 0.8f, "E9E6DC");
             boot.references = new Texture[layout.compareViews.Length];
             for (int i = 0; i < layout.compareViews.Length; i++)
             {
@@ -175,6 +180,8 @@ namespace InnerFrame.AlmondStudio.EditorTools
                 if (boot.references[i] == null) Debug.LogWarning("[AS Setup] No comparison picture at " + path + " (view " + (i + 1) + ").");
             }
             boot.chairPrefab = ChairFromBedroom();
+            // the still life is cut into its objects at runtime, so its mesh must be readable
+            if (AssetImporter.GetAtPath(SillModel) is ModelImporter sillImp && !sillImp.isReadable) { sillImp.isReadable = true; sillImp.SaveAndReimport(); }
             boot.sillModel = AssetDatabase.LoadAssetAtPath<GameObject>(SillModel);
             if (boot.sillModel == null) Debug.Log("[AS Setup] No sill still life at " + SillModel + "; the sill keeps its cylinders.");
             boot.easelModel = AssetDatabase.LoadAssetAtPath<GameObject>(EaselModel);

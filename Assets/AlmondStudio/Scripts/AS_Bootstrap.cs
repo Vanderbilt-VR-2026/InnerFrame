@@ -21,7 +21,7 @@ namespace InnerFrame.AlmondStudio
     {
         public AS_Layout layout;
         [Tooltip("Assets/AlmondStudio/Data/AS_Branches.json: the branch paths.")] public TextAsset branchesJson;
-        public Material wall, floor, ceiling, wood, frame, revealLeft, revealRight, canvas, brushHead, vincent, bark, ink, skyMaterial, groundMaterial, glow, guideDot, blossom;
+        public Material wall, floor, ceiling, wood, frame, windowFrame, sillTop, revealLeft, revealRight, canvas, brushHead, vincent, bark, ink, skyMaterial, groundMaterial, glow, guideDot, blossom;
         [Tooltip("VG_DialogueUI.prefab: Vincent's words and the hint, as in every scene.")] public GameObject uiPrefab;
         public VG_DialogueSettings uiSettings;
         [Tooltip("The comparison pictures, one per AS_Layout.compareViews entry (Textures/Reference), set by Build.")] public Texture[] references = new Texture[0];
@@ -101,7 +101,9 @@ namespace InnerFrame.AlmondStudio
             Box(world, "Wall N below", new Vector3(cx, wb / 2f, zN), new Vector3(2f * ro, wb, T), wall);
             ArchWall(world, "Wall N arch", spring, cx, ro, H, D, D + T, wall);
             Reveal(world, ww, cx, ro, wb, spring, D, zg, revealLeft, revealRight);
-            Box(world, "Sill", new Vector3(cx, wb + 0.02f, (D - layout.sillOverhang + zg) / 2f), new Vector3(2f * ro + 0.06f, 0.04f, zg - D + layout.sillOverhang), wood);
+            // the sill: pale, as in the painting, with a dark grey-green front edge
+            Box(world, "Sill", new Vector3(cx, wb + 0.02f, (D - layout.sillOverhang + zg) / 2f), new Vector3(2f * ro + 0.06f, 0.04f, zg - D + layout.sillOverhang), sillTop != null ? sillTop : wood);
+            Box(world, "Sill edge", new Vector3(cx, wb + 0.015f, D - layout.sillOverhang - 0.006f), new Vector3(2f * ro + 0.07f, 0.06f, 0.012f), WF, collider: false);
             // the ceiling's beams, across the room (S03)
             for (int i = 0; i < layout.beamCount; i++)
                 Box(world, "Beam", new Vector3(0f, H - layout.beamDepth / 2f, D * (i + 1f) / (layout.beamCount + 1f)), new Vector3(W, layout.beamDepth, layout.beamWidth), frame, collider: false);
@@ -111,7 +113,7 @@ namespace InnerFrame.AlmondStudio
             float[] xs = { -0.42f, -0.12f, 0.02f, 0.2f, 0.36f };
             float[] hs = { 0.32f, 0.16f, 0.3f, 0.12f, 0.12f };
             float[] rs = { 0.055f, 0.035f, 0.04f, 0.04f, 0.05f };
-            if (sillModel != null) SillStillLife(world, new Vector3(0f, y0, zs));   // the Tripo model; the cylinders only without it
+            if (sillModel != null) SillStillLife(world, new Vector3(0f, y0, zs), D);   // the Tripo model; the cylinders only without it
             else for (int i = 0; i < 5; i++)
             {
                 var c = Prim(world, PrimitiveType.Cylinder, "Sill object " + (i + 1), new Vector3(xs[i], y0 + hs[i] / 2f, zs), new Vector3(rs[i] * 2f, hs[i] / 2f, rs[i] * 2f), frame);
@@ -159,10 +161,19 @@ namespace InnerFrame.AlmondStudio
             win.transform.SetParent(world, false);
             win.openDegrees = layout.casementOpenDegrees;
             win.openSeconds = layout.casementOpenSeconds;
-            float zc = zg, hgt = spring - wb - 0.04f, yc = (wb + spring) / 2f + 0.02f;
+            // after the painting: a broad grey-green frame round the opening at the glass, a heavy transom on the
+            // springing line, and the two casements inside the frame
+            float fw = layout.windowFrameWidth, tr = layout.windowTransom, zc = zg;
+            float inner = ww / 2f - fw, bottom = wb + fw, top = spring - tr / 2f, hgt = top - bottom, yc = (top + bottom) / 2f;
+            var outer = new GameObject("Frame").transform;
+            outer.SetParent(win.transform, false);
+            Box(outer, "Frame L", new Vector3(-ww / 2f + fw / 2f, (wb + spring) / 2f, zc), new Vector3(fw, spring - wb, 0.06f), WF, collider: false);
+            Box(outer, "Frame R", new Vector3(ww / 2f - fw / 2f, (wb + spring) / 2f, zc), new Vector3(fw, spring - wb, 0.06f), WF, collider: false);
+            Box(outer, "Frame bottom", new Vector3(0f, wb + fw / 2f, zc), new Vector3(ww, fw, 0.06f), WF, collider: false);
+            Merge(outer);
             Fanlight(win.transform, ww / 2f, spring, zg);
-            win.hingeLeft = Casement(win.transform, "Hinge L", new Vector3(-ww / 2f, yc, zc), +1f, ww / 2f, hgt);
-            win.hingeRight = Casement(win.transform, "Hinge R", new Vector3(ww / 2f, yc, zc), -1f, ww / 2f, hgt);
+            win.hingeLeft = Casement(win.transform, "Hinge L", new Vector3(-inner, yc, zc), +1f, inner, hgt);
+            win.hingeRight = Casement(win.transform, "Hinge R", new Vector3(inner, yc, zc), -1f, inner, hgt);
             win.Wire();
 
             // the brush on the sill, tip toward the window
@@ -239,17 +250,19 @@ namespace InnerFrame.AlmondStudio
             var hinge = new GameObject(name).transform;
             hinge.SetParent(parent, false);
             hinge.localPosition = hingeAt;
-            const float bar = 0.045f, depth = 0.04f;
+            float bar = layout.windowStile, glazing = layout.windowBar;
+            const float depth = 0.045f;
             var leaf = new GameObject("Leaf").transform;
             leaf.SetParent(hinge, false);
             leaf.localPosition = new Vector3(dir * width / 2f, 0f, 0f);
-            Box(leaf, "Top", new Vector3(0f, height / 2f - bar / 2f, 0f), new Vector3(width, bar, depth), frame, collider: false);
-            Box(leaf, "Bottom", new Vector3(0f, -height / 2f + bar / 2f, 0f), new Vector3(width, bar, depth), frame, collider: false);
-            Box(leaf, "Outer", new Vector3(-dir * (width / 2f - bar / 2f), 0f, 0f), new Vector3(bar, height, depth), frame, collider: false);
-            Box(leaf, "Inner", new Vector3(dir * (width / 2f - bar / 2f), 0f, 0f), new Vector3(bar, height, depth), frame, collider: false);
-            for (int k = 1; k <= 3; k++)   // the small panes' bars
-                Box(leaf, "Bar", new Vector3(0f, -height / 2f + height * k / 4f, 0f), new Vector3(width, 0.022f, depth * 0.8f), frame, collider: false);
-            Box(leaf, "Mullion", Vector3.zero, new Vector3(0.022f, height, depth * 0.8f), frame, collider: false);
+            Box(leaf, "Top", new Vector3(0f, height / 2f - bar / 2f, 0f), new Vector3(width, bar, depth), WF, collider: false);
+            Box(leaf, "Bottom", new Vector3(0f, -height / 2f + bar / 2f, 0f), new Vector3(width, bar, depth), WF, collider: false);
+            Box(leaf, "Outer", new Vector3(-dir * (width / 2f - bar / 2f), 0f, 0f), new Vector3(bar, height, depth), WF, collider: false);
+            // the meeting stile, heavier: the painting's dark upright down the middle of the window
+            Box(leaf, "Inner", new Vector3(dir * (width / 2f - bar * 0.65f), 0f, 0f), new Vector3(bar * 1.3f, height, depth), WF, collider: false);
+            for (int k = 1; k <= 3; k++)   // the small panes' bars: four rows
+                Box(leaf, "Bar", new Vector3(0f, -height / 2f + height * k / 4f, 0f), new Vector3(width, glazing, depth * 0.8f), WF, collider: false);
+            Box(leaf, "Mullion", Vector3.zero, new Vector3(glazing, height, depth * 0.8f), WF, collider: false);
             // one box collider over the whole leaf, for grabbing it (it swings away; the rig is never pushed by it)
             var col = leaf.gameObject.AddComponent<BoxCollider>();
             col.size = new Vector3(width, height, depth * 2f);
@@ -339,29 +352,69 @@ namespace InnerFrame.AlmondStudio
             }
         }
 
-        /// <summary>The fixed fanlight in the arch: a transom on the springing line, the arc, and five radiating bars.</summary>
+        /// <summary>The fixed fanlight in the arch, after the painting: a heavy transom on the springing line, a broad arc
+        /// at the frame's width, a half-round hub on the transom's middle and five bars radiating from it.</summary>
         void Fanlight(Transform parent, float r, float spring, float z)
         {
             var f = new GameObject("Fanlight").transform;
             f.SetParent(parent, false);
-            const float bar = 0.035f, depth = 0.04f;
-            Box(f, "Transom", new Vector3(0f, spring, z), new Vector3(r * 2f, bar * 1.4f, depth), frame, collider: false);
-            const int n = 14;
+            float fw = layout.windowFrameWidth, tr = layout.windowTransom, hub = layout.windowHub, ray = layout.windowBar * 1.2f;
+            const float depth = 0.06f;
+            Box(f, "Transom", new Vector3(0f, spring, z), new Vector3(r * 2f, tr, depth), WF, collider: false);
+            const int n = 18;
             for (int i = 0; i < n; i++)
             {
                 float a0 = Mathf.PI * i / n, a1 = Mathf.PI * (i + 1) / n, am = (a0 + a1) / 2f;
-                var seg = Box(f, "Arc", new Vector3(Mathf.Cos(am) * (r - bar / 2f), spring + Mathf.Sin(am) * (r - bar / 2f), z),
-                              new Vector3(bar, 2f * r * Mathf.Sin((a1 - a0) / 2f) + 0.01f, depth), frame, collider: false);
+                var seg = Box(f, "Arc", new Vector3(Mathf.Cos(am) * (r - fw / 2f), spring + Mathf.Sin(am) * (r - fw / 2f), z),
+                              new Vector3(fw, 2f * r * Mathf.Sin((a1 - a0) / 2f) + 0.012f, depth), WF, collider: false);
                 seg.transform.localRotation = Quaternion.Euler(0f, 0f, am * Mathf.Rad2Deg);
             }
+            HalfDisc(f, "Hub", new Vector3(0f, spring + tr / 2f, z), hub, depth, WF);
+            float y0 = spring + tr / 2f, len = r - fw - hub;
             for (int k = 1; k <= 5; k++)
             {
-                float a = Mathf.PI * k / 6f;
-                var ray = Box(f, "Ray", new Vector3(Mathf.Cos(a) * r * 0.5f, spring + Mathf.Sin(a) * r * 0.5f, z),
-                              new Vector3(0.02f, r, depth * 0.8f), frame, collider: false);
-                ray.transform.localRotation = Quaternion.Euler(0f, 0f, a * Mathf.Rad2Deg - 90f);
+                float a = Mathf.PI * k / 6f, mid = hub + len / 2f;
+                var b = Box(f, "Ray", new Vector3(Mathf.Cos(a) * mid, y0 + Mathf.Sin(a) * mid, z), new Vector3(ray, len + 0.01f, depth * 0.8f), WF, collider: false);
+                b.transform.localRotation = Quaternion.Euler(0f, 0f, a * Mathf.Rad2Deg - 90f);
             }
+            Merge(f);
         }
+
+        /// <summary>A half-round slab standing on its flat edge (the fanlight's hub): centre of the flat edge at `at`, facing z.</summary>
+        static void HalfDisc(Transform parent, string name, Vector3 at, float r, float depth, Material m)
+        {
+            const int n = 12;
+            var v = new List<Vector3>(); var tri = new List<int>(); var uv = new List<Vector2>();
+            foreach (float dz in new[] { -depth / 2f, depth / 2f })
+            {
+                int c0 = v.Count;
+                v.Add(new Vector3(0f, 0f, dz)); uv.Add(Vector2.zero);
+                for (int i = 0; i <= n; i++)
+                {
+                    float a = Mathf.PI * i / n;
+                    v.Add(new Vector3(Mathf.Cos(a) * r, Mathf.Sin(a) * r, dz)); uv.Add(new Vector2(Mathf.Cos(a) * r, Mathf.Sin(a) * r));
+                }
+                for (int i = 0; i < n; i++)
+                    if (dz < 0f) tri.AddRange(new[] { c0, c0 + 1 + i + 1, c0 + 1 + i });   // faces -z (into the room)
+                    else tri.AddRange(new[] { c0, c0 + 1 + i, c0 + 1 + i + 1 });
+            }
+            int back = n + 2;   // the second ring starts here
+            for (int i = 0; i < n; i++)   // the curved rim
+            {
+                int a0 = 1 + i, a1 = 2 + i, b0 = back + 1 + i, b1 = back + 2 + i;
+                tri.AddRange(new[] { a0, a1, b0, a1, b1, b0 });
+            }
+            var mesh = new Mesh { name = name + " (runtime)" };
+            mesh.SetVertices(v); mesh.SetUVs(0, uv); mesh.SetTriangles(tri, 0); mesh.RecalculateNormals(); mesh.RecalculateBounds();
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = at;
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            go.AddComponent<MeshRenderer>().sharedMaterial = m;
+        }
+
+        /// <summary>The window's frame material (lighter grey-green, as painted); the old frame material if it is missing.</summary>
+        Material WF => windowFrame != null ? windowFrame : frame;
 
         XRGrabInteractable Brush(Transform parent, Vector3 at, Quaternion rot, out Transform tip)
         {
@@ -423,7 +476,7 @@ namespace InnerFrame.AlmondStudio
         /// <summary>The Tripo still life on the sill: turned by AS_Layout.sillModelEuler, scaled so its tallest object (the
         /// lidded jar) is sillModelHeight tall, its feet on the sill and its middle at `at` + sillModelOffset. With flat
         /// shading its texture goes on an AS_Painted copy, so it reads like the room.</summary>
-        void SillStillLife(Transform parent, Vector3 at)
+        void SillStillLife(Transform parent, Vector3 at, float roomFace)
         {
             var root = new GameObject("Sill still life").transform;
             root.SetParent(parent, false);
@@ -463,6 +516,91 @@ namespace InnerFrame.AlmondStudio
                     r.sharedMaterials = dst;
                 }
             Debug.Log($"[AS] Sill still life: {sillModel.name}, scaled x{k:0.000}, now {b.size.x:0.00} m wide, {b.size.y:0.00} m tall, {b.size.z:0.00} m deep.");
+            if (layout.sillSplit && SplitSill(root, m, at.y, roomFace)) Destroy(m);
+        }
+
+        /// <summary>Cuts the still life into its objects where there are gaps across x (sillSplitGap), and stands each on the
+        /// sill at its own AS_Layout.sillItemSpots (x across, z from the room face) and sillItemYaw, as in the painting.
+        /// False (and the model stays whole) if the mesh can't be read or the cut doesn't give one piece per spot.</summary>
+        bool SplitSill(Transform root, GameObject model, float sillY, float roomFace)
+        {
+            var mf = model.GetComponentInChildren<MeshFilter>();
+            if (mf == null || mf.sharedMesh == null) return false;
+            var mesh = mf.sharedMesh;
+            if (!mesh.isReadable) { Debug.LogWarning("[AS] The sill model's mesh isn't readable (Read/Write off): run Build, which turns it on. It stays in one piece."); return false; }
+            var toRoot = root.worldToLocalMatrix * mf.transform.localToWorldMatrix;
+            var src = mesh.vertices; var srcN = mesh.normals; var srcUv = mesh.uv;
+            var p = new Vector3[src.Length];
+            var nrm = srcN.Length == src.Length ? new Vector3[src.Length] : null;
+            for (int i = 0; i < src.Length; i++)
+            {
+                p[i] = toRoot.MultiplyPoint3x4(src[i]);
+                if (nrm != null) nrm[i] = toRoot.MultiplyVector(srcN[i]).normalized;
+            }
+            int subs = mesh.subMeshCount;
+            var tris = new List<(int sub, int a, int b, int c, float x)>();
+            for (int s = 0; s < subs; s++)
+            {
+                var t = mesh.GetTriangles(s);
+                for (int k = 0; k + 2 < t.Length; k += 3)
+                    tris.Add((s, t[k], t[k + 1], t[k + 2], (p[t[k]].x + p[t[k + 1]].x + p[t[k + 2]].x) / 3f));
+            }
+            if (tris.Count == 0) return false;
+            tris.Sort((u, w) => u.x.CompareTo(w.x));
+            var starts = new List<int> { 0 };
+            for (int k = 1; k < tris.Count; k++)
+                if (tris[k].x - tris[k - 1].x > layout.sillSplitGap) starts.Add(k);
+            int n = layout.sillItemSpots.Length;
+            if (starts.Count != n)
+            {
+                Debug.LogWarning($"[AS] The sill model cuts into {starts.Count} pieces across x, not {n}: it stays one piece. Try another AS_Layout.sillSplitGap (now {layout.sillSplitGap:0.000} m; smaller finds more gaps).");
+                return false;
+            }
+            starts.Add(tris.Count);
+            var mats = mf.GetComponent<MeshRenderer>().sharedMaterials;
+            for (int c = 0; c < n; c++)
+            {
+                var map = new Dictionary<int, int>();
+                var v = new List<Vector3>(); var vn = new List<Vector3>(); var uv = new List<Vector2>();
+                var perSub = new List<int>[subs];
+                for (int s = 0; s < subs; s++) perSub[s] = new List<int>();
+                for (int k = starts[c]; k < starts[c + 1]; k++)
+                {
+                    var t = tris[k];
+                    foreach (int idx in new[] { t.a, t.b, t.c })
+                    {
+                        if (!map.TryGetValue(idx, out int j))
+                        {
+                            j = v.Count; map[idx] = j; v.Add(p[idx]);
+                            if (nrm != null) vn.Add(nrm[idx]);
+                            if (srcUv.Length == src.Length) uv.Add(srcUv[idx]);
+                        }
+                        perSub[t.sub].Add(j);
+                    }
+                }
+                // stand the piece's own feet on its origin
+                Vector3 lo = v[0], hi = v[0];
+                foreach (var q in v) { lo = Vector3.Min(lo, q); hi = Vector3.Max(hi, q); }
+                var foot = new Vector3((lo.x + hi.x) / 2f, lo.y, (lo.z + hi.z) / 2f);
+                for (int i = 0; i < v.Count; i++) v[i] -= foot;
+                var piece = new Mesh { name = $"Sill object {c + 1} (runtime)" };
+                if (v.Count > 65000) piece.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+                piece.SetVertices(v);
+                if (uv.Count == v.Count) piece.SetUVs(0, uv);
+                piece.subMeshCount = subs;
+                for (int s = 0; s < subs; s++) piece.SetTriangles(perSub[s], s);
+                if (vn.Count == v.Count) piece.SetNormals(vn); else piece.RecalculateNormals();
+                piece.RecalculateBounds();
+                var go = new GameObject($"Sill object {c + 1}");
+                go.transform.SetParent(root, false);
+                var spot = layout.sillItemSpots[c];
+                float yaw = c < layout.sillItemYaw.Length ? layout.sillItemYaw[c] : 0f;
+                go.transform.SetLocalPositionAndRotation(new Vector3(spot.x, sillY, roomFace + spot.y), Quaternion.Euler(0f, yaw, 0f));
+                go.AddComponent<MeshFilter>().sharedMesh = piece;
+                go.AddComponent<MeshRenderer>().sharedMaterials = mats;
+            }
+            Debug.Log($"[AS] Sill still life cut into {n} pieces and placed as in the painting (AS_Layout.sillItemSpots).");
+            return true;
         }
 
         const float TableTop = 0.765f;   // the table top's upper face (0.74 + half its 0.05)

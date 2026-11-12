@@ -263,13 +263,16 @@ namespace InnerFrame.Gallery.EditorTools.Tests
                 yield return null; yield return null;
                 var hand = Object.FindObjectsByType<NearFarInteractor>(FindObjectsSortMode.None).FirstOrDefault(h => h.handedness == UnityEngine.XR.Interaction.Toolkit.Interactors.InteractorHandedness.Right);
                 // The ray starts at XRI's stabilised cast origin, which follows the hand smoothly (XRTransformStabilizer), as on
-                // a headset: let it settle, and correct for its offset from the controller, until the ray is on the target.
-                for (int i = 0; i < 30 && hand != null; i++)
+                // a headset: let it settle, and correct for its offset from the controller, until the ray stays on the target
+                // (three readings in a row, 0.1 s apart, within 0.5 deg: one reading alone can catch the origin still swinging
+                // past the target, and the ray then drifted 1 to 5 deg off before the trigger, missing a 7.6 cm button).
+                for (int i = 0, steady = 0; i < 60 && hand != null && steady < 3; i++)
                 {
                     yield return new WaitForSecondsRealtime(0.1f);
                     var o = hand.curveOrigin != null ? hand.curveOrigin : hand.transform;
                     var fix = Quaternion.FromToRotation(o.forward, (target - o.position).normalized);
-                    if (Quaternion.Angle(Quaternion.identity, fix) < 0.5f) break;
+                    if (Quaternion.Angle(Quaternion.identity, fix) < 0.5f) { steady++; continue; }
+                    steady = 0;
                     handRot = Quaternion.Inverse(offset.rotation) * fix * offset.rotation * handRot;
                     Push();
                 }

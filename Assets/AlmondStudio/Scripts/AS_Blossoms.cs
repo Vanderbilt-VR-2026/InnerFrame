@@ -26,7 +26,11 @@ namespace InnerFrame.AlmondStudio
             public float Openness(float now, float dur) => openAt < 0f ? 0f : Mathf.Clamp01((now - openAt) / dur);
         }
 
-        class Drift { public Vector3 pos, vel; public float born, rot, spin, size, life = 2.4f; }
+        class Drift { public Vector3 pos, vel; public float born, rot, spin, size, life = 2.4f; public bool floats; }
+        /// <summary>A petal lying on the studio floor (room space, so it stays put).</summary>
+        struct Landed { public Vector3 pos; public float yaw, size; }
+        readonly List<Landed> landed = new List<Landed>();
+        float streamFrom = -1f, streamUntil = -1f, streamCarry;
 
         AS_Layout layout;
         readonly List<Blossom> blossoms = new List<Blossom>();
@@ -107,6 +111,8 @@ namespace InnerFrame.AlmondStudio
         {
             foreach (var b in blossoms) b.openAt = -1f;
             drifts.Clear();
+            landed.Clear();
+            streamFrom = streamUntil = -1f; streamCarry = 0f;
             Opened = 0;
             waveStarted = false;
         }
@@ -151,11 +157,47 @@ namespace InnerFrame.AlmondStudio
                     {
                         pos = b.pos, born = at + 0.2f + (float)rnd.NextDouble() * 0.8f,
                         // a breeze into the room (-z), a little lift, then they fall
-                        vel = new Vector3(((float)rnd.NextDouble() - 0.5f) * 0.5f, 0.15f + (float)rnd.NextDouble() * 0.2f, -0.35f - (float)rnd.NextDouble() * 0.5f),
+                        vel = Breeze(),
+                        floats = true,
                         rot = (float)rnd.NextDouble() * 360f, spin = 60f + (float)rnd.NextDouble() * 160f,
                         size = b.size * Mathf.Lerp(0.6f, 0.9f, (float)rnd.NextDouble()),
                         life = layout.blossomShowerSeconds * Mathf.Lerp(0.7f, 1.1f, (float)rnd.NextDouble()),
                     });
+            }
+            // then a steady stream through the open window
+            streamFrom = now + seconds * 0.3f;
+            streamUntil = now + seconds + layout.blossomStreamSeconds;
+        }
+
+        /// <summary>A petal's drift: into the room (the room's -z) on the breeze, a little sideways and a little lift.</summary>
+        Vector3 Breeze()
+        {
+            var local = new Vector3(((float)rnd.NextDouble() - 0.5f) * 0.6f, 0.1f + (float)rnd.NextDouble() * 0.25f,
+                                    -layout.blossomBreeze * Mathf.Lerp(0.6f, 1.4f, (float)rnd.NextDouble()));
+            return transform.parent != null ? transform.parent.TransformDirection(local) : local;
+        }
+
+        /// <summary>Petals blown in through the window's opening, from just outside it.</summary>
+        void Stream(float now, float dt)
+        {
+            if (now < streamFrom || now > streamUntil || drifts.Count >= layout.blossomMaxDrifting) return;
+            // the stream thins out over its last third
+            float k = 1f - Mathf.InverseLerp(streamUntil - layout.blossomStreamSeconds / 3f, streamUntil, now);
+            streamCarry += layout.blossomStreamPerSecond * k * dt;
+            var room = transform.parent;
+            while (streamCarry >= 1f)
+            {
+                streamCarry -= 1f;
+                float x = ((float)rnd.NextDouble() - 0.5f) * layout.windowWidth;
+                float y = Mathf.Lerp(layout.windowBottom + 0.3f, layout.Springing + 0.3f, (float)rnd.NextDouble());
+                var local = new Vector3(x, y, layout.roomDepth + layout.wallThickness + 0.2f + (float)rnd.NextDouble() * 0.6f);
+                drifts.Add(new Drift
+                {
+                    pos = room != null ? room.TransformPoint(local) : local, born = now, vel = Breeze(), floats = true,
+                    rot = (float)rnd.NextDouble() * 360f, spin = 60f + (float)rnd.NextDouble() * 160f,
+                    size = layout.blossomSize * Mathf.Lerp(0.55f, 0.9f, (float)rnd.NextDouble()),
+                    life = layout.blossomShowerSeconds * Mathf.Lerp(0.8f, 1.2f, (float)rnd.NextDouble()),
+                });
             }
         }
 
@@ -191,7 +233,11 @@ namespace InnerFrame.AlmondStudio
                 });
         }
 
-        void Update() => Rebuild(Time.time);
+        void Update()
+        {
+            Stream(Time.time, Time.deltaTime);
+            Rebuild(Time.time);
+        }
 
         // ------------------------------------------------------------------------------------------------ the mesh
 
@@ -227,19 +273,40 @@ namespace InnerFrame.AlmondStudio
                     CentredQuad(b.pos + axis * s * 0.06f, axis, e1, hs, Heart, Shade(axis));
                 }
             }
+            var room = transform.parent;
+            Vector3 roomUp = room != null ? room.up : Vector3.up;
             for (int i = drifts.Count - 1; i >= 0; i--)
             {
                 var d = drifts[i];
                 float age = now - d.born;
                 if (age > d.life) { drifts.RemoveAt(i); continue; }
                 if (age < 0f) continue;
-                // long-lived shower petals fall slower (they float on the breeze)
-                float fall = d.life > 3f ? 0.5f : 1f;
+                // the shower's petals float on the breeze and fall slowly; a bud's own petal falls quicker
+                float fall = d.floats ? 0.45f : 1f;
                 Vector3 p = d.pos + d.vel * age + Vector3.down * fall * (0.35f * age + 0.08f * age * age)
                             + new Vector3(Mathf.Sin(age * 3f + d.rot), 0f, Mathf.Cos(age * 2.3f + d.rot)) * 0.06f;
+                // inside the studio and down on its floor: it lands and stays
+                if (d.floats && room != null)
+                {
+                    var lp = room.InverseTransformPoint(p);
+                    if (lp.y <= 0.004f && lp.z < layout.roomDepth && Mathf.Abs(lp.x) < layout.roomWidth * 0.5f)
+                    {
+                        if (landed.Count >= layout.blossomFloorPetals) landed.RemoveAt(0);
+                        landed.Add(new Landed { pos = new Vector3(lp.x, 0.003f + (float)rnd.NextDouble() * 0.002f, lp.z), yaw = d.rot, size = d.size });
+                        drifts.RemoveAt(i);
+                        continue;
+                    }
+                }
                 Quaternion q = Quaternion.Euler(d.rot + age * d.spin, d.rot * 0.7f + age * d.spin * 0.6f, 0f);
                 float fade = 1f - Mathf.InverseLerp(d.life * 0.75f, d.life, age);
                 CentredQuad(p, q * Vector3.forward, q * Vector3.right, d.size * fade, Petal, 0.9f);
+            }
+            // the petals on the floor, lying flat
+            foreach (var f in landed)
+            {
+                var p = room != null ? room.TransformPoint(f.pos) : f.pos;
+                var right = Quaternion.AngleAxis(f.yaw, roomUp) * (room != null ? room.right : Vector3.right);
+                CentredQuad(p, roomUp, right, f.size, Petal, 0.85f);
             }
             mesh.Clear();
             mesh.SetVertices(v); mesh.SetUVs(0, uv); mesh.SetColors(col); mesh.SetTriangles(tri, 0);

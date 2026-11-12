@@ -160,6 +160,16 @@ namespace InnerFrame.AlmondStudio.EditorTools
                 layout.layoutVersion = 9;
                 EditorUtility.SetDirty(layout);
             }
+            if (layout.layoutVersion < 10)
+            {
+                // version 10 (2026-11-12): many more petals into the room at the end
+                var d10 = ScriptableObject.CreateInstance<AS_Layout>();
+                if (Mathf.Approximately(layout.blossomShower, 1.2f)) layout.blossomShower = d10.blossomShower;
+                if (Mathf.Approximately(layout.blossomShowerSeconds, 4.5f)) layout.blossomShowerSeconds = d10.blossomShowerSeconds;
+                Object.DestroyImmediate(d10);
+                layout.layoutVersion = 10;
+                EditorUtility.SetDirty(layout);
+            }
 
             var lit = Shader.Find("Universal Render Pipeline/Lit");
             var unlit = Shader.Find("Universal Render Pipeline/Unlit");

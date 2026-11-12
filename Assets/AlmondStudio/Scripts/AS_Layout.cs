@@ -206,8 +206,13 @@ namespace InnerFrame.AlmondStudio
         [Tooltip("Blossoms per scattered point: a small cluster, as on a real almond branch (1 = single flowers).")] [Range(1, 6)] public int blossomCluster = 3;
         [Tooltip("How far round a point its cluster spreads, metres.")] public float blossomClusterSpread = 0.07f;
         [Tooltip("Only buds you can see through the window from paintEye count toward blossomFinish; this much slack (metres) round the opening, for leaning.")] public float blossomReachMargin = 0.25f;
-        [Tooltip("The ending's petal shower: extra petals per blossom opening in the wave, drifting in through the window.")] [Range(0f, 3f)] public float blossomShower = 1.2f;
-        [Tooltip("Seconds a shower petal drifts before it fades.")] public float blossomShowerSeconds = 4.5f;
+        [Tooltip("The ending's petal shower: extra petals per blossom opening in the wave, drifting in through the window.")] [Range(0f, 6f)] public float blossomShower = 2.5f;
+        [Tooltip("Seconds a shower petal drifts before it fades (unless it lands on the floor first).")] public float blossomShowerSeconds = 7f;
+        [Tooltip("The breeze that carries the petals into the room, metres per second.")] public float blossomBreeze = 0.9f;
+        [Tooltip("After the wave, petals keep drifting in through the open window: this many a second...")] public float blossomStreamPerSecond = 30f;
+        [Tooltip("...for this many seconds.")] public float blossomStreamSeconds = 12f;
+        [Tooltip("Petals that land on the floor stay there (the oldest go when there are more than this).")] public int blossomFloorPetals = 500;
+        [Tooltip("Most petals in the air at once (for the headset's frame rate).")] public int blossomMaxDrifting = 1200;
 
         [Header("People")]
         [Tooltip("Where the player arrives: the S02 viewpoint, a little left of the window, looking at it.")] public Vector3 playerStart = new Vector3(-0.31f, 0f, 2.52f);

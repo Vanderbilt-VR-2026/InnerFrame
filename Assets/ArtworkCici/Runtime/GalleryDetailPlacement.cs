@@ -19,14 +19,35 @@ public class GalleryDetailPlacement : MonoBehaviour {
  var plane=new Plane(anchor.forward,anchor.position);
  if(plane.Raycast(new Ray(eyes.transform.position,forward),out float wallDistance)&&wallDistance>0)
  distance=Mathf.Min(distance,Mathf.Max(.08f,wallDistance-.15f));
- // Stop the centre before room geometry; ignore UI button colliders.
- if(Physics.Raycast(eyes.transform.position,forward,out var hit,distance,~(1<<5),QueryTriggerInteraction.Ignore)){
- if(hit.distance<=.04f+eyes.nearClipPlane){gameObject.SetActive(false);return;}
- distance=Mathf.Min(distance,hit.distance-.04f);
- }
+ // A centre ray misses low pedestals that can block ENTER. Keep the full reading
+ // panel and every button in front of geometry, preserving its angular size.
+ for(int attempt=0;attempt<6;attempt++){
+ if(distance<=.04f+eyes.nearClipPlane){gameObject.SetActive(false);return;}
  transform.localScale=Vector3.one*(1.35f*distance/1.15f);
- transform.SetPositionAndRotation(eyes.transform.position+forward*distance-Vector3.up*.10f,Quaternion.LookRotation(forward,Vector3.up));
- lastForward=eyes.transform.forward;
+ transform.SetPositionAndRotation(eyes.transform.position+forward*distance-Vector3.up*(.10f*distance/1.15f),Quaternion.LookRotation(forward,Vector3.up));
+ Physics.SyncTransforms();
+ float clearDistance=ClearDistance(eyes.transform.position,forward,distance);
+ if(clearDistance>=distance-.001f){lastForward=eyes.transform.forward;return;}
+ distance=clearDistance;
+ }
+ // Do not leave a visible but unreachable action if the visitor is inside geometry.
+ gameObject.SetActive(false);
+ }
+ float ClearDistance(Vector3 origin,Vector3 forward,float distance){
+ float clear=distance;
+ void Check(Vector3 point){
+ var direction=point-origin;
+ if(Physics.Raycast(origin,direction.normalized,out var hit,direction.magnitude,~(1<<5),QueryTriggerInteraction.Ignore))
+ clear=Mathf.Min(clear,Vector3.Dot(hit.point-origin,forward)-.04f);
+ }
+ var rect=(RectTransform)transform;var corners=new Vector3[4];rect.GetWorldCorners(corners);
+ Check((corners[0]+corners[2])*.5f);
+ for(int i=0;i<4;i++){Check(corners[i]);Check((corners[i]+corners[(i+1)%4])*.5f);}
+ foreach(var button in GetComponentsInChildren<UnityEngine.UI.Button>()){
+ var box=button.GetComponent<BoxCollider>();
+ Check(box?box.transform.TransformPoint(box.center):button.transform.position);
+ }
+ return clear;
  }
 }
 }

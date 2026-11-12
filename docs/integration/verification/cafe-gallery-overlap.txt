@@ -1,0 +1,110 @@
+Cafe/Gallery overlap snapshot — 2026-11-12
+HEAD: 64593578acabb51481bf5d4c511833d582a95295
+origin/main: b94d86e5228ad0b26f8f2274f9544afcf4982373
+Command: git merge-tree --write-tree --name-only HEAD origin/pr/<number>
+The HEAD checks include the committed music update. Pending Cafe/Gallery working-tree edits are not included; rerun after their commit.
+
+#192 a016e42a867ba58e9fc9512b9e1c6308419f9f72: CLEAN
+#191 6095f030665114d270df849fbdff1b4fe4da536f: CLEAN
+#190 95553bbce673544c9aba8554615a84a47c1bca0e: CLEAN
+#189 09cd5fbbdbd4cfa4699e4ea4e8905c3b6a00d462: CLEAN
+#188 c8ede5664c43dac47d068d19181f39fc0b08a4bd: CLEAN
+#187 4eebec349720af9d5dd16dbe9ce348c1fdaa8fe8: CONFLICT
+  Assets/Scenes/Gallery.unity
+#184 412a5e036dec4e5a098b0592d2236c581c6fe9a1: CONFLICT
+  docs/ASSETS.md
+#180 d0ad8a7af34c85dcb75d2449ec872de463ffec52: CONFLICT
+  Assets/VanGogh/Editor/ConvaiDirectTest.cs
+#178 e0d4fb7fbb48bf2eff8440da9185a73db98bed63: CLEAN
+#177 aa7068ce2aa344f8e21e01f0afd90859b18330e1: CLEAN
+#176 38f9c0acaf41cce349a3556f27c1e2a366500a4e: CLEAN
+#112 c871724d9823a5b81cc4b75196ebb6fb43256cd7: CONFLICT
+  Assets/Entrance/Resources/Entrance/BrushFontHD.asset
+  Assets/Entrance/Runtime/EntranceGoldRay.cs
+  Assets/Entrance/Runtime/EntranceHoverFeedback.cs
+  Assets/Entrance/Runtime/EntranceMenu.cs
+  Assets/Scenes/Gallery.unity
+  Assets/Script/SceneFader.cs
+  Assets/TextMesh Pro.meta
+  Assets/TextMesh Pro/Fonts.meta
+  Assets/TextMesh Pro/Fonts/LiberationSans - OFL.txt
+  Assets/TextMesh Pro/Fonts/LiberationSans - OFL.txt.meta
+  Assets/TextMesh Pro/Fonts/LiberationSans.ttf
+  Assets/TextMesh Pro/Fonts/LiberationSans.ttf.meta
+  Assets/TextMesh Pro/Resources.meta
+  Assets/TextMesh Pro/Resources/Fonts & Materials.meta
+  Assets/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF - Drop Shadow.mat
+  Assets/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF - Drop Shadow.mat.meta
+  Assets/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF - Fallback.asset
+  Assets/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF - Fallback.asset.meta
+  Assets/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF - Outline.mat
+  Assets/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF - Outline.mat.meta
+  Assets/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF.asset
+  Assets/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF.asset.meta
+  Assets/TextMesh Pro/Resources/LineBreaking Following Characters.txt
+  Assets/TextMesh Pro/Resources/LineBreaking Following Characters.txt.meta
+  Assets/TextMesh Pro/Resources/LineBreaking Leading Characters.txt
+  Assets/TextMesh Pro/Resources/LineBreaking Leading Characters.txt.meta
+  Assets/TextMesh Pro/Resources/Sprite Assets.meta
+  Assets/TextMesh Pro/Resources/Sprite Assets/EmojiOne.asset
+  Assets/TextMesh Pro/Resources/Sprite Assets/EmojiOne.asset.meta
+  Assets/TextMesh Pro/Resources/Style Sheets.meta
+  Assets/TextMesh Pro/Resources/Style Sheets/Default Style Sheet.asset
+  Assets/TextMesh Pro/Resources/Style Sheets/Default Style Sheet.asset.meta
+  Assets/TextMesh Pro/Resources/TMP Settings.asset.meta
+  Assets/TextMesh Pro/Shaders.meta
+  Assets/TextMesh Pro/Shaders/SDFFunctions.hlsl
+  Assets/TextMesh Pro/Shaders/SDFFunctions.hlsl.meta
+  Assets/TextMesh Pro/Shaders/TMP_Bitmap-Custom-Atlas.shader
+  Assets/TextMesh Pro/Shaders/TMP_Bitmap-Custom-Atlas.shader.meta
+  Assets/TextMesh Pro/Shaders/TMP_Bitmap-Mobile.shader
+  Assets/TextMesh Pro/Shaders/TMP_Bitmap-Mobile.shader.meta
+  Assets/TextMesh Pro/Shaders/TMP_Bitmap.shader
+  Assets/TextMesh Pro/Shaders/TMP_Bitmap.shader.meta
+  Assets/TextMesh Pro/Shaders/TMP_SDF Overlay.shader
+  Assets/TextMesh Pro/Shaders/TMP_SDF Overlay.shader.meta
+  Assets/TextMesh Pro/Shaders/TMP_SDF SSD.shader
+  Assets/TextMesh Pro/Shaders/TMP_SDF SSD.shader.meta
+  Assets/TextMesh Pro/Shaders/TMP_SDF-HDRP LIT.shadergraph
+  Assets/TextMesh Pro/Shaders/TMP_SDF-HDRP LIT.shadergraph.meta
+  Assets/TextMesh Pro/Shaders/TMP_SDF-HDRP UNLIT.shadergraph
+  Assets/TextMesh Pro/Shaders/TMP_SDF-HDRP UNLIT.shadergraph.meta
+  Assets/TextMesh Pro/Shaders/TMP_SDF-Mobile Masking.shader
+  Assets/TextMesh Pro/Shaders/TMP_SDF-Mobile Masking.shader.meta
+  Assets/TextMesh Pro/Shaders/TMP_SDF-Mobile Overlay.shader
+  Assets/TextMesh Pro/Shaders/TMP_SDF-Mobile Overlay.shader.meta
+  Assets/TextMesh Pro/Shaders/TMP_SDF-Mobile SSD.shader
+  Assets/TextMesh Pro/Shaders/TMP_SDF-Mobile SSD.shader.meta
+  Assets/TextMesh Pro/Shaders/TMP_SDF-Mobile-2-Pass.shader
+  Assets/TextMesh Pro/Shaders/TMP_SDF-Mobile-2-Pass.shader.meta
+  Assets/TextMesh Pro/Shaders/TMP_SDF-Surface-Mobile.shader
+  Assets/TextMesh Pro/Shaders/TMP_SDF-Surface-Mobile.shader.meta
+  Assets/TextMesh Pro/Shaders/TMP_SDF-Surface.shader
+  Assets/TextMesh Pro/Shaders/TMP_SDF-Surface.shader.meta
+  Assets/TextMesh Pro/Shaders/TMP_SDF-URP Lit.shadergraph
+  Assets/TextMesh Pro/Shaders/TMP_SDF-URP Lit.shadergraph.meta
+  Assets/TextMesh Pro/Shaders/TMP_SDF-URP Unlit.shadergraph
+  Assets/TextMesh Pro/Shaders/TMP_SDF-URP Unlit.shadergraph.meta
+  Assets/TextMesh Pro/Shaders/TMP_SDF.shader
+  Assets/TextMesh Pro/Shaders/TMP_SDF.shader.meta
+  Assets/TextMesh Pro/Shaders/TMP_Sprite.shader
+  Assets/TextMesh Pro/Shaders/TMP_Sprite.shader.meta
+  Assets/TextMesh Pro/Shaders/TMPro.cginc
+  Assets/TextMesh Pro/Shaders/TMPro.cginc.meta
+  Assets/TextMesh Pro/Shaders/TMPro_Mobile.cginc
+  Assets/TextMesh Pro/Shaders/TMPro_Mobile.cginc.meta
+  Assets/TextMesh Pro/Shaders/TMPro_Surface.cginc
+  Assets/TextMesh Pro/Shaders/TMPro_Surface.cginc.meta
+  Assets/TextMesh Pro/Sprites.meta
+  Assets/TextMesh Pro/Sprites/EmojiOne Attribution.txt
+  Assets/TextMesh Pro/Sprites/EmojiOne Attribution.txt.meta
+  Assets/TextMesh Pro/Sprites/EmojiOne.json
+  Assets/TextMesh Pro/Sprites/EmojiOne.json.meta
+  Assets/TextMesh Pro/Sprites/EmojiOne.png
+  Assets/TextMesh Pro/Sprites/EmojiOne.png.meta
+  ProjectSettings/EditorBuildSettings.asset
+  docs/ASSETS.md
+#109 97121053c8bae3cdbf2341348a9fcbd63a78877b: CONFLICT
+  Assets/InnerFrameBedroomWeb/Generated/PaintedBedroom.prefab
+  Assets/InnerFrameBedroomWeb/Generated/PaintedBedroom_Meshes.asset
+  Assets/InnerFrameBedroomWeb/Scenes/PaintedBedroom.unity

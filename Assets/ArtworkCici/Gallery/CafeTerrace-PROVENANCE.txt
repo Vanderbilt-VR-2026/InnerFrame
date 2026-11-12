@@ -1,0 +1,27 @@
+Café Terrace at Night / Terrace of a Café at Night (Place du Forum)
+Vincent van Gogh, c. 16 September 1888
+Oil on canvas, 80.7 x 65.3 cm (height x width)
+Collection: Kröller-Müller Museum, Otterlo, Netherlands
+Accession: KM 108.565; catalogues F467 / JH1580
+
+Whole painting reproduction downloaded unchanged on 2026-11-12:
+https://upload.wikimedia.org/wikipedia/commons/8/86/Van_Gogh_-_Terrace_of_a_Caf%C3%A9_at_Night_%28Place_du_Forum%29_1888.jpg
+Source file page:
+https://commons.wikimedia.org/wiki/File:Van_Gogh_-_Terrace_of_a_Caf%C3%A9_at_Night_(Place_du_Forum)_1888.jpg
+Commons identifies this as a faithful reproduction of a public-domain work,
+PD-art-old-100-expired / Public Domain Mark 1.0. Source cited by the uploader:
+https://data.collectienederland.nl/page/aggregation/kroller-muller/44529
+https://creativecommons.org/publicdomain/mark/1.0/
+
+Museum artwork record (title, date, medium, accession, interpretive facts):
+https://www.krollermuller.nl/en/collection/vincent-van-gogh-terrace-of-a-caf-at-night-place-du-forum-km-108-565
+Museum listing (dimensions and collection):
+https://www.museum.nl/en/kroller-muller-museum/showpiece/terrace-of-a-cafe-van-gogh
+
+Facts checked on 2026-11-12: painted at night on location in Arles; warm gaslight
+in the terrace contrasts with blue sky and surrounding houses. Card descriptions
+should paraphrase the museum rather than reproduce its prose verbatim.
+
+Local source is retained without cropping or color changes. Unity may downsample
+the imported texture for rendering. This image is intended for the Gallery frame
+and artwork information cards; it is not the CafeTerrace scene's model textures.

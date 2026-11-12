@@ -63,7 +63,7 @@ public static class ConvaiDirectTest
                 if (string.IsNullOrEmpty(talker.LastReply) || !talker.voice.isPlaying || talker.voice.clip == null) return;
                 if (EditorApplication.timeSinceStartup - stepStarted < .25) return;
                 var music = InnerFrame.Entrance.EntranceAudioDirector.Ensure();
-                if (music.VoiceMusicGain > .11f) { Finish(false, "Vincent replied but the BGM did not duck"); return; }
+                if (music.VoiceMusicGain < .24f || music.VoiceMusicGain > .26f) { Finish(false, "Vincent replied but BGM was not retained at 25 percent"); return; }
                 Debug.Log("[ConvaiDirectTest] Voice priority PASS: BGM at " + music.VoiceMusicGain.ToString("F2") + " gain");
                 bool voiced = talker.voice.clip.name == "Convai reply";
                 Finish(voiced, $"Vincent said \"{talker.LastReply}\" with {talker.voice.clip.length:F1} s of " +

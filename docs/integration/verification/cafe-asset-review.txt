@@ -1,0 +1,74 @@
+Music and Café asset review — 2026-11-12
+Effort: one independent review angle covering credentials, licensing/provenance,
+and imported GUID identity. Scope: music commit 6459357 and the current Café import
+from upstream 6095f03, plus the new Gallery painting image/material.
+
+# | Finding | Verdict | Evidence | Severity | Resolution
+1 | Charlyne's Tripo plan is not recorded in upstream provenance | QUESTION | docs/ASSETS.md imported source rows; Tripo sections 5.2.1/5.2.2 distinguish free/paid rights | Pending release provenance | Official terms checked and linked; confirm generation plan or another grant before claiming unrestricted distribution clearance
+2 | New whole-painting reproduction had no dedicated inventory row | CONFIRMED, fixed | Assets/ArtworkCici/Gallery/CafeTerraceAtNight.jpg and CafeTerrace-PROVENANCE.txt | Resolved | Added source, exact hash, dimensions and PD-Art/PDM row to docs/ASSETS.md
+
+Verified/refuted concerns:
+- Credential leak: REFUTED for reviewed files. Compared the actual local Convai
+  key in memory against every changed blob in music commit 6459357 and all 133
+  imported Café source files: zero matches. The credential path is ignored and
+  git ls-files returns no ConvaiApiKey files. No credential value was printed.
+- Missing music permission/attribution: REFUTED. Both composer pages expressly
+  identify CC BY 4.0; PaintingMusic-CREDITS.txt retains artist, titles, source,
+  licence links and adaptation notes. MusicCredit supplies matching in-game
+  attribution. Official pages rechecked on 2026-11-12:
+  https://www.scottbuckley.com.au/library/hiraeth/
+  https://www.scottbuckley.com.au/library/adrift-among-infinite-stars/
+- Raw music binaries in Git: REFUTED. git show 6459357:<each new WAV> returns an
+  LFS pointer for BedroomHiraethLoop.wav and StarryNightAdriftLoop.wav.
+- Altered imported Café assets/GUIDs: REFUTED. All 133 imported source files
+  match upstream6095f03 bytes or their expected LFS SHA-256; all 18 LFS payloads
+  are hydrated. The new provenance-review.txt is an intentional additional doc.
+- GUID collisions/missing references: REFUTED for the reviewed asset set.
+  Scanned every Assets .meta for collisions affecting Café, Gallery image assets,
+  and the two music clips: zero. Checked serialized Café and Gallery-image
+  references against Assets, Packages and Library/PackageCache metadata: zero
+  unresolved non-built-in GUIDs. Unity-generated image/material metadata exists.
+- Whole image lacks provenance: REFUTED after inventory fix. The downloaded
+  6,325,135-byte JPEG has SHA-1 6d657d9ec8c72a305eedfefa8ab1b722d88c706c,
+  matching Commons; SHA-256 e8d9e2799359752d119d4080464b7c8e4d14797daeb70e767f2ca851016b192e.
+  Commons identifies a faithful reproduction of public-domain art (PD-Art/PDM).
+  https://commons.wikimedia.org/wiki/File:Van_Gogh_-_Terrace_of_a_Caf%C3%A9_at_Night_(Place_du_Forum)_1888.jpg
+
+Terms checked, without inventing asset-specific clearance:
+- OpenAI terms effective2026-01-01 assign output ownership to the generating
+  user to the extent allowed by law, with input/third-party duties retained.
+- Tripo terms updated2025-07-11 permit lawful use subject to the agreement and
+  distinguish free/paid output rights. Source only names Charlyne's account,
+  not the plan. See docs/cafe-terrace/provenance-review.txt for dated URLs and
+  the preserved unresolved point. No new content generation was performed.
+
+Merge coordination: preserve Café upstream6095f03 source/GUIDs and the existing
+main-merge prohibition. This review does not certify final scene layout,
+compilation, controller behavior, headset operation or the later commit's CI;
+the parent task supplies those checks. No confirmed credential/GUID blocker
+was found. The plan question above remains explicit for release review.
+
+Final pre-commit asset/security pass (same date, after 1888 portrait integration):
+- Reviewed all 166 current changed/untracked files excluding the unrelated
+  pre-existing EditorTests directory. In-memory comparison with the local key
+  and scans for GitHub token/private-key signatures found zero matches.
+  ConvaiApiKey remains ignored; no key file is tracked.
+- No missing .meta files or orphan .meta files among changed Assets paths.
+  No collisions involving newly added metadata. All serialized GUID references
+  in changed scenes, prefabs, materials and assets resolve through Assets or
+  the installed packages; built-in zero-prefix GUIDs are excluded correctly.
+- The 132 upstream Café asset/source files (excluding the README) still match
+  6095f03 exactly, with hydrated LFS bytes validated by SHA-256.
+- The 1888 portrait is 5,150,508 bytes and matches the provenance SHA-256:
+  6a6fc35364c8a577ce3701614530516925e93e16711404ace8b0632a6761e9a7.
+  Commons confirms the title/date, 4748 x 5800 reproduction and PD-Art/PDM
+  marking. Its Harvard museum URL returns403 here; that limitation is already
+  disclosed in SelfPortrait1888-PROVENANCE.txt, with institutional alternatives.
+  https://commons.wikimedia.org/wiki/File:Van_Gogh_self-portrait_dedicated_to_Gauguin.jpg
+- The two new Gallery JPEGs and Café FBX are covered by filter=lfs. Parent's
+  post-commit ci-local must verify the actual committed pointers/history.
+- Fixed the isolated blank line separating the portrait's docs/ASSETS.md row
+  from its table. No Unity asset files were edited by this review.
+- No new confirmed security/GUID/provenance blocker. The documented upstream
+  Tripo-plan question remains a release-provenance follow-up, not evidence that
+  the source files are misidentified or that any credential is exposed.

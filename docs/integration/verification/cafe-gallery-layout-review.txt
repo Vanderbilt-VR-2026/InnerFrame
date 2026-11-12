@@ -1,0 +1,84 @@
+Independent layout/editor review — 2026-11-12
+Reviewer: cafe_research sub-agent. Scope: CafeGallerySetup.cs, source Gallery geometry,
+latest-model provenance, source image and committed-HEAD PR overlap. No scene/code edits
+were made by this reviewer.
+
+Finding 1 — CONFIRMED, resolved in the working tree:
+The initial editor menu opened Gallery immediately without protecting unsaved scenes
+or excluding Play mode. Run now rejects Play and asks Unity to save modified scenes
+before changing scenes (interactive use only). Automated batch work is unaffected.
+
+Finding 2 — CONFIRMED, resolved in the working tree:
+The initial frame fitting independently used painting width/height + 0.28 m for the
+outer frame size. This does not preserve the source frame's 3 x 2.4 m opening, and
+could leave vertical red-wall slits around the narrow Cafe canvas. The source frame
+is defined by build_gallery.py PAINTING_W/PAINTING_H and FRAME_PROFILE starting at
+offset zero. Arrange now derives outer frame size from mesh bounds divided by the
+source opening dimensions, matching its opening to the painting dimensions.
+
+Finding 3 — CONFIRMED, resolved in the working tree (follow-up 2026-11-12):
+CheckAndRender now invokes GalleryCardInstaller.Check before reporting the three
+card routes. That audit checks the card count, hidden initial detail state, expected
+destinations, matching entrance references, XR colliders/interactables, More/Close
+bindings, and the exact serialized ENTER and pedestal XR event targets/methods.
+CheckAndRender also explicitly requires an enabled Cafe scene in EditorBuildSettings.
+The unconditional retained-Gallery.fbx PASS wording was removed. The current layout
+log reports the actual measured 1.38 m frame gap and both frames above the wood rail.
+The runtime harness also requires every expected pedestal prompt, its non-null hidden
+hint, and its inactive glow while reading; it no longer silently skips missing hints.
+
+Geometry observations:
+- The east wall itself is solid. Existing Wainscot and Wainscot_Rail meshes have a
+  baked cutout at Unity z=-1.6, 3.42 m wide. RepairTrim fills that interval without
+  changing the original Gallery.fbx. Check the rendered UV/texture seam visually.
+- Cafe and Starry are above the 1.03 m rail top, spaced along the east wall in the
+  order Bedroom -> Cafe -> Starry; minimum requested frame gap is asserted at 1 m.
+- Bedroom slot is left in place, so the runtime Van Gogh portrait offset remains
+  attached to the correct painting.
+- Follow-up image inspection: Logs/CafeGallery/Overview.png shows the complete Cafe
+  canvas fitting its frame, the wood strip filled continuously beneath it, and the
+  order Bedroom -> Cafe -> Starry with open wall between the frames. The lamp is
+  between Cafe and Starry rather than across Starry's image. This is visual review
+  of Editor-rendered images, not a headset claim.
+- The separate GalleryDecor/Lantern_EastWall has scene overrides y=2.65, z=-0.5,
+  retaining x=-3.26. GalleryDecorSetup uses the same new position. Starry's source
+  scene, gallery painting image and entrance prefab were not edited for this move.
+- Logs/GalleryCards/CafeTerrace Mouse Detail.png has legible title, complete body
+  copy, Close and ENTER controls, and the newly requested 1888 artist portrait.
+  This addresses the earlier blank-looking edit-mode text concern. Functional
+  Play-mode tests are running separately; this review does not assert their result.
+
+Provenance and latest model:
+- Cafe environment: PR191, charlyne/cafe-terrace, 6095f030665114d270df849fbdff1b4fe4da536f.
+- Latest Gallery room model is already present from merged PR186. The Gallery.fbx
+  Git blob is identical in HEAD, origin/main, gallery/tripo-props and gallery/lighting.
+- PR187 adds lighting/material/shared-render changes, not a newer room mesh. Wholesale
+  replacement of Gallery.unity would remove the existing Cici cards.
+- Whole Cafe painting image: Commons public-domain reproduction; source/provenance
+  retained in deliverables/Cafe-Gallery/source/PROVENANCE.txt.
+- Cafe detail portrait: Van Gogh, Self-Portrait Dedicated to Paul Gauguin (1888),
+  Harvard Art Museums/Fogg Museum, 1951.65. The museum's Google Arts & Culture
+  contribution confirms the year, medium, dimensions and collection; Commons
+  labels the faithful reproduction PD-Art / Public Domain Mark 1.0.
+  https://artsandculture.google.com/asset/self-portrait-dedicated-to-paul-gauguin/0QEgNCpCSJfkUQ
+  https://commons.wikimedia.org/wiki/File:Van_Gogh_self-portrait_dedicated_to_Gauguin.jpg
+  The imported JPEG retains the downloaded source bytes (4748 x 5800 pixels),
+  SHA-256 6a6fc35364c8a577ce3701614530516925e93e16711404ace8b0632a6761e9a7.
+  The Cafe prefab and Gallery scene both bind its GUID 4d0601c95c2e94bba88a65ac25c82220;
+  the visible caption is Self-portrait · 1888. The UI crops centrally via RawImage
+  UVs, preserving the source image. Inventory row is in docs/ASSETS.md and full
+  provenance ships at Assets/ArtworkCici/Gallery/SelfPortrait1888-PROVENANCE.txt.
+- Upstream Cafe environment prototype texture/Tripo licensing caveats are preserved;
+  this review does not upgrade their licensing status.
+
+Merge topology:
+See cafe-gallery-overlap.txt. The merge-tree snapshot includes committed music HEAD
+64593578acabb51481bf5d4c511833d582a95295; pending Cafe scene/code is excluded and must
+be rechecked after commit. No merge or branch mutation performed by this reviewer.
+
+Follow-up disposition:
+All three findings in this layout/editor review are closed. No additional blocking
+layout or portrait-provenance issue found in the current working tree. This reviewer
+only updated this report; no Unity asset was edited or Editor process launched.
+Compilation, Editor tests, final full interaction run and post-commit overlap checks
+remain the integrating agent's separately recorded verification work.

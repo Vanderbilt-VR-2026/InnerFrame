@@ -2,6 +2,12 @@
 
 Scene owners: Gallery = Cici; Bedroom = Rowling. The Gallery scene is the user-approved GalleryIntegration design with Cici cards. This change does not edit the Bedroom scene.
 
+Café integration (2026-11-12): the room FBX is still the latest modeling from #186. The newer #187 changes lighting, not the model. Café Terrace from #191 (`6095f03`) is now between Bedroom and Starry Night in the Gallery. Café and Starry frames have 1.38 m of wall between them; the east lantern sits in that gap, with about 0.49 m lateral clearance from Starry's frame, and its vase is on the opposite wall. The former Starry wainscot gap is repaired with the existing materials. The original Starry image, prefab and immersive scene are unchanged. Regenerate this integrated layout with Tools > InnerFrame > Gallery > Install Cafe and space artworks (`CafeGallerySetup.Run`), not the older single-painting installer.
+
+Café uses the shared placard and detail-card design, museum-sourced facts and an 1888 self-portrait (Self-Portrait Dedicated to Paul Gauguin, Harvard Art Museums/Fogg Museum). More, Close and ENTER use the same local UI and scene loader as the other paintings. While reading any detail card, pedestal hints and their glow hide. Panel corners, edge centres and button centres are checked against room geometry; moving the panel closer also scales its vertical offset so it stays fully in view. Café's imported environment has no Vincent conversation or dedicated BGM yet; M > Back to Gallery is available. The Café author’s generator-plan provenance remains a documented release follow-up in `docs/cafe-terrace/provenance-review.txt`.
+
+The integrated three-card flow passed 176 offline Editor Play-mode assertions in Unity 6000.3.23f1 on 2026-11-12 (`verification/cafe-gallery-play.txt`): simulated desktop input, exact first-hit button rays, full-panel viewport bounds, local-viewer isolation, pedestal routes, XR interaction-manager selection, all three painting destinations and the Back to Gallery menu handlers. The integrated project also passed the 83 Entrance/audio assertions again (`verification/cafe-audio-regression.txt`). This does not constitute physical controller or headset testing. `verification/cafe-detail-1888.png` shows the tested Café card; the delivery project was opened and visually checked in the Unity GUI (`verification/cafe-gui.txt`).
+
 Use Unity **6000.3.23f1**. Open `Assets/Entrance/Scenes/Entrance.unity`, press Play, select a character, and continue through the controller guide. Gallery is `Assets/Scenes/Gallery.unity`.
 
 Gallery controls in the Editor: WASD to walk, J/L to turn, I/K to look vertically, Escape to free the mouse. Click More, close, and ENTER on the artwork cards. The existing pedestal entry remains available. M opens the navy/gold player menu; Back to Gallery returns from paintings. Hold keyboard B or the right controller's B to record a question, then release to send. T remains a compatibility shortcut. A configured Convai key or local AI proxy is required for real replies; no credentials are included.
@@ -9,12 +15,13 @@ Gallery controls in the Editor: WASD to walk, J/L to turn, I/K to look verticall
 Entrance includes the controller tutorial, title video, opening soundtrack, click sounds, and gold rays. The Van Gogh lettering now dissolves directly into the gold transition and then the latest Gallery; the three immersion preview cards no longer play between the title and Gallery. Gold prelude is 1.1 s, scene fade-out/reveal are 0.6 s each (half their previous duration); music crossfades use 0.3 s without changing playback speed. The full gold-to-Gallery transition targets at most 15 s, including the prelude, fades, room shutdown, disk load and connection wait. If required scene loading itself exceeds this budget, it finishes safely and reveals without an extra connection wait. The gold edges are brighter, and the video buffer is replaced by gold before release. Other scene transitions retain their existing defaults. Starry Night reuses its dialogue UI for live conversation, pausing story time/audio while a conversation is active and resuming afterwards. Story instructions remain visible alongside the B reminder.
 
 Shared settings:
-- `ProjectSettings/EditorBuildSettings.asset`: Entrance first, followed by Gallery, PaintedBedroom, and StarryNight; disabled SampleScene and Bedroom_StyleExperiment entries removed. Saved by Unity in the tested delivery.
+- `ProjectSettings/EditorBuildSettings.asset`: Entrance first, followed by Gallery, PaintedBedroom, StarryNight and CafeTerrace; disabled SampleScene and Bedroom_StyleExperiment entries removed. Saved by Unity in the tested delivery. CafeTerrace is enabled so both card and pedestal entries can load it by name.
 - `ProjectSettings/ProjectSettings.asset`: Standalone adds `PHOTON_REALTIME_4`, initialized by Photon for Editor compilation.
 - Packages, XR setup, Android minimum API 32, GameActivity and Meta Quest Support remain as on main.
 
 Validation commands:
 - `bash scripts/ci-local.sh`
+- Unity batch `-executeMethod GalleryCardPlayCheck.Begin` (no `-quit`; three-card simulated desktop-input/XR-manager flow, all destinations and actual menu return handlers; physical devices not tested)
 - Unity batch `-executeMethod InnerFrame.StarryNight.SN_Checks.RunAll -quit -snLogDir <folder>` (Editor suites; explicitly skips extra Play-mode suites)
 - Unity batch `-executeMethod PlayerMenuCheck.RunBatch -menuShots <folder>`
 - Unity batch `-executeMethod ConversationDeliveryCheck.RunBatch`

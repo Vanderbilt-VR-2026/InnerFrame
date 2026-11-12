@@ -1,0 +1,1541 @@
+{
+  "_about": [
+    "Cafe Terrace at Night: the one layout source of truth. Real-world metres.",
+    "Axes here (Blender): x = right, y = forward down the street, z = up. Origin = a fixed point on the cobbles, 5 m from the cafe wall and 1 m before the near end of the terrace (where 04_plan drew the easel).",
+    "Unity: (x, y, z)_unity = (x, z, y)_here.",
+    "Design distances from notes/cafe-terrace/00_brief_reply.md and the approved images; not measured from the painting.",
+    "A house front runs from a to b and faces the side on the RIGHT of a->b; the body lies behind it.",
+    "An opening's u is the distance of its centre from a along the front; z is its bottom above the house's base."
+  ],
+  "version": 1,
+  "rig": {
+    "_note": "The rig stays 0.8 as in every scene. The set is modelled in real metres and scaled by world_scale at runtime. Charlyne, 2026-11-11, on a Quest 3 (test build from f45e5d0 with a 0.8 / 0.9 / 1.0 switch): 0.8 (1:1) felt a little small; she chose 0.9, so the set feels 1.125x real size. The Bedroom is 0.8 x 0.8 today (#144: one scale across scenes is still to settle). Positions given to other code (Vincent, spawn, trigger) are multiplied by world_scale too; Vincent himself must be scaled by world_scale / 0.8 when he is added. Change both numbers here only.",
+    "scale": 0.8,
+    "world_scale": 0.9,
+    "eye_height": 1.6
+  },
+  "painter": {
+    "_note": "Charlyne, 2026-11-10: the painter stands where the master image (01_master_v2) lines up, not mid-street as in 04_plan. Fitted from the terrace's two near corners in that image, taking eye height 1.6 m and a vertical view of 65 degrees: 2.66 m from the cafe wall, 4.83 m before the terrace, looking 8.5 degrees left of the street. 'easel' is where the painter's feet are; the easel itself stands 0.75 m in front.",
+    "_note_2": "Later the same day she moved it closer to the wall: 1.6 m from it (was 2.66 m, the fitted value), looking 2 degrees left. Three distances were rendered (2.0, 1.6, 1.2 m).",
+    "easel": [
+      -3.4,
+      -3.83
+    ],
+    "yaw_deg": -2,
+    "easel_yaw_deg": 178,
+    "vincent": [
+      -2.45,
+      -3.6
+    ]
+  },
+  "painting_view": {
+    "_note": "The check camera for the master image: the painter's own eye.",
+    "pos": [
+      -3.4,
+      -3.83
+    ],
+    "yaw_deg": -2,
+    "vfov_deg": 65
+  },
+  "spawn": {
+    "_note": "In front of the small door on the left of the back row (08_back), facing down the street.",
+    "pos": [
+      3.25,
+      -5.4
+    ],
+    "yaw_deg": 0
+  },
+  "exit_trigger": {
+    "_note": "A step or two past the end of the walkable street: jump to The Starry Night. Hook only.",
+    "center": [
+      -0.1,
+      22.5
+    ],
+    "size": [
+      7.0,
+      1.5
+    ],
+    "walkable_end_y": 21.0
+  },
+  "street": {
+    "cafe_wall_x": -5.0,
+    "right_wall_x": 4.0,
+    "back_wall_y": -7.0,
+    "near_end_y": 24.5,
+    "kerb_height": 0.12,
+    "_note": "House fronts stay almost parallel (9 m apart at the terrace, about 7 m at the carriage); it is the roadway between the kerbs that narrows to about 4 m, as the kerb lines do in 04_plan.",
+    "right_kerb": [
+      [
+        2.8,
+        -6.0
+      ],
+      [
+        2.8,
+        10.0
+      ],
+      [
+        2.2,
+        12.5
+      ],
+      [
+        2.0,
+        19.5
+      ],
+      [
+        2.0,
+        24.5
+      ]
+    ],
+    "right_front": [
+      [
+        4.0,
+        -6.0
+      ],
+      [
+        4.0,
+        10.0
+      ],
+      [
+        3.9,
+        14.5
+      ],
+      [
+        3.7,
+        19.5
+      ],
+      [
+        3.5,
+        24.5
+      ]
+    ],
+    "left_kerb": [
+      [
+        -3.0,
+        9.6
+      ],
+      [
+        -2.4,
+        12.5
+      ],
+      [
+        -2.1,
+        19.5
+      ],
+      [
+        -2.0,
+        24.5
+      ]
+    ],
+    "left_front": [
+      [
+        -3.8,
+        9.6
+      ],
+      [
+        -3.7,
+        14.5
+      ],
+      [
+        -3.6,
+        19.5
+      ],
+      [
+        -3.5,
+        24.5
+      ]
+    ],
+    "back_pavement_depth": 1.0,
+    "ground_margin": 1.0
+  },
+  "terrace": {
+    "_note": "Plan reads 2.4 x 8.1 m. Widened to 3.0 m so a 1 m aisle fits between the two table rows (brief, answer 2).",
+    "x": [
+      -5.0,
+      -2.0
+    ],
+    "y": [
+      1.0,
+      9.4
+    ],
+    "height": 0.12,
+    "plank_width": 0.14
+  },
+  "awning": {
+    "_note": "Attached at 4.55 m (fitted to the master image from the painter's eye). Three depths were rendered from there (1.1, 1.9, 3.2 m out): 3.2 m, just past the terrace's street edge, is closest to the image's outline. The image's own perspective is not consistent, so this is a judgement by eye.",
+    "y": [
+      1.1,
+      9.5
+    ],
+    "wall_z": 4.55,
+    "outer_x": -1.8,
+    "outer_z": 2.6,
+    "valance": 0.25,
+    "thickness": 0.04,
+    "rods_y": [
+      1.2,
+      3.9,
+      6.7,
+      9.4
+    ],
+    "rod_wall_z": 5.9
+  },
+  "balcony": {
+    "y": [
+      1.1,
+      9.3
+    ],
+    "floor_z": 4.65,
+    "depth": 0.9,
+    "rail_height": 1.0,
+    "post_spacing": 0.5
+  },
+  "lantern": {
+    "_note": "Bracket about halfway along the terrace (plan).",
+    "wall_y": 4.9,
+    "reach": 0.95,
+    "z": 2.45
+  },
+  "light": {
+    "_note": "Look-dev lights (make_environment.py --look lit). They are baked, never realtime on Quest. Tuned by eye against 01_master_v2: sulphur-yellow lamp light, blue-violet night that never goes black.",
+    "lantern_w": 55.0,
+    "lantern_colour": "#fff4cf",
+    "awning_w": 400.0,
+    "awning_colour": "#fff6d6",
+    "_sky_note": "sky / sky_horizon = the dome's colour overhead and at the horizon (under Cici's night strokes at half strength); tone_check.py tunes them to the effect image. sky_light = the soft night light the sky casts.",
+    "_tone_note": "2026-11-10, measured against 01_master_v2 region by region: the night was too violet and too bright (houses hue 257 against the target's 221, value 0.48 against 0.33), the sky and shop front too saturated, the cobbles magenta instead of warm grey, the yellows a little too orange.",
+    "sky": "#12389f",
+    "_houses_note": "2026-11-11, measured: in 07_right and 03_overview the house walls are a greyer, lighter slate blue (about #55668a near, #3a4868 far) than the sky, which is a saturated ultramarine (about #24427a). Ours were as saturated as the sky, so the two ran together.",
+    "sky_light": "#b6c0dc",
+    "sky_strength": 2.2,
+    "window_glow": 1.5,
+    "_saturation_note": "Charlyne, 2026-11-10: a little less saturated than the first lit rounds. 1 = the colours as painted.",
+    "saturation": 0.94,
+    "_stars_note": "Charlyne, 2026-11-11 (this replaces the earlier \"no stars / only a few\"): the painting has stars, so the cafe has them as the painting and the master image show them (many, clearly seen), but each star LOOKS like The Starry Night's: a copy of Cici's dome, night texture, star-field shader and star atlas (her glowing core and painted ring halo). small = points, large = stars with the painted halo. Counts are the master image's density (about 20 points and 8 haloed stars in its patch of sky) carried round the whole dome; hers has 150 and 25.",
+    "stars": {
+      "small": 1400,
+      "large": 170,
+      "seed": 1889
+    },
+    "exposure": 0.0,
+    "samples": 96,
+    "sky_horizon": "#1c4cb4"
+  },
+  "sizes": {
+    "table": {
+      "height": 0.72,
+      "diameter": 0.65
+    },
+    "chair": {
+      "seat_height": 0.45,
+      "seat": 0.4,
+      "back_height": 0.9
+    },
+    "person": {
+      "standing": 1.7,
+      "seated": 1.28,
+      "width": 0.45
+    },
+    "easel": {
+      "height": 1.75,
+      "canvas_w": 0.65,
+      "canvas_h": 0.81,
+      "canvas_z": 0.95
+    },
+    "lantern": {
+      "w": 0.26,
+      "h": 0.48
+    },
+    "carriage": {
+      "w": 1.5,
+      "body_l": 2.2,
+      "h": 2.1,
+      "horse_l": 2.3,
+      "horse_h": 1.6
+    },
+    "tree": {
+      "trunk_r": 0.2,
+      "trunk_h": 3.4,
+      "crown_r": 2.6,
+      "crown_z": 6.4,
+      "ring_r": 0.65
+    }
+  },
+  "_tables_note_2": "Charlyne, 2026-11-11: place the tables as the pictures show them, nothing made up. Read from the painting, 01_master_v2 and 03_overview, which agree: the front row is TWO tables standing on the cobbles right at the terrace's front edge (their feet below the edge, their tops over it): one near the cafe wall, one in the middle; a chair on the terrace behind each, a chair on the cobbles between them and one at the front right corner; a third table stands on the cobbles off the terrace's street edge, a little further back, with a chair on the terrace edge turned to it. Positions measured in 01_master_v2 (terrace front edge = 3.0 m = 1055 px; depth from the feet's height under the horizon) [I: the horizon line is estimated]. 04_plan disagrees here (it draws three front tables a metre inside the terrace and two outside); where they differ the front views win, and the plan only places what they do not show clearly: the five tables with customers and the further outside table (09).",
+  "_tables_note": "Measured from 04_plan.webp, table by table and chair by chair (Charlyne, 2026-11-10: follow the image, do not arrange them freely). Table centres are mapped onto the terrace as built (3.0 m wide, the plan draws 2.4 m); each seat is [dx, dy, customer] in metres from its table at the plan's own scale, and faces the table. The two street-side tables stay.",
+  "tables": [
+    {
+      "name": "PH_Table_01",
+      "pos": [
+        -4.18,
+        8.29
+      ],
+      "on": "terrace",
+      "seats": [
+        [
+          -0.15,
+          0.56,
+          1
+        ],
+        [
+          -0.52,
+          0.06,
+          1
+        ],
+        [
+          -0.23,
+          -0.48,
+          1
+        ],
+        [
+          0.32,
+          0.42,
+          1
+        ]
+      ]
+    },
+    {
+      "name": "PH_Table_02",
+      "pos": [
+        -2.69,
+        8.21
+      ],
+      "on": "terrace",
+      "seats": [
+        [
+          -0.31,
+          0.37,
+          1
+        ],
+        [
+          0.11,
+          0.62,
+          1
+        ],
+        [
+          0.34,
+          0.21,
+          1
+        ],
+        [
+          0.14,
+          -0.51,
+          0
+        ]
+      ]
+    },
+    {
+      "name": "PH_Table_03",
+      "pos": [
+        -4.2,
+        6.31
+      ],
+      "on": "terrace",
+      "seats": [
+        [
+          -0.13,
+          0.7,
+          1
+        ],
+        [
+          -0.41,
+          0.4,
+          1
+        ],
+        [
+          0.28,
+          0.3,
+          1
+        ],
+        [
+          -0.27,
+          -0.41,
+          1
+        ]
+      ]
+    },
+    {
+      "name": "PH_Table_04",
+      "pos": [
+        -2.67,
+        5.65
+      ],
+      "on": "terrace",
+      "seats": [
+        [
+          -0.25,
+          0.6,
+          1
+        ],
+        [
+          0.2,
+          0.53,
+          1
+        ],
+        [
+          0.32,
+          -0.51,
+          0
+        ]
+      ]
+    },
+    {
+      "name": "PH_Table_05",
+      "pos": [
+        -4.27,
+        3.91
+      ],
+      "on": "terrace",
+      "seats": [
+        [
+          -0.15,
+          0.51,
+          1
+        ],
+        [
+          -0.4,
+          0.12,
+          1
+        ],
+        [
+          -0.23,
+          -0.47,
+          1
+        ]
+      ]
+    },
+    {
+      "name": "PH_Table_06",
+      "pos": [
+        -4.43,
+        0.68
+      ],
+      "on": "street",
+      "seats": []
+    },
+    {
+      "name": "PH_Table_07",
+      "pos": [
+        -3.2,
+        0.8
+      ],
+      "on": "street",
+      "seats": []
+    },
+    {
+      "name": "PH_Table_08",
+      "pos": [
+        -1.55,
+        2.4
+      ],
+      "on": "street",
+      "seats": []
+    },
+    {
+      "name": "PH_Table_09",
+      "pos": [
+        -1.36,
+        5.12
+      ],
+      "on": "street",
+      "seats": [
+        [
+          -0.22,
+          0.54,
+          0
+        ],
+        [
+          0.06,
+          -0.57,
+          0
+        ]
+      ]
+    }
+  ],
+  "loose_chairs": [
+    {
+      "pos": [
+        -3.08,
+        4.78
+      ],
+      "yaw_deg": 200,
+      "on": "terrace"
+    },
+    {
+      "pos": [
+        -2.38,
+        6.75
+      ],
+      "yaw_deg": 0,
+      "on": "terrace"
+    },
+    {
+      "pos": [
+        -4.4,
+        0.84
+      ],
+      "yaw_deg": 172,
+      "on": "street",
+      "_is": "at the left front table, pushed under it from the terrace side: its back stands against the terrace's edge, its seat is under the table top, it faces the painter"
+    },
+    {
+      "pos": [
+        -3.68,
+        0.5
+      ],
+      "yaw_deg": 135,
+      "on": "street",
+      "_is": "between the two front tables, on the cobbles: back to the left and away, seat to the right and towards the painter (turned 45 degrees)"
+    },
+    {
+      "pos": [
+        -2.43,
+        0.72
+      ],
+      "yaw_deg": 135,
+      "on": "street",
+      "_is": "at the terrace's front right corner, on the cobbles: turned the same way as the one between the tables"
+    },
+    {
+      "pos": [
+        -2.22,
+        2.3
+      ],
+      "yaw_deg": 100,
+      "on": "terrace",
+      "_is": "on the terrace's street edge: seen from its side, seat towards the table outside"
+    },
+    {
+      "pos": [
+        -3.3,
+        1.9
+      ],
+      "yaw_deg": 180,
+      "on": "terrace",
+      "_is": "on the terrace behind the middle front table, facing the painter"
+    },
+    {
+      "pos": [
+        -3.8,
+        2.1
+      ],
+      "yaw_deg": 175,
+      "on": "terrace",
+      "_is": "on the terrace behind and left of the middle front table, facing the painter"
+    }
+  ],
+  "people": [
+    {
+      "name": "PH_Waiter",
+      "pos": [
+        -3.31,
+        7.41
+      ],
+      "on": "terrace"
+    },
+    {
+      "name": "PH_Pedestrian_Boy",
+      "pos": [
+        0.0,
+        9.5
+      ],
+      "height": 1.25
+    },
+    {
+      "name": "PH_Pedestrian_WomanRed",
+      "pos": [
+        0.5,
+        12.2
+      ]
+    },
+    {
+      "name": "PH_Pedestrian_CoupleA",
+      "pos": [
+        1.3,
+        11.0
+      ]
+    },
+    {
+      "name": "PH_Pedestrian_CoupleB",
+      "pos": [
+        1.9,
+        10.8
+      ]
+    },
+    {
+      "name": "PH_Pedestrian_FarA",
+      "pos": [
+        -1.0,
+        16.5
+      ]
+    },
+    {
+      "name": "PH_Pedestrian_FarB",
+      "pos": [
+        -0.5,
+        17.0
+      ]
+    }
+  ],
+  "carriage": {
+    "name": "PH_CarriageAndHorse",
+    "pos": [
+      -0.2,
+      20.0
+    ],
+    "yaw_deg": 180
+  },
+  "tree": {
+    "name": "PH_Tree",
+    "pos": [
+      2.0,
+      3.0
+    ]
+  },
+  "shop_bay": {
+    "_note": "The green lit shop on the right: 6.5 to 9 m ahead of the easel (plan).",
+    "y": [
+      6.4,
+      9.0
+    ],
+    "depth": 1.1,
+    "chamfer": 0.45,
+    "height": 3.3
+  },
+  "houses": [
+    {
+      "name": "L_Cafe",
+      "row": "left",
+      "a": [
+        -5.0,
+        -7.0
+      ],
+      "b": [
+        -5.0,
+        9.6
+      ],
+      "depth": 6.0,
+      "floors": [
+        4.55,
+        3.3
+      ],
+      "chimneys": [
+        3.0,
+        9.0,
+        14.0
+      ],
+      "openings": [
+        {
+          "kind": "window",
+          "u": 1.6,
+          "w": 1.0,
+          "h": 1.5,
+          "z": 1.0,
+          "shutters": "open",
+          "lit": true
+        },
+        {
+          "kind": "door",
+          "u": 3.4,
+          "w": 1.0,
+          "h": 2.5,
+          "z": 0.0,
+          "hood": true
+        },
+        {
+          "kind": "shopfront",
+          "u": 6.2,
+          "w": 3.6,
+          "h": 3.3,
+          "z": 0.0,
+          "door_w": 1.0
+        },
+        {
+          "kind": "door",
+          "u": 10.2,
+          "w": 1.0,
+          "h": 2.5,
+          "z": 0.12,
+          "lit": true
+        },
+        {
+          "kind": "door",
+          "u": 12.6,
+          "w": 1.0,
+          "h": 2.5,
+          "z": 0.12,
+          "lit": true
+        },
+        {
+          "kind": "sign",
+          "u": 14.6,
+          "w": 1.1,
+          "h": 0.4,
+          "z": 2.9
+        },
+        {
+          "kind": "window",
+          "u": 1.6,
+          "w": 1.0,
+          "h": 1.4,
+          "z": 4.3,
+          "shutters": "closed"
+        },
+        {
+          "kind": "window",
+          "u": 5.4,
+          "w": 1.0,
+          "h": 1.4,
+          "z": 4.3,
+          "shutters": "open"
+        },
+        {
+          "kind": "window",
+          "u": 7.6,
+          "w": 1.0,
+          "h": 1.4,
+          "z": 4.3,
+          "shutters": "open"
+        },
+        {
+          "kind": "door",
+          "u": 9.6,
+          "w": 1.1,
+          "h": 2.2,
+          "z": 4.65,
+          "shutters": "open"
+        },
+        {
+          "kind": "door",
+          "u": 12.0,
+          "w": 1.1,
+          "h": 2.2,
+          "z": 4.65,
+          "shutters": "open"
+        },
+        {
+          "kind": "door",
+          "u": 14.4,
+          "w": 1.1,
+          "h": 2.2,
+          "z": 4.65,
+          "shutters": "open"
+        }
+      ]
+    },
+    {
+      "name": "L_Next",
+      "row": "left",
+      "a": [
+        -3.8,
+        9.6
+      ],
+      "b": [
+        -3.7,
+        14.5
+      ],
+      "depth": 6.0,
+      "floors": [
+        3.4,
+        3.2,
+        1.6
+      ],
+      "chimneys": [
+        1.5
+      ],
+      "side_a_openings": [
+        {
+          "kind": "door",
+          "u": 0.6,
+          "w": 1.0,
+          "h": 2.4,
+          "z": 0.12,
+          "lit": true
+        },
+        {
+          "kind": "window",
+          "u": 0.6,
+          "w": 0.9,
+          "h": 1.3,
+          "z": 5.2
+        }
+      ],
+      "auto": {
+        "spacing": 2.3,
+        "lit": [
+          1
+        ]
+      }
+    },
+    {
+      "name": "L_3",
+      "row": "left",
+      "a": [
+        -3.7,
+        14.5
+      ],
+      "b": [
+        -3.6,
+        19.5
+      ],
+      "depth": 6.0,
+      "floors": [
+        3.3,
+        3.1
+      ],
+      "chimneys": [
+        2.5
+      ],
+      "auto": {
+        "spacing": 2.4,
+        "lit": [
+          3
+        ]
+      }
+    },
+    {
+      "name": "L_4",
+      "row": "left",
+      "a": [
+        -3.6,
+        19.5
+      ],
+      "b": [
+        -3.5,
+        24.5
+      ],
+      "depth": 6.0,
+      "floors": [
+        3.4,
+        3.2,
+        1.2
+      ],
+      "chimneys": [
+        1.0,
+        4.0
+      ],
+      "auto": {
+        "spacing": 2.4,
+        "lit": [
+          0
+        ]
+      }
+    },
+    {
+      "name": "R_5",
+      "row": "right",
+      "a": [
+        3.5,
+        24.5
+      ],
+      "b": [
+        3.7,
+        19.5
+      ],
+      "depth": 6.0,
+      "floors": [
+        3.3,
+        3.2
+      ],
+      "chimneys": [
+        2.0
+      ],
+      "auto": {
+        "spacing": 2.4,
+        "lit": [
+          2
+        ]
+      }
+    },
+    {
+      "name": "R_4",
+      "row": "right",
+      "a": [
+        3.7,
+        19.5
+      ],
+      "b": [
+        3.9,
+        14.5
+      ],
+      "depth": 6.0,
+      "floors": [
+        3.4,
+        3.2,
+        1.4
+      ],
+      "chimneys": [
+        1.0,
+        4.0
+      ],
+      "auto": {
+        "spacing": 2.4,
+        "lit": [
+          1,
+          2
+        ]
+      }
+    },
+    {
+      "name": "R_3",
+      "row": "right",
+      "a": [
+        3.9,
+        14.5
+      ],
+      "b": [
+        4.0,
+        10.0
+      ],
+      "depth": 6.0,
+      "floors": [
+        3.3,
+        3.1
+      ],
+      "chimneys": [
+        3.0
+      ],
+      "auto": {
+        "spacing": 2.2,
+        "lit": [
+          0,
+          3
+        ]
+      }
+    },
+    {
+      "name": "R_Shop",
+      "row": "right",
+      "a": [
+        4.0,
+        10.0
+      ],
+      "b": [
+        4.0,
+        5.8
+      ],
+      "depth": 6.0,
+      "floors": [
+        3.4,
+        3.2,
+        1.4
+      ],
+      "chimneys": [
+        1.0,
+        3.5
+      ],
+      "openings": [
+        {
+          "kind": "window",
+          "u": 1.2,
+          "w": 0.9,
+          "h": 1.4,
+          "z": 4.4,
+          "lit": true
+        },
+        {
+          "kind": "window",
+          "u": 3.0,
+          "w": 0.9,
+          "h": 1.4,
+          "z": 4.4,
+          "lit": true
+        }
+      ]
+    },
+    {
+      "name": "R_1",
+      "row": "right",
+      "a": [
+        4.0,
+        5.8
+      ],
+      "b": [
+        4.0,
+        0.8
+      ],
+      "depth": 6.0,
+      "floors": [
+        3.3,
+        3.0
+      ],
+      "chimneys": [
+        1.2,
+        4.0
+      ],
+      "openings": [
+        {
+          "kind": "door",
+          "u": 1.5,
+          "w": 1.1,
+          "h": 2.7,
+          "z": 0.12,
+          "hood": true
+        },
+        {
+          "kind": "window",
+          "u": 3.6,
+          "w": 1.1,
+          "h": 1.7,
+          "z": 1.0,
+          "shutters": "open",
+          "lit": true
+        },
+        {
+          "kind": "window",
+          "u": 1.5,
+          "w": 0.9,
+          "h": 1.4,
+          "z": 4.3,
+          "shutters": "closed"
+        },
+        {
+          "kind": "window",
+          "u": 3.6,
+          "w": 1.0,
+          "h": 1.4,
+          "z": 4.3,
+          "shutters": "closed"
+        }
+      ]
+    },
+    {
+      "name": "R_2",
+      "row": "right",
+      "a": [
+        4.0,
+        0.8
+      ],
+      "b": [
+        4.0,
+        -2.3
+      ],
+      "depth": 6.0,
+      "floors": [
+        3.4,
+        3.2,
+        0.5
+      ],
+      "chimneys": [
+        0.5,
+        2.6
+      ],
+      "openings": [
+        {
+          "kind": "door",
+          "u": 1.0,
+          "w": 1.1,
+          "h": 2.7,
+          "z": 0.12,
+          "hood": true
+        },
+        {
+          "kind": "drainpipe",
+          "u": 3.0
+        },
+        {
+          "kind": "window",
+          "u": 1.5,
+          "w": 1.0,
+          "h": 1.4,
+          "z": 4.4,
+          "shutters": "open",
+          "lit": true
+        }
+      ]
+    },
+    {
+      "name": "R_0",
+      "row": "right",
+      "a": [
+        4.0,
+        -2.3
+      ],
+      "b": [
+        4.0,
+        -7.0
+      ],
+      "depth": 6.0,
+      "floors": [
+        3.3,
+        3.0
+      ],
+      "chimneys": [
+        1.0,
+        3.6
+      ],
+      "openings": [
+        {
+          "kind": "window",
+          "u": 0.8,
+          "w": 1.1,
+          "h": 1.7,
+          "z": 1.0
+        },
+        {
+          "kind": "door",
+          "u": 2.5,
+          "w": 1.1,
+          "h": 2.7,
+          "z": 0.12,
+          "hood": true
+        },
+        {
+          "kind": "window",
+          "u": 1.0,
+          "w": 1.0,
+          "h": 1.4,
+          "z": 4.3,
+          "shutters": "closed"
+        },
+        {
+          "kind": "window",
+          "u": 3.6,
+          "w": 0.9,
+          "h": 1.4,
+          "z": 4.3,
+          "shutters": "closed"
+        }
+      ]
+    },
+    {
+      "name": "B_1",
+      "row": "back",
+      "a": [
+        4.0,
+        -7.0
+      ],
+      "b": [
+        1.3,
+        -7.0
+      ],
+      "depth": 6.0,
+      "floors": [
+        3.3,
+        3.0
+      ],
+      "chimneys": [
+        0.6
+      ],
+      "openings": [
+        {
+          "kind": "door",
+          "u": 0.75,
+          "w": 0.95,
+          "h": 2.5,
+          "z": 0.12,
+          "hood": true,
+          "tag": "ENTRANCE"
+        },
+        {
+          "kind": "window",
+          "u": 2.05,
+          "w": 0.9,
+          "h": 1.5,
+          "z": 1.05
+        },
+        {
+          "kind": "window",
+          "u": 0.75,
+          "w": 0.9,
+          "h": 1.4,
+          "z": 4.3,
+          "shutters": "closed"
+        },
+        {
+          "kind": "window",
+          "u": 2.05,
+          "w": 0.8,
+          "h": 1.4,
+          "z": 4.3,
+          "shutters": "open",
+          "lit": true
+        }
+      ]
+    },
+    {
+      "name": "B_2",
+      "row": "back",
+      "a": [
+        1.3,
+        -7.0
+      ],
+      "b": [
+        -2.1,
+        -7.0
+      ],
+      "depth": 6.0,
+      "floors": [
+        3.6,
+        3.3,
+        0.4
+      ],
+      "chimneys": [
+        0.4,
+        2.8
+      ],
+      "openings": [
+        {
+          "kind": "drainpipe",
+          "u": 0.15
+        },
+        {
+          "kind": "gate",
+          "u": 1.7,
+          "w": 2.8,
+          "h": 3.2,
+          "z": 0.12
+        },
+        {
+          "kind": "window",
+          "u": 1.7,
+          "w": 1.1,
+          "h": 1.4,
+          "z": 4.6,
+          "shutters": "closed"
+        }
+      ]
+    },
+    {
+      "name": "B_3",
+      "row": "back",
+      "a": [
+        -2.1,
+        -7.0
+      ],
+      "b": [
+        -5.0,
+        -7.0
+      ],
+      "depth": 6.0,
+      "floors": [
+        3.3,
+        3.0
+      ],
+      "chimneys": [
+        2.6
+      ],
+      "openings": [
+        {
+          "kind": "door",
+          "u": 0.7,
+          "w": 0.95,
+          "h": 2.5,
+          "z": 0.12,
+          "hood": true
+        },
+        {
+          "kind": "window",
+          "u": 2.05,
+          "w": 0.8,
+          "h": 1.5,
+          "z": 1.05,
+          "shutters": "open",
+          "lit": true
+        },
+        {
+          "kind": "window",
+          "u": 0.7,
+          "w": 0.9,
+          "h": 1.4,
+          "z": 4.3,
+          "shutters": "closed"
+        },
+        {
+          "kind": "window",
+          "u": 2.1,
+          "w": 0.9,
+          "h": 1.4,
+          "z": 4.3
+        }
+      ]
+    }
+  ],
+  "far": {
+    "_note": "The street beyond the carriage: its own layer. Blockout stand-in only; 05_far is its target.",
+    "start_y": 24.5,
+    "length": 40.0,
+    "bend_x": 5.0,
+    "houses_per_side": 8,
+    "width": 7.0,
+    "tower": {
+      "pos": [
+        1.2,
+        66.0
+      ],
+      "height": 17.0,
+      "w": 2.6
+    }
+  },
+  "cameras": {
+    "_note": "Fixed check views. yaw 0 = looking down the street, positive = turning right. Painter's eye unless pos is given. hide = stand-ins left out of that view (the easel and Vincent stand in the painter's own way). The painter's four views use a headset-like 100 degrees. The side targets (07, 08, 09) are drawn flatter than a real view from 4 to 7 m, so each also has an elev_ view from across the street, for measuring doors and windows.",
+    "forward": {
+      "yaw_deg": 0,
+      "pitch_deg": 0,
+      "hfov_deg": 100,
+      "res": [
+        1536,
+        1024
+      ],
+      "target": "01_master_v2.webp",
+      "hide": [
+        "PH_Easel",
+        "PH_Vincent"
+      ]
+    },
+    "right": {
+      "yaw_deg": 90,
+      "pitch_deg": 0,
+      "hfov_deg": 100,
+      "res": [
+        1536,
+        1024
+      ],
+      "target": "07_right.webp",
+      "hide": [
+        "PH_Easel",
+        "PH_Vincent"
+      ]
+    },
+    "back": {
+      "yaw_deg": 180,
+      "pitch_deg": 0,
+      "hfov_deg": 100,
+      "res": [
+        1536,
+        1024
+      ],
+      "target": "08_back.webp",
+      "hide": [
+        "PH_Easel",
+        "PH_Vincent"
+      ]
+    },
+    "left": {
+      "yaw_deg": 270,
+      "pitch_deg": 0,
+      "hfov_deg": 100,
+      "res": [
+        1536,
+        1024
+      ],
+      "target": "09_left.webp",
+      "hide": [
+        "PH_Easel",
+        "PH_Vincent"
+      ]
+    },
+    "overview": {
+      "pos": [
+        -0.6,
+        -6.4,
+        3.4
+      ],
+      "yaw_deg": -6,
+      "pitch_deg": -8,
+      "hfov_deg": 75,
+      "res": [
+        1536,
+        1024
+      ],
+      "target": "03_overview.webp"
+    },
+    "elev_right": {
+      "pos": [
+        -1.1,
+        1.2,
+        2.4
+      ],
+      "yaw_deg": 90,
+      "pitch_deg": 6,
+      "hfov_deg": 100,
+      "res": [
+        1536,
+        1024
+      ],
+      "target": "07_right.webp",
+      "hide": [
+        "PH_Easel",
+        "PH_Vincent"
+      ]
+    },
+    "elev_back": {
+      "pos": [
+        -0.5,
+        3.0,
+        2.6
+      ],
+      "yaw_deg": 180,
+      "pitch_deg": 4,
+      "hfov_deg": 68,
+      "res": [
+        1536,
+        1024
+      ],
+      "target": "08_back.webp",
+      "hide": [
+        "PH_Easel",
+        "PH_Vincent"
+      ]
+    },
+    "elev_left": {
+      "pos": [
+        3.6,
+        -0.4,
+        2.4
+      ],
+      "yaw_deg": 270,
+      "pitch_deg": 2,
+      "hfov_deg": 52,
+      "res": [
+        1536,
+        1024
+      ],
+      "target": "09_left.webp",
+      "hide": [
+        "PH_Easel",
+        "PH_Vincent"
+      ]
+    },
+    "lantern": {
+      "pos": [
+        -2.5,
+        3.5,
+        2.0
+      ],
+      "yaw_deg": -48,
+      "pitch_deg": 6,
+      "hfov_deg": 34,
+      "res": [
+        1024,
+        1024
+      ],
+      "target": null
+    },
+    "terrace": {
+      "pos": [
+        -0.6,
+        -0.6,
+        1.6
+      ],
+      "yaw_deg": -38,
+      "pitch_deg": -12,
+      "hfov_deg": 70,
+      "res": [
+        1536,
+        1024
+      ],
+      "target": null
+    },
+    "sky_view": {
+      "pos": [
+        0.5,
+        2.0,
+        1.6
+      ],
+      "yaw_deg": 5,
+      "pitch_deg": 32,
+      "hfov_deg": 90,
+      "res": [
+        1536,
+        1024
+      ],
+      "target": "06_sky_parked.webp"
+    },
+    "painting": {
+      "from": "painting_view",
+      "pitch_deg": 8,
+      "hide": [
+        "PH_Easel",
+        "PH_Vincent"
+      ],
+      "res": [
+        1122,
+        1402
+      ],
+      "target": "01_master_v2.webp"
+    },
+    "spawn": {
+      "from": "spawn",
+      "pitch_deg": 0,
+      "hfov_deg": 90,
+      "res": [
+        1536,
+        1024
+      ],
+      "target": null
+    },
+    "plan": {
+      "ortho": true,
+      "cut_above": 2.3,
+      "hide": [
+        "Awning_",
+        "Balcony_",
+        "PH_Tree_Crown"
+      ],
+      "center": [
+        -0.5,
+        8.5
+      ],
+      "ortho_scale": 36.0,
+      "res": [
+        1024,
+        1536
+      ],
+      "target": "04_plan.webp"
+    }
+  },
+  "_tone_note": "Charlyne, 2026-11-11: every surface's tone and light follows the effect images. tone = a multiplier on each surface's paint (linear r, g, b), set by tone_check.py from measured patches (target / Unity), not by eye.",
+  "tone": {
+    "house": [
+      2.9726,
+      3.2971,
+      3.5106
+    ],
+    "shutter": [
+      2.8654,
+      2.4275,
+      2.3908
+    ],
+    "door": [
+      3.3423,
+      2.7899,
+      4.0798
+    ],
+    "glow": [
+      0.844,
+      0.5816,
+      0.2542
+    ],
+    "pave": [
+      1.2711,
+      1.2383,
+      1.1846
+    ],
+    "cafe": [
+      1.0008,
+      0.9698,
+      0.2926
+    ],
+    "shop": [
+      1.4037,
+      1.4557,
+      1.5803
+    ],
+    "cobble": [
+      1.0836,
+      1.204,
+      1.46
+    ],
+    "plank": [
+      1.0825,
+      0.6669,
+      0.4816
+    ],
+    "awning": [
+      1.2751,
+      0.966,
+      0.2106
+    ]
+  },
+  "_chairs_note": "Charlyne, 2026-11-11: the chairs' directions follow the pictures too. yaw_deg = the way a sitter would face (0 = down the street, 90 = towards the street side, 180 = towards the painter), read chair by chair from 01_master_v2 and checked in 03_overview: where the hoop back is and which way the seat points. Chairs placed by hand get no random turn."
+}

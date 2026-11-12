@@ -132,7 +132,7 @@ namespace InnerFrame.Gallery.EditorTools
         };
         public static readonly (string name, Vector3 at, float yaw)[] Vases =
         {
-            ("Vase_EastWall", new Vector3(-3.0f, 0f, 2.4f), 90f), ("Vase_WestWall", new Vector3(3.0f, 0f, -1.0f), -90f),
+            ("Vase_EastWall", new Vector3(3.0f, 0f, 1.0f), -90f), ("Vase_WestWall", new Vector3(3.0f, 0f, -1.0f), -90f),
         };
         // Each hangs by its ring from an arm out of a wall: one each side of the arch (south wall, z 4.5), and one on each
         // side wall at z = 1, just south of The Starry Night's frame (its south edge at z 0.08), so neither hangs in front of
@@ -142,7 +142,7 @@ namespace InnerFrame.Gallery.EditorTools
         public static readonly (string name, Vector3 at, float arm, float yaw)[] Lanterns =
         {
             ("Lantern_ArchEast", new Vector3(-1.45f, 2.35f, 4.26f), 0.24f, 0f), ("Lantern_ArchWest", new Vector3(1.45f, 2.35f, 4.26f), 0.24f, 0f),
-            ("Lantern_EastWall", new Vector3(-3.26f, 2.35f, 1.0f), 0.24f, -90f), ("Lantern_WestWall", new Vector3(3.26f, 2.35f, 1.0f), 0.24f, 90f),
+            ("Lantern_EastWall", new Vector3(-3.26f, 2.65f, -0.5f), 0.24f, -90f), ("Lantern_WestWall", new Vector3(3.26f, 2.35f, 1.0f), 0.24f, 90f),
         };
 
         static string Fbx(string n) => $"{Folder}/GP_{n}.fbx";

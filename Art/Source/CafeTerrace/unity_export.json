@@ -1,7 +1,7 @@
 {
  "_about": "Written by make_unity_export.py from cafe_layout.json. Do not edit: change the layout and export again.",
  "rigScale": 0.8,
- "worldScale": 0.8,
+ "worldScale": 0.9,
  "eyeHeight": 1.6,
  "saturation": 0.94,
  "lightRange": 4.0,

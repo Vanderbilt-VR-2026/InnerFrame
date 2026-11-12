@@ -9,9 +9,9 @@
   ],
   "version": 1,
   "rig": {
-    "_note": "Same standard as the Bedroom (branch charlyne/bedroom-size, 41d1c6b): the rig stays 0.8 in every scene, the set is modelled in real metres, and the whole set is scaled by world_scale at runtime, so 0.8 x 0.8 feels 1:1. Positions given to other code (Vincent, spawn, trigger) are multiplied by world_scale too. Change both here only.",
+    "_note": "The rig stays 0.8 as in every scene. The set is modelled in real metres and scaled by world_scale at runtime. Charlyne, 2026-11-11, on a Quest 3 (test build from f45e5d0 with a 0.8 / 0.9 / 1.0 switch): 0.8 (1:1) felt a little small; she chose 0.9, so the set feels 1.125x real size. The Bedroom is 0.8 x 0.8 today (#144: one scale across scenes is still to settle). Positions given to other code (Vincent, spawn, trigger) are multiplied by world_scale too; Vincent himself must be scaled by world_scale / 0.8 when he is added. Change both numbers here only.",
     "scale": 0.8,
-    "world_scale": 0.8,
+    "world_scale": 0.9,
     "eye_height": 1.6
   },
   "painter": {

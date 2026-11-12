@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: CT_Layout
   m_EditorClassIdentifier: Assembly-CSharp::InnerFrame.CafeTerrace.CT_Layout
   rigScale: 0.8
-  worldScale: 0.8
+  worldScale: 0.9
   eyeHeight: 1.6
   saturation: 0.94
   lightRange: 4

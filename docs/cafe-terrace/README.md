@@ -59,8 +59,10 @@ tuned to this scene's target image; more stars than hers, as in the painting.
 
 ## Scale
 
-As the Bedroom: the rig is 0.8 and the set, modelled in real metres, is scaled 0.8 at runtime (`CT_Layout.worldScale`),
-so it feels 1:1. Both numbers are in the layout only.
+The rig is 0.8, as in every scene. The set is modelled in real metres and scaled 0.9 at runtime
+(`CT_Layout.worldScale`), so it feels 1.125× real size: chosen on a Quest 3 on 2026-11-11 (at 0.8, which is 1:1 and
+what the Bedroom uses today, it felt a little small). Both numbers are in the layout only. Vincent, when he is added,
+has to be scaled by the same 0.9 / 0.8.
 
 ## Hooks for the rest of the journey
 

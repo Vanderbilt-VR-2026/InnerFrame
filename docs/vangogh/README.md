@@ -47,7 +47,7 @@ October 1888, text-to-speech), and his answer plays from the portrait.
     shows, first, his state (*Listening…*, *Vincent is thinking…*, *Vincent can't hear you right now*, or who else is
     asking); else the mirror's next step (*Take the mirror off the wall*, *Hold the mirror up to Vincent*, *Let go: the
     mirror stays here*, *Hang the mirror back on the wall*, from `MirrorScene.Now`); else *Hold (B) to ask Vincent*
-    with the B in its circle (T in the Editor).
+    with the B in its circle (B in the Editor; T also accepted).
   - The hint shows within 4 m of Vincent or the portrait; the box whenever he speaks. Both fade over 0.2 s.
   - Both hang 1.3 m ahead of your eyes, 15° below your gaze (`VG_FollowGroup`). They stay put until your gaze is 20°
     away, then ease after it (98 % in 0.5 s); they follow pitch between −30° and +45° of gaze and stay upright. When they
@@ -72,7 +72,7 @@ October 1888, text-to-speech), and his answer plays from the portrait.
     2.8 cm to 2.2 cm capitals to stay on two lines, then takes a third line at the size that fits the panel, then splits
     at the comma nearest its middle. The v1.3 parchment lies over the panel, because the ink's contrast on the bake alone
     falls to 4.4:1 in its darkest strokes. They fade out a second after his voice stops.
-  - Hints appear on a small dark pill: *Hold B to ask Vincent* (*T* in the Editor) with the key in a circle,
+  - Hints appear on a small dark pill: *Hold B to ask Vincent* (*B* on the keyboard; *T* also accepted) with the key in a circle,
     *Listening…*, *Vincent is thinking…*, or *Vincent can't hear you right now* for 3 s. The pill hides while he
     speaks.
   - Over Vincent the pill sits 8 cm above his head and his words above it. Under the portrait his words hang below
@@ -197,9 +197,9 @@ Start the proxy, `adb reverse tcp:8000 tcp:8000`, build to the Quest, then press
 
 Gallery:
 
-1. Hold B in the headset and ask something. The Editor's hint shows *Player N is asking Vincent…*; T does nothing there.
+1. Hold B in the headset and ask something. The Editor's hint shows *Player N is asking Vincent…*; B does nothing there.
 2. The answer plays in both, from the portrait; the Editor's hint shows the question.
-3. When he stops, ask from the Editor (T): the same, the other way round.
+3. When he stops, ask from the Editor (B; T also accepted): the same, the other way round.
 4. Press B and T at the same moment: only the lower player number's question is answered.
 
 Painted Bedroom (both players go there through the menu or the door):

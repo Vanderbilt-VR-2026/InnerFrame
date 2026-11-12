@@ -59,6 +59,8 @@ namespace InnerFrame.StarryNight
             // the way back: at Done, once the morning star has faded, the player menu opens with "Back to Gallery"
             gameObject.AddComponent<SN_GalleryReturn>().openAfterSeconds = layout.morningStarFadeSeconds + 2f;
             Game.Begin();
+            var conversation = Game.vincent.gameObject.AddComponent<SN_Conversation>();
+            conversation.Connect(Game);
         }
 
         void OnDestroy() => xrInput?.Dispose();

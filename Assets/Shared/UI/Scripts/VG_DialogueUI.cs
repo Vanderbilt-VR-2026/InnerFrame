@@ -26,6 +26,8 @@ public class VG_DialogueUI : MonoBehaviour
     public bool IsSpeaking => paging != null && paging.Showing;
     /// <summary>The hint's line as last set, tokens included.</summary>
     public string HintLine { get; private set; }
+    /// <summary>The resolved hint title, including a scene's more specific activity title.</summary>
+    public string HintTitle { get; private set; }
     /// <summary>The box's height now, in metres.</summary>
     public float BoxHeight => dialogue != null ? dialogue.Height * settings.Scale : 0f;
 
@@ -58,10 +60,11 @@ public class VG_DialogueUI : MonoBehaviour
     {
         Build();
         hintShown = !string.IsNullOrEmpty(line);
-        if (!hintShown) return;
+        HintTitle = title ?? settings.hintTitle;
+        if (!hintShown) { HintLine = line; return; }
         if (line != HintLine && settings.hintFadeIn > 0f) hintGroup.alpha = 0f;
         HintLine = line;
-        title = title ?? settings.hintTitle;
+        title = HintTitle;
         int open = line.IndexOf('{'), close = open >= 0 ? line.IndexOf('}', open) : -1;
         if (close > open + 1) hint.Show(title, line.Substring(0, open).TrimEnd(), line.Substring(open + 1, close - open - 1), line.Substring(close + 1).TrimStart());
         else hint.Show(title, line);
@@ -86,8 +89,8 @@ public class VG_DialogueUI : MonoBehaviour
     {
         Build();
         paging.Step(dt, Voice != null && clip != null && Voice.isPlaying && Voice.clip == clip ? Voice.time : (float?)null);
-        Fade(words, paging.Showing, dt, FadeSeconds);
-        Fade(hintGroup, hintShown, dt, settings.hintFadeIn > 0f ? settings.hintFadeIn : FadeSeconds);
+        Fade(words, paging.Showing && !PlayerMenu.MenuOpen, dt, FadeSeconds);
+        Fade(hintGroup, hintShown && !PlayerMenu.MenuOpen, dt, settings.hintFadeIn > 0f ? settings.hintFadeIn : FadeSeconds);
         follow.enabled = words.gameObject.activeSelf || hintGroup.gameObject.activeSelf;   // so it appears in place
     }
 

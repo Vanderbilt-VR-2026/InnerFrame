@@ -1,0 +1,12 @@
+{
+  "_about": [
+    "The Tripo models the set uses, by stand-in. The .glb files are raw inputs and stay out of the repo;",
+    "pass their folder with --objects. Each is brought to the real size in cafe_layout.json 'sizes'.",
+    "Retopologised versions only (Tripo Smart Mesh): the full-detail ones are 0.8 million triangles and more."
+  ],
+  "chair": {"file": "chair/wooden chair 3d model-retopo.glb", "replaces": "PH_Chair_*"},
+  "table": {"file": "table/round table 3d model retopo.glb", "replaces": "PH_Table_*",
+            "_note": "Four legs, as approved. Its legs came out yellow-brown; below the top they are repainted the dark blue-green iron of the master image (iron_below = share of the height, as made).",
+            "iron_below": 0.9, "iron": "#2f4a48"},
+  "lantern": {"file": "lantern/ornate street lamp 3d model retopo.glb", "replaces": "PH_Lantern"}
+}

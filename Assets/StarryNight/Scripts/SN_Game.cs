@@ -158,6 +158,13 @@ namespace InnerFrame.StarryNight
 
         public void Step(float dt)
         {
+            // Free conversation pauses the story clock and prop progression, keeping its place.
+            if (voice != null && voice.ConversationPaused)
+            {
+                if (ui != null) ui.Step(dt);
+                if (vincentDriver != null) vincentDriver.Step(dt, Head);
+                return;
+            }
             Clock += dt;
             Input?.Tick();
             var head = Head;

@@ -1,0 +1,5 @@
+Painting_TheBedroom center=(0.00, 2.00, -4.40) size=(3.00, 2.34, 0.00)
+Painting_CafeTerrace center=(-3.39, 2.30, -2.10) size=(0.00, 1.93, 1.55)
+Painting_TheStarryNight center=(-3.39, 2.25, 1.40) size=(0.00, 1.74, 2.20)
+PASS: frame separation=1.38m; both frames clear wall rail.
+PASS: three card routes validated; Cafe build entry enabled.

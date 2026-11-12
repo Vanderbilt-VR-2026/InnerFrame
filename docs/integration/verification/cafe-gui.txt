@@ -1,0 +1,7 @@
+Unity 6000.3.23f1, macOS, 2026-11-12
+Updated delivery project: deliverables/InnerFrame-TestProject
+Reloaded Gallery from disk and observed Bedroom, Cafe Terrace and Starry Night in the revised layout.
+Opened Preview Cafe Detail in Play mode. Confirmed full card, readable text, the 1888 Harvard self-portrait/caption, visible ENTER/Close buttons, and no pedestal hint/glow over the card.
+Left this Cafe detail preview running in Unity.
+No recording, headset deployment or main merge performed.
+Automated input and scene-return evidence is in cafe-gallery-play.txt; audio regression is in cafe-audio-regression.txt.

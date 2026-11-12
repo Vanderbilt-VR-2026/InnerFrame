@@ -1,0 +1,78 @@
+Café Gallery integration: card/runtime review — 2026-11-12
+
+Effort: targeted review of card generation, runtime scene lifecycle, and test vacuity.
+Scope: current uncommitted Café integration following the approved music update.
+Outcome: CLOSED. Unity 6000.3.23f1 Play integration run exited 0; 176 assertions
+passed. See cafe-gallery-play.txt and cafe-detail-1888.png beside this review.
+
+# | Finding | Verdict | Severity | Evidence / resolution
+1 | Immediate Edit-mode card renders have unreadable text | REFUTED as a runtime font blocker | Preview-only limitation | Actual Play captures independently reviewed by root and card reviewer have fully readable text, including the final Cafe detail. Static atlas bytes exactly match HEAD (SHA256 9732ded55f60d3391c3b4ea7fc08dada41fed1e1a160d853ffb6212c0f125408); only fallback-list metadata differs. Atlas-data loss is not the confirmed cause of the unreliable immediate Edit-mode preview.
+2 | Café frame outer-size scaling could leave gaps at the inner opening | RESOLVED | Visual check | Root changed frame scaling to use original 3 x 2.4 m opening ratio. Generated Café render shows the image filling the frame.
+3 | Pedestal collider intercepts Cafe detail ENTER | RESOLVED | Interaction blocker | GalleryDetailPlacement now checks panel corners, edge centres and all action buttons, and moves/scales the panel in front of geometry without disabling pedestal collision. Exact collider-hit checks and all three mouse/XR ENTER scene routes passed.
+4 | Moving the panel closer clipped its bottom edge | RESOLVED | Visual blocker | Vertical offset now scales with distance, preserving screen position. All four panel corners are asserted inside the viewport for each card. Final Cafe screenshot shows the whole panel, including ENTER and bottom border, with no overlapping hint/glow.
+
+Refuted concerns:
+- Café still presents Bedroom text: generated CafeTerrace Interactive.prefab has all
+  three visible titles, both metadata fields, the summary, and the long description
+  replaced. Remaining Bedroom strings are GameObject names only. Cafe now uses the
+  requested 1888 self-portrait and matching caption; the other cards retain theirs.
+- Café advertises an unimplemented audio guide: the inherited Audio 12 object has
+  m_IsActive: 0 in the generated prefab. This change does not claim Café narration.
+- ENTER invokes the Bedroom loader: generated prefab's expectedScene is CafeTerrace;
+  Installer binds the scene's Button_CafeTerrace and validates expectedScene/targetScene,
+  persistent ENTER receiver, and pedestal XR listener. The runtime mismatch guard remains.
+- Multiple panels must remain open to navigate: all three cards keep exclusiveDetails;
+  the generic runtime closes only other cards in the same local scene.
+- A new Café menu is required: PlayerMenu bootstraps globally and creates a scene-local
+  panel for the active camera. PaintingNames now includes CafeTerrace, enabling its
+  arrival hint and wrist menu tag. CT_Bootstrap owns the set and places the single rig;
+  it does not add a second menu/audio listener. CT_ExitTrigger's automatic onward load
+  remains disabled in the source design.
+
+Test evidence design:
+- More/Close/ENTER tests simulate desktop mouse events in InputSystem and explicitly
+  run the production DesktopTestRig.Update consumer, preserving its physics ray,
+  active/interactable checks, and GalleryCardButton path. This is an integration
+  test, not physical OS mouse input. XR tests use the interaction manager and assert
+  a physics ray reaches the intended collider before selection.
+- XR button aiming keeps the reader at eye height and rotates the ray toward the
+  button. The former fixture teleported the head to each button's height after
+  placement; its first collider is retained as a diagnostic query. Production-ray
+  first-hit identity remains an assertion, with no collider masking or bypass.
+- After opening each card, tests require all three pedestal hints and glow objects
+  to exist and be hidden, preventing a vacuous no-overlap pass from missing prompts.
+- Runtime Cafe screenshot independently confirms fully readable text, the new
+  green-background 1888 self-portrait and caption, and no overlapping hint or glow.
+- ENTER tests wait for the actual active scene and compare against the specific
+  selected destination; a wrong scene fails rather than counting as success.
+- XR returns create the real PlayerMenuPanel and invoke its Back to Gallery button,
+  then assert Gallery reloaded with all three details hidden. This verifies the
+  production button handler, but does not claim physical controller/M-key input.
+- Preview positioning follows each installed card transform and restores the desktop
+  camera pose; it no longer assumes there are two artworks at the former positions.
+- Three-card test execution, final readable card renders, and headset testing are
+  separate evidence. No headset test is claimed by this review.
+
+Card text sources (verified this session, paraphrased):
+https://www.krollermuller.nl/en/collection/vincent-van-gogh-terrace-of-a-caf-at-night-place-du-forum-km-108-565
+https://www.museum.nl/en/kroller-muller-museum/showpiece/terrace-of-a-cafe-van-gogh
+Title/date/medium and colour interpretation from the collection museum; dimensions
+80.7 x 65.3 cm (height x width) from the museum listing. Source ID KM 108.565 and
+krollermuller.nl appear in the detail card. Artwork/portrait provenance is covered
+by the separate cafe-asset-review.txt and repository asset documentation.
+
+No card/runtime review findings remain open. Initial diagnostics
+showed mouse-down at frame 4769 and assertion at frame 4770. A two-frame wait alone
+did not resolve the next run, so frame delay is not claimed as the full cause.
+InputManager.defaultUpdateType uses the Editor input buffer without game focus;
+package source confirms the independent player buffer and focus-routing settings.
+The fixture uses a temporary InputSettings clone with IgnoreFocus and
+AllDeviceInputAlwaysGoesToGameView, then restores the original in Finish. No project
+input asset changes. It explicitly updates InputSystem then invokes the actual
+DesktopTestRig.Update consumer, retaining every state, collision and destination
+assertion. The two-frame wait remains for dependent UI updates. Root separately
+clicked Cafe More in the GUI and confirmed that real mouse path works.
+Pre-click, successful mouse detail, and failure views are captured for review.
+For future layout regeneration, use CafeGallerySetup.Run; the historical
+SN_GallerySetup.Apply entry point predates the three-painting arrangement and can
+restore the former Starry Night placement.

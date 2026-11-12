@@ -1,0 +1,58 @@
+== 1. The avatar and his height
+  PASS  avatar VincentV2@BreathingIdleAvatar: valid True, human True
+  PASS  bind-pose height 1.7 m (target 1.7 +- 0.01)
+  (reported) standing (BreathingIdle, frame 0): 1.687 m from his soles to the top of his head
+  (reported) import: file unit scale 0.01 (centimetres), scale factor 1.7008; avatar from BreathingIdle's skeleton; 28 skinned bones, 13250 vertices, 10619 triangles, quality Bone4
+  (reported) the right hand's finger chain in the hand's space: RightHandIndex1 (0.000, 0.062, 0.000), RightHandIndex2 (0.002, 0.093, 0.006), RightHandIndex3 (0.006, 0.124, 0.044), RightHandIndex4 (0.009, 0.142, 0.073); charcoal at (0.000, 0.125, 0.012)
+
+== 2. Sitting on the rock (SittingIdle 12 frames, SittingTalking 60 frames)
+  (reported) the seat: the lowest thigh or buttock vertex 0.308 m above the ground; the rock x1.19 in height; his root at (-0.170, 0.000, 0.190), yaw 0
+  PASS  no thigh or buttock vertex more than 0.015 m inside the rock: the deepest 0.008 m (SittingTalking t=22.033 at (-0.322, 0.322, 0.122); 72 frames)
+  PASS  no gap over 0.015 m under the hips (the lowest seat vertex within 0.1 m of the hips bone, above the rock): the worst 0.006 m (SittingTalking t=17.627)
+  PASS  the soles within 0.03 m of the ground: the worst 0.006 m (SittingTalking t=5.141 (left 0.006, right 0.001))
+  PASS  no lower-leg or foot vertex inside the rock: none
+
+== 3, 4, 5. Talking, the look and the pointing, through the story (his Animator at 20 Hz with the game)
+  PASS  Talking on whenever the box speaks: 781 of 781 frames
+  PASS  Talking off 1 s after the box stops (from t=12.35): 10 of 10 frames off
+  (reported) the hold: 9 of 9 frames still Talking within 0.6 s of the box stopping
+  (reported) his states while Talking: SittingIdle, SittingTalking, Standing; at the end: Standing
+    ok    t=1.05 sketch: head 20.364 deg from it (limit 38.061 at weight 0.6; 2.864 deg round from his facing, head turned 2.911)
+    ok    t=5.3 player: past the look's yaw limit (130.468 deg from his facing): head turned 96.718 deg toward it (the limit 100), 33.68 deg from it
+    ok    t=18.7 N1: head 1.513 deg from it (limit 15; 22.441 deg round from his facing, head turned 23.858)
+    ok    t=21.6 N2: head 3.001 deg from it (limit 15; 6.368 deg round from his facing, head turned 9.563)
+    ok    t=51.2 N3: head 2.593 deg from it (limit 15; 24.844 deg round from his facing, head turned 21.903)
+    ok    t=56.799 player: past the look's yaw limit (152.57 deg from his facing): head turned 90.484 deg toward it (the limit 100), 61.83 deg from it
+    ok    t=59.799 guide: head 4.005 deg from it (limit 15; 13.7 deg round from his facing, head turned 8.735)
+    ok    t=85.601 player: past the look's yaw limit (151.158 deg from his facing): head turned 97.13 deg toward it (the limit 100), 53.842 deg from it
+    ok    t=95.551 N3: head 4.061 deg from it (limit 15; 24.978 deg round from his facing, head turned 22.006)
+    ok    t=115.553 player: past the look's yaw limit (159.254 deg from his facing): head turned 93.243 deg toward it (the limit 100), 62.663 deg from it
+  PASS  the look, 1 s after each target change: 10 of 10 within 15 deg (or at the clamp's edge)
+  PASS  pointing at N1: the charcoal's axis at most 0.048 deg from it over 44 frames at full weight (limit 10)
+  PASS  pointing at N2: the charcoal's axis at most 0.048 deg from it over 99 frames at full weight (limit 10)
+  PASS  pointing at N3: the charcoal's axis at most 0.056 deg from it over 97 frames at full weight (limit 10)
+  -- positive control: the axis against N2 during N1's line: at least 17.177 deg
+  PASS  positive control: N2 during N1's line -> FAIL (17.177 deg > 10)
+  (reported) final state Done; his animator state Standing; stood True
+
+== 6a. The loops drift (20 s each, root motion on)
+  PASS  SittingIdle: the root moved 0 m in 20 s (limit 0.01); the hips swayed at most 0.002 m from where they began
+  PASS  SittingTalking: the root moved 0 m in 20 s (limit 0.01); the hips swayed at most 0.014 m from where they began
+  PASS  Standing: the root moved 0 m in 20 s (limit 0.01); the hips swayed at most 0.107 m from where they began
+
+== 6b. No hip jump at the transitions (60 Hz, the fade against the clips' own motion)
+  PASS  SittingIdle -> SittingTalking (Talking on): the hips' largest step during the fade 0.001 m per frame, the clips' own 0: a jump of 0.001 m (limit 0.02)
+  PASS  SittingTalking -> SittingIdle (Talking off): the hips' largest step during the fade 0.001 m per frame, the clips' own 0: a jump of 0.001 m (limit 0.02)
+  PASS  SittingIdle -> SitToStand (Stand): the hips' largest step during the fade 0.001 m per frame, the clips' own 0.014: a jump of 0 m (limit 0.02)
+  PASS  SittingTalking -> SitToStand (Stand): the hips' largest step during the fade 0.003 m per frame, the clips' own 0.014: a jump of 0 m (limit 0.02)
+  PASS  SitToStand -> Standing (its end): the hips' largest step during the fade 0.005 m per frame, the clips' own 0.014: a jump of 0 m (limit 0.02)
+
+== 7. After SitToStand (the controller, root motion on), in Standing
+  (reported) state Standing; his root moved from (-0.170, 0.000, 0.190) to (-0.200, 0.000, 0.494) (0.305 m)
+  PASS  no leg vertex inside the rock: none
+  PASS  the soles on the ground: left 0 m, right 0 m (limit +-0.03)
+  PASS  no bush vertex inside his body: 0
+  PASS  his nearest vertex 1.331 m from the player's seat (limit 0.6, the seat's radius)
+
+Errors logged during the run: 0
+RESULT: 25 passed, 0 failed

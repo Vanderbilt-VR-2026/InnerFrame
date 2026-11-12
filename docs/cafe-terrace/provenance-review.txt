@@ -1,0 +1,30 @@
+Café asset provenance follow-up — checked 2026-11-12
+
+This integration reuses Charlyne's already-published environment at upstream
+6095f030665114d270df849fbdff1b4fe4da536f (PR #191), without new generation.
+133 imported source files were checked against the Git objects; all 18 LFS
+payloads were hydrated and matched their stored SHA-256 hashes. This source
+identity is evidence of provenance, not proof of a particular generator plan.
+
+OpenAI Terms of Use, effective 2026-01-01, Content / Ownership:
+https://openai.com/policies/terms-of-use/
+The generating user owns output as between the user and OpenAI, to the extent
+permitted by law. The user remains responsible for input permissions and
+third-party rights; ownership does not imply output uniqueness. This supports
+the upstream ChatGPT-output description without claiming independent ownership
+of third-party content.
+
+Tripo Terms of User Agreement, updated 2025-07-11, sections 3.2 and 5.2:
+https://www.tripo3d.ai/terms
+Lawful commercial and noncommercial uses remain subject to the agreement.
+Section 5.2.2 generally grants paid users rights to use, modify and distribute
+their outputs; section 5.2.1 says Tripo retains free-user input/output rights.
+Charlyne's plan at generation time is not identified in the source. The team
+should confirm that plan or another applicable grant before treating the
+models as cleared for unrestricted distribution or release. No assertion of
+paid-plan status is made by this integration.
+
+The newly added Gallery painting is separate from these model/texture assets:
+Assets/ArtworkCici/Gallery/CafeTerraceAtNight.jpg
+Its exact source, public-domain marking, museum facts, and source hash are
+recorded in CafeTerrace-PROVENANCE.txt and docs/ASSETS.md.

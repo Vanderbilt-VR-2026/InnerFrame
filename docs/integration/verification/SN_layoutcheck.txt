@@ -1,0 +1,61 @@
+== 1, 2. The budget (SN_World only; the rig's own controller models are not in it), through the story
+  at the start (Arrive): triangles 161,189, renderers x materials 44, transparent renderers 21 (the mist's 10)
+  Stars, every star out: triangles 161,209, renderers x materials 54, transparent renderers 31 (the mist's 10)
+  Stars, the trigger held on N3 (the beam at full): triangles 161,215, renderers x materials 57, transparent renderers 34 (the mist's 10)
+  Wind, half traced (the guide and the beam): triangles 161,337, renderers x materials 58, transparent renderers 35 (the mist's 10)
+  the wind traced, the sky painted, the guide and the beam fading: triangles 161,215, renderers x materials 57, transparent renderers 34 (the mist's 10)
+  Dawn, the page out: triangles 161,233, renderers x materials 44, transparent renderers 20 (the mist's 10)
+  Done: triangles 161,187, renderers x materials 43, transparent renderers 20 (the mist's 10)
+  PASS  triangles at the start 161,189 (limit 250,000)
+  PASS  triangles at the most 161,337 (Wind, half traced (the guide and the beam); limit 250,000)
+  PASS  transparent renderers at the most 35 (Wind, half traced (the guide and the beam); limit 35)
+  PASS  the mist's transparent renderers at the most 10 (limit 10)
+  (reported) renderers x materials: 44 at the start, 58 at the most (Wind, half traced (the guide and the beam))
+  (reported) transparent at the most: SN_Hilltop/HillRing, SN_Hilltop/Mist/MistLayer_0, SN_Hilltop/Mist/MistLayer_1, SN_Hilltop/Mist/MistLayer_2, SN_Hilltop/Mist/MistPuff_0, SN_Hilltop/Mist/MistPuff_1, SN_Hilltop/Mist/MistPuff_2, SN_Hilltop/Mist/MistPuff_3, SN_Hilltop/Mist/MistPuff_4, SN_Hilltop/Mist/MistLayer_3, SN_Hilltop/Mist/MistPuff_5, SN_Hilltop/Horizon, SN_Hilltop/VillageGlow, SN_Sky/Moon, SN_Sky/Guide, SN_Sky/StarsSmall, SN_Sky/StarsMedium, SN_Sky/Star_N1/Core, SN_Sky/Star_N1/Halo, SN_Sky/Star_N2/Core, SN_Sky/Star_N2/Halo, SN_Sky/Star_N3/Core, SN_Sky/Star_N3/Halo, SN_Sky/Star_S1/Core, SN_Sky/Star_S2/Core, SN_Sky/Star_S3/Core, SN_Sky/Star_S4/Core, SN_Sky/Star_S5/Core, SN_Sky/Star_S6/Core, SN_Sky/Star_S7/Core, SN_Sky/Star_S8/Core, SN_Sky/Star_S9/Core, SN_Beam, SN_Lantern/Flame/FlameCross, SN_Lantern/Model/Glass
+
+== 3, 4. The bushes and the clouds, from the built meshes' vertices (world space)
+    ok    BushA: to the path's centre line 0.81 m (limit 0.4; nearest: copy 25)
+    ok    BushA: to the player's seat 1.325 m (limit 0.6; nearest: copy 4)
+    ok    BushA: to the rock's footprint 0.716 m (limit 0.2; nearest: copy 20)
+    ok    BushA: to the lantern 0.985 m (limit 0.3; nearest: copy 46)
+    ok    BushA: tallest within 1.5 m of the seat 0.184 m above the ground (limit 0.6; copy 4)
+    ok    BushA: copies straddling the walls' line (r 5.65 m): 0
+  PASS  BushA: every rule
+    ok    BushB: to the path's centre line 1.205 m (limit 0.4; nearest: copy 22)
+    ok    BushB: to the player's seat 1.573 m (limit 0.6; nearest: copy 14)
+    ok    BushB: to the rock's footprint 0.422 m (limit 0.2; nearest: copy 14)
+    ok    BushB: to the lantern 1.948 m (limit 0.3; nearest: copy 14)
+    ok    BushB: tallest within 1.5 m of the seat 0 m above the ground (limit 0.6)
+    ok    BushB: copies straddling the walls' line (r 5.65 m): 0
+  PASS  BushB: every rule
+    ok    Clouds: 25 copies; nearest vertex 6.027 m from the centre (limit 6; copy 1)
+    ok    Clouds: highest vertex seen from the seat eye -12.526 deg (limit -12.5; copy 20)
+  PASS  Clouds: every rule
+  -- positive controls (must FAIL; built from a copy, the scene's own scatter is not touched)
+    FAIL  BushA (control): to the path's centre line 0 m (limit 0.4; nearest: copy 0)
+  PASS  positive control: BushA copy 0 moved onto the path (1.806, -1.822) -> FAIL
+    FAIL  Clouds (control): highest vertex seen from the seat eye 1.643 deg (limit -12.5; copy 0)
+  PASS  positive control: Clouds copy 0 raised 3 m -> FAIL
+
+== 5. The props after 5 s of physics (a preview scene's own physics scene)
+  PASS  SN_Page: from (0.240, 0.355, -0.200) to (0.241, 0.330, -0.200) (moved 0.025 m), resting on SN_Rock, asleep, tilted 8.229 deg, 0.731 m from the seat (limits: on SN_Rock, asleep, tilt 10, within 0.75 m)
+  (reported) SN_Sketchbook: from (0.540, 0.378, -0.120) to (0.540, 0.364, -0.121) (moved 0.014 m), resting on SN_Rock, asleep, tilted 4.327 deg, 0.784 m from the seat
+  -- positive control (must FAIL): the page dropped 0.9 m from the seat, toward where it lies
+    SN_Page: from (0.191, 0.405, -0.038) to (0.192, 0.321, -0.038) (moved 0.084 m), resting on SN_Rock, asleep, tilted 4.112 deg, 0.899 m from the seat (limits: on SN_Rock, asleep, tilt 10, within 0.75 m)
+  PASS  positive control: the page at 0.9 m (0.191, -0.038) -> FAIL
+
+== 6. The far ridge against the painted strip's own ridge, seen from the seat eye
+  PASS  over the strip's faded ends (8 deg each, 16 ridge points): at least 0.6000 deg under the strip's ridge (worst at yaw -54.943; limit 0.6, to 0.001 deg)
+  PASS  12 deg beyond each end (24 ridge points; the strip's ridge held at its end column): at least 0.6000 deg under it (worst at yaw -62.868; limit 0.6, to 0.001 deg)
+
+== 7. The rock's keep-off rim (SN_Hilltop/RockRim), from its mesh (world space)
+  PASS  convex True, solid True, no renderer True, layer Ignore Raycast
+    the top over the ground 1 m at the least (limit 0.75); 0.484 m from the seat and 0.484 m from the line start -> seat (limit 0.25); 32 corners
+  PASS  every rule
+  PASS  every prop ignores it: SN_Lantern True, SN_Sketchbook True, SN_Page True
+  -- positive control (must FAIL; a copy of its vertices)
+    the top over the ground 0.3 m at the least (limit 0.75); 0.484 m from the seat and 0.484 m from the line start -> seat (limit 0.25); 32 corners
+  PASS  positive control: the rim's top lowered to 0.3 m above the ground -> FAIL
+
+Errors logged during the run: 0
+RESULT: 17 passed, 0 failed

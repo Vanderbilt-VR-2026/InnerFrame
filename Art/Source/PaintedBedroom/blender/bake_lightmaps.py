@@ -83,7 +83,7 @@ RIG = {
     "sun": {"energy": 9.9, "color": (1.0, 0.87, 0.66), "angle_deg": 4.0, "elevation_deg": 50.0, "azimuth_deg": 28.0},
     "sky": {"energy": 594.0, "color": (1.0, 0.91, 0.78), "outside_m": 0.10, "oversize_m": 0.10, "tilt_deg": 25.0,   # placed from the Window's bounds in make_rig (the room moved, 11/12)
             "no_direct": ["Window", "Room_Ceiling"]},   # objects the sky light skips (light linking): the frame it sits against, the ceiling (W11/W12: lit directly it read as a ceiling lamp)
-    "world": {"color": (0.95, 0.93, 0.90), "strength": 0.0},
+    "world": {"color": (0.95, 0.93, 0.90), "strength": 0.0, "outside_strength": 12.0},   # outside_strength: only while baking the scenery outside the window, which the sky must light (review 11/13: it read as dusk at 108 vs the sheet's 176)
     "material_glow": 0.0,     # multiplies every material's if_emission in the bake (1 = as the data says); unlit stays
     "clamp_indirect": 8.0, "max_bounces": 8, "roughness": 0.85,
 }
@@ -631,7 +631,12 @@ def main():
             L = (pixels(old) ** 2 * LM_MAX).copy(); bpy.data.images.remove(old)
             baked[emp.name] = (png, L); log(f"reusing {png}")
             continue
+        bg = next((n for n in scene.world.node_tree.nodes if n.type == "BACKGROUND"), None)
+        if emp.name == "Window_View" and bg is not None:
+            bg.inputs["Strength"].default_value = RIG["world"].get("outside_strength", RIG["world"]["strength"])   # the open sky over the scenery
         L, Dsun = bake_object(scene, emp, parts, size, sun, sky)
+        if emp.name == "Window_View" and bg is not None:
+            bg.inputs["Strength"].default_value = RIG["world"]["strength"]
         unwritten = (L.max(axis=2) == 0) & (Dsun.max(axis=2) == 0)
         L = fill_holes(L, unwritten); Dsun = fill_holes(Dsun, unwritten)
         if use_denoise:

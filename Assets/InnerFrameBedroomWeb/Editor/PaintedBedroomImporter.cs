@@ -303,6 +303,17 @@ namespace InnerFrame.PaintedBedroom.EditorTools
             m.SetFloat("_ZWrite", on ? 0f : 1f);
             if (on) m.EnableKeyword("_SURFACE_TYPE_TRANSPARENT"); else m.DisableKeyword("_SURFACE_TYPE_TRANSPARENT");
             m.renderQueue = on ? (int)RenderQueue.Transparent : -1;
+            if (on)
+            {
+                // A 10%-alpha pane kept its full specular (URP's "preserve specular" blend) and the realtime sun turned the
+                // clear window glass (#177) into a white sheet in Unity, scenery gone. The painting has no reflections:
+                // alpha scales everything, no highlights, no reflections (11/12).
+                m.SetFloat("_BlendModePreserveSpecular", 0f);
+                m.SetFloat("_Smoothness", 0f);
+                m.SetFloat("_SpecularHighlights", 0f); m.EnableKeyword("_SPECULARHIGHLIGHTS_OFF");
+                m.SetFloat("_EnvironmentReflections", 0f); m.EnableKeyword("_ENVIRONMENTREFLECTIONS_OFF");
+                m.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha); m.DisableKeyword("_BLENDMODEPRESERVESPECULAR");
+            }
         }
 
         static Vector3 V3(float[] a) => a != null && a.Length >= 3 ? new Vector3(a[0], a[1], a[2]) : Vector3.zero;

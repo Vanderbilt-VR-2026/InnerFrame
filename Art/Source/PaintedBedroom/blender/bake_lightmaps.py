@@ -61,7 +61,11 @@ TEXTURES = None   # set in main(): --textures DIR, else <repo of the .blend>/Ass
 ROOT_COLLECTION = "PaintedBedroom"
 LM_UV = "Lightmap"
 LM_MAX = 8.0            # encoded range; the Unity shader's _LightMax
-NEVER_BAKED = {"Window_View"}   # the scenery outside the window: it is lit by its own glow, Unity keeps it as is
+NEVER_BAKED = {"Window_View"}
+SIZE_MIN = {"Bed": 1024}        # per-object floor on the lightmap size: the blanket's dense Tripo mesh still showed seams at 512 (11/11)
+UNWRAP_ANYWAY = {"Bed"}         # Tripo objects whose own atlas overlaps itself (the bed: dark slits on the blanket wherever two
+                                # surfaces share texels); these get a fresh smart-project unwrap at SIZE_MIN instead
+BAKE_MARGIN = 8                 # texels of margin the bake extends past each UV island (4 left seams at island borders)   # the scenery outside the window: it is lit by its own glow, Unity keeps it as is
 
 # The light rig that produced the accepted Cycles reference (10/29 - 10/30). Blender coordinates: Z up,
 # the window wall is at +Y. Sun: direction given as where the sun stands (elevation above the horizon,
@@ -277,7 +281,7 @@ def setup_cycles(scene, samples):
     scene.cycles.glossy_bounces = 2; scene.cycles.transmission_bounces = 4; scene.cycles.transparent_max_bounces = 8
     scene.cycles.sample_clamp_indirect = RIG["clamp_indirect"]; scene.cycles.sample_clamp_direct = 0
     scene.cycles.use_denoising = False               # bakes are denoised separately below
-    scene.render.bake.margin = 4
+    scene.render.bake.margin = BAKE_MARGIN
     scene.render.bake.use_clear = True
     scene.render.bake.use_selected_to_active = False
     scene.render.film_transparent = False
@@ -301,7 +305,7 @@ def add_lightmap_uvs(emp, parts):
     The first UV layer stays the render layer. Tripo parts (dense meshes with their own non-overlapping atlas)
     keep a copy of that atlas as the lightmap UVs: smart-projecting 19k tiny triangles starved them (11/10, the
     bed: 70% of triangles under one texel, black patches on the blanket)."""
-    tripo = all(is_tripo(ob) for ob in parts)
+    tripo = all(is_tripo(ob) for ob in parts) and emp.name not in UNWRAP_ANYWAY
     for ob in parts:
         me = ob.data
         if LM_UV in me.uv_layers:
@@ -372,14 +376,14 @@ def bake_object(scene, emp, parts, size, sun=None, sky=None):
     for m in mats:
         m.node_tree.nodes["bake_target"].image = diffuse
     set_emit_white(mats, 0.0)
-    bpy.ops.object.bake(type="DIFFUSE", pass_filter={"DIRECT", "INDIRECT"}, margin=4, use_clear=True)
+    bpy.ops.object.bake(type="DIFFUSE", pass_filter={"DIRECT", "INDIRECT"}, margin=BAKE_MARGIN, use_clear=True)
     D = pixels(diffuse).copy()
 
     emit = new_float_image(f"lmE_{emp.name}", size)
     for m in mats:
         m.node_tree.nodes["bake_target"].image = emit
     set_emit_white(mats, 1.0)
-    bpy.ops.object.bake(type="EMIT", margin=4, use_clear=True)
+    bpy.ops.object.bake(type="EMIT", margin=BAKE_MARGIN, use_clear=True)
     E = pixels(emit).copy()
     set_emit_white(mats, 0.0)
     Dsun = None
@@ -388,7 +392,7 @@ def bake_object(scene, emp, parts, size, sun=None, sky=None):
         direct = new_float_image(f"lmS_{emp.name}", size)
         for m in mats:
             m.node_tree.nodes["bake_target"].image = direct
-        bpy.ops.object.bake(type="DIFFUSE", pass_filter={"DIRECT"}, margin=4, use_clear=True)
+        bpy.ops.object.bake(type="DIFFUSE", pass_filter={"DIRECT"}, margin=BAKE_MARGIN, use_clear=True)
         Dsun = pixels(direct).copy()
         bpy.data.images.remove(direct)
         if sky is not None: sky.hide_render = False
@@ -574,7 +578,7 @@ def main():
             continue
         how = add_lightmap_uvs(emp, parts)
         tris = sum(len(p.data.polygons) for p in parts)
-        sizes[emp.name] = lightmap_size(sum(world_area(p) for p in parts), texels, tris)
+        sizes[emp.name] = max(lightmap_size(sum(world_area(p) for p in parts), texels, tris), SIZE_MIN.get(emp.name, 0))
         log(f"UV {emp.name}: {len(parts)} parts, {tris} faces, {how}, {sizes[emp.name]} px")
     if uv_blend:
         for emp in statics:

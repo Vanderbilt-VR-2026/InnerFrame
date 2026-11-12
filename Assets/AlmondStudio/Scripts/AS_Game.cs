@@ -39,6 +39,7 @@ namespace InnerFrame.AlmondStudio
         float offBranchFor, stateTime;
         bool triggerWas, letterTaken;
         Vector3 endPaintingScale = Vector3.one;
+        bool endPaintingScaleRead;
 
         public bool BrushHeld => BrushHeldInEditor || (brush != null && brush.isSelected);
 
@@ -51,7 +52,13 @@ namespace InnerFrame.AlmondStudio
             letterTaken = false;
             if (letterInHand != null) letterInHand.gameObject.SetActive(true);
             if (letterView != null) letterView.Hide();
-            if (endPainting != null) { endPaintingScale = endPainting.transform.localScale == Vector3.zero ? endPaintingScale : endPainting.transform.localScale; endPainting.SetActive(false); }
+            if (endPainting != null)
+            {
+                // its full size, read once (a restart in the middle of growing in must not keep the half size)
+                if (!endPaintingScaleRead) { endPaintingScale = endPainting.transform.localScale; endPaintingScaleRead = true; }
+                endPainting.transform.localScale = endPaintingScale;
+                endPainting.SetActive(false);
+            }
             Enter(AS_State.Arrive);
         }
 

@@ -112,6 +112,18 @@ namespace InnerFrame.AlmondStudio.EditorTools
                 layout.layoutVersion = 5;
                 EditorUtility.SetDirty(layout);
             }
+            if (layout.layoutVersion < 6)
+            {
+                // version 6 (2026-11-12): the arrival line no longer gives away the letter's news (the letter tells it)
+                if (layout.lineArrive == "A letter from Theo. A boy, and they have named him Vincent.")
+                {
+                    var d6 = ScriptableObject.CreateInstance<AS_Layout>();
+                    layout.lineArrive = d6.lineArrive;
+                    Object.DestroyImmediate(d6);
+                }
+                layout.layoutVersion = 6;
+                EditorUtility.SetDirty(layout);
+            }
 
             var lit = Shader.Find("Universal Render Pipeline/Lit");
             var unlit = Shader.Find("Universal Render Pipeline/Unlit");

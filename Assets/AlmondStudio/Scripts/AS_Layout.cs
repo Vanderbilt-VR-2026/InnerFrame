@@ -228,7 +228,7 @@ namespace InnerFrame.AlmondStudio
 
         [Header("Lines (ours, placeholders) and hints")]
         public string hintTitle = "Saint-Rémy, February 1890";
-        public string lineArrive = "A letter from Theo. A boy, and they have named him Vincent.";
+        public string lineArrive = "A letter from Theo! My hands are shaking. Will you read it to me?";
         public string linePaint = "Slowly. Let each one open.";
         public string lineDone = "Now I know what to paint for his room.";
         public string hintOpen = "Open the window";

@@ -20,6 +20,8 @@ namespace InnerFrame.AlmondStudio
             go.transform.SetParent(parent, false);
             var canvas = go.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.WorldSpace;
+            // a world-space canvas draws its text at 1 pixel per unit (1 mm here): blurry up close in a headset
+            go.AddComponent<CanvasScaler>().dynamicPixelsPerUnit = 4f;
             var rt = (RectTransform)go.transform;
             rt.sizeDelta = new Vector2(300f, 390f);
             rt.localScale = Vector3.one * 0.001f;   // 1 unit = 1 mm
@@ -40,11 +42,15 @@ namespace InnerFrame.AlmondStudio
             Stretch(view.text.rectTransform, 24f);
             view.text.font = font != null ? font : Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             view.text.fontSize = 17;
+            // the whole letter must fit on the sheet: shrink to fit (17 mm down to 11)
+            view.text.resizeTextForBestFit = true;
+            view.text.resizeTextMaxSize = 17;
+            view.text.resizeTextMinSize = 11;
             view.text.lineSpacing = 1.15f;
             view.text.color = new Color(0.28f, 0.17f, 0.09f);
             view.text.alignment = TextAnchor.UpperLeft;
             view.text.horizontalOverflow = HorizontalWrapMode.Wrap;
-            view.text.verticalOverflow = VerticalWrapMode.Overflow;
+            view.text.verticalOverflow = VerticalWrapMode.Truncate;
             go.SetActive(false);
             return view;
         }

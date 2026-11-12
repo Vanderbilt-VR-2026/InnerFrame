@@ -88,6 +88,13 @@ namespace InnerFrame.AlmondStudio
         [Tooltip("The sky's radius round the window.")] public float skyRadius = 40f;
         [Tooltip("The camera's clear colour (only seen if the sky is missing).")] public Color skyBehind = new Color(0.486f, 0.682f, 0.686f);
         public Color groundColour = new Color(0.55f, 0.6f, 0.38f);
+        [Tooltip("The garden ground outside. Off: only painted sky behind the branches, as in Almond Blossom (which has no ground).")] public bool showGround = false;
+        [Tooltip("The sky's four paints (AS_Sky): turquoise (most), deeper blue-green, pale, teal. From Almond Blossom; Build writes them to AS_Sky.mat.")]
+        public Color[] skyPaints = { new Color(0.470f, 0.730f, 0.735f), new Color(0.300f, 0.560f, 0.640f), new Color(0.650f, 0.830f, 0.800f), new Color(0.380f, 0.660f, 0.640f) };
+        [Tooltip("Sky strokes round the full circle (more = smaller strokes).")] public float skyStrokes = 140f;
+        [Tooltip("Sky stroke length and width, in stroke cells.")] public float skyStrokeLength = 1.5f, skyStrokeWidth = 0.42f;
+        [Tooltip("Ridge and bristle marks in each sky stroke (0-1).")] [Range(0f, 1f)] public float skyStrokeRidge = 0.5f;
+        [Tooltip("How much deeper the sky gets toward the top (0-1).")] [Range(0f, 1f)] public float skyDeeperTop = 0.35f;
 
         [Header("Following a branch with the brush's beam (degrees from the beam)")]
         [Tooltip("How close the beam must come to a branch's glowing dot to start on it.")] public float startToleranceDeg = 4f;
@@ -287,6 +294,18 @@ namespace InnerFrame.AlmondStudio
         [Tooltip("Metres; the width follows the painting (73.3 x 92.4 cm).")] public float endPaintingHeight = 0.62f;
         [Tooltip("Leans back against the easel, degrees.")] public float endPaintingTilt = 8f;
         public float endPaintingSeconds = 2f;
+
+        [Header("The ending: he turns to his easel, Almond Blossom appears, then the epilogue")]
+        [Tooltip("Seconds of bloom and petals before he turns to his easel.")] public float endEaselDelay = 7f;
+        [Tooltip("Said as he turns to the easel.")] public string lineEasel = "Come, look.";
+        [Tooltip("The hint then.")] public string hintTurn = "Turn around";
+        [Tooltip("The epilogue comes when you look at the painting (within this angle, degrees)...")] public float endLookDegrees = 30f;
+        [Tooltip("...or after this many seconds anyway.")] public float endEpilogueWait = 15f;
+        public string epilogueTitle = "Almond Blossom, Saint-R\u00e9my, February 1890";
+        [Tooltip("Facts from the Van Gogh Museum's page on Almond Blossom (checked 12 Nov 2026).")]
+        [TextArea(3, 8)] public string epilogueText =
+            "Vincent painted these branches of white almond blossom against a blue sky as a gift for his newborn nephew. He meant it to hang in Theo and Jo's bedroom; they gave it a place of honour above the piano in their Paris home.\n\nThe boy, Vincent Willem van Gogh, grew up to found the Van Gogh Museum in Amsterdam, where Almond Blossom hangs today.";
+        public string epilogueCredit = "Vincent van Gogh, Almond Blossom, 1890. Van Gogh Museum, Amsterdam (Vincent van Gogh Foundation)";
 
         public float Springing => windowTop - windowWidth / 2f;
         public Vector3 WindowCentreInner => new Vector3(0f, (windowBottom + windowTop) * 0.5f, roomDepth);

@@ -278,8 +278,11 @@ namespace InnerFrame.AlmondStudio
             var sky = Prim(world, PrimitiveType.Sphere, "Sky", layout.WindowCentreOuter, Vector3.one * layout.skyRadius * 2f, skyMaterial);
             DestroyImmediate(sky.GetComponent<Collider>());
             sky.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            var ground = Box(world, "Garden ground", new Vector3(0f, -0.06f, D + T + 6f), new Vector3(24f, 0.1f, 12f), groundMaterial, collider: false);
-            ground.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            if (layout.showGround)
+            {
+                var ground = Box(world, "Garden ground", new Vector3(0f, -0.06f, D + T + 6f), new Vector3(24f, 0.1f, 12f), groundMaterial, collider: false);
+                ground.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            }
             var branches = AS_Branches.Load(branchesJson);
             AS_Tree tree = null;
             var guides = new GameObject("Guides").AddComponent<AS_Guides>();
@@ -327,6 +330,7 @@ namespace InnerFrame.AlmondStudio
             Game.letterInHand = handLetter;
             Game.letterView = AS_LetterView.Make(world, letterSheet != null ? letterSheet.GetTexture("_BaseMap") : null, ui != null ? ui.font : null);
             Game.endPainting = EndPainting(world);
+            Game.epilogue = AS_EpilogueView.Make(world, almondBlossom != null ? almondBlossom.GetTexture("_BaseMap") : null, ui != null ? ui.font : null);
         }
 
         /// <summary>A painted casement: one picture (panes cut out) on a leaf that swings on its hinge, with the same grab

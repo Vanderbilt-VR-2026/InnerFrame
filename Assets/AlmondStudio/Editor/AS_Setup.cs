@@ -224,6 +224,14 @@ namespace InnerFrame.AlmondStudio.EditorTools
             boot.bark = Mat("AS_Bark", barkShader);
             boot.ink = Mat("AS_Ink", inkShader);
             boot.skyMaterial = Mat("AS_Sky", skyShader);
+            // the painted sky's paints and strokes, from the layout (Almond Blossom's sky)
+            for (int i = 0; i < 4 && i < layout.skyPaints.Length; i++) boot.skyMaterial.SetColor("_C" + i, layout.skyPaints[i]);
+            boot.skyMaterial.SetFloat("_Dabs", layout.skyStrokes);
+            boot.skyMaterial.SetFloat("_Length", layout.skyStrokeLength);
+            boot.skyMaterial.SetFloat("_Width", layout.skyStrokeWidth);
+            boot.skyMaterial.SetFloat("_Ridge", layout.skyStrokeRidge);
+            boot.skyMaterial.SetFloat("_Top", layout.skyDeeperTop);
+            EditorUtility.SetDirty(boot.skyMaterial);
             boot.blossom = Mat("AS_Blossom", blossomShader);
             var atlas = AssetDatabase.LoadAssetAtPath<Texture2D>(AtlasPath);
             if (atlas == null) Debug.LogWarning("[AS Setup] No blossom atlas at " + AtlasPath + "; the blossoms will be white squares.");

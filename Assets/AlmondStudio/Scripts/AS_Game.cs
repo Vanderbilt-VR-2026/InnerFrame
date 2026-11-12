@@ -26,6 +26,7 @@ namespace InnerFrame.AlmondStudio
         [Tooltip("Theo's letter in Vincent's hand (taken in Arrive).")] public Transform letterInHand;
         public AS_LetterView letterView;
         [Tooltip("Almond Blossom on his easel, shown at the end.")] public GameObject endPainting;
+        [Tooltip("The epilogue card: the painting and what became of it.")] public AS_EpilogueView epilogue;
         public AS_IInput Input { get; set; }
 
         public AS_Branch[] Branches { get; set; }
@@ -59,6 +60,8 @@ namespace InnerFrame.AlmondStudio
             }
             if (letterInHand != null) letterInHand.gameObject.SetActive(true);
             if (letterView != null) letterView.Hide(atOnce: true);
+            if (epilogue != null) epilogue.Hide();
+            endPhase = 0;
             if (endPainting != null)
             {
                 // its full size, read once (a restart in the middle of growing in must not keep the half size)
@@ -111,11 +114,13 @@ namespace InnerFrame.AlmondStudio
                     guides.Show(true);
                     break;
                 case AS_State.Done:
-                    Hint(layout.hintDone);
+                    // the bloom and the petals first; the easel and the epilogue follow (Update)
+                    Hint(null);
                     guides.Show(false);
                     Pose(layout.vincentHappyClip);
                     Say(layout.lineDone);
-                    if (endPainting != null) { endPainting.SetActive(true); endPainting.transform.localScale = Vector3.zero; }
+                    endPhase = 0;
+                    if (endPainting != null) endPainting.SetActive(false);
                     Input?.Haptic(0.5f, 0.3f);
                     break;
             }
@@ -171,8 +176,7 @@ namespace InnerFrame.AlmondStudio
                     break;
                 case AS_State.Done:
                     guides.HideBeam();
-                    if (endPainting != null)   // Almond Blossom grows in on his easel
-                        endPainting.transform.localScale = endPaintingScale * Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(stateTime / layout.endPaintingSeconds));
+                    Ending();
                     break;
             }
             HoldAndTurn(dt);
@@ -316,6 +320,53 @@ namespace InnerFrame.AlmondStudio
                 float y = Mathf.MoveTowardsAngle(e.y, turnTo, layout.vincentTurnSpeed * dt);
                 if (!Mathf.Approximately(y, e.y)) vincent.transform.rotation = Quaternion.Euler(e.x, y, e.z);
             }
+        }
+
+        // ------------------------------------------------------------------------------------------------ the ending
+        int endPhase;      // Done: 0 the bloom, 1 he turns to his easel and Almond Blossom appears, 2 the epilogue
+        float endPhaseAt;
+
+        /// <summary>After the bloom (endEaselDelay): he turns to his easel, where Almond Blossom grows in, and says
+        /// lineEasel; hint "Turn around". When you look at it (endLookDegrees) or after endEpilogueWait, the epilogue card.</summary>
+        void Ending()
+        {
+            var cam = Camera.main;
+            if (endPhase == 0 && stateTime > layout.endEaselDelay)
+            {
+                endPhase = 1; endPhaseAt = stateTime;
+                if (endPainting != null)
+                {
+                    endPainting.SetActive(true);
+                    endPainting.transform.localScale = Vector3.zero;
+                    if (vincent != null) turnTo = YawTo(endPainting.transform.position);
+                }
+                Pose(layout.vincentRestClip);
+                Say(layout.lineEasel);
+                Hint(layout.hintTurn);
+            }
+            else if (endPhase == 1)
+            {
+                float t = stateTime - endPhaseAt;
+                if (endPainting != null)   // Almond Blossom grows in on his easel
+                    endPainting.transform.localScale = endPaintingScale * Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / layout.endPaintingSeconds));
+                bool looking = endPainting != null && cam != null &&
+                               Vector3.Angle(cam.transform.forward, endPainting.transform.position - cam.transform.position) < layout.endLookDegrees;
+                if ((looking && t > layout.endPaintingSeconds) || t > layout.endEpilogueWait || endPainting == null)
+                {
+                    endPhase = 2;
+                    Hint(null);
+                    if (ui != null) ui.Clear();
+                    if (epilogue != null && cam != null) epilogue.Show(cam.transform, layout.epilogueTitle, layout.epilogueText, layout.epilogueCredit);
+                    Input?.Haptic(0.3f, 0.15f);
+                }
+            }
+        }
+
+        /// <summary>His yaw to face a point.</summary>
+        float YawTo(Vector3 point)
+        {
+            var to = point - vincent.transform.position;
+            return Mathf.Atan2(to.x, to.z) * Mathf.Rad2Deg;
         }
 
         /// <summary>His yaw part-way (pointTurn) from facing the room to facing the window's middle.</summary>

@@ -88,6 +88,17 @@ namespace InnerFrame.AlmondStudio.EditorTools
                 EditorUtility.SetDirty(layout);
             }
 
+            if (layout.layoutVersion < 5)
+            {
+                // version 5 (2026-11-11 20:40): thinner casement bars, as in the painting
+                var d5 = ScriptableObject.CreateInstance<AS_Layout>();
+                layout.windowStile = d5.windowStile;
+                layout.windowBar = d5.windowBar;
+                Object.DestroyImmediate(d5);
+                layout.layoutVersion = 5;
+                EditorUtility.SetDirty(layout);
+            }
+
             var lit = Shader.Find("Universal Render Pipeline/Lit");
             var unlit = Shader.Find("Universal Render Pipeline/Unlit");
             var glowShader = Shader.Find("InnerFrame/AlmondStudio/Glow");
@@ -168,8 +179,19 @@ namespace InnerFrame.AlmondStudio.EditorTools
             Paint(boot.frame, "AS_Wood.jpg", 0.8f, "8C9A8C");          // grey-green: casements, beams, door, boxes
             Paint(boot.wood, "AS_Ceiling.jpg", 0.6f, "B5793A");       // the ivory strokes warmed to his yellow-brown wood
             // the window's frame and the sill, after Window in the Studio: a lighter grey-green frame, a pale sill
-            boot.windowFrame = Lit("AS_WindowFrame", surface, "8FA08A");
-            Paint(boot.windowFrame, "AS_Ceiling.jpg", 0.8f, "8FA08A");
+            boot.windowFrame = Lit("AS_WindowFrame", surface, "71846C");
+            Paint(boot.windowFrame, "AS_Ceiling.jpg", 0.8f, "71846C");
+            // the pictures on the north wall show their own corners of the painting itself
+            var painting = AssetDatabase.LoadAssetAtPath<Texture2D>(ReferenceFolder + "/AS_WindowInTheStudio.jpg");
+            if (painting != null)
+            {
+                boot.wallPictures = Lit("AS_WallPictures", surface, "FFFFFF");
+                boot.wallPictures.SetTexture("_BaseMap", painting);
+                boot.wallPictures.SetTextureScale("_BaseMap", Vector2.one);
+                boot.wallPictures.SetTextureOffset("_BaseMap", Vector2.zero);
+                EditorUtility.SetDirty(boot.wallPictures);
+            }
+            else { boot.wallPictures = null; Debug.LogWarning("[AS Setup] No " + ReferenceFolder + "/AS_WindowInTheStudio.jpg: the wall pictures stay blank."); }
             boot.sillTop = Lit("AS_Sill", surface, "EEE8DA");
             Paint(boot.sillTop, "AS_Ceiling.jpg", 0.8f, "E9E6DC");
             boot.references = new Texture[layout.compareViews.Length];

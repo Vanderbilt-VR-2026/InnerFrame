@@ -7,6 +7,17 @@ namespace InnerFrame.AlmondStudio
     /// Tools > InnerFrame > Almond Studio > Build). Metres and degrees. The room's floor is at y = 0, x runs east, z north;
     /// the window is centred on the north wall, whose inner face is at z = roomDepth.
     /// </summary>
+    /// <summary>One of the pictures pinned on the north wall, cut from Window in the Studio itself: where it hangs, how
+    /// tall, and its four corners in the painting (fractions of the picture's width and height, from its top-left).</summary>
+    [System.Serializable]
+    public class AS_WallPicture
+    {
+        public string name;
+        [Tooltip("Its middle on the north wall: x across, y up (metres).")] public Vector2 centre;
+        [Tooltip("Metres; the width follows the corners' shape in the painting.")] public float height = 0.6f;
+        public Vector2 topLeft, topRight, bottomRight, bottomLeft;
+    }
+
     [System.Serializable]
     public class AS_View
     {
@@ -105,12 +116,28 @@ namespace InnerFrame.AlmondStudio
         [Tooltip("Each object's spot, left to right as seen from the room: x across (0 = the glass's middle), y = how far from the room face toward the glass (the sill runs from -sillOverhang to about 0.21). After Window in the Studio: the jar alone at the front left; the others grouped right, staggered.")]
         public Vector2[] sillItemSpots = { new Vector2(-0.36f, 0.01f), new Vector2(-0.02f, 0.08f), new Vector2(0.12f, 0.14f), new Vector2(0.25f, 0.05f), new Vector2(0.37f, 0.14f) };
         [Tooltip("Each object's turn, degrees.")] public float[] sillItemYaw = { 0f, 20f, -10f, 15f, 0f };
+        [Tooltip("The brush stands in this sill object (0-based, left to right; 3 = the glass). -1: it lies on the sill. Only when the model is cut.")]
+        public int brushStandsIn = 3;
+
+        [Header("The pictures on the north wall, cut from Window in the Studio (Textures/Reference/AS_WindowInTheStudio.jpg)")]
+        public AS_WallPicture[] wallPictures =
+        {
+            // corners measured on the 614 x 800 copy, 11 Nov; the hanging spots are the S02 ones
+            new AS_WallPicture { name = "Left, upper (reddish study)", centre = new Vector2(-1.0f, 1.9f), height = 0.67f,
+                topLeft = new Vector2(0.003f, 0.240f), topRight = new Vector2(0.176f, 0.250f), bottomRight = new Vector2(0.173f, 0.473f), bottomLeft = new Vector2(0.003f, 0.465f) },
+            new AS_WallPicture { name = "Left, lower (green study)", centre = new Vector2(-0.95f, 1.12f), height = 0.56f,
+                topLeft = new Vector2(0.003f, 0.525f), topRight = new Vector2(0.137f, 0.531f), bottomRight = new Vector2(0.137f, 0.738f), bottomLeft = new Vector2(0.003f, 0.731f) },
+            new AS_WallPicture { name = "Right, upper (framed drawing)", centre = new Vector2(1.52f, 2.08f), height = 0.64f,
+                topLeft = new Vector2(0.834f, 0.268f), topRight = new Vector2(0.961f, 0.265f), bottomRight = new Vector2(0.967f, 0.416f), bottomLeft = new Vector2(0.840f, 0.414f) },
+            new AS_WallPicture { name = "Right, lower (drawing of a figure)", centre = new Vector2(1.27f, 1.19f), height = 0.76f,
+                topLeft = new Vector2(0.754f, 0.475f), topRight = new Vector2(0.974f, 0.466f), bottomRight = new Vector2(0.974f, 0.631f), bottomLeft = new Vector2(0.765f, 0.638f) },
+        };
 
         [Header("Window frame (after the painting)")]
         [Tooltip("The broad frame round the opening at the glass, and the fanlight's arc.")] public float windowFrameWidth = 0.065f;
         [Tooltip("The transom on the springing line.")] public float windowTransom = 0.075f;
-        [Tooltip("The casements' stiles and rails.")] public float windowStile = 0.05f;
-        [Tooltip("The glazing bars between the small panes.")] public float windowBar = 0.026f;
+        [Tooltip("The casements' stiles and rails.")] public float windowStile = 0.04f;
+        [Tooltip("The glazing bars between the small panes.")] public float windowBar = 0.022f;
         [Tooltip("The half-round hub the fanlight's bars radiate from.")] public float windowHub = 0.075f;
 
         [Header("Blossoms on the Tripo tree (AS_Blossoms)")]

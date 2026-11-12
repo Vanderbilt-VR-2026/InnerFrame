@@ -21,7 +21,7 @@ namespace InnerFrame.AlmondStudio
     {
         public AS_Layout layout;
         [Tooltip("Assets/AlmondStudio/Data/AS_Branches.json: the branch paths.")] public TextAsset branchesJson;
-        public Material wall, floor, ceiling, wood, frame, windowFrame, sillTop, revealLeft, revealRight, canvas, brushHead, vincent, bark, ink, skyMaterial, groundMaterial, glow, guideDot, blossom;
+        public Material wall, floor, ceiling, wood, frame, windowFrame, sillTop, wallPictures, revealLeft, revealRight, canvas, brushHead, vincent, bark, ink, skyMaterial, groundMaterial, glow, guideDot, blossom;
         [Tooltip("VG_DialogueUI.prefab: Vincent's words and the hint, as in every scene.")] public GameObject uiPrefab;
         public VG_DialogueSettings uiSettings;
         [Tooltip("The comparison pictures, one per AS_Layout.compareViews entry (Textures/Reference), set by Build.")] public Texture[] references = new Texture[0];
@@ -141,8 +141,11 @@ namespace InnerFrame.AlmondStudio
             Box(world, "Boxes", new Vector3(W / 2f - 0.3f, 0.72f, D - 0.4f), new Vector3(0.4f, 0.24f, 0.45f), frame);
             // his works: two each side of the window on the north wall, as in the painting; two on the west wall
             // placed where S02 shows them, seen from its viewpoint (two left of the window, two right)
-            foreach (var (x, y, w2, h2) in new[] { (-1.0f, 1.9f, 0.7f, 0.67f), (-0.95f, 1.12f, 0.5f, 0.56f), (1.52f, 2.08f, 0.46f, 0.64f), (1.27f, 1.19f, 0.7f, 0.76f) })
-                Box(world, "Canvas N", new Vector3(x, y, D - 0.02f), new Vector3(w2, h2, 0.03f), canvas);
+            if (wallPictures != null && wallPictures.GetTexture("_BaseMap") != null && layout.wallPictures.Length > 0)
+                foreach (var pic in layout.wallPictures) WallPicture(world, pic, D);
+            else
+                foreach (var (x, y, w2, h2) in new[] { (-1.0f, 1.9f, 0.7f, 0.67f), (-0.95f, 1.12f, 0.5f, 0.56f), (1.52f, 2.08f, 0.46f, 0.64f), (1.27f, 1.19f, 0.7f, 0.76f) })
+                    Box(world, "Canvas N", new Vector3(x, y, D - 0.02f), new Vector3(w2, h2, 0.03f), canvas);
             foreach (var (z, w2, h2) in new[] { (1.5f, 0.6f, 0.5f), (2.7f, 0.45f, 0.6f) })
                 Box(world, "Canvas W", new Vector3(-W / 2f + 0.02f, 1.7f, z), new Vector3(0.03f, h2, w2), canvas);
 
@@ -177,7 +180,15 @@ namespace InnerFrame.AlmondStudio
             win.Wire();
 
             // the brush on the sill, tip toward the window
-            var brush = Brush(world, new Vector3(0.42f, wb + 0.07f, D + 0.04f), Quaternion.Euler(0f, -60f, 0f), out var tip);
+            // the brush: standing in one of the sill objects (the cut still life), else lying on the sill
+            Vector3 brushAt = new Vector3(0.42f, wb + 0.07f, D + 0.04f);
+            Quaternion brushRot = Quaternion.Euler(0f, -60f, 0f);
+            if (brushStand.HasValue)
+            {
+                brushRot = Quaternion.Euler(0f, 200f, 0f) * Quaternion.Euler(-75f, 0f, 0f);   // head up, leaning a little toward the room
+                brushAt = brushStand.Value + new Vector3(0f, 0.015f, 0f) + brushRot * new Vector3(0f, 0f, 0.13f);   // the handle's end in the glass
+            }
+            var brush = Brush(world, brushAt, brushRot, out var tip);
             brushT = brush.transform;
             brushHome = new Pose(brushT.position, brushT.rotation);
             brush.selectExited.AddListener(_ => ReturnBrush());
@@ -598,9 +609,42 @@ namespace InnerFrame.AlmondStudio
                 go.transform.SetLocalPositionAndRotation(new Vector3(spot.x, sillY, roomFace + spot.y), Quaternion.Euler(0f, yaw, 0f));
                 go.AddComponent<MeshFilter>().sharedMesh = piece;
                 go.AddComponent<MeshRenderer>().sharedMaterials = mats;
+                if (c == layout.brushStandsIn) brushStand = go.transform.position;
             }
             Debug.Log($"[AS] Sill still life cut into {n} pieces and placed as in the painting (AS_Layout.sillItemSpots).");
             return true;
+        }
+
+        Vector3? brushStand;   // where the brush stands, if the still life was cut (SplitSill)
+
+        /// <summary>A picture pinned on the north wall, showing its own part of the painting: a 2 cm slab whose front face
+        /// maps the four corners in AS_Layout.wallPictures onto AS_WindowInTheStudio.jpg; its width follows that part's shape.</summary>
+        void WallPicture(Transform parent, AS_WallPicture pic, float wallFace)
+        {
+            var tex = wallPictures.GetTexture("_BaseMap");
+            // the corners in texture UVs (v up) and the part's shape in the painting's pixels
+            Vector2 Uv(Vector2 f) => new Vector2(f.x, 1f - f.y);
+            Vector2[] uvc = { Uv(pic.topLeft), Uv(pic.topRight), Uv(pic.bottomRight), Uv(pic.bottomLeft) };
+            float pw = ((pic.topRight - pic.topLeft).magnitude + (pic.bottomRight - pic.bottomLeft).magnitude) / 2f * tex.width;
+            float ph = ((pic.bottomLeft - pic.topLeft).magnitude + (pic.bottomRight - pic.topRight).magnitude) / 2f * tex.height;
+            float h = pic.height, w = ph > 1f ? h * pw / ph : h, t = 0.02f;
+            // the face toward the room (-z), corners clockwise as seen from the room, then the four edges back to the wall
+            Vector3[] front = { new Vector3(-w / 2f, h / 2f, -t), new Vector3(w / 2f, h / 2f, -t), new Vector3(w / 2f, -h / 2f, -t), new Vector3(-w / 2f, -h / 2f, -t) };
+            var v = new List<Vector3>(front); var uv = new List<Vector2>(uvc); var tri = new List<int> { 0, 1, 2, 0, 2, 3 };
+            for (int i = 0; i < 4; i++)
+            {
+                int j = (i + 1) % 4, b = v.Count;
+                v.Add(front[i] + new Vector3(0f, 0f, t)); v.Add(front[j] + new Vector3(0f, 0f, t)); v.Add(front[j]); v.Add(front[i]);
+                uv.Add(uvc[i]); uv.Add(uvc[j]); uv.Add(uvc[j]); uv.Add(uvc[i]);
+                tri.AddRange(new[] { b, b + 1, b + 2, b, b + 2, b + 3 });
+            }
+            var mesh = new Mesh { name = pic.name + " (runtime)" };
+            mesh.SetVertices(v); mesh.SetUVs(0, uv); mesh.SetTriangles(tri, 0); mesh.RecalculateNormals(); mesh.RecalculateBounds();
+            var go = new GameObject("Picture: " + pic.name);
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = new Vector3(pic.centre.x, pic.centre.y, wallFace);
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            go.AddComponent<MeshRenderer>().sharedMaterial = wallPictures;
         }
 
         const float TableTop = 0.765f;   // the table top's upper face (0.74 + half its 0.05)

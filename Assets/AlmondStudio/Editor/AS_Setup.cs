@@ -30,6 +30,8 @@ namespace InnerFrame.AlmondStudio.EditorTools
         const string EaselModel = "Assets/VanGogh/Art/Props/VG_Easel.fbx";
         const string EaselMaterial = "Assets/VanGogh/Art/Props/M_Easel.mat";
         const string SillModel = Root + "/Art/Props/AS_SillStillLife.fbx";   // Serena's Tripo model, 11 Nov
+        const string ChestModel = Root + "/Art/Props/AS_ChestBoxes.fbx";     // Serena's Tripo model, 11 Nov
+        const string WindowFolder = Root + "/Textures/Window";               // the painted window (ChatGPT, panes cut out)
         const string XrOriginPrefab = "Assets/Samples/XR Interaction Toolkit/3.3.2/Starter Assets/Prefabs/XR Origin (XR Rig).prefab";
         const string XrOriginName = "XR Origin (XR Rig)";
         const string DialoguePrefab = "Assets/VanGogh/Prefabs/VG_DialogueUI.prefab";
@@ -204,6 +206,13 @@ namespace InnerFrame.AlmondStudio.EditorTools
             boot.chairPrefab = ChairFromBedroom();
             // the still life is cut into its objects at runtime, so its mesh must be readable
             if (AssetImporter.GetAtPath(SillModel) is ModelImporter sillImp && !sillImp.isReadable) { sillImp.isReadable = true; sillImp.SaveAndReimport(); }
+            boot.chestModel = AssetDatabase.LoadAssetAtPath<GameObject>(ChestModel);
+            if (boot.chestModel == null) Debug.Log("[AS Setup] No chest at " + ChestModel + "; the corner keeps its boxes.");
+            boot.casementLeft = Cutout("AS_CasementL", surface, "AS_CasementL.png");
+            boot.casementRight = Cutout("AS_CasementR", surface, "AS_CasementR.png");
+            boot.fanlightPainted = Cutout("AS_Fanlight", surface, "AS_Fanlight.png");
+            if (boot.casementLeft == null || boot.casementRight == null || boot.fanlightPainted == null)
+                Debug.Log("[AS Setup] The painted window needs AS_CasementL.png, AS_CasementR.png and AS_Fanlight.png in " + WindowFolder + "; the built window is used.");
             boot.sillModel = AssetDatabase.LoadAssetAtPath<GameObject>(SillModel);
             if (boot.sillModel == null) Debug.Log("[AS Setup] No sill still life at " + SillModel + "; the sill keeps its cylinders.");
             boot.easelModel = AssetDatabase.LoadAssetAtPath<GameObject>(EaselModel);
@@ -297,6 +306,32 @@ namespace InnerFrame.AlmondStudio.EditorTools
 
         static bool HasMesh(GameObject g) =>
             g.GetComponentsInChildren<MeshFilter>(true).Any(f => f.sharedMesh != null) && g.GetComponentsInChildren<Renderer>(true).Length > 0;
+
+        /// <summary>A two-sided material cut out by the picture's alpha (the painted window's panes and background).</summary>
+        static Material Cutout(string name, Shader shader, string file)
+        {
+            string path = WindowFolder + "/" + file;
+            var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            if (tex == null) return null;
+            var imp = (TextureImporter)AssetImporter.GetAtPath(path);
+            if (!imp.alphaIsTransparency || imp.wrapMode != TextureWrapMode.Clamp || imp.maxTextureSize != 1024 || imp.alphaSource != TextureImporterAlphaSource.FromInput)
+            {
+                imp.alphaSource = TextureImporterAlphaSource.FromInput; imp.alphaIsTransparency = true;
+                imp.wrapMode = TextureWrapMode.Clamp; imp.maxTextureSize = 1024; imp.mipmapEnabled = true;
+                imp.SaveAndReimport();
+            }
+            var m = Mat(name, shader);
+            m.SetTexture("_BaseMap", tex);
+            m.SetTextureScale("_BaseMap", Vector2.one);
+            m.SetColor("_BaseColor", Color.white);
+            m.SetFloat("_Cull", 0f);
+            m.SetFloat("_Cutoff", 0.5f);
+            m.SetFloat("_AlphaClip", 1f);
+            m.EnableKeyword("_ALPHATEST_ON");
+            m.renderQueue = (int)UnityEngine.Rendering.RenderQueue.AlphaTest;
+            EditorUtility.SetDirty(m);
+            return m;
+        }
 
         static Material Mat(string name, Shader shader)
         {

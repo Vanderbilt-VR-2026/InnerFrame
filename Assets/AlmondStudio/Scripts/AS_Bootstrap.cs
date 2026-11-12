@@ -21,13 +21,14 @@ namespace InnerFrame.AlmondStudio
     {
         public AS_Layout layout;
         [Tooltip("Assets/AlmondStudio/Data/AS_Branches.json: the branch paths.")] public TextAsset branchesJson;
-        public Material wall, floor, ceiling, wood, frame, windowFrame, sillTop, wallPictures, revealLeft, revealRight, canvas, brushHead, vincent, bark, ink, skyMaterial, groundMaterial, glow, guideDot, blossom;
+        public Material wall, floor, ceiling, wood, frame, windowFrame, sillTop, wallPictures, casementLeft, casementRight, fanlightPainted, revealLeft, revealRight, canvas, brushHead, vincent, bark, ink, skyMaterial, groundMaterial, glow, guideDot, blossom;
         [Tooltip("VG_DialogueUI.prefab: Vincent's words and the hint, as in every scene.")] public GameObject uiPrefab;
         public VG_DialogueSettings uiSettings;
         [Tooltip("The comparison pictures, one per AS_Layout.compareViews entry (Textures/Reference), set by Build.")] public Texture[] references = new Texture[0];
         [Tooltip("The Bedroom's chair, saved for this scene by AS_Setup (Prefabs/AS_Chair.prefab). Boxes if missing.")] public GameObject chairPrefab;
         [Tooltip("Vincent's easel (VanGogh/Art/Props/VG_Easel.fbx) and its painted material M_Easel. Boxes if missing.")] public GameObject easelModel;
         [Tooltip("The sill's five objects as one Tripo model (Art/Props/AS_SillStillLife.fbx). Cylinders if missing.")] public GameObject sillModel;
+        [Tooltip("The chest with its boxes (Art/Props/AS_ChestBoxes.fbx). Boxes if missing.")] public GameObject chestModel;
         public Material easelMaterial;
 
         public AS_Game Game { get; private set; }
@@ -137,8 +138,13 @@ namespace InnerFrame.AlmondStudio
             // S03: the door a little east of the middle of the south wall, the easel west of it (both seen facing south)
             Door(world, new Vector3(0.3f, 0f, 0f), 1.0f, 2.15f);   // grey-green, as in S03
             Easel(world, new Vector3(-1.15f, 0f, 0.35f));
-            Box(world, "Chest", new Vector3(W / 2f - 0.3f, 0.3f, D - 0.4f), new Vector3(0.5f, 0.6f, 0.6f), wood);
-            Box(world, "Boxes", new Vector3(W / 2f - 0.3f, 0.72f, D - 0.4f), new Vector3(0.4f, 0.24f, 0.45f), frame);
+            if (chestModel != null)
+                PropModel(world, "Chest and boxes", chestModel, layout.chestModelEuler, layout.chestModelHeight, new Vector3(layout.chestSpot.x, 0f, layout.chestSpot.y));
+            else
+            {
+                Box(world, "Chest", new Vector3(W / 2f - 0.3f, 0.3f, D - 0.4f), new Vector3(0.5f, 0.6f, 0.6f), wood);
+                Box(world, "Boxes", new Vector3(W / 2f - 0.3f, 0.72f, D - 0.4f), new Vector3(0.4f, 0.24f, 0.45f), frame);
+            }
             // his works: two each side of the window on the north wall, as in the painting; two on the west wall
             // placed where S02 shows them, seen from its viewpoint (two left of the window, two right)
             if (wallPictures != null && wallPictures.GetTexture("_BaseMap") != null && layout.wallPictures.Length > 0)
@@ -167,16 +173,29 @@ namespace InnerFrame.AlmondStudio
             // after the painting: a broad grey-green frame round the opening at the glass, a heavy transom on the
             // springing line, and the two casements inside the frame
             float fw = layout.windowFrameWidth, tr = layout.windowTransom, zc = zg;
-            float inner = ww / 2f - fw, bottom = wb + fw, top = spring - tr / 2f, hgt = top - bottom, yc = (top + bottom) / 2f;
-            var outer = new GameObject("Frame").transform;
-            outer.SetParent(win.transform, false);
-            Box(outer, "Frame L", new Vector3(-ww / 2f + fw / 2f, (wb + spring) / 2f, zc), new Vector3(fw, spring - wb, 0.06f), WF, collider: false);
-            Box(outer, "Frame R", new Vector3(ww / 2f - fw / 2f, (wb + spring) / 2f, zc), new Vector3(fw, spring - wb, 0.06f), WF, collider: false);
-            Box(outer, "Frame bottom", new Vector3(0f, wb + fw / 2f, zc), new Vector3(ww, fw, 0.06f), WF, collider: false);
-            Merge(outer);
-            Fanlight(win.transform, ww / 2f, spring, zg);
-            win.hingeLeft = Casement(win.transform, "Hinge L", new Vector3(-inner, yc, zc), +1f, inner, hgt);
-            win.hingeRight = Casement(win.transform, "Hinge R", new Vector3(inner, yc, zc), -1f, inner, hgt);
+            // the painted window (three ChatGPT pictures, panes cut out) when it is there: each casement is one picture
+            // that swings on its hinge, the fanlight one picture above; their own painted frames replace the built ones
+            bool painted = layout.paintedWindow && casementLeft != null && casementRight != null && fanlightPainted != null;
+            float inner = painted ? ww / 2f : ww / 2f - fw, bottom = painted ? wb : wb + fw, top = spring - tr / 2f, hgt = top - bottom, yc = (top + bottom) / 2f;
+            if (painted)
+            {
+                var fan = Quad(win.transform, "Fanlight (painted)", 2f * (ww / 2f), spring + ww / 2f - top, fanlightPainted);
+                fan.localPosition = new Vector3(0f, (top + spring + ww / 2f) / 2f, zg);
+                win.hingeLeft = PaintedCasement(win.transform, "Hinge L", new Vector3(-inner, yc, zc), +1f, inner, hgt, casementLeft);
+                win.hingeRight = PaintedCasement(win.transform, "Hinge R", new Vector3(inner, yc, zc), -1f, inner, hgt, casementRight);
+            }
+            else
+            {
+                var outer = new GameObject("Frame").transform;
+                outer.SetParent(win.transform, false);
+                Box(outer, "Frame L", new Vector3(-ww / 2f + fw / 2f, (wb + spring) / 2f, zc), new Vector3(fw, spring - wb, 0.06f), WF, collider: false);
+                Box(outer, "Frame R", new Vector3(ww / 2f - fw / 2f, (wb + spring) / 2f, zc), new Vector3(fw, spring - wb, 0.06f), WF, collider: false);
+                Box(outer, "Frame bottom", new Vector3(0f, wb + fw / 2f, zc), new Vector3(ww, fw, 0.06f), WF, collider: false);
+                Merge(outer);
+                Fanlight(win.transform, ww / 2f, spring, zg);
+                win.hingeLeft = Casement(win.transform, "Hinge L", new Vector3(-inner, yc, zc), +1f, inner, hgt);
+                win.hingeRight = Casement(win.transform, "Hinge R", new Vector3(inner, yc, zc), -1f, inner, hgt);
+            }
             win.Wire();
 
             // the brush on the sill, tip toward the window
@@ -254,6 +273,79 @@ namespace InnerFrame.AlmondStudio
             Game.brushTip = tip;
             Game.ui = ui;
             Game.Branches = branches;
+        }
+
+        /// <summary>A painted casement: one picture (panes cut out) on a leaf that swings on its hinge, with the same grab
+        /// collider as the built casement.</summary>
+        Transform PaintedCasement(Transform parent, string name, Vector3 hingeAt, float dir, float width, float height, Material m)
+        {
+            var hinge = new GameObject(name).transform;
+            hinge.SetParent(parent, false);
+            hinge.localPosition = hingeAt;
+            var leaf = Quad(hinge, "Leaf (painted)", width, height, m);
+            leaf.localPosition = new Vector3(dir * width / 2f, 0f, 0f);
+            var col = leaf.gameObject.AddComponent<BoxCollider>();
+            col.size = new Vector3(width, height, 0.09f);
+            col.isTrigger = true;
+            leaf.gameObject.AddComponent<XRSimpleInteractable>();
+            return hinge;
+        }
+
+        /// <summary>A flat picture, w x h, facing the room (-z), UVs 0..1 (both sides drawn if its material culls nothing).</summary>
+        static Transform Quad(Transform parent, string name, float w, float h, Material m)
+        {
+            var mesh = new Mesh { name = name + " (runtime)" };
+            mesh.SetVertices(new List<Vector3> { new Vector3(-w / 2f, h / 2f, 0f), new Vector3(w / 2f, h / 2f, 0f), new Vector3(w / 2f, -h / 2f, 0f), new Vector3(-w / 2f, -h / 2f, 0f) });
+            mesh.SetUVs(0, new List<Vector2> { new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(1f, 0f), new Vector2(0f, 0f) });
+            mesh.SetTriangles(new[] { 0, 1, 2, 0, 2, 3 }, 0);
+            mesh.RecalculateNormals(); mesh.RecalculateBounds();
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            go.AddComponent<MeshRenderer>().sharedMaterial = m;
+            return go.transform;
+        }
+
+        /// <summary>A Tripo prop: turned by `euler`, scaled so it is `height` tall, its feet's middle at `foot`, its own
+        /// colliders dropped for one box round it; with flat shading its texture goes on an AS_Painted copy.</summary>
+        GameObject PropModel(Transform parent, string name, GameObject model, Vector3 euler, float height, Vector3 foot)
+        {
+            var root = new GameObject(name).transform;
+            root.SetParent(parent, false);
+            var m = Instantiate(model, root);
+            m.name = model.name;
+            m.transform.localRotation = Quaternion.Euler(euler);
+            var rs = m.GetComponentsInChildren<Renderer>(true);
+            if (rs.Length == 0) { Debug.LogWarning("[AS] " + name + ": the model has no renderer."); return root.gameObject; }
+            Bounds Measure() { var bb = rs[0].bounds; foreach (var r in rs) bb.Encapsulate(r.bounds); return bb; }
+            var b = Measure();
+            float k = b.size.y > 1e-5f ? height / b.size.y : 1f;
+            m.transform.localScale = Vector3.one * k;
+            b = Measure();
+            m.transform.position += new Vector3(foot.x - b.center.x, foot.y - b.min.y, foot.z - b.center.z);
+            b = Measure();
+            foreach (var c in m.GetComponentsInChildren<Collider>(true)) Destroy(c);
+            var box = root.gameObject.AddComponent<BoxCollider>();
+            box.center = root.InverseTransformPoint(b.center);
+            box.size = b.size;
+            if (layout.flatShading && wall != null)
+                foreach (var r in rs)
+                {
+                    var src = r.sharedMaterials;
+                    var dst = new Material[src.Length];
+                    for (int i = 0; i < src.Length; i++)
+                    {
+                        dst[i] = new Material(wall.shader) { name = (src[i] != null ? src[i].name : name) + " (painted)" };
+                        var tex = src[i] != null ? src[i].mainTexture : null;
+                        if (tex != null) dst[i].SetTexture("_BaseMap", tex);
+                        dst[i].SetColor("_BaseColor", Color.white);
+                    }
+                    r.sharedMaterials = dst;
+                }
+            if (b.size.y < Mathf.Min(b.size.x, b.size.z) * 0.6f)
+                Debug.LogWarning($"[AS] {name} looks flat ({b.size.x:0.00} x {b.size.y:0.00} x {b.size.z:0.00} m): it may be lying down. Change its Euler in AS_Layout (try X 270 or X 90).");
+            Debug.Log($"[AS] {name}: {model.name}, scaled x{k:0.000}, {b.size.x:0.00} m wide, {b.size.y:0.00} m tall, {b.size.z:0.00} m deep.");
+            return root.gameObject;
         }
 
         Transform Casement(Transform parent, string name, Vector3 hingeAt, float dir, float width, float height)

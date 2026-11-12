@@ -139,6 +139,13 @@ namespace InnerFrame.AlmondStudio
         [Tooltip("The casements' stiles and rails.")] public float windowStile = 0.04f;
         [Tooltip("The glazing bars between the small panes.")] public float windowBar = 0.022f;
         [Tooltip("The half-round hub the fanlight's bars radiate from.")] public float windowHub = 0.075f;
+        [Tooltip("Use the painted window (Textures/Window: AS_CasementL.png, AS_CasementR.png, AS_Fanlight.png, panes cut out by alpha) when the three pictures are there; else the built one.")]
+        public bool paintedWindow = true;
+
+        [Header("Chest with its boxes (Tripo model Art/Props/AS_ChestBoxes.fbx)")]
+        [Tooltip("Turns the model upright with its front toward the room, as for the sill still life.")] public Vector3 chestModelEuler = new Vector3(270f, 180f, 0f);
+        [Tooltip("Floor to the top box, metres: sets the model's scale.")] public float chestModelHeight = 0.85f;
+        [Tooltip("Where it stands (x, z): the north-east corner, under the right-hand pictures, as at the painting's lower right.")] public Vector2 chestSpot = new Vector2(1.8f, 3.68f);
 
         [Header("Blossoms on the Tripo tree (AS_Blossoms)")]
         [Tooltip("A blossom's petal length, metres.")] public float blossomSize = 0.07f;

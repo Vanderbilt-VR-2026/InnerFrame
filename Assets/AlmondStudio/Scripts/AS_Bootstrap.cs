@@ -558,7 +558,7 @@ namespace InnerFrame.AlmondStudio
             foreach (var x in new[] { -0.25f, 0.25f })
             {
                 var leg = Box(e, "Leg", new Vector3(x, 0.85f, 0f), new Vector3(0.04f, 1.75f, 0.04f), wood);
-                leg.transform.localRotation = Quaternion.Euler(-8f, 0f, x > 0 ? -6f : 6f);
+                leg.transform.localRotation = Quaternion.Euler(-8f, 0f, x > 0 ? 6f : -6f);   // tops lean in (an A, not a V)
             }
             var back = Box(e, "Back leg", new Vector3(0f, 0.8f, -0.25f), new Vector3(0.04f, 1.65f, 0.04f), wood);
             back.transform.localRotation = Quaternion.Euler(18f, 0f, 0f);

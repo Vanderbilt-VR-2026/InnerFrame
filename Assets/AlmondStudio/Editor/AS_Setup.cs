@@ -195,6 +195,12 @@ namespace InnerFrame.AlmondStudio.EditorTools
                 EditorUtility.SetDirty(boot.wallPictures);
             }
             else { boot.wallPictures = null; Debug.LogWarning("[AS Setup] No " + ReferenceFolder + "/AS_WindowInTheStudio.jpg: the wall pictures stay blank."); }
+            // the east and west walls' canvases, and the letter and birth card: each picture, when it is there
+            boot.sideCanvasMaterials = new Material[layout.sideCanvases.Length];
+            for (int i = 0; i < layout.sideCanvases.Length; i++)
+                boot.sideCanvasMaterials[i] = Picture("AS_Canvas" + i, surface, Root + "/Textures/Canvases", layout.sideCanvases[i].file);
+            boot.letter = Picture("AS_Letter", surface, Root + "/Textures/Table", "AS_Letter");
+            boot.birthCard = Picture("AS_BirthCard", surface, Root + "/Textures/Table", "AS_BirthCard");
             boot.sillTop = Lit("AS_Sill", surface, "EEE8DA");
             Paint(boot.sillTop, "AS_Ceiling.jpg", 0.8f, "E9E6DC");
             boot.references = new Texture[layout.compareViews.Length];
@@ -309,6 +315,23 @@ namespace InnerFrame.AlmondStudio.EditorTools
 
         static bool HasMesh(GameObject g) =>
             g.GetComponentsInChildren<MeshFilter>(true).Any(f => f.sharedMesh != null) && g.GetComponentsInChildren<Renderer>(true).Length > 0;
+
+        /// <summary>A material showing one picture whole (a canvas, a sheet of paper): `file` (.jpg/.png/.jpeg) in `folder`, or
+        /// null (logged) if it isn't there yet.</summary>
+        static Material Picture(string name, Shader shader, string folder, string file)
+        {
+            Texture2D tex = null;
+            foreach (var ext in new[] { ".jpg", ".png", ".jpeg" })
+                if (tex == null) tex = AssetDatabase.LoadAssetAtPath<Texture2D>(folder + "/" + file + ext);
+            if (tex == null) { Debug.Log("[AS Setup] No " + file + " (.jpg/.png) in " + folder + " yet: it stays blank."); return null; }
+            var m = Mat(name, shader);
+            m.SetTexture("_BaseMap", tex);
+            m.SetTextureScale("_BaseMap", Vector2.one);
+            m.SetTextureOffset("_BaseMap", Vector2.zero);
+            m.SetColor("_BaseColor", Color.white);
+            EditorUtility.SetDirty(m);
+            return m;
+        }
 
         /// <summary>A two-sided material cut out by the picture's alpha (the painted window's panes and background).</summary>
         static Material Cutout(string name, Shader shader, string file)

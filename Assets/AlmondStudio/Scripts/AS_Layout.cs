@@ -18,6 +18,19 @@ namespace InnerFrame.AlmondStudio
         public Vector2 topLeft, topRight, bottomRight, bottomLeft;
     }
 
+    /// <summary>A canvas or print on the east or west wall: a picture from Textures/Canvases on a stretched canvas with a
+    /// thin frame; its width follows the picture's shape. Blank if the picture isn't there yet.</summary>
+    [System.Serializable]
+    public class AS_SideCanvas
+    {
+        public string name;
+        [Tooltip("File name in Textures/Canvases, without extension (.jpg or .png).")] public string file;
+        [Tooltip("+1 = east wall, -1 = west wall.")] public int wall = -1;
+        [Tooltip("Its middle: z along the wall (0 = south, 4 = north) and y up, metres.")] public Vector2 centre;
+        [Tooltip("Metres.")] public float height = 0.6f;
+        [Tooltip("Width / height when there is no picture yet.")] public float blankAspect = 1.25f;
+    }
+
     [System.Serializable]
     public class AS_View
     {
@@ -118,6 +131,22 @@ namespace InnerFrame.AlmondStudio
         [Tooltip("Each object's turn, degrees.")] public float[] sillItemYaw = { 0f, 20f, -10f, 15f, 0f };
         [Tooltip("The brush stands in this sill object (0-based, left to right; 3 = the glass). -1: it lies on the sill. Only when the model is cut.")]
         public int brushStandsIn = 3;
+
+        [Header("East and west walls: his Saint-Rémy works and a Japanese print (the map S10 and S03)")]
+        public AS_SideCanvas[] sideCanvases =
+        {
+            new AS_SideCanvas { name = "The Large Plane Trees (Cleveland 1947.209, CC0)", file = "AS_Canvas_PlaneTrees", wall = -1, centre = new Vector2(3.0f, 1.75f), height = 0.62f, blankAspect = 1.25f },
+            new AS_SideCanvas { name = "Keisai Eisen, Courtesan with a Letter (RISD, CC0)", file = "AS_Canvas_Print", wall = -1, centre = new Vector2(2.2f, 1.6f), height = 0.62f, blankAspect = 0.34f },
+            new AS_SideCanvas { name = "Wheat Field with Cypresses (Met, Open Access)", file = "AS_Canvas_WheatField", wall = -1, centre = new Vector2(1.2f, 1.55f), height = 0.6f, blankAspect = 1.26f },
+            new AS_SideCanvas { name = "Cypresses (Met, Open Access)", file = "AS_Canvas_Cypresses", wall = 1, centre = new Vector2(2.35f, 1.75f), height = 0.75f, blankAspect = 0.79f },
+            new AS_SideCanvas { name = "First Steps, after Millet (Met 64.165.2, Open Access)", file = "AS_Canvas_FirstSteps", wall = 1, centre = new Vector2(1.2f, 1.6f), height = 0.58f, blankAspect = 1.26f },
+        };
+
+        [Header("Theo's letter and the birth card on the table (Textures/Table)")]
+        [Tooltip("The letter's middle on the table (x, z), and its turn.")] public Vector2 letterSpot = new Vector2(0.1f, 1.95f);
+        public float letterYaw = -8f;
+        [Tooltip("The birth card's middle on the table (x, z), and its turn.")] public Vector2 cardSpot = new Vector2(0.36f, 2.0f);
+        public float cardYaw = 12f;
 
         [Header("The pictures on the north wall, cut from Window in the Studio (Textures/Reference/AS_WindowInTheStudio.jpg)")]
         public AS_WallPicture[] wallPictures =

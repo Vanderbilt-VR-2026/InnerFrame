@@ -21,7 +21,7 @@ namespace InnerFrame.AlmondStudio
     {
         public AS_Layout layout;
         [Tooltip("Assets/AlmondStudio/Data/AS_Branches.json: the branch paths.")] public TextAsset branchesJson;
-        public Material wall, floor, ceiling, wood, frame, windowFrame, sillTop, wallPictures, casementLeft, casementRight, fanlightPainted, revealLeft, revealRight, canvas, brushHead, vincent, bark, ink, skyMaterial, groundMaterial, glow, guideDot, blossom;
+        public Material wall, floor, ceiling, wood, frame, windowFrame, sillTop, wallPictures, letter, birthCard, casementLeft, casementRight, fanlightPainted, revealLeft, revealRight, canvas, brushHead, vincent, bark, ink, skyMaterial, groundMaterial, glow, guideDot, blossom;
         [Tooltip("VG_DialogueUI.prefab: Vincent's words and the hint, as in every scene.")] public GameObject uiPrefab;
         public VG_DialogueSettings uiSettings;
         [Tooltip("The comparison pictures, one per AS_Layout.compareViews entry (Textures/Reference), set by Build.")] public Texture[] references = new Texture[0];
@@ -30,6 +30,7 @@ namespace InnerFrame.AlmondStudio
         [Tooltip("The sill's five objects as one Tripo model (Art/Props/AS_SillStillLife.fbx). Cylinders if missing.")] public GameObject sillModel;
         [Tooltip("The chest with its boxes (Art/Props/AS_ChestBoxes.fbx). Boxes if missing.")] public GameObject chestModel;
         [Tooltip("The Tripo casement, left leaf (Art/Props/AS_Casement.fbx); the right leaf is its mirror.")] public GameObject casementModel;
+        [Tooltip("One per AS_Layout.sideCanvases entry (null = blank), made by Build from Textures/Canvases.")] public Material[] sideCanvasMaterials = new Material[0];
         public Material easelMaterial;
 
         public AS_Game Game { get; private set; }
@@ -132,6 +133,9 @@ namespace InnerFrame.AlmondStudio
             // on the table: his paint box, lid open, and a pot of brushes
             PaintBox(world, new Vector3(layout.paintBoxSpot.x, TableTop, layout.paintBoxSpot.y), layout.paintBoxYaw);
             BrushPot(world, new Vector3(layout.brushPotSpot.x, TableTop, layout.brushPotSpot.y));
+            // Theo's letter and the printed birth card, lying on the table (pictures in Textures/Table)
+            if (letter != null) PaperOnTable(world, "Theo's letter", letter, 0.21f, layout.letterSpot, layout.letterYaw);
+            if (birthCard != null) PaperOnTable(world, "Birth card", birthCard, 0.13f, layout.cardSpot, layout.cardYaw);
 
             var compare = world.gameObject.AddComponent<AS_Compare>();
             compare.layout = layout;
@@ -153,8 +157,8 @@ namespace InnerFrame.AlmondStudio
             else
                 foreach (var (x, y, w2, h2) in new[] { (-1.0f, 1.9f, 0.7f, 0.67f), (-0.95f, 1.12f, 0.5f, 0.56f), (1.52f, 2.08f, 0.46f, 0.64f), (1.27f, 1.19f, 0.7f, 0.76f) })
                     Box(world, "Canvas N", new Vector3(x, y, D - 0.02f), new Vector3(w2, h2, 0.03f), canvas);
-            foreach (var (z, w2, h2) in new[] { (1.5f, 0.6f, 0.5f), (2.7f, 0.45f, 0.6f) })
-                Box(world, "Canvas W", new Vector3(-W / 2f + 0.02f, 1.7f, z), new Vector3(0.03f, h2, w2), canvas);
+            for (int i = 0; i < layout.sideCanvases.Length; i++)
+                SideCanvas(world, layout.sideCanvases[i], i < sideCanvasMaterials.Length ? sideCanvasMaterials[i] : null, W);
 
             // light: morning sun through the window, a little from the east
             var sun = new GameObject("Sun").AddComponent<Light>();
@@ -803,6 +807,39 @@ namespace InnerFrame.AlmondStudio
             go.transform.localPosition = new Vector3(pic.centre.x, pic.centre.y, wallFace);
             go.AddComponent<MeshFilter>().sharedMesh = mesh;
             go.AddComponent<MeshRenderer>().sharedMaterial = wallPictures;
+        }
+
+        /// <summary>A canvas on the east or west wall: the picture on a 2 cm stretched canvas inside a thin wooden frame,
+        /// its width from the picture's shape; a blank canvas if the picture isn't there.</summary>
+        void SideCanvas(Transform parent, AS_SideCanvas c, Material m, float roomWidth)
+        {
+            var tex = m != null ? m.GetTexture("_BaseMap") : null;
+            float h = c.height, w = tex != null && tex.height > 0 ? h * tex.width / tex.height : h * c.blankAspect;
+            var root = new GameObject("Canvas: " + c.name).transform;
+            root.SetParent(parent, false);
+            // local: x across the picture, y up, -z toward the room; the wall's face at z = 0
+            root.SetLocalPositionAndRotation(new Vector3(c.wall * roomWidth / 2f, c.centre.y, c.centre.x), Quaternion.Euler(0f, c.wall > 0 ? 90f : -90f, 0f));
+            const float depth = 0.025f, fr = 0.03f;
+            if (m != null)
+            {
+                var face = Quad(root, "Picture", w, h, m);
+                face.localPosition = new Vector3(0f, 0f, -depth);
+            }
+            else Box(root, "Blank", new Vector3(0f, 0f, -depth / 2f), new Vector3(w, h, depth), canvas, collider: false);
+            // the frame round it, a little proud of the picture
+            Box(root, "Frame top", new Vector3(0f, h / 2f + fr / 2f, -depth / 2f - 0.003f), new Vector3(w + 2f * fr, fr, depth + 0.006f), wood, collider: false);
+            Box(root, "Frame bottom", new Vector3(0f, -h / 2f - fr / 2f, -depth / 2f - 0.003f), new Vector3(w + 2f * fr, fr, depth + 0.006f), wood, collider: false);
+            Box(root, "Frame left", new Vector3(-w / 2f - fr / 2f, 0f, -depth / 2f - 0.003f), new Vector3(fr, h, depth + 0.006f), wood, collider: false);
+            Box(root, "Frame right", new Vector3(w / 2f + fr / 2f, 0f, -depth / 2f - 0.003f), new Vector3(fr, h, depth + 0.006f), wood, collider: false);
+        }
+
+        /// <summary>A sheet of paper lying on the table: `width` across, its length from the picture's shape.</summary>
+        void PaperOnTable(Transform parent, string name, Material m, float width, Vector2 spot, float yaw)
+        {
+            var tex = m.GetTexture("_BaseMap");
+            float len = tex != null && tex.width > 0 ? width * tex.height / tex.width : width * 1.3f;
+            var q = Quad(parent, name, width, len, m);
+            q.SetLocalPositionAndRotation(new Vector3(spot.x, TableTop + 0.002f, spot.y), Quaternion.Euler(0f, yaw, 0f) * Quaternion.Euler(90f, 0f, 0f));
         }
 
         const float TableTop = 0.765f;   // the table top's upper face (0.74 + half its 0.05)

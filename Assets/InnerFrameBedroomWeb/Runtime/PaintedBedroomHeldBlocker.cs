@@ -81,7 +81,19 @@ namespace InnerFrame.PaintedBedroom
         // applies the table.
         void Update()
         {
-            if (grab.isSelected) return;
+            if (grab.isSelected)
+            {
+                // The table applied again while it is held (an Inspector edit in Play mode) makes it kinematic and its
+                // grab Kinematic again: put the hold back on physics.
+                if (switched && grab.movementType == XRBaseInteractable.MovementType.Kinematic)
+                {
+                    grab.movementType = XRBaseInteractable.MovementType.VelocityTracking;
+                    body.isKinematic = false;
+                    body.useGravity = false;
+                    body.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
+                }
+                return;
+            }
             bool noPhysics = body.isKinematic && (movable == null || !movable.restUntilGrabbed);
             if (noPhysics && grab.movementType == XRBaseInteractable.MovementType.Kinematic)
             {

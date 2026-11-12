@@ -24,6 +24,8 @@ public class NetworkPlayer : NetworkBehaviour
         var owner = Object.StateAuthority;
         name = $"Player {owner.PlayerId}" + (HasStateAuthority ? " (you)" : "");
         Tint(PlayerColor(owner.PlayerId));
+        if (!TryGetComponent(out PlayerAvatarBody body)) body = gameObject.AddComponent<PlayerAvatarBody>();
+        body.Init(this);   // a full body (Resources/PlayerAvatars), chosen by order in the room
 
         if (HasStateAuthority)
         {

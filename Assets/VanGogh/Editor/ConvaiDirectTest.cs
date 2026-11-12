@@ -94,6 +94,10 @@ public static class ConvaiDirectTest
             case 1:   // his answer arrived and his voice is playing
                 WatchClips();
                 if (string.IsNullOrEmpty(talker.LastReply) || !talker.voice.isPlaying || talker.voice.clip == null) return;
+                if (EditorApplication.timeSinceStartup - stepStarted < .25) return;
+                var music = InnerFrame.Entrance.EntranceAudioDirector.Ensure();
+                if (music.VoiceMusicGain < .24f || music.VoiceMusicGain > .26f) { Finish(false, "Vincent replied but BGM was not retained at 25 percent"); return; }
+                Debug.Log("[ConvaiDirectTest] Voice priority PASS: BGM at " + music.VoiceMusicGain.ToString("F2") + " gain");
                 string clipName = talker.voice.clip.name;
                 bool voiced = clipName == "Convai reply" || clipName == VincentVoice.ClipName;
                 string whose = clipName == VincentVoice.ClipName ? "his headset voice" : "his Convai voice";

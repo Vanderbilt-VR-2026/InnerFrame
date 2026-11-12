@@ -14,7 +14,7 @@ public class VG_Hint : MonoBehaviour
     static readonly Color KeyLetter = new Color32(0x55, 0x36, 0x1C, 0xFF);
 
     RectTransform plate, star, key;
-    Text title, before, after, letter;
+    Text title, instruction, before, after, letter;
     float titleCap, lineCap;
     string shown;
 
@@ -29,6 +29,7 @@ public class VG_Hint : MonoBehaviour
         self.plate = plate.rectTransform;
         self.star = VG_UI.Picture("Star", root, starSprite, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.one * StarSize, 0f, material).rectTransform;
         self.title = VG_UI.Label("Title", root, font, self.titleCap, settings.titleColour, new Vector2(0f, 0.5f), TextAnchor.MiddleLeft, material);
+        self.instruction = VG_UI.Label("Instruction", root, font, self.lineCap, settings.lineColour, new Vector2(0f, 0.5f), TextAnchor.MiddleLeft, material);
         self.before = VG_UI.Label("Line", root, font, self.lineCap, settings.lineColour, new Vector2(0f, 0.5f), TextAnchor.MiddleLeft, material);
         self.key = VG_UI.Picture("Key", root, keySprite, new Vector2(0f, 0.5f), Vector2.zero, Vector2.one * KeySize, 0f, material).rectTransform;
         self.letter = VG_UI.Label("Letter", self.key, font, self.lineCap * KeyCapShare, KeyLetter, new Vector2(0.5f, 0.5f), TextAnchor.MiddleCenter, material);
@@ -36,7 +37,8 @@ public class VG_Hint : MonoBehaviour
         return self;
     }
 
-    /// <summary>`title` (empty hides its row), then one line: `line`, or `line`, `buttonKey` in a circle, then `rest`.</summary>
+    /// <summary>`title` (empty hides its row), then `line`, `buttonKey` in a circle, and `rest`.
+    /// Newlines in `line` put instruction rows above its final button row.</summary>
     public void Show(string titleText, string line, string buttonKey = null, string rest = null)
     {
         string now = $"{titleText}|{line}|{buttonKey}|{rest}";
@@ -46,18 +48,31 @@ public class VG_Hint : MonoBehaviour
         title.gameObject.SetActive(hasTitle);
         key.gameObject.SetActive(hasKey);
         after.gameObject.SetActive(hasKey);
-        title.text = titleText; before.text = line; letter.text = buttonKey; after.text = rest;
-        float lineMiddle = Pad + VG_UI.LineHeight(lineCap) / VG_UI.UnitsPerMetre / 2f;
-        float titleMiddle = lineMiddle + (VG_UI.LineHeight(lineCap) + VG_UI.LineHeight(titleCap)) / VG_UI.UnitsPerMetre / 2f;
+        line = line ?? "";
+        int split = line.LastIndexOf('\n');
+        string extra = split >= 0 ? line.Substring(0, split) : "";
+        int extraRows = string.IsNullOrEmpty(extra) ? 0 : extra.Split('\n').Length;
+        instruction.gameObject.SetActive(extraRows > 0);
+        instruction.text = extra;
+        title.text = titleText; before.text = split >= 0 ? line.Substring(split + 1) : line;
+        letter.text = buttonKey; after.text = rest;
+        float lineHeight = VG_UI.LineHeight(lineCap) / VG_UI.UnitsPerMetre;
+        float lineMiddle = Pad + lineHeight / 2f;
+        float titleMiddle = lineMiddle + extraRows * lineHeight + (VG_UI.LineHeight(lineCap) + VG_UI.LineHeight(titleCap)) / VG_UI.UnitsPerMetre / 2f;
         float x = Pad + StarSize + Gap, width = VG_UI.Fit(before, new Vector2(x, lineMiddle));
         if (hasKey)
         {
             key.anchoredPosition = new Vector2(VG_UI.U(x + width + Gap / 2f), VG_UI.U(lineMiddle));
             width += Gap + KeySize + VG_UI.Fit(after, new Vector2(x + width + Gap + KeySize + Gap / 2f, lineMiddle));
         }
+        if (extraRows > 0)
+        {
+            width = Mathf.Max(width, VG_UI.Fit(instruction, new Vector2(x, lineMiddle + lineHeight * (extraRows + 1) / 2f)));
+            instruction.rectTransform.sizeDelta = new Vector2(instruction.rectTransform.sizeDelta.x, VG_UI.U(lineHeight * extraRows));
+        }
         if (hasTitle) width = Mathf.Max(width, VG_UI.Fit(title, new Vector2(x, titleMiddle)));
-        float top = (hasTitle ? titleMiddle + VG_UI.LineHeight(titleCap) / VG_UI.UnitsPerMetre / 2f : 2f * lineMiddle - Pad) + Pad;
-        star.anchoredPosition = new Vector2(VG_UI.U(Pad + StarSize / 2f), VG_UI.U(hasTitle ? titleMiddle : lineMiddle));
+        float top = (hasTitle ? titleMiddle + VG_UI.LineHeight(titleCap) / VG_UI.UnitsPerMetre / 2f : 2f * lineMiddle - Pad + extraRows * lineHeight) + Pad;
+        star.anchoredPosition = new Vector2(VG_UI.U(Pad + StarSize / 2f), VG_UI.U(hasTitle ? titleMiddle : lineMiddle + extraRows * lineHeight));
         plate.sizeDelta = new Vector2(VG_UI.U(x + width + Pad), VG_UI.U(top));
     }
 }

@@ -1,0 +1,237 @@
+PASS local viewer A switches cards without closing viewer B
+PASS local viewer A closes X without closing viewer B
+PASS unowned network avatar is not local input
+PASS unowned avatar cannot enter a painting for this client
+Pointer input: keyboard=True, mouse=True, cursor=None, rig=True
+PASS mouse button is on screen
+PASS simulated mouse ray reaches More → (first hit VG_Box)
+Pointer diagnostic before down: hit=VG_Box bridge=True active=True interactable=True card=Bedroom Introduction open=False, frame=11814, device=Mouse, held=False, pressedThisFrame=False, rigEnabled=True, menuOpen=False
+PASS simulated mouse press reaches InputSystem
+PASS desktop pointer consumer is enabled
+Pointer diagnostic before up: hit=VG_Box bridge=True active=True interactable=True card=Bedroom Introduction open=True, frame=12035, device=Mouse, held=False, pressedThisFrame=False, rigEnabled=True, menuOpen=False
+Pointer release: hit=VG_Box, mouse=(0.00, 0.00), target=(349.69, 186.55), cursor=None
+PASS Bedroom simulated desktop mouse More opens
+PASS detail keeps mouse free
+PASS all three pedestal prompts exist during card reading
+PASS StarryNight pedestal hint is hidden while reading
+PASS StarryNight pedestal glow is hidden while reading
+PASS CafeTerrace pedestal hint is hidden while reading
+PASS CafeTerrace pedestal glow is hidden while reading
+PASS PaintedBedroom pedestal hint is hidden while reading
+PASS PaintedBedroom pedestal glow is hidden while reading
+PASS detail exists and is open for viewport check
+PASS Bedroom Introduction full detail panel stays inside the viewing area
+Pointer input: keyboard=True, mouse=True, cursor=None, rig=True
+PASS mouse button is on screen
+PASS simulated mouse ray reaches × (first hit VG_Box)
+Pointer diagnostic before down: hit=VG_Box bridge=True active=True interactable=True card=Bedroom Introduction open=True, frame=14391, device=Mouse, held=False, pressedThisFrame=False, rigEnabled=True, menuOpen=False
+PASS simulated mouse press reaches InputSystem
+PASS desktop pointer consumer is enabled
+Pointer diagnostic before up: hit=Wall_North bridge=False active=False interactable=False card=none open=False, frame=16755, device=Mouse, held=False, pressedThisFrame=False, rigEnabled=True, menuOpen=False
+Pointer release: hit=Wall_North, mouse=(0.00, 0.00), target=(479.57, 334.15), cursor=None
+PASS Bedroom simulated desktop mouse X closes
+Pointer input: keyboard=True, mouse=True, cursor=None, rig=True
+PASS mouse button is on screen
+PASS simulated mouse ray reaches More → (first hit VG_Box)
+Pointer diagnostic before down: hit=VG_Box bridge=True active=True interactable=True card=Bedroom Introduction open=False, frame=19483, device=Mouse, held=False, pressedThisFrame=False, rigEnabled=True, menuOpen=False
+PASS simulated mouse press reaches InputSystem
+PASS desktop pointer consumer is enabled
+Pointer diagnostic before up: hit=VG_Box bridge=True active=True interactable=True card=Bedroom Introduction open=True, frame=22150, device=Mouse, held=False, pressedThisFrame=False, rigEnabled=True, menuOpen=False
+Pointer release: hit=VG_Box, mouse=(0.00, 0.00), target=(349.69, 186.55), cursor=None
+PASS Bedroom simulated desktop mouse More opens
+PASS detail keeps mouse free
+Pointer input: keyboard=True, mouse=True, cursor=None, rig=True
+PASS mouse button is on screen
+PASS simulated mouse ray reaches More → (first hit VG_Box)
+Pointer diagnostic before down: hit=VG_Box bridge=True active=True interactable=True card=CafeTerrace Introduction open=False, frame=27687, device=Mouse, held=False, pressedThisFrame=False, rigEnabled=True, menuOpen=False
+PASS simulated mouse press reaches InputSystem
+PASS desktop pointer consumer is enabled
+Pointer diagnostic before up: hit=VG_Box bridge=True active=True interactable=True card=CafeTerrace Introduction open=True, frame=29947, device=Mouse, held=False, pressedThisFrame=False, rigEnabled=True, menuOpen=False
+Pointer release: hit=VG_Box, mouse=(0.00, 0.00), target=(349.69, 186.55), cursor=None
+PASS CafeTerrace simulated desktop mouse More opens
+PASS detail keeps mouse free
+PASS all three pedestal prompts exist during card reading
+PASS StarryNight pedestal hint is hidden while reading
+PASS StarryNight pedestal glow is hidden while reading
+PASS CafeTerrace pedestal hint is hidden while reading
+PASS CafeTerrace pedestal glow is hidden while reading
+PASS PaintedBedroom pedestal hint is hidden while reading
+PASS PaintedBedroom pedestal glow is hidden while reading
+PASS detail exists and is open for viewport check
+PASS CafeTerrace Introduction full detail panel stays inside the viewing area
+Pointer input: keyboard=True, mouse=True, cursor=None, rig=True
+PASS mouse button is on screen
+PASS simulated mouse ray reaches × (first hit VG_Box)
+Pointer diagnostic before down: hit=VG_Box bridge=True active=True interactable=True card=CafeTerrace Introduction open=True, frame=32449, device=Mouse, held=False, pressedThisFrame=False, rigEnabled=True, menuOpen=False
+PASS simulated mouse press reaches InputSystem
+PASS desktop pointer consumer is enabled
+Pointer diagnostic before up: hit=Wall_East bridge=False active=False interactable=False card=none open=False, frame=34942, device=Mouse, held=False, pressedThisFrame=False, rigEnabled=True, menuOpen=False
+Pointer release: hit=Wall_East, mouse=(0.00, 0.00), target=(479.57, 334.15), cursor=None
+PASS CafeTerrace simulated desktop mouse X closes
+Pointer input: keyboard=True, mouse=True, cursor=None, rig=True
+PASS mouse button is on screen
+PASS simulated mouse ray reaches More → (first hit VG_Box)
+Pointer diagnostic before down: hit=VG_Box bridge=True active=True interactable=True card=CafeTerrace Introduction open=False, frame=37869, device=Mouse, held=False, pressedThisFrame=False, rigEnabled=True, menuOpen=False
+PASS simulated mouse press reaches InputSystem
+PASS desktop pointer consumer is enabled
+Pointer diagnostic before up: hit=VG_Box bridge=True active=True interactable=True card=CafeTerrace Introduction open=True, frame=40729, device=Mouse, held=False, pressedThisFrame=False, rigEnabled=True, menuOpen=False
+Pointer release: hit=VG_Box, mouse=(0.00, 0.00), target=(349.69, 186.55), cursor=None
+PASS CafeTerrace simulated desktop mouse More opens
+PASS detail keeps mouse free
+Pointer input: keyboard=True, mouse=True, cursor=None, rig=True
+PASS mouse button is on screen
+PASS simulated mouse ray reaches More → (first hit VG_Box)
+Pointer diagnostic before down: hit=VG_Box bridge=True active=True interactable=True card=StarryNight Introduction open=False, frame=46457, device=Mouse, held=False, pressedThisFrame=False, rigEnabled=True, menuOpen=False
+PASS simulated mouse press reaches InputSystem
+PASS desktop pointer consumer is enabled
+Pointer diagnostic before up: hit=VG_Box bridge=True active=True interactable=True card=StarryNight Introduction open=True, frame=48859, device=Mouse, held=False, pressedThisFrame=False, rigEnabled=True, menuOpen=False
+Pointer release: hit=VG_Box, mouse=(0.00, 0.00), target=(349.69, 186.55), cursor=None
+PASS StarryNight simulated desktop mouse More opens
+PASS detail keeps mouse free
+PASS all three pedestal prompts exist during card reading
+PASS StarryNight pedestal hint is hidden while reading
+PASS StarryNight pedestal glow is hidden while reading
+PASS CafeTerrace pedestal hint is hidden while reading
+PASS CafeTerrace pedestal glow is hidden while reading
+PASS PaintedBedroom pedestal hint is hidden while reading
+PASS PaintedBedroom pedestal glow is hidden while reading
+PASS detail exists and is open for viewport check
+PASS StarryNight Introduction full detail panel stays inside the viewing area
+Pointer input: keyboard=True, mouse=True, cursor=None, rig=True
+PASS mouse button is on screen
+PASS simulated mouse ray reaches × (first hit VG_Box)
+Pointer diagnostic before down: hit=VG_Box bridge=True active=True interactable=True card=StarryNight Introduction open=True, frame=51373, device=Mouse, held=False, pressedThisFrame=False, rigEnabled=True, menuOpen=False
+PASS simulated mouse press reaches InputSystem
+PASS desktop pointer consumer is enabled
+Pointer diagnostic before up: hit=Wall_East bridge=False active=False interactable=False card=none open=False, frame=53878, device=Mouse, held=False, pressedThisFrame=False, rigEnabled=True, menuOpen=False
+Pointer release: hit=Wall_East, mouse=(0.00, 0.00), target=(479.57, 334.15), cursor=None
+PASS StarryNight simulated desktop mouse X closes
+Pointer input: keyboard=True, mouse=True, cursor=None, rig=True
+PASS mouse button is on screen
+PASS simulated mouse ray reaches More → (first hit VG_Box)
+Pointer diagnostic before down: hit=VG_Box bridge=True active=True interactable=True card=StarryNight Introduction open=False, frame=56825, device=Mouse, held=False, pressedThisFrame=False, rigEnabled=True, menuOpen=False
+PASS simulated mouse press reaches InputSystem
+PASS desktop pointer consumer is enabled
+Pointer diagnostic before up: hit=VG_Box bridge=True active=True interactable=True card=StarryNight Introduction open=True, frame=59692, device=Mouse, held=False, pressedThisFrame=False, rigEnabled=True, menuOpen=False
+Pointer release: hit=VG_Box, mouse=(0.00, 0.00), target=(349.69, 186.55), cursor=None
+PASS StarryNight simulated desktop mouse More opens
+PASS detail keeps mouse free
+PASS switching to Bedroom closes the other detail
+PASS background pedestal mouse click blocked while reading
+Pointer input: keyboard=True, mouse=True, cursor=None, rig=True
+PASS mouse button is on screen
+PASS simulated mouse ray reaches ENTER → (first hit VG_Box)
+Pointer diagnostic before down: hit=VG_Box bridge=True active=True interactable=True card=Bedroom Introduction open=True, frame=68169, device=Mouse, held=False, pressedThisFrame=False, rigEnabled=True, menuOpen=False
+PASS simulated mouse press reaches InputSystem
+PASS desktop pointer consumer is enabled
+Pointer diagnostic before up: hit=VG_Box bridge=True active=True interactable=True card=Bedroom Introduction open=True, frame=70452, device=Mouse, held=False, pressedThisFrame=False, rigEnabled=True, menuOpen=False
+Pointer release: hit=VG_Box, mouse=(0.00, 0.00), target=(190.68, 93.08), cursor=None
+PASS Bedroom simulated desktop mouse ENTER loads PaintedBedroom (actual PaintedBedroom)
+PASS switching to CafeTerrace closes the other detail
+PASS background pedestal mouse click blocked while reading
+Pointer input: keyboard=True, mouse=True, cursor=None, rig=True
+PASS mouse button is on screen
+PASS simulated mouse ray reaches ENTER → (first hit VG_Box)
+Pointer diagnostic before down: hit=VG_Box bridge=True active=True interactable=True card=CafeTerrace Introduction open=True, frame=92098, device=Mouse, held=False, pressedThisFrame=False, rigEnabled=True, menuOpen=False
+PASS simulated mouse press reaches InputSystem
+PASS desktop pointer consumer is enabled
+Pointer diagnostic before up: hit=VG_Box bridge=True active=True interactable=True card=CafeTerrace Introduction open=True, frame=94384, device=Mouse, held=False, pressedThisFrame=False, rigEnabled=True, menuOpen=False
+Pointer release: hit=VG_Box, mouse=(0.00, 0.00), target=(190.68, 93.08), cursor=None
+PASS CafeTerrace simulated desktop mouse ENTER loads CafeTerrace (actual CafeTerrace)
+PASS switching to StarryNight closes the other detail
+PASS background pedestal mouse click blocked while reading
+Pointer input: keyboard=True, mouse=True, cursor=None, rig=True
+PASS mouse button is on screen
+PASS simulated mouse ray reaches ENTER → (first hit VG_Box)
+Pointer diagnostic before down: hit=VG_Box bridge=True active=True interactable=True card=StarryNight Introduction open=True, frame=123977, device=Mouse, held=False, pressedThisFrame=False, rigEnabled=True, menuOpen=False
+PASS simulated mouse press reaches InputSystem
+PASS desktop pointer consumer is enabled
+Pointer diagnostic before up: hit=VG_Box bridge=True active=True interactable=True card=StarryNight Introduction open=True, frame=125197, device=Mouse, held=False, pressedThisFrame=False, rigEnabled=True, menuOpen=False
+Pointer release: hit=VG_Box, mouse=(0.00, 0.00), target=(190.68, 93.08), cursor=None
+PASS StarryNight simulated desktop mouse ENTER loads StarryNight (actual StarryNight)
+PASS Bedroom pedestal target is PaintedBedroom
+PASS Bedroom pedestal legacy mouse callback loads PaintedBedroom (actual PaintedBedroom)
+PASS CafeTerrace pedestal target is CafeTerrace
+PASS CafeTerrace pedestal legacy mouse callback loads CafeTerrace (actual CafeTerrace)
+PASS StarryNight pedestal target is StarryNight
+PASS StarryNight pedestal legacy mouse callback loads StarryNight (actual StarryNight)
+PASS Bedroom pedestal target is PaintedBedroom
+PASS XR ray reaches original pedestal Button_Bedroom
+PASS Bedroom pedestal XR select loads PaintedBedroom (actual PaintedBedroom)
+PASS CafeTerrace pedestal target is CafeTerrace
+PASS XR ray reaches original pedestal Button_CafeTerrace
+PASS CafeTerrace pedestal XR select loads CafeTerrace (actual CafeTerrace)
+PASS StarryNight pedestal target is StarryNight
+PASS XR ray reaches original pedestal Button_TheStarryNight
+PASS StarryNight pedestal XR select loads StarryNight (actual StarryNight)
+PASS three cards; details initially hidden
+PASS original Gallery self portrait present
+PASS camera available
+PASS existing desktop XR ray available
+XR button-height diagnostic: VG_Box
+PASS existing ray settings hit More → (first hit VG_Box)
+PASS Bedroom XR More opens
+PASS camera available
+PASS existing desktop XR ray available
+XR button-height diagnostic: VG_Box
+PASS existing ray settings hit × (first hit VG_Box)
+PASS Bedroom XR Close hides
+PASS camera available
+PASS existing desktop XR ray available
+XR button-height diagnostic: VG_Box
+PASS existing ray settings hit More → (first hit VG_Box)
+PASS Bedroom XR More reopens
+PASS camera available
+PASS existing desktop XR ray available
+XR button-height diagnostic: VG_Box
+PASS existing ray settings hit More → (first hit VG_Box)
+PASS CafeTerrace XR More opens
+PASS camera available
+PASS existing desktop XR ray available
+XR button-height diagnostic: VG_Box
+PASS existing ray settings hit × (first hit VG_Box)
+PASS CafeTerrace XR Close hides
+PASS camera available
+PASS existing desktop XR ray available
+XR button-height diagnostic: VG_Box
+PASS existing ray settings hit More → (first hit VG_Box)
+PASS CafeTerrace XR More reopens
+PASS camera available
+PASS existing desktop XR ray available
+XR button-height diagnostic: VG_Box
+PASS existing ray settings hit More → (first hit VG_Box)
+PASS StarryNight XR More opens
+PASS camera available
+PASS existing desktop XR ray available
+XR button-height diagnostic: VG_Box
+PASS existing ray settings hit × (first hit VG_Box)
+PASS StarryNight XR Close hides
+PASS camera available
+PASS existing desktop XR ray available
+XR button-height diagnostic: VG_Box
+PASS existing ray settings hit More → (first hit VG_Box)
+PASS StarryNight XR More reopens
+PASS camera available
+PASS existing desktop XR ray available
+XR button-height diagnostic: VG_Box
+PASS existing ray settings hit ENTER → (first hit VG_Box)
+PASS Bedroom XR ENTER loads its painting through SceneFader
+PASS painting has a viewing camera
+PASS Bedroom menu return resets all details
+PASS camera available
+PASS existing desktop XR ray available
+XR button-height diagnostic: VG_Box
+PASS existing ray settings hit ENTER → (first hit VG_Box)
+PASS CafeTerrace XR ENTER loads its painting through SceneFader
+PASS painting has a viewing camera
+PASS CafeTerrace menu return resets all details
+PASS camera available
+PASS existing desktop XR ray available
+XR button-height diagnostic: VG_Box
+PASS existing ray settings hit ENTER → (first hit VG_Box)
+PASS StarryNight XR ENTER loads its painting through SceneFader
+PASS painting has a viewing camera
+PASS StarryNight menu return resets all details
+PASS Gallery reload retains all three cards
+PASS return resets details to hidden
+ALL PASSED — Editor offline; headset not tested

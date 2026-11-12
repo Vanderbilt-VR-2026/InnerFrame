@@ -1,0 +1,16 @@
+CAFE TERRACE MUSIC — INNERFRAME
+
+"Parisian" by Kevin MacLeod (incompetech.com)
+Licensed under Creative Commons: By Attribution 4.0 License
+https://creativecommons.org/licenses/by/4.0/
+
+Official source: https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100120
+Original MP3: https://incompetech.com/music/royalty-free/mp3-royaltyfree/Parisian.mp3
+License verified on the official track page, 2026-11-12.
+
+Changes for InnerFrame: source 0–40.5 seconds, 4-second tail/head crossfade;
+36.5-second loop, 2 ms endpoint correction, -27 LUFS, 48 kHz stereo 16-bit PCM.
+Original pitch and playback speed preserved.
+Same music gain, speech attenuation and scene transition behavior as other paintings.
+This is an adaptation of Kevin MacLeod's recording, not an original composition.
+Keep the artist, title, source, license link and modification notice in distributed copies.

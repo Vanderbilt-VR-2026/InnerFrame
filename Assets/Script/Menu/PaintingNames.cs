@@ -9,7 +9,7 @@ public static class PaintingNames
     /// <summary>True for a scene that is a painting you step into (not the Gallery, an entrance or a test scene): the
     /// arrival hint and the wrist tag show only there.</summary>
     public static bool IsPainting(string scene) =>
-        scene == "PaintedBedroom" || scene == "Bedroom_StyleExperiment" || scene == "StarryNight";
+        scene == "PaintedBedroom" || scene == "Bedroom_StyleExperiment" || scene == "StarryNight" || scene == "CafeTerrace";
 
     /// <summary>The painting's title, as on its plaque.</summary>
     public static string Title(string scene)
@@ -20,6 +20,7 @@ public static class PaintingNames
             case "PaintedBedroom": return "The Bedroom";
             case "Bedroom_StyleExperiment": return "The Bedroom";
             case "StarryNight": return "The Starry Night";
+            case "CafeTerrace": return "Café Terrace at Night";
             default: return scene;
         }
     }
@@ -32,6 +33,7 @@ public static class PaintingNames
             case "PaintedBedroom":
             case "Bedroom_StyleExperiment": return "The Bedroom, 1888";
             case "StarryNight": return "The Starry Night, 1889";
+            case "CafeTerrace": return "Café Terrace at Night, 1888";
             default: return Title(scene);
         }
     }

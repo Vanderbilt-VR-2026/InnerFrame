@@ -1,0 +1,46 @@
+[
+  {
+    "name": "BedroomHiraethLoop",
+    "source_sha256": "f790c7d53b8d802981ff7cdd8c59e22cdfe103ea66aba296c6cf1a65fe7fcf01",
+    "source_seconds": [
+      44.0,
+      173.0
+    ],
+    "crossfade_seconds": 8.0,
+    "loop_seconds": 121.0,
+    "sample_rate": 48000,
+    "channels": 2,
+    "format": "PCM 16-bit stereo",
+    "loudness_before_lufs": -13.1,
+    "loudness_after_lufs": -27.0,
+    "gain_db": -13.9,
+    "peak_dbfs": -14.825514793395996,
+    "boundary_sample_difference": 0,
+    "wrap_half_second_rms": [
+      0.022350382059812546,
+      0.03139394521713257
+    ]
+  },
+  {
+    "name": "StarryNightAdriftLoop",
+    "source_sha256": "e26744726c5677f915d91e7d0784767a293f76ecd2ad7d4db3118c076aa12a28",
+    "source_seconds": [
+      61.5,
+      141.5
+    ],
+    "crossfade_seconds": 8.0,
+    "loop_seconds": 72.0,
+    "sample_rate": 48000,
+    "channels": 2,
+    "format": "PCM 16-bit stereo",
+    "loudness_before_lufs": -17.6,
+    "loudness_after_lufs": -27.0,
+    "gain_db": -9.399999999999999,
+    "peak_dbfs": -12.281696319580078,
+    "boundary_sample_difference": 0,
+    "wrap_half_second_rms": [
+      0.039918720722198486,
+      0.03775818273425102
+    ]
+  }
+]

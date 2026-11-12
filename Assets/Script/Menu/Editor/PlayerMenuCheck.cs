@@ -8,7 +8,7 @@ using UnityEngine.UI;
 /// <summary>
 /// Edit-mode checks for the player menu (#160): Back goes to the Gallery from every other scene and is hidden in the
 /// Gallery; the panel opens inside the controllers' reach; the wrist tag builds with the dialogue box's font and sprites.
-/// (The panel's own look is the plain one until the menu style, #161, is redone.) With -menuShots &lt;folder&gt; it also
+/// The panel shares the Gallery artwork style. With -menuShots &lt;folder&gt; it also
 /// renders the panel and the wrist tag to PNGs.
 /// Menu: InnerFrame > Menu > Run Checks. Batch: -executeMethod PlayerMenuCheck.RunBatch [-menuShots &lt;folder&gt;] -quit
 /// </summary>
@@ -64,6 +64,9 @@ public static class PlayerMenuCheck
         Check(distance < 2f, $"it opens {distance:F2} m from the eyes, inside the 2 m ray");
         Check(Count<Button>(panel) == 2, $"two buttons (X and Back): {Count<Button>(panel)}");
         Check(panel.GetComponentInChildren<BoxCollider>() != null, "the title bar has a collider to grab");
+        foreach (var label in panel.GetComponentsInChildren<Text>(true))
+            Check(label.font == MenuLook.Font, "menu text uses the shared Gallery font: " + label.text);
+        Check(panel.transform.Find("Canvas/Gallery Frame") != null, "Gallery-style rounded frame is present");
         if (shots != null) Shot(camera, Path.Combine(shots, "menu-painting.png"));
 
         panel.ShowInFrontOf(camera.transform, null);

@@ -26,6 +26,7 @@ public class PaintingEntrancePrompt : MonoBehaviour
     Transform glowBox;
     Bounds box;
     int hovers;
+    InnerFrame.ArtworkCici.ArtworkCiciActions[] cards;
 
     /// <summary>The hint, for the checks.</summary>
     public WayfindingHint Hint => hint;
@@ -66,6 +67,7 @@ public class PaintingEntrancePrompt : MonoBehaviour
     {
         if (button != null) return;
         button = GetComponent<SceneChangeButton>();
+        cards = FindObjectsByType<InnerFrame.ArtworkCici.ArtworkCiciActions>(FindObjectsSortMode.None);
         var simple = GetComponent<XRSimpleInteractable>();
         if (simple != null)
         {
@@ -105,6 +107,10 @@ public class PaintingEntrancePrompt : MonoBehaviour
 
     void Update()
     {
+        bool reading = false;
+        foreach (var card in cards)
+            if (card && card.gameObject.scene == gameObject.scene && card.IsOpen) { reading = true; break; }
+        if (glowBox) glowBox.gameObject.SetActive(!reading && !PlayerMenu.MenuOpen);
         float pulse = 0.5f + 0.5f * Mathf.Sin(Time.time * Mathf.PI * 2f / 2.4f);
         if (glow != null) glow.color = Color.Lerp(GlowLow, GlowHigh, pulse);
         if (hint == null) return;
@@ -120,7 +126,7 @@ public class PaintingEntrancePrompt : MonoBehaviour
             face.y = 0f;
             if (face.sqrMagnitude > 1e-4f) hint.transform.rotation = Quaternion.LookRotation(face, Vector3.up);
         }
-        hint.Visible = !PlayerMenu.MenuOpen && (hovers > 0 || (near && !HasEntered));
+        hint.Visible = !reading && !PlayerMenu.MenuOpen && (hovers > 0 || (near && !HasEntered));
     }
 
     void OnDestroy()

@@ -21,6 +21,7 @@ public class SceneChangeButton : MonoBehaviour
     void OnTriggerEnter(Collider other)
     {
         if (!useTrigger) return;
+        if (!InnerFrame.ArtworkCici.GalleryCardButton.IsLocalActor(other)) return;
         if (!string.IsNullOrEmpty(requiredTag) && !other.CompareTag(requiredTag)) return;
         Activate();
     }
@@ -28,12 +29,17 @@ public class SceneChangeButton : MonoBehaviour
     // Mouse click / screen tap (works on desktop and mobile with a collider)
     void OnMouseDown()
     {
+        // A visible detail card owns mouse interaction; do not click through it
+        // into a legacy pedestal, including events from a different camera.
+        foreach(var card in FindObjectsByType<InnerFrame.ArtworkCici.ArtworkCiciActions>(FindObjectsSortMode.None))
+            if(card.IsOpen && card.gameObject.scene==gameObject.scene)return;
         Activate();
     }
 
     // Public so you can also hook it to VR events (Select Entered, Activated, UI Button OnClick...)
     public void Activate()
     {
+        Debug.Log("[Gallery Entrance] "+name+" -> "+targetScene,this);
         SceneFader.Instance.FadeToScene(targetScene, fadeTime);
     }
 }

@@ -1,0 +1,85 @@
+PASS
+Opening cue starts
+Begin sign emits exactly one click
+Disabled continue does not click or navigate
+Boy portrait emits exactly one click
+Girl portrait emits exactly one click
+Chosen portrait keeps a non-blocking yellow outline
+No duplicate sound binding
+Enter the Story sign emits exactly one click
+New Room sign emits exactly one click
+Room code remains four digits
+Back sign emits exactly one click
+Join Room sign emits exactly one click
+Key 1 emits exactly one click
+Key 2 emits exactly one click
+Key 3 emits exactly one click
+Key 4 emits exactly one click
+Key DEL emits exactly one click
+Delete preserves code workflow
+Key 4 emits exactly one click
+Join enables after four digits
+New player-menu Close clicks immediately before hiding
+Selection can wait through a full music loop without extra clicks
+Join sign emits exactly one click
+Controller tutorial opens before the intro
+Continue emits exactly one click
+Landing 1 switches on actual Start/Join
+Handwriting audio runs during the actual title video
+Title advances directly to gold and writing stops
+Gold cue starts on gold flash
+Gold prelude lasts about 1.1 seconds (half duration)
+Shorter music transitions keep original playback pitch and speed
+Gold music survives Gallery scene loading
+Arrival cue waits for visible Gallery reveal
+Gallery reveal completes in the shorter fade window
+Full gold-to-Gallery transition finishes within 15 seconds plus frame tolerance
+Arrival transitions into the selected Gallery strings
+Gallery loop is a 36-second looping PCM clip
+Arrival and gold sources stop after their crossfades
+Imported loop exposes PCM across its wrap point
+Imported stereo loop has continuous boundary samples
+Gallery music wraps with no stop or fade-out
+Vincent speech retains the playing Gallery BGM at twenty-five percent
+Voice priority leaves Vincent's voice volume unchanged
+Short speech gaps retain BGM at twenty-five percent
+BGM recovers smoothly after speech without restarting its loop
+Recording also retains BGM at twenty-five percent
+Waiting also retains BGM at twenty-five percent
+Failed requests restore BGM instead of leaving it quiet
+PaintedBedroom starts its selected music at reveal
+PaintedBedroom overlaps Gallery music during crossfade
+PaintedBedroom stops the previous cue after crossfade
+PaintedBedroom uses its stereo streaming loop at the expected duration
+PaintedBedroom crosses its loop boundary without stopping
+PaintedBedroom live-conversation voice retains BGM at twenty-five percent
+PaintedBedroom preserves Vincent voice gain
+PaintedBedroom smoothly restores music after speech
+PaintedBedroom menu includes music attribution
+PaintedBedroom menu returns to Gallery music without the arrival cue
+PaintedBedroom music continues under the Gallery return crossfade
+PaintedBedroom return leaves one music director and stops the painting cue
+StarryNight starts its selected music at reveal
+StarryNight overlaps Gallery music during crossfade
+StarryNight stops the previous cue after crossfade
+StarryNight uses its stereo streaming loop at the expected duration
+StarryNight crosses its loop boundary without stopping
+StarryNight live-conversation voice retains BGM at twenty-five percent
+StarryNight preserves Vincent voice gain
+StarryNight smoothly restores music after speech
+Starry Night scripted narration retains BGM at twenty-five percent
+Starry Night restores BGM after scripted narration
+StarryNight menu includes music attribution
+StarryNight menu returns to Gallery music without the arrival cue
+StarryNight music continues under the Gallery return crossfade
+StarryNight return leaves one music director and stops the painting cue
+Begin sign emits exactly one click
+Boy portrait emits exactly one click
+Enter the Story sign emits exactly one click
+New Room sign emits exactly one click
+Start sign emits exactly one click
+Continue emits exactly one click
+Skip intro sign emits exactly one click
+Skip immediately stops writing audio
+One audio director after returning to Entrance
+All local checks passed. Physical Quest verification is not performed.

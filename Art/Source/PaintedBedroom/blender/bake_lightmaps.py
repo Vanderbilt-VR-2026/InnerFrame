@@ -31,7 +31,7 @@ What the script does, in order:
 2. Materials rebuilt as Principled (roughness 0.85): base = texture x if_color, emission = base x
    if_emission, alpha = if_opacity. Ink outlines and markers are hidden; glass and the view outside the
    window cast no shadow. This mirrors what Unity's materials show, not the viewport nodes.
-3. Every fixed object (not liftable in the physics table, not Window_View) gets a "Lightmap" UV layer
+3. Every fixed object (not liftable in the physics table) gets a "Lightmap" UV layer
    on each part (smart project 66 deg + pack, all parts of one object in one image). The first UV layer
    stays the render layer, so colour textures are still sampled right.
 4. Bake DIFFUSE direct+indirect, then EMIT with white emission (light only), add, denoise, encode, save.
@@ -61,11 +61,13 @@ TEXTURES = None   # set in main(): --textures DIR, else <repo of the .blend>/Ass
 ROOT_COLLECTION = "PaintedBedroom"
 LM_UV = "Lightmap"
 LM_MAX = 8.0            # encoded range; the Unity shader's _LightMax
-NEVER_BAKED = {"Window_View"}
+NEVER_BAKED = set()             # the scenery outside the window is baked too since #177's clear glass (11/12): Unity lit it white
 SIZE_MIN = {"Bed": 1024}        # per-object floor on the lightmap size: the blanket's dense Tripo mesh still showed seams at 512 (11/11)
+SIZE_MAX = {"Window_View": 512} # the 50 m scenery dome would get 2048 by area; it is only seen through the window
+SIZE_FLOOR = 256                # every object: the pictures' 64 px maps banded on their flat faces (11/12)
 UNWRAP_ANYWAY = {"Bed"}         # Tripo objects whose own atlas overlaps itself (the bed: dark slits on the blanket wherever two
                                 # surfaces share texels); these get a fresh smart-project unwrap at SIZE_MIN instead
-BAKE_MARGIN = 8                 # texels of margin the bake extends past each UV island (4 left seams at island borders)   # the scenery outside the window: it is lit by its own glow, Unity keeps it as is
+BAKE_MARGIN = 8                 # texels of margin the bake extends past each UV island (4 left seams at island borders)
 
 # The light rig that produced the accepted Cycles reference (10/29 - 10/30). Blender coordinates: Z up,
 # the window wall is at +Y. Sun: direction given as where the sun stands (elevation above the horizon,
@@ -79,7 +81,7 @@ BAKE_MARGIN = 8                 # texels of margin the bake extends past each UV
 # target sheet's (床尾, corners): accepted as physically right; to be re-judged once the room shrinks (#144).
 RIG = {
     "sun": {"energy": 9.9, "color": (1.0, 0.87, 0.66), "angle_deg": 4.0, "elevation_deg": 50.0, "azimuth_deg": 28.0},
-    "sky": {"energy": 594.0, "color": (1.0, 0.91, 0.78), "location": (-1.16, 4.12, 2.30), "size": (1.10, 1.90), "tilt_deg": 25.0,
+    "sky": {"energy": 594.0, "color": (1.0, 0.91, 0.78), "outside_m": 0.10, "oversize_m": 0.10, "tilt_deg": 25.0,   # placed from the Window's bounds in make_rig (the room moved, 11/12)
             "no_direct": ["Window", "Room_Ceiling"]},   # objects the sky light skips (light linking): the frame it sits against, the ceiling (W11/W12: lit directly it read as a ceiling lamp)
     "world": {"color": (0.95, 0.93, 0.90), "strength": 0.0},
     "material_glow": 0.0,     # multiplies every material's if_emission in the bake (1 = as the data says); unlit stays
@@ -241,10 +243,18 @@ def make_rig(scene, window_parts, extra_excluded=()):
     sun.rotation_euler = (-towards_sun).to_track_quat("-Z", "Y").to_euler()   # a light shines down its -Z
     sun.location = (0, 0, 5)
     k = RIG["sky"]
+    # the rectangle sits just outside the window opening, a little larger than it, facing in: derived from the Window
+    # object's bounds so it follows the room (a hard-coded spot was 1.2 m behind the wall after #193 and lit nothing)
+    lo = Vector((1e9,) * 3); hi = Vector((-1e9,) * 3)
+    for ob in parts_of(bpy.data.objects["Window"]):
+        for c in ob.bound_box:
+            w = ob.matrix_world @ Vector(c); lo = Vector(map(min, lo, w)); hi = Vector(map(max, hi, w))
     sky_d = bpy.data.lights.new("LM_WindowSky", "AREA"); sky_d.shape = "RECTANGLE"
-    sky_d.energy = k["energy"]; sky_d.color = k["color"]; sky_d.size, sky_d.size_y = k["size"]
+    sky_d.energy = k["energy"]; sky_d.color = k["color"]
+    sky_d.size, sky_d.size_y = (hi.x - lo.x) + k["oversize_m"], (hi.z - lo.z) + k["oversize_m"]
     sky = bpy.data.objects.new("LM_WindowSky", sky_d); scene.collection.objects.link(sky)
-    sky.location = k["location"]
+    sky.location = ((lo.x + hi.x) / 2, hi.y + k["outside_m"], (lo.z + hi.z) / 2)
+    log(f"sky light {sky_d.size:.2f} x {sky_d.size_y:.2f} m at {tuple(round(v, 2) for v in sky.location)} (window y {lo.y:.2f}..{hi.y:.2f})")
     # shines into the room (-Y), tilted down: sky light through a window travels downward, to the floor and the lower
     # walls, not up to the ceiling (11/10, W9/W10: level, the ceiling by the window went white)
     t = math.radians(k.get("tilt_deg", 0.0))
@@ -578,7 +588,8 @@ def main():
             continue
         how = add_lightmap_uvs(emp, parts)
         tris = sum(len(p.data.polygons) for p in parts)
-        sizes[emp.name] = max(lightmap_size(sum(world_area(p) for p in parts), texels, tris), SIZE_MIN.get(emp.name, 0))
+        sizes[emp.name] = max(lightmap_size(sum(world_area(p) for p in parts), texels, tris), SIZE_MIN.get(emp.name, 0), SIZE_FLOOR)
+        sizes[emp.name] = min(sizes[emp.name], SIZE_MAX.get(emp.name, 2048))
         log(f"UV {emp.name}: {len(parts)} parts, {tris} faces, {how}, {sizes[emp.name]} px")
     if uv_blend:
         for emp in statics:

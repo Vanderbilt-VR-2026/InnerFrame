@@ -418,7 +418,8 @@ namespace InnerFrame.PaintedBedroom.EditorTools
             if (prof == null) { prof = ScriptableObject.CreateInstance<VolumeProfile>(); AssetDatabase.CreateAsset(prof, LookProfilePath); }
             prof.components.RemoveAll(c => c == null);   // earlier builds saved the components as null (they were never added to the asset, review 11/12)
             if (!prof.TryGet(out Tonemapping tm)) { tm = prof.Add<Tonemapping>(true); AssetDatabase.AddObjectToAsset(tm, prof); }   // a component must live inside the profile asset, or it saves as null
-            tm.active = true; tm.mode.overrideState = true; tm.mode.value = TonemappingMode.None;   // Blender-baked light: no tonemapping, like Blender's Standard view (10/29)
+            tm.active = true; tm.mode.overrideState = true;
+            tm.mode.value = Tonemap > 0.5f ? TonemappingMode.Neutral : TonemappingMode.None;   // None = like Blender's Standard view (10/29); Neutral rolls the clipped highlights off (11/12 review: 3.8% pure white)
             if (!prof.TryGet(out ColorAdjustments ca)) { ca = prof.Add<ColorAdjustments>(true); AssetDatabase.AddObjectToAsset(ca, prof); }
             ca.active = true; ca.postExposure.overrideState = true; ca.postExposure.value = Exposure;
             EditorUtility.SetDirty(tm); EditorUtility.SetDirty(ca); EditorUtility.SetDirty(prof);
@@ -430,9 +431,10 @@ namespace InnerFrame.PaintedBedroom.EditorTools
         // Daylight tuning (10/29): matched to the target sheet's brightness in the fixed painter view.
         static float SunIntensity = 9.9f / Mathf.PI;   // RIG sun energy 9.9 (W/m2) -> Unity directional intensity (11/11, x1.65)
         static float Exposure = 0.0f;   // 0 with the Blender-baked lightmaps
+        static float Tonemap = 0f;      // 1 = Neutral tonemapping in the look volume (batch: -ifTonemap 1)
         /// <summary>The window panes glow white and feed the bake (10/29): daylight through glass is overexposed
         /// and spills onto the reveal and the wall around the window, as in the target. HDR emission strength.</summary>
-        public static float GlassGlow = 1.2f;
+        public static float GlassGlow = 0f;   // 0 since #177's clear glass: the scenery shows through, as in the Cycles bake (was 1.2, M3b)
         /// <summary>For tuning in batch mode only: -ifSun, -ifExposure, -ifGlass override the values above.</summary>
         public static float TuningArg(string k, float d)
         {
@@ -443,7 +445,7 @@ namespace InnerFrame.PaintedBedroom.EditorTools
         static void ReadTuningArgs()
         {
             float Get(string k, float d) => TuningArg(k, d);
-            SunIntensity = Get("-ifSun", SunIntensity); Exposure = Get("-ifExposure", Exposure);
+            SunIntensity = Get("-ifSun", SunIntensity); Exposure = Get("-ifExposure", Exposure); Tonemap = Get("-ifTonemap", Tonemap);
         }
 
         static Transform FindDeep(Transform t, string name)

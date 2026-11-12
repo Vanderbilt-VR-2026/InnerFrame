@@ -10,7 +10,7 @@ namespace InnerFrame.StarryNight
     /// <summary>
     /// The only thing in StarryNight.unity besides the player rig: at runtime it spawns the hilltop, the rock, the
     /// cypress, the lantern, the sketchbook, the page, Vincent (his charcoal in his hand), the sky and the beam from the prefabs in
-    /// Assets/StarryNight/Prefabs, and the shared dialogue box (Assets/VanGogh/Prefabs/VG_DialogueUI.prefab with the
+    /// Assets/StarryNight/Prefabs, and the shared dialogue box (Assets/Shared/UI/Prefabs/VG_DialogueUI.prefab with the
     /// VG_Dialogue_StarryNight settings), places them from SN_Layout, and starts SN_Game.
     /// Editor fallback (no XR device): the mouse aims, Space is the trigger, G grabs or releases the nearest grabbable
     /// within SN_Layout.editorGrabReach, 1 and 2 jump to the player start and the player seat (DesktopTestRig walks
@@ -22,6 +22,8 @@ namespace InnerFrame.StarryNight
         public SN_Lines lines;
         public GameObject hilltopPrefab, rockPrefab, cypressPrefab, lanternPrefab, sketchbookPrefab, pagePrefab,
             charcoalPrefab, vincentPrefab, skyPrefab, beamPrefab;
+        [Tooltip("2026-11-09: the lantern's post and hook, the seat's blanket.")]
+        public GameObject lanternPostPrefab, blanketPrefab;
         [Tooltip("VG_DialogueUI.prefab: Vincent's words and the hint, as in every scene.")] public GameObject uiPrefab;
         [Tooltip("VG_Dialogue_StarryNight: where the box sits (1.6 m, 22 deg under the gaze) and its sizes.")] public VG_DialogueSettings uiSettings;
         [Tooltip("SN_Grading.asset (Color Adjustments): used only when SN_Layout.colourGrading is on.")] public VolumeProfile grading;
@@ -43,6 +45,10 @@ namespace InnerFrame.StarryNight
         void Start()
         {
             CheckRigs();
+            // the props never lift the rig: it climbs anything up to about 0.55 m (measured 2026-11-09: its CharacterController's
+            // step offset, 0.5, is not scaled with the 0.8 rig); also the Editor's desktop rig
+            var controllers = FindObjectsByType<CharacterController>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (var g in Game.Shareables) if (g != null) g.IgnoreAlways(controllers);
 #if UNITY_EDITOR
             if (!XRSettings.isDeviceActive) Game.Input = new SN_InputEditor();
             else
@@ -120,19 +126,41 @@ namespace InnerFrame.StarryNight
             cypress.name = "SN_Cypress";
             cypress.transform.position = layout.OnGround(layout.cypressBase);
 
+            // the three props with a Rigidbody (the charcoal below is only its model): placed with their bodies (PlaceProp)
             var lanternGo = Instantiate(lanternPrefab, World);
             lanternGo.name = "SN_Lantern";
-            lanternGo.transform.SetPositionAndRotation(layout.OnGround(layout.lantern) + Vector3.up * 0.005f, Quaternion.Euler(0f, -20f, 0f));
+            var lanternAt = LanternSpawn(layout);
+            PlaceProp(lanternGo, lanternAt.position, lanternAt.rotation);
+            // on its hook, kinematic; let go, it glides back there (SN_Grabbable)
+            lanternGo.GetComponent<SN_Grabbable>().SetHome(lanternAt, layout.lanternReturnSeconds, place: false);
             var lantern = lanternGo.GetComponent<SN_Lantern>();
             lantern.Configure(layout.lanternIntensity, layout.lanternRange, layout.lanternLight);
+            lantern.ConfigureFinding(layout.lanternPulse, layout.lanternPulseHz, layout.lanternTargetBoost);
+
+            // its post, the seat's blanket (no colliders)
+            if (lanternPostPrefab != null)
+            {
+                var post = Instantiate(lanternPostPrefab, World);
+                post.name = "SN_LanternPost";
+                var at = layout.LanternPostPose;
+                post.transform.SetPositionAndRotation(at.position, at.rotation);
+            }
+            if (blanketPrefab != null)
+            {
+                var blanket = Instantiate(blanketPrefab, World);
+                blanket.name = "SN_Blanket";
+                blanket.transform.SetPositionAndRotation(layout.OnGround(new Vector3(layout.playerSeat.x, 0f, layout.playerSeat.z)), Quaternion.Euler(0f, layout.blanketYaw, 0f));
+            }
 
             var book = Instantiate(sketchbookPrefab, World);
             book.name = "SN_Sketchbook";
-            book.transform.SetPositionAndRotation(layout.sketchbook, Quaternion.Euler(0f, 15f, 0f));
+            var bookAt = SketchbookSpawn(layout);
+            PlaceProp(book, bookAt.position, bookAt.rotation);
 
             var pageGo = Instantiate(pagePrefab, World);
             pageGo.name = "SN_Page";
-            pageGo.transform.SetPositionAndRotation(layout.page, Quaternion.Euler(0f, -10f, 0f));
+            var pageAt = PageSpawn(layout);
+            PlaceProp(pageGo, pageAt.position, pageAt.rotation);
 
             // Vincent v2 on the rock (step 3); his charcoal in his right hand, physics off (only the stick's model)
             var vincent = Instantiate(vincentPrefab, World);
@@ -180,6 +208,12 @@ namespace InnerFrame.StarryNight
             ui.Voice = voice.source;    // the pages keep the voice's own time while it plays the line's clip
             PrewarmFont(ui);
 
+            // the props pass through the rock's keep-off rim (it is only there to keep the rig off the rock)
+            var rimT = hill.transform.Find("RockRim");
+            var rim = rimT != null ? rimT.GetComponent<Collider>() : null;
+            if (rim != null)
+                foreach (var g in new[] { lanternGo, book, pageGo }) g.GetComponent<SN_Grabbable>().IgnoreAlways(new[] { rim });
+
             var game = World.gameObject.AddComponent<SN_Game>();
             game.layout = layout;
             game.sky = sky;
@@ -197,11 +231,34 @@ namespace InnerFrame.StarryNight
             return game;
         }
 
+        /// <summary>Where each prop starts (also read by the checks).</summary>
+        public static Pose LanternSpawn(SN_Layout l) => l.LanternHomePose;   // on its hook (version 7; before: on the grass at SN_Layout.lantern)
+        public static Pose SketchbookSpawn(SN_Layout l) => new Pose(l.sketchbook, Quaternion.Euler(0f, 15f, 0f));
+        public static Pose PageSpawn(SN_Layout l) => new Pose(l.page, Quaternion.Euler(0f, -10f, 0f));
+
+        /// <summary>
+        /// Puts a spawned prop at its spot, its Rigidbody included (SN_Grabbable.Place). The props' bodies interpolate
+        /// (SN_Setup.Grabbable), and an interpolating body that is moved only through its Transform right after Instantiate
+        /// keeps the pose it was created with: the prefab's, the world origin, inside the rock. Until 2026-11-09 the
+        /// lantern and the sketchbook started there in Play mode (the page did not: it is hidden in Begin and its body is
+        /// made again, from its Transform, when it is shown at dawn).
+        /// </summary>
+        public static void PlaceProp(GameObject go, Vector3 position, Quaternion rotation)
+        {
+            var g = go.GetComponent<SN_Grabbable>();
+            if (g != null && !ControlPlaceByTransformOnly) g.Place(position, rotation);
+            else go.transform.SetPositionAndRotation(position, rotation);
+        }
+
+        /// <summary>SN_SpawnCheck's control only (Editor/Tests): place the props through their Transform alone, as before
+        /// 2026-11-09; the check must then fail. Never set in the game.</summary>
+        public static bool ControlPlaceByTransformOnly;
+
         /// <summary>Every character the box and the hint will draw, into the font's atlas at once (no rebuild mid-scene).</summary>
         void PrewarmFont(VG_DialogueUI ui)
         {
-            var texts = new System.Collections.Generic.List<string> { SN_Voice.Speaker, ui.settings.hintTitle, SN_Game.TakeThePage, "0123456789.,;:!?'-" };
-            foreach (SN_State s in System.Enum.GetValues(typeof(SN_State))) texts.Add(SN_Game.HintFor(s));
+            var texts = new System.Collections.Generic.List<string> { SN_Voice.Speaker, ui.settings.hintTitle, SN_Game.PageTitle, SN_Game.TakeThePage, "0123456789.,;:!?'-" };
+            foreach (SN_State s in System.Enum.GetValues(typeof(SN_State))) { texts.Add(SN_Game.TitleFor(s)); texts.Add(SN_Game.HintFor(s)); }
             if (lines != null) foreach (var l in lines.lines) texts.Add(l.text);
             ui.Prewarm(texts);
         }

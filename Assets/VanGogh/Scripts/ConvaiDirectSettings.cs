@@ -2,7 +2,8 @@ using UnityEngine;
 
 /// <summary>
 /// Vincent through Convai's web API, straight from the headset (no proxy, no Convai SDK): SpeechToProxy sends the
-/// recorded question to https://api.convai.com/character/getResponse and plays the voice it returns.
+/// recorded question to https://api.convai.com/character/getResponse. With Headset Voice on (the default), Convai sends
+/// only his words and each headset speaks them (VincentVoice, #157); off, it plays the voice Convai returns.
 ///
 /// One asset, Assets/VanGogh/Resources/ConvaiDirectSettings (Tools > InnerFrame > Van Gogh > Set Up Convai Direct):
 /// Use Convai and Vincent's Character ID. The API key is NOT here: it goes in Assets/VanGogh/Resources/ConvaiApiKey.txt
@@ -21,6 +22,15 @@ public class ConvaiDirectSettings : ScriptableObject
 
     [Tooltip("Vincent's Character ID from convai.com: only the ID, like 1a2b3c4d-1a2b-1a2b-1a2b-1a2b3c4d5e6f.")]
     public string characterId = "";
+
+    [Tooltip("Speak his answers on each headset in his Piper voice (VincentVoice, #157), so every player hears him. " +
+             "Off: Convai's own voice, which only the player who asked hears.")]
+    public bool headsetVoice = true;
+
+    [Tooltip("Turn your question into text on the headset (VincentEars, Moonshine) and send Convai the text: " +
+             "about 1.4 s faster, and the other players see what was asked. Off: Convai gets the audio. " +
+             "Only with Headset Voice on (it streams).")]
+    public bool headsetSpeechToText = true;
 
     static ConvaiDirectSettings current;
     static string apiKey;

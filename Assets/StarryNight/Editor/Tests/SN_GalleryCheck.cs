@@ -104,12 +104,13 @@ namespace InnerFrame.StarryNight.EditorTools
             var picture = painting.GetComponent<Renderer>().bounds;
             Vector3 facing = -painting.forward;   // a quad's visible side faces its -Z
             W($"painting centre {V(picture.center)}, size {V(picture.size)}, facing {V(facing)}; frame {V(frame.min)}..{V(frame.max)}; pedestal {V(pedestal.min)}..{V(pedestal.max)}; button {V(button.transform.position)}");
-            Check(Vector3.Distance(picture.center, new Vector3(-4.9f, 2f, -3.6f)) < Mm && Vector3.Angle(facing, Vector3.right) < 0.01f,
-                "the painting's centre is at (-4.900, 2.000, -3.600), facing into the room (+X)");
+            var expect = G.RootPosition + new Vector3(0.1f, 2f, 0f);   // its slot 0.1 m off the east wall, 2 m up
+            Check(Vector3.Distance(picture.center, expect) < Mm && Vector3.Angle(facing, Vector3.right) < 0.01f,
+                $"the painting's centre is at {V(expect)}, facing into the room (+X)");
             float bottom = picture.min.y, height = picture.size.y, width = picture.size.z;
             Check(Mathf.Abs(width - 3f) < Mm && Mathf.Abs(height - 3f * 1622f / 2048f) < Mm, $"the painting is {F(width)} x {F(height)} m (3 m wide at the image's ratio)");
             Check(Mathf.Abs(bottom - 0.8f) < 0.02f, $"its bottom edge is {F(bottom)} m up (The Bedroom's: 0.8 m)");
-            Check(Mathf.Abs(frame.min.x - (-5f)) < Mm, $"the frame's back is on the east wall's face (x {F(frame.min.x)}, wall -5.000)");
+            Check(Mathf.Abs(frame.min.x - G.RootPosition.x) < Mm, $"the frame's back is on the east wall's face (x {F(frame.min.x)}, wall {F(G.RootPosition.x)})");
             Check(picture.center.x > frame.min.x && picture.center.x < frame.max.x && Inside(picture, frame),
                 $"the painting sits inside the frame, {F(frame.max.x - picture.center.x)} m behind its front");
             Check(Mathf.Abs(pedestal.min.y) < Mm, $"the pedestal stands on the floor (bottom {F(pedestal.min.y)} m)");
@@ -126,12 +127,12 @@ namespace InnerFrame.StarryNight.EditorTools
                 foreach (var c in Physics.OverlapBox(b.center, b.extents - Vector3.one * 0.005f, Quaternion.identity, ~0, QueryTriggerInteraction.Collide))
                     if (!ourColliders.Contains(c)) overlaps.Add($"{mine} x {c.name}");
             }
-            // control: the same query with the pedestal moved onto Bench_03 must find the bench (the Gallery's colliders are
+            // control: the same query with the pedestal moved onto a bench (Bench_01 since 2026-11-10) must find the bench (the Gallery's colliders are
             // hollow meshes: a box must cross their surface to touch them, as an overlapping pedestal would)
-            var bench3 = scene.GetRootGameObjects().SelectMany(g => g.GetComponentsInChildren<Collider>(true)).FirstOrDefault(c => c.name == "Bench_03");
+            var bench3 = scene.GetRootGameObjects().SelectMany(g => g.GetComponentsInChildren<Collider>(true)).FirstOrDefault(c => c.name.StartsWith("Bench_"));
             var onBench = bench3 != null ? Physics.OverlapBox(new Vector3(bench3.bounds.center.x, pedestal.center.y, bench3.bounds.center.z),
                 pedestal.extents - Vector3.one * 0.005f, Quaternion.identity, ~0, QueryTriggerInteraction.Collide) : new Collider[0];
-            Check(onBench.Contains(bench3), $"control: the pedestal's box moved onto Bench_03 finds {string.Join(", ", onBench.Select(c => c.name))}");
+            Check(onBench.Contains(bench3), $"control: the pedestal's box moved onto the bench finds {string.Join(", ", onBench.Select(c => c.name))}");
             Check(overlaps.Count == 0, $"no collider in the Gallery overlaps the frame or the pedestal (OverlapBox, 5 mm in) {Errs(overlaps)}");
             foreach (var bench in scene.GetRootGameObjects().SelectMany(g => g.GetComponentsInChildren<Renderer>(true)).Where(r => r.name.StartsWith("Bench_")))
                 W($"  gap from the pedestal to {bench.name}: {F(Gap(pedestal, bench.bounds))} m");
@@ -193,9 +194,9 @@ namespace InnerFrame.StarryNight.EditorTools
                 Check(tex.format == TextureFormat.ASTC_6x6, $"on Android it is compressed: ASTC 6x6 ({tex.format}), about 2.5 MB with mipmaps");
             else W($"  (the Editor's target is {EditorUserBuildSettings.activeBuildTarget}, so the Android format is checked from the importer only)");
             var mat = painting.GetComponent<Renderer>().sharedMaterial;
-            Check(mat != null && AssetDatabase.GetAssetPath(mat) == G.MaterialPath && mat.shader.name == "Universal Render Pipeline/Unlit"
+            Check(mat != null && AssetDatabase.GetAssetPath(mat) == G.MaterialPath && mat.shader.name == "Universal Render Pipeline/Lit"
                   && mat.GetTexture("_BaseMap") == tex && mat.GetColor("_BaseColor") == Color.white,
-                $"the painting draws {G.MaterialPath}: URP Unlit, the image, white");
+                $"the painting draws {G.MaterialPath}: URP Lit, the image, white");
 
             // ------------------------------------------------------------------ controls: each of these must fail
             W("# controls (in memory; nothing is saved)");

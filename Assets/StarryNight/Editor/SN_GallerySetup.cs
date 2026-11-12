@@ -22,7 +22,7 @@ namespace InnerFrame.StarryNight.EditorTools
     /// loads The Starry Night by name, as the Bedroom's does.
     /// What it writes, each only when it differs:
     ///   - the image's import settings (2048 x 1622 stretched to 2048 x 2048 on import, mipmaps, ASTC 6x6 on Android);
-    ///   - SN_GalleryPainting.mat (URP Unlit, the image, white) and SN_GalleryEntrance.prefab. The frame and pedestal are
+    ///   - SN_GalleryPainting.mat (URP Lit, the image, white, matte: lit by the room) and SN_GalleryEntrance.prefab. The frame and pedestal are
     ///     Gallery.fbx's own Frame_Bedroom and Pedestal_Bedroom meshes and materials, by reference. Frame, pedestal, button and
     ///     painting keep The Bedroom's offsets from the north wall, turned 90 degrees onto the east wall; the offsets are read
     ///     on every run from The Bedroom's objects in Gallery.unity (the scene's own adjustments included: its button is
@@ -52,12 +52,14 @@ namespace InnerFrame.StarryNight.EditorTools
 
         /// <summary>Spot A (Phase 2, approved 2026-11-05): on the east wall's inner face (x = -5; Wall_East is centred at
         /// x = -5.1 and 0.2 m thick), 3.6 m north of the room's middle; the root faces into the room (+X).</summary>
-        public static readonly Vector3 RootPosition = new Vector3(-5f, 0f, -3.6f);
+        // 2026-11-10: the Gallery is 7 x 9 m (build_gallery.py), so the east wall is at x = -3.5 and the painting hangs at z = -1.6
+        // (it was (-5, 0, -3.6) in the 10 x 14 m room): its pedestal then stands clear of the bench and the rug.
+        public static readonly Vector3 RootPosition = new Vector3(-3.5f, 0f, -1.6f);
         public const float RootYaw = 90f;
         public static Quaternion RootRotation => Quaternion.Euler(0f, RootYaw, 0f);
         /// <summary>The north wall's inner face (Wall_North: centre z -7.1, 0.2 m thick), which The Bedroom hangs from.
         /// Its frame, pedestal and button keep their offsets from it, relative to the entrance's root.</summary>
-        public static readonly Vector3 BedroomWall = new Vector3(0f, 0f, -7f);
+        public static readonly Vector3 BedroomWall = new Vector3(0f, 0f, -4.5f);   // the north wall's face (-7 in the 14 m room)
         /// <summary>The Bedroom's painting is 3 m wide (both canvases are about 92 cm wide); the height follows the image.</summary>
         public const float PaintingWidth = 3f;
         /// <summary>The quad faces -Z; turned round it faces out of the wall, as Painting_TheBedroom does.</summary>
@@ -145,27 +147,10 @@ namespace InnerFrame.StarryNight.EditorTools
             return new Vector2Int(w, h);
         }
 
-        static Material BuildMaterial(List<string> changes)
-        {
-            var shader = Shader.Find("Universal Render Pipeline/Unlit") ?? throw new Exception($"{Tag} URP Unlit shader not found");
-            var image = AssetDatabase.LoadAssetAtPath<Texture2D>(ImagePath);
-            var m = AssetDatabase.LoadAssetAtPath<Material>(MaterialPath);
-            if (m == null)
-            {
-                m = new Material(shader) { name = Path.GetFileNameWithoutExtension(MaterialPath) };
-                m.SetTexture("_BaseMap", image);
-                m.SetColor("_BaseColor", Color.white);   // true colours (The Bedroom's material is tinted blue-grey)
-                AssetDatabase.CreateAsset(m, MaterialPath);
-                changes.Add($"{MaterialPath}: created");
-                return m;
-            }
-            var why = new List<string>();
-            if (m.shader != shader) { m.shader = shader; why.Add("shader"); }
-            if (m.GetTexture("_BaseMap") != image) { m.SetTexture("_BaseMap", image); why.Add("image"); }
-            if (m.GetColor("_BaseColor") != Color.white) { m.SetColor("_BaseColor", Color.white); why.Add("colour"); }
-            if (why.Count > 0) { EditorUtility.SetDirty(m); changes.Add($"{MaterialPath}: {string.Join(", ", why)}"); }
-            return m;
-        }
+        /// <summary>URP Lit, the image, white and matte, as The Bedroom's painting (GalleryLightingSetup): the room's
+        /// lanterns and sun light it (2026-11-11; it was URP Unlit, so no light reached it).</summary>
+        static Material BuildMaterial(List<string> changes) =>
+            InnerFrame.Gallery.EditorTools.GalleryLightingSetup.MakePainting(MaterialPath, ImagePath, changes);
 
         // ---------------------------------------------------------------------------------------------- prefab
 

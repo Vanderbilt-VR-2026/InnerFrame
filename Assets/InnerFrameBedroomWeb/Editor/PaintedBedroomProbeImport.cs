@@ -43,8 +43,12 @@ namespace InnerFrame.PaintedBedroom.EditorTools
                 var go = new GameObject("Light Probes");
                 group = go.AddComponent<LightProbeGroup>();
             }
+            // #193 shrinks the room at runtime about the origin (PaintedBedroomPhysicsTable.roomScale); the probes were
+            // sampled in the data-sized room, which has the same light, so they only have to move with it
+            var table = AssetDatabase.LoadAssetAtPath<PaintedBedroomPhysicsTable>("Assets/InnerFrameBedroomWeb/Resources/PaintedBedroomPhysicsTable.asset");
+            float roomScale = table != null ? table.roomScale : 1f;
             var positions = new Vector3[data.probes.Length];
-            for (int i = 0; i < positions.Length; i++) positions[i] = new Vector3(data.probes[i].position[0], data.probes[i].position[1], data.probes[i].position[2]);
+            for (int i = 0; i < positions.Length; i++) positions[i] = new Vector3(data.probes[i].position[0], data.probes[i].position[1], data.probes[i].position[2]) * roomScale;
             group.transform.position = Vector3.zero; group.transform.rotation = Quaternion.identity; group.transform.localScale = Vector3.one;
             group.probePositions = positions;
 
@@ -77,7 +81,7 @@ namespace InnerFrame.PaintedBedroom.EditorTools
             EditorUtility.SetDirty(lp);
             EditorSceneManager_Save(scene);
             LastImportOk = true;
-            Debug.Log($"[ProbeImport] {matched}/{lp.count} probes now carry the Cycles light ({data.width}x{data.height} px each)");
+            Debug.Log($"[ProbeImport] {matched}/{lp.count} probes now carry the Cycles light ({data.width}x{data.height} px each), positions x {roomScale}");
         }
 
         static SphericalHarmonicsL2 FromPanorama(File data, Probe p)

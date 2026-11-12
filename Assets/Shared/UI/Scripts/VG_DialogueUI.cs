@@ -5,7 +5,7 @@ using UnityEngine.UI;
 /// <summary>
 /// The dialogue UI for any scene (Cici's concepts V1-V3, 2026-11-04): a speaker's words in a dark box with their name
 /// on a tab, and a hint above it with a title and one line, both low in the player's view, following the head lazily
-/// and drawn over the room. Put Assets/VanGogh/Prefabs/VG_DialogueUI.prefab in a scene with a main camera, give it a
+/// and drawn over the room. Put Assets/Shared/UI/Prefabs/VG_DialogueUI.prefab in a scene with a main camera, give it a
 /// VG_DialogueSettings asset, and call Say, Clear and SetHint. It plays no sound: the caller plays the voice, and sets
 /// Voice so the pages keep its time.
 /// </summary>

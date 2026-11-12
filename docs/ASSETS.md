@@ -136,10 +136,10 @@ sample, re-import it from Package Manager instead of editing it here.
 
 | Asset | Source | License / provenance |
 |---|---|---|
-| Assets/ArtworkCici | User-approved card layouts and interaction scripts from the standalone Cici UI preview | Project-authored UI and code; reuses existing VanGogh sprites and Libre Baskerville font GUIDs |
+| `Assets/ArtworkCici` | User-approved card layouts and interaction scripts from the standalone Cici UI preview | Project-authored UI and code; reuses existing VanGogh sprites and Libre Baskerville font GUIDs |
 | StarryNight Orsay Portrait | https://commons.wikimedia.org/wiki/File:Vincent_van_Gogh_-_Self-Portrait_-_Google_Art_Project.jpg | Public-domain painting and faithful reproduction; 1889 Orsay self-portrait, Google Art Project |
 | Bedroom portrait inset | Existing approved Portrait.jpg / AIC Self-Portrait, 1887, accession 1954.326 | Public-domain artwork; retains original approved image |
-| Assets/TextMesh Pro (missing essential resources) | Unity com.unity.ugui 2.0.0 / TextMesh Pro Essential Resources; copied from the existing Unity preview | Unity package license; Liberation Sans font SIL OFL (Fonts/LiberationSans - OFL.txt); EmojiOne attribution in Sprites/EmojiOne Attribution.txt |
+| `Assets/TextMesh Pro` (missing essential resources) | Unity com.unity.ugui 2.0.0 / TextMesh Pro Essential Resources; copied from the existing Unity preview | Unity package license; Liberation Sans font SIL OFL (Fonts/LiberationSans - OFL.txt); EmojiOne attribution in Sprites/EmojiOne Attribution.txt |
 | Gallery LibreBaskerville font atlas | Generated from existing LibreBaskerville-Regular.ttf | SIL Open Font License; existing Assets/VanGogh/Art/Fonts/OFL.txt |
 
 ## Entrance and controller tutorial

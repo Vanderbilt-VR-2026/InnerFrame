@@ -6,15 +6,16 @@ using UnityEngine.Video;
 
 namespace InnerFrame.Entrance
 {
-    /// <summary>Event-driven C score. UI sounds are separate from music and movie timing.</summary>
+    /// <summary>Persistent scene music with shared speech priority; UI sounds remain separate.</summary>
     public sealed class EntranceAudioDirector : MonoBehaviour
     {
         const string Folder = "Entrance/Audio/";
+        const float SpeechMusicLevel = .25f;
         static EntranceAudioDirector instance;
         readonly AudioSource[] music = new AudioSource[2];
         readonly float[] weights = new float[2];
         AudioSource clicks, handwriting;
-        AudioClip opening, landing1, landing2, gold, arrival, galleryLoop;
+        AudioClip opening, landing1, landing2, gold, arrival, galleryLoop, bedroomLoop, starryLoop;
         Coroutine crossfade, writingRoutine, arrivalRoutine;
         int active;
         float nextScan, duck = 1f;
@@ -50,17 +51,24 @@ namespace InnerFrame.Entrance
             opening = Load("OpeningLoop"); landing1 = Load("Landing1Loop");
             landing2 = Load("Landing2Loop"); gold = Load("GoldLoop"); arrival = Load("GalleryArrival");
             galleryLoop = Load("GalleryWarmStringsLoop");
+            bedroomLoop = Load("BedroomHiraethLoop"); starryLoop = Load("StarryNightAdriftLoop");
             clicks.clip = Load("SoftClick"); handwriting.clip = Load("Handwriting");
             SceneManager.sceneLoaded += Loaded;
         }
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        static void StartGalleryAudio()
+        static void StartSceneAudio()
         {
-            if (SceneManager.GetActiveScene().name == "Gallery") Ensure();
+            if (HasSceneMusic(SceneManager.GetActiveScene().name)) Ensure();
+        }
+        static bool HasSceneMusic(string scene) => scene == "Gallery" || scene == "PaintedBedroom" || scene == "StarryNight";
+        public static string MusicCredit(string scene)
+        {
+            string title = scene == "PaintedBedroom" ? "Hiraeth" : scene == "StarryNight" ? "Adrift Among Infinite Stars" : null;
+            return title == null ? null : title + " · Scott Buckley\nCC BY 4.0 · scottbuckley.com.au\nLoop edit for InnerFrame";
         }
         void Start()
         {
-            if (SceneManager.GetActiveScene().name == "Gallery")
+            if (HasSceneMusic(SceneManager.GetActiveScene().name))
                 Loaded(SceneManager.GetActiveScene(), LoadSceneMode.Single);
         }
         AudioClip Load(string name)
@@ -160,13 +168,28 @@ namespace InnerFrame.Entrance
             if (arrivalRoutine != null) { StopCoroutine(arrivalRoutine); arrivalRoutine = null; }
             if (scene.name == "Gallery")
                 arrivalRoutine = StartCoroutine(AwaitGalleryReveal(scene, enteringGallery));
-            else if (CurrentCue == "Gallery loop" || CurrentCue == "Gallery arrival")
+            else if (scene.name == "PaintedBedroom" || scene.name == "StarryNight")
+            {
+                enteringGallery = false;
+                arrivalRoutine = StartCoroutine(AwaitPaintingReveal(scene));
+            }
+            else if (CurrentCue == "Gallery loop" || CurrentCue == "Gallery arrival" || CurrentCue == "Bedroom loop" || CurrentCue == "Starry Night loop")
             {
                 if (crossfade != null) StopCoroutine(crossfade);
                 CurrentCue = "Outside Gallery";
                 crossfade = StartCoroutine(FadeGalleryOut());
             }
             nextScan = 0;
+        }
+        IEnumerator AwaitPaintingReveal(Scene scene)
+        {
+            // Keep the previous room's score under loading; crossfade when the painting appears.
+            var fader = SceneFader.Instance;
+            while (scene.isLoaded && fader.IsTransitioning && fader.Coverage >= .98f) yield return null;
+            if (scene.isLoaded && SceneManager.GetActiveScene() == scene)
+                Switch(scene.name == "PaintedBedroom" ? bedroomLoop : starryLoop, true,
+                    scene.name == "PaintedBedroom" ? "Bedroom loop" : "Starry Night loop", 2.4f);
+            arrivalRoutine = null;
         }
         IEnumerator AwaitGalleryReveal(Scene scene, bool fromGold)
         {
@@ -183,7 +206,7 @@ namespace InnerFrame.Entrance
                     while (AudioSettings.dspTime < loopStart && scene.isLoaded) yield return null;
                 }
                 if (scene.isLoaded && SceneManager.GetActiveScene() == scene)
-                    Switch(galleryLoop, true, "Gallery loop", fromGold ? 2.4f : 1.2f);
+                    Switch(galleryLoop, true, "Gallery loop", fromGold || CurrentCue == "Bedroom loop" || CurrentCue == "Starry Night loop" ? 2.4f : 1.2f);
             }
             arrivalRoutine = null;
         }
@@ -222,9 +245,9 @@ namespace InnerFrame.Entrance
                     if (ui != null && ui.isActiveAndEnabled && ui.Voice != null && ui.Voice.isPlaying)
                     { voicePriority = true; break; }
             if (voicePriority) voiceHoldUntil = Time.unscaledTime + .35f;
-            float target = Time.unscaledTime < voiceHoldUntil ? .1f : 1f;
+            float target = Time.unscaledTime < voiceHoldUntil ? SpeechMusicLevel : 1f;
             float seconds = target < VoiceMusicGain ? .08f : 1.2f;
-            VoiceMusicGain = Mathf.MoveTowards(VoiceMusicGain, target, .9f * Time.unscaledDeltaTime / seconds);
+            VoiceMusicGain = Mathf.MoveTowards(VoiceMusicGain, target, (1f - SpeechMusicLevel) * Time.unscaledDeltaTime / seconds);
             duck = Mathf.MoveTowards(duck, HandwritingPlaying ? .75f : 1f, Time.unscaledDeltaTime * 2f);
             for (int i = 0; i < 2; i++) music[i].volume = weights[i] * duck * VoiceMusicGain;
         }

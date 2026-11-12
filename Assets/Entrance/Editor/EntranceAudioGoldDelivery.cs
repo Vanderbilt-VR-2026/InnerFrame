@@ -40,6 +40,18 @@ namespace InnerFrame.Entrance.Editor
             galleryImporter.defaultSampleSettings = gallerySettings;
             galleryImporter.forceToMono = false;
             galleryImporter.SaveAndReimport();
+            foreach (string name in new[] { "BedroomHiraethLoop", "StarryNightAdriftLoop" })
+            {
+                var importer = AssetImporter.GetAtPath(Root + "Audio/" + name + ".wav") as AudioImporter;
+                if (importer == null) throw new InvalidOperationException("Missing painting music: " + name);
+                var settings = importer.defaultSampleSettings;
+                settings.loadType = AudioClipLoadType.Streaming;
+                settings.compressionFormat = AudioCompressionFormat.PCM;
+                settings.sampleRateSetting = AudioSampleRateSetting.PreserveSampleRate;
+                importer.defaultSampleSettings = settings;
+                importer.forceToMono = false;
+                importer.SaveAndReimport();
+            }
             MaterialAt("GoldRay", "InnerFrame/Entrance/GoldRay");
             MaterialAt("GoldRayTip", "InnerFrame/Entrance/GoldRayTip");
             AssetDatabase.SaveAssets();

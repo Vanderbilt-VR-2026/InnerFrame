@@ -26,7 +26,7 @@ namespace InnerFrame.Entrance
             DontDestroyOnLoad(gameObject);
             folder = Path.GetFullPath(Path.Combine(Application.dataPath,"../../verification"));
             Directory.CreateDirectory(folder);
-            deadline = Time.realtimeSinceStartup + 150f;
+            deadline = Time.realtimeSinceStartup + 240f;
             StartCoroutine(Guard(Run()));
         }
         void Update()
@@ -158,12 +158,12 @@ namespace InnerFrame.Entrance
             var spoken = Resources.Load<AudioClip>("Entrance/Audio/Handwriting");
             speaker.Say(spoken, "Voice priority regression fixture");
             yield return new WaitForSecondsRealtime(.2f);
-            Check(audioDirector.VoiceMusicGain <= .11f && loop.volume <= .11f,
-                "Vincent speech ducks the playing Gallery BGM to ten percent");
+            Check(audioDirector.VoiceMusicGain >= .24f && audioDirector.VoiceMusicGain <= .26f && loop.volume >= .24f && loop.volume <= .26f,
+                "Vincent speech retains the playing Gallery BGM at twenty-five percent");
             Check(Mathf.Approximately(speaker.voice.volume, voiceVolume), "Voice priority leaves Vincent's voice volume unchanged");
             speaker.voice.Stop();
             yield return new WaitForSecondsRealtime(.2f);
-            Check(audioDirector.VoiceMusicGain <= .11f, "Short speech gaps keep BGM ducked");
+            Check(audioDirector.VoiceMusicGain >= .24f && audioDirector.VoiceMusicGain <= .26f, "Short speech gaps retain BGM at twenty-five percent");
             yield return new WaitForSecondsRealtime(1.5f);
             Check(audioDirector.VoiceMusicGain >= .99f && loop.isPlaying, "BGM recovers smoothly after speech without restarting its loop");
             // Asking and error states use the same path as hold-B; no microphone or API is called here.
@@ -173,19 +173,14 @@ namespace InnerFrame.Entrance
             {
                 setSpeechState.Invoke(speaker, new[] { Enum.Parse(stateType, state) });
                 yield return new WaitForSecondsRealtime(.2f);
-                Check(audioDirector.VoiceMusicGain <= .11f, state + " also ducks BGM");
+                Check(audioDirector.VoiceMusicGain >= .24f && audioDirector.VoiceMusicGain <= .26f, state + " also retains BGM at twenty-five percent");
             }
             setSpeechState.Invoke(speaker, new[] { Enum.Parse(stateType, "Error") });
             yield return new WaitForSecondsRealtime(1.7f);
             Check(audioDirector.VoiceMusicGain >= .99f, "Failed requests restore BGM instead of leaving it quiet");
             setSpeechState.Invoke(speaker, new[] { Enum.Parse(stateType, "Idle") });
-            yield return SceneManager.LoadSceneAsync("Assets/StarryNight/Scenes/StarryNight.unity");
-            yield return new WaitForSecondsRealtime(.8f);
-            Check(!loop.isPlaying, "Gallery music fades out in a painting scene");
-            yield return SceneManager.LoadSceneAsync("Assets/Scenes/Gallery.unity");
-            yield return new WaitForSecondsRealtime(1.5f);
-            Check(audioDirector.CurrentCue == "Gallery loop", "Returning to Gallery resumes music without replaying the entrance cue");
-            Check(FindObjectsByType<EntranceAudioDirector>(FindObjectsSortMode.None).Length == 1, "Returning keeps exactly one music director");
+            yield return PaintingMusic("PaintedBedroom", "Bedroom loop", "BedroomHiraethLoop", 121f);
+            yield return PaintingMusic("StarryNight", "Starry Night loop", "StarryNightAdriftLoop", 72f);
             yield return SceneManager.LoadSceneAsync("Assets/Entrance/Scenes/Entrance.unity");
             menu=null; yield return Ready();
             yield return Click("Begin sign"); yield return Click("Boy portrait"); yield return Click("Enter the Story sign"); yield return Click("New Room sign"); yield return Click("Start sign"); yield return Click("Continue");
@@ -195,6 +190,59 @@ namespace InnerFrame.Entrance
             Check(!audioDirector.HandwritingPlaying,"Skip immediately stops writing audio");
             Check(FindObjectsByType<EntranceAudioDirector>(FindObjectsSortMode.None).Length==1,"One audio director after returning to Entrance");
             Finish(true,"All local checks passed. Physical Quest verification is not performed.");
+        }
+        IEnumerator PaintingMusic(string scene, string cue, string clipName, float seconds)
+        {
+            var previous = audioDirector.GetComponents<AudioSource>().Single(s => s.isPlaying && s.clip.name == "GalleryWarmStringsLoop");
+            SceneFader.Instance.FadeToScene(scene, .2f);
+            float until = Time.realtimeSinceStartup + 25f;
+            while (audioDirector.CurrentCue != cue && Time.realtimeSinceStartup < until) yield return null;
+            Check(audioDirector.CurrentCue == cue, scene + " starts its selected music at reveal");
+            yield return new WaitForSecondsRealtime(.4f);
+            var loop = audioDirector.GetComponents<AudioSource>().Single(s => s.isPlaying && s.clip.name == clipName);
+            Check(previous.isPlaying && previous.volume > 0 && loop.volume > 0, scene + " overlaps Gallery music during crossfade");
+            yield return new WaitForSecondsRealtime(2.2f);
+            Check(!previous.isPlaying, scene + " stops the previous cue after crossfade");
+            Check(loop.loop && Mathf.Abs(loop.clip.length - seconds) < .01f && loop.clip.channels == 2 && loop.clip.loadType == AudioClipLoadType.Streaming,
+                scene + " uses its stereo streaming loop at the expected duration");
+            loop.time = loop.clip.length - .25f;
+            yield return new WaitForSecondsRealtime(.6f);
+            Check(loop.isPlaying && loop.time < 1f, scene + " crosses its loop boundary without stopping");
+            var speaker = FindObjectsByType<SpeechToProxy>(FindObjectsSortMode.None).First();
+            float voiceVolume = speaker.voice.volume;
+            var spoken = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/StarryNight/Audio/SN_L01.wav");
+            speaker.Say(spoken, "Voice priority regression fixture");
+            yield return new WaitForSecondsRealtime(.3f);
+            Check(speaker.voice.isPlaying && audioDirector.VoiceMusicGain >= .24f && audioDirector.VoiceMusicGain <= .26f && loop.volume >= .24f && loop.volume <= .26f,
+                scene + " live-conversation voice retains BGM at twenty-five percent");
+            Check(Mathf.Approximately(speaker.voice.volume, voiceVolume), scene + " preserves Vincent voice gain");
+            speaker.voice.Stop();
+            yield return new WaitForSecondsRealtime(1.8f);
+            Check(audioDirector.VoiceMusicGain >= .99f && loop.isPlaying, scene + " smoothly restores music after speech");
+            if (scene == "StarryNight")
+            {
+                var narrative = FindAnyObjectByType<InnerFrame.StarryNight.SN_Voice>();
+                narrative.PauseForConversation(false);
+                narrative.source.clip = spoken; narrative.ui.Voice = narrative.source; narrative.source.Play();
+                yield return new WaitForSecondsRealtime(.3f);
+                Check(narrative.source.isPlaying && loop.volume >= .24f && loop.volume <= .26f, "Starry Night scripted narration retains BGM at twenty-five percent");
+                narrative.source.Stop();
+                yield return new WaitForSecondsRealtime(1.8f);
+                Check(audioDirector.VoiceMusicGain >= .99f, "Starry Night restores BGM after scripted narration");
+            }
+            var panel = PlayerMenuPanel.Create(Camera.main);
+            panel.ShowInFrontOf(Camera.main.transform, "Gallery", true);
+            Check(panel.GetComponentsInChildren<Text>().Any(t => t.text.Contains("Scott Buckley") && t.text.Contains("CC BY 4.0")), scene + " menu includes music attribution");
+            var back = panel.GetComponentsInChildren<Button>().Single(b => b.GetComponentInChildren<Text>()?.text == "Back to Gallery");
+            back.onClick.Invoke();
+            until = Time.realtimeSinceStartup + 25f;
+            while (audioDirector.CurrentCue != "Gallery loop" && Time.realtimeSinceStartup < until) yield return null;
+            Check(audioDirector.CurrentCue == "Gallery loop", scene + " menu returns to Gallery music without the arrival cue");
+            yield return new WaitForSecondsRealtime(.4f);
+            Check(loop.isPlaying && loop.volume > 0, scene + " music continues under the Gallery return crossfade");
+            yield return new WaitForSecondsRealtime(2.2f);
+            Check(!loop.isPlaying && FindObjectsByType<EntranceAudioDirector>(FindObjectsSortMode.None).Length == 1,
+                scene + " return leaves one music director and stops the painting cue");
         }
         void RayMaterialPreview()
         {

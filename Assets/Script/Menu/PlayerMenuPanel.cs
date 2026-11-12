@@ -85,7 +85,8 @@ public class PlayerMenuPanel : MonoBehaviour
         canvasGo.AddComponent<GraphicRaycaster>();                // mouse, in the Editor
 
         // The same opaque navy reading surface and rounded gold outline as the Gallery cards.
-        AddFrame(rect, "Gallery Frame", Vector2.zero, new Vector2(W, H));
+        string musicCredit = InnerFrame.Entrance.EntranceAudioDirector.MusicCredit(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
+        AddFrame(rect, "Gallery Frame", musicCredit == null ? Vector2.zero : new Vector2(0, -25), new Vector2(W, H + (musicCredit == null ? 0 : 50)));
 
         // A small overlapping title tab doubles as the controller's grab handle.
         var title = AddFrame(rect, "Title Bar (grab to move)", new Vector2(-132, H / 2), new Vector2(200, 42));
@@ -105,6 +106,8 @@ public class PlayerMenuPanel : MonoBehaviour
         moveHint = AddText(rect, "", new Vector2(0, -106), new Vector2(W - 110, 30), 13, TextAnchor.MiddleCenter);
         moveHint.color = MenuLook.Muted;
         AddStar(rect, new Vector2(222, -112), 23);
+        if (musicCredit != null)
+            AddText(rect, musicCredit, new Vector2(0, -155), new Vector2(W - 50, 54), 12, TextAnchor.MiddleCenter).color = MenuLook.Muted;
 
         // ---- drag: added last, so it picks up the title bar's collider ----
         var body = gameObject.AddComponent<Rigidbody>();

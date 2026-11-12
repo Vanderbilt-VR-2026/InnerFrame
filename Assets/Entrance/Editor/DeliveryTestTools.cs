@@ -42,6 +42,18 @@ public static class DeliveryTestTools
         nextPreviewClick = EditorApplication.timeSinceStartup + .8;
     }
 
+    [MenuItem("Tools/InnerFrame/Music Preview/Gallery")]
+    public static void PreviewGallery() => PreviewScene("Assets/Scenes/Gallery.unity");
+    [MenuItem("Tools/InnerFrame/Music Preview/Bedroom - Hiraeth")]
+    public static void PreviewBedroom() => PreviewScene("Assets/InnerFrameBedroomWeb/Scenes/PaintedBedroom.unity");
+    [MenuItem("Tools/InnerFrame/Music Preview/Starry Night - Adrift Among Infinite Stars")]
+    public static void PreviewStarry() => PreviewScene("Assets/StarryNight/Scenes/StarryNight.unity");
+    static void PreviewScene(string path)
+    {
+        if (EditorApplication.isPlaying) SceneFader.Instance.FadeToScene(Path.GetFileNameWithoutExtension(path));
+        else { EditorSceneManager.OpenScene(path, OpenSceneMode.Single); EditorApplication.isPlaying = true; }
+    }
+
     public static void RunEntranceWithLayout()
     {
         var paths = new[]{"Assets/Entrance/Scenes/Entrance.unity", "Assets/Scenes/Gallery.unity", "Assets/InnerFrameBedroomWeb/Scenes/PaintedBedroom.unity", "Assets/StarryNight/Scenes/StarryNight.unity"};

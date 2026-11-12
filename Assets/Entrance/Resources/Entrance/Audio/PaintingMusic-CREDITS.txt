@@ -1,0 +1,25 @@
+PAINTING MUSIC — INNERFRAME
+
+'Hiraeth' by Scott Buckley — released under CC BY 4.0.
+https://www.scottbuckley.com.au/library/hiraeth/
+Original MP3: https://www.scottbuckley.com.au/library/wp-content/uploads/2020/06/sb_hiraeth.mp3
+
+'Adrift Among Infinite Stars' by Scott Buckley — released under CC BY 4.0.
+https://www.scottbuckley.com.au/library/adrift-among-infinite-stars/
+Original MP3: https://www.scottbuckley.com.au/library/wp-content/uploads/2022/02/AdriftAmongInfiniteStars.mp3
+
+Composer: Scott Buckley — www.scottbuckley.com.au
+License: Creative Commons Attribution 4.0 International
+https://creativecommons.org/licenses/by/4.0/
+https://creativecommons.org/licenses/by/4.0/legalcode
+Official usage information: https://www.scottbuckley.com.au/library/using-this-music/
+Source and license checked 2026-11-12.
+
+Modifications by InnerFrame for scene BGM, 2026-11-12:
+- Hiraeth: source 00:44–02:53, with an 8-second tail/head crossfade; 121-second loop.
+- Adrift Among Infinite Stars: source 01:01.5–02:21.5, with an 8-second crossfade; 72-second loop.
+- Loudness reduced to -27 LUFS; no change to pitch or playback speed.
+- Stereo 48 kHz / 16-bit PCM; 2 ms boundary correction; looping without a silence/fade-out gap.
+
+These are adaptations of Scott Buckley's recordings, not original InnerFrame compositions.
+Keep this attribution and license information with distributed copies. In-game credits appear in the painting's player menu. If using the music in a YouTube video, also credit Scott Buckley in that video's description as requested on his official site.

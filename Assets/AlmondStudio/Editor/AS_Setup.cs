@@ -46,7 +46,7 @@ namespace InnerFrame.AlmondStudio.EditorTools
         const string WindowFolder = Root + "/Textures/Window";               // the painted window (ChatGPT, panes cut out)
         const string XrOriginPrefab = "Assets/Samples/XR Interaction Toolkit/3.3.2/Starter Assets/Prefabs/XR Origin (XR Rig).prefab";
         const string XrOriginName = "XR Origin (XR Rig)";
-        const string DialoguePrefab = "Assets/VanGogh/Prefabs/VG_DialogueUI.prefab";
+        const string DialoguePrefab = "Assets/Shared/UI/Prefabs/VG_DialogueUI.prefab";
         const string DialogueSettings = "Assets/VanGogh/Prefabs/VG_Dialogue_Bedroom.asset";
 
         [MenuItem("Tools/InnerFrame/Almond Studio/Build")]

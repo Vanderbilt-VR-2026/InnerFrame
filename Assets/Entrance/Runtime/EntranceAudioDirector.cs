@@ -72,7 +72,7 @@ namespace InnerFrame.Entrance
         public void PlayGold()
         {
             EndHandwriting(); enteringGallery = true;
-            Switch(gold, true, "Gold transition");
+            Switch(gold, true, "Gold transition", .3f);
         }
         public void PlayClick()
         {
@@ -80,7 +80,7 @@ namespace InnerFrame.Entrance
             clicks.PlayOneShot(clicks.clip);
             ClickCount++;
         }
-        void Switch(AudioClip clip, bool loop, string cue)
+        void Switch(AudioClip clip, bool loop, string cue, float fadeDuration = .55f)
         {
             if (clip == null || (CurrentCue == cue && music[active].isPlaying)) return;
             CurrentCue = cue;
@@ -88,12 +88,11 @@ namespace InnerFrame.Entrance
             int previous = active; active = 1 - active;
             music[active].Stop(); music[active].clip = clip; music[active].loop = loop;
             music[active].volume = 0f; weights[active] = 0f; music[active].Play();
-            crossfade = StartCoroutine(Fade(previous, active));
+            crossfade = StartCoroutine(Fade(previous, active, fadeDuration));
         }
-        IEnumerator Fade(int previous, int next)
+        IEnumerator Fade(int previous, int next, float duration)
         {
             float old = weights[previous];
-            const float duration = .55f;
             for (float t = 0; t < duration; t += Time.unscaledDeltaTime)
             {
                 float f = Mathf.SmoothStep(0, 1, t / duration);
@@ -156,7 +155,7 @@ namespace InnerFrame.Entrance
                 yield return null;
             if (enteringGallery && scene.isLoaded && SceneManager.GetActiveScene().name == "Gallery")
             {
-                enteringGallery = false; Switch(arrival, false, "Gallery arrival");
+                enteringGallery = false; Switch(arrival, false, "Gallery arrival", .3f);
             }
             arrivalRoutine = null;
         }

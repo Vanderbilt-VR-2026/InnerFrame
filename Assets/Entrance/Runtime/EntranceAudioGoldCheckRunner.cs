@@ -50,7 +50,8 @@ namespace InnerFrame.Entrance
             menu.CaptureMode=true;
             audioDirector=EntranceAudioDirector.Ensure();
             // Keep this local visual/audio check out of multiplayer services.
-            if(NetworkSession.Instance!=null) Destroy(NetworkSession.Instance.gameObject);
+            if(NetworkSession.Instance!=null && !Environment.GetCommandLineArgs().Contains("-verifyGoldBudget"))
+                Destroy(NetworkSession.Instance.gameObject);
             yield return null;
         }
         IEnumerator Click(string name)
@@ -115,15 +116,27 @@ namespace InnerFrame.Entrance
                 yield return null;
             }
             Check(heardWriting,"Handwriting audio runs during the actual title video");
-            Check(audioDirector.CurrentCue=="Landing 2" && !audioDirector.HandwritingPlaying,"Landing 2 switches and writing stops");
-            while(menu!=null && menu.IntroBeat<7) yield return null;
+            Check(menu!=null && menu.IntroBeat==4 && !audioDirector.HandwritingPlaying,
+                "Title advances directly to gold and writing stops");
             Check(audioDirector.CurrentCue=="Gold transition","Gold cue starts on gold flash");
+            float goldStarted=Time.realtimeSinceStartup;
+            while(menu!=null && !SceneFader.Instance.IsTransitioning) yield return null;
+            float goldHold=Time.realtimeSinceStartup-goldStarted;
+            Check(goldHold>=.9f && goldHold<1.5f,"Gold prelude lasts about 1.1 seconds (half duration)");
+            Shot("03-Direct-Gold.png");
+            Check(audioDirector.GetComponents<AudioSource>().All(source=>Mathf.Approximately(source.pitch,1f)),
+                "Shorter music transitions keep original playback pitch and speed");
             while(SceneManager.GetActiveScene().name!="Gallery") yield return null;
             Check(audioDirector.CurrentCue=="Gold transition","Gold music survives Gallery scene loading");
             while(SceneFader.Instance.Coverage>=.98f) yield return null;
             yield return null;
             Check(audioDirector.CurrentCue=="Gallery arrival","Arrival cue waits for visible Gallery reveal");
+            float revealStarted=Time.realtimeSinceStartup;
             while(SceneFader.Instance.IsTransitioning) yield return null;
+            Check(Time.realtimeSinceStartup-revealStarted<.9f,"Gallery reveal completes in the shorter fade window");
+            float goldElapsed=Time.realtimeSinceStartup-goldStarted;
+            Check(goldElapsed<15.5f,"Full gold-to-Gallery transition finishes within 15 seconds plus frame tolerance");
+            Debug.Log("[AudioGold Check] Gold-to-Gallery elapsed: "+goldElapsed.ToString("F3")+" s");
             yield return SceneManager.LoadSceneAsync("Assets/Entrance/Scenes/Entrance.unity");
             menu=null; yield return Ready();
             yield return Click("Begin sign"); yield return Click("Boy portrait"); yield return Click("Enter the Story sign"); yield return Click("New Room sign"); yield return Click("Start sign"); yield return Click("Continue");

@@ -451,7 +451,7 @@ namespace InnerFrame.Entrance
             backdrop.rectTransform.anchoredPosition=Vector2.zero;
             backdrop.rectTransform.localScale=originalScale;
             // C4 finishes before the painted Van Gogh title. The following
-            // landing animation dissolves directly over its final video frame.
+            // gold transition dissolves directly over its final video frame.
             IntroBeat=3;
             if (!skipIntro) yield return PlayVanGoghInterlude();
             Clear();
@@ -462,7 +462,7 @@ namespace InnerFrame.Entrance
                 transition.color=Color.white;
                 yield return EnterGallery();
             }
-            else yield return PaintingPreview();
+            else yield return GoldTransition();
         }
 
         IEnumerator EnterGallery()
@@ -484,7 +484,7 @@ namespace InnerFrame.Entrance
             busy = true;
             Ready = false;
             audioDirector.PlayGold();
-            fader.FadeToScene(target,1.2f,GoldGradient());
+            fader.FadeToScene(target,.6f,GoldGradient(),.6f,13.9f);
             // On success this Entrance object is unloaded. If loading fails while
             // Entrance still exists, restore the buttons so the user can retry.
             while (fader.IsTransitioning) yield return null;
@@ -497,33 +497,17 @@ namespace InnerFrame.Entrance
             }
         }
 
-        IEnumerator PaintingPreview()
+        IEnumerator GoldTransition()
         {
-            var a=Resources.Load<EntranceTransitionAssets>("Entrance/TransitionAssets");
-            if(a==null || a.wake==null || a.burst==null || a.inside==null)
-            { Debug.LogError("[Entrance] Run Tools > InnerFrame > Entrance > Prepare Land Transitions."); yield break; }
-            audioDirector.PlayLanding2();
-            busy=true; Ready=false; Clear(); transition.color=Color.clear;
-            var frames=new[]{a.wake,a.burst,a.inside};
-            var durations=new[]{1.75f,1.75f,2f};
-            var start=new[]{1.03f,1.03f,1.08f}; var end=new[]{1.10f,1.12f,1.03f};
-            for(int i=0;i<3;i++)
-            {
-                transition.texture=frames[i];
-                for(float t=0;t<.375f;t+=Time.unscaledDeltaTime)
-                { transition.color=new Color(1,1,1,t/.375f); yield return null; }
-                SetPainting(frames[i]); transition.color=Color.clear;
-                if(i==0) EndVanGoghInterlude();
-                IntroBeat=4+i;
-                for(float t=0;t<durations[i];t+=.125f)
-                { backdrop.rectTransform.localScale=Vector3.one*Mathf.Lerp(start[i],end[i],t/durations[i]); yield return new WaitForSecondsRealtime(.125f); }
-            }
-            transition.texture=GoldGradient(); IntroBeat=7;
+            busy=true;
+            Ready=false;
+            transition.texture=GoldGradient(); IntroBeat=4;
             audioDirector.PlayGold();
             if(galleryGold!=null) galleryGold.gameObject.SetActive(true);
-            for(float t=0;t<2.2f;t+=Time.unscaledDeltaTime)
-            { float v=Mathf.FloorToInt(t*8)%4<2?1f:.9f; galleryGold.color=new Color(v,v,v,Mathf.Clamp01(t/.6f)); yield return null; }
-            busy=false;
+            for(float t=0;t<1.1f;t+=Time.unscaledDeltaTime)
+            { float v=Mathf.FloorToInt(t*8)%4<2?1f:.9f; galleryGold.color=new Color(v,v,v,Mathf.Clamp01(t/.3f)); yield return null; }
+            SetPainting(GoldGradient());
+            EndVanGoghInterlude();
             yield return EnterGallery();
         }
 
@@ -565,7 +549,7 @@ namespace InnerFrame.Entrance
             VanGoghInterludePlaying=false;
             if (player.isPrepared && !skipIntro)
             {
-                // Hold the final painted frame behind the dissolve into the landing.
+                // Hold the final painted frame behind the dissolve into gold.
                 player.Pause();
                 backdrop.texture=buffer;
                 interludePlayer=player;
@@ -614,7 +598,7 @@ namespace InnerFrame.Entrance
                 float nx=(x+0.5f)/size*2f-1f;
                 float ny=(y+0.5f)/size*2f-1f;
                 float glow=Mathf.Pow(1f-Mathf.Clamp01(Mathf.Sqrt(nx*nx+ny*ny)),1.5f);
-                pixels[y*size+x]=Color.Lerp(new Color(.39f,.16f,.015f),new Color(1f,.9f,.46f),glow);
+                pixels[y*size+x]=Color.Lerp(new Color(.72f,.40f,.08f),new Color(1f,.9f,.46f),glow);
             }
             goldGradient.SetPixels(pixels);
             goldGradient.Apply(false,false);

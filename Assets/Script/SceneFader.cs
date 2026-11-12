@@ -64,7 +64,7 @@ public class SceneFader : MonoBehaviour
         loadingLabel = go.AddComponent<TMPro.TextMeshPro>();
         var font = Resources.Load<TMPro.TMP_FontAsset>("Entrance/BrushFont");
         if (font != null) loadingLabel.font = font;
-        loadingLabel.text = destination == "Gallery" ? "Loading the gallery…" : "Loading The Bedroom…";
+        loadingLabel.text = System.IO.Path.GetFileNameWithoutExtension(destination) == "Gallery" ? "Loading the gallery…" : "Loading The Bedroom…";
         loadingLabel.fontSize = 2;
         loadingLabel.alignment = TMPro.TextAlignmentOptions.Center;
         loadingLabel.rectTransform.sizeDelta = new Vector2(1.1f,.15f);
@@ -135,7 +135,7 @@ public class SceneFader : MonoBehaviour
     }
 
     /// <param name="fadeImage">Optional. Leave null for plain black.</param>
-    public void FadeToScene(string sceneName, float fadeTime = 1f, Texture2D fadeImage = null)
+    public void FadeToScene(string sceneName, float fadeTime = 1f, Texture2D fadeImage = null, float revealTime = 1.2f, float transitionBudget = 0f)
     {
         if (busy) return;
         if (!Application.CanStreamedLevelBeLoaded(sceneName))
@@ -148,11 +148,12 @@ public class SceneFader : MonoBehaviour
         LastFailure = null;
         LastCompletedScene = null;
         SetTransitionImage(fadeImage);
-        StartCoroutine(Guard(FadeRoutine(sceneName, Mathf.Max(.01f, fadeTime), fadeImage)));
+        StartCoroutine(Guard(FadeRoutine(sceneName, Mathf.Max(.01f, fadeTime), fadeImage, Mathf.Max(.01f, revealTime), Mathf.Max(0f, transitionBudget))));
     }
 
-    IEnumerator FadeRoutine(string sceneName, float fadeTime, Texture2D fadeImage)
+    IEnumerator FadeRoutine(string sceneName, float fadeTime, Texture2D fadeImage, float revealTime, float transitionBudget)
     {
+        float transitionStarted = Time.realtimeSinceStartup;
         if (BeforeSceneChange != null) yield return BeforeSceneChange(sceneName);
 
         // Image: white tint so it shows true colours. No image: black.
@@ -181,15 +182,19 @@ public class SceneFader : MonoBehaviour
         cam = Camera.main;
         if (ownedImage != null && NetworkSession.Instance != null)
         {
-            float deadline = Time.realtimeSinceStartup + 30f;
+            // Entrance budgets the whole transition, including scene load and reveal,
+            // so slow loading does not add another full connection wait.
+            float deadline = transitionBudget > 0f
+                ? transitionStarted + transitionBudget - Mathf.Max(fadeTime, revealTime)
+                : Time.realtimeSinceStartup + 30f;
             while ((NetworkSession.Instance.Runner == null || !NetworkSession.Instance.Runner.IsRunning)
                 && Time.realtimeSinceStartup < deadline) yield return null;
             if (NetworkSession.Instance.Runner == null || !NetworkSession.Instance.Runner.IsRunning)
-                Debug.LogWarning("[Entrance] Scene loaded, but multiplayer is not connected after 30 seconds. Revealing local scene; this is NOT a multiplayer pass.");
+                Debug.LogWarning("[Entrance] Connection wait limit reached. Revealing the loaded local scene; this is NOT a multiplayer pass.");
         }
         HideLoading();
         FollowCamera();
-        yield return Fade(1f, 0f, Mathf.Max(fadeTime,1.2f));              // fade in
+        yield return Fade(1f, 0f, Mathf.Max(fadeTime,revealTime));              // fade in
         LastCompletedScene = sceneName;
         Debug.Log("[Entrance] Land complete: " + sceneName + ". Physical Quest validation remains pending.");
         mat.mainTexture = null;

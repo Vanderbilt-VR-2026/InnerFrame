@@ -89,12 +89,9 @@ namespace InnerFrame.AlmondStudio
         [Tooltip("The camera's clear colour (only seen if the sky is missing).")] public Color skyBehind = new Color(0.486f, 0.682f, 0.686f);
         public Color groundColour = new Color(0.55f, 0.6f, 0.38f);
         [Tooltip("The garden ground outside. Off: only painted sky behind the branches, as in Almond Blossom (which has no ground).")] public bool showGround = false;
-        [Tooltip("The sky's four paints (AS_Sky): turquoise (most), deeper blue-green, pale, teal. From Almond Blossom; Build writes them to AS_Sky.mat.")]
-        public Color[] skyPaints = { new Color(0.470f, 0.730f, 0.735f), new Color(0.300f, 0.560f, 0.640f), new Color(0.650f, 0.830f, 0.800f), new Color(0.380f, 0.660f, 0.640f) };
-        [Tooltip("Sky strokes round the full circle (more = smaller strokes).")] public float skyStrokes = 140f;
-        [Tooltip("Sky stroke length and width, in stroke cells.")] public float skyStrokeLength = 1.5f, skyStrokeWidth = 0.42f;
-        [Tooltip("Ridge and bristle marks in each sky stroke (0-1).")] [Range(0f, 1f)] public float skyStrokeRidge = 0.5f;
-        [Tooltip("How much deeper the sky gets toward the top (0-1).")] [Range(0f, 1f)] public float skyDeeperTop = 0.35f;
+        [Tooltip("The painted sky picture (Textures/Sky/AS_Sky.jpg or .png, seamless; ChatGPT after Almond Blossom): how many times it repeats round the sky (x) and from bottom to top (y). More = smaller strokes.")]
+        public Vector2 skyTiles = new Vector2(8f, 4f);
+        [Tooltip("Tint over the sky picture (white = as painted).")] public Color skyTint = Color.white;
 
         [Header("Following a branch with the brush's beam (degrees from the beam)")]
         [Tooltip("How close the beam must come to a branch's glowing dot to start on it.")] public float startToleranceDeg = 4f;

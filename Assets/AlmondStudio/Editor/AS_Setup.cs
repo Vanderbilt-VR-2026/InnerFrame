@@ -224,13 +224,25 @@ namespace InnerFrame.AlmondStudio.EditorTools
             boot.bark = Mat("AS_Bark", barkShader);
             boot.ink = Mat("AS_Ink", inkShader);
             boot.skyMaterial = Mat("AS_Sky", skyShader);
-            // the painted sky's paints and strokes, from the layout (Almond Blossom's sky)
-            for (int i = 0; i < 4 && i < layout.skyPaints.Length; i++) boot.skyMaterial.SetColor("_C" + i, layout.skyPaints[i]);
-            boot.skyMaterial.SetFloat("_Dabs", layout.skyStrokes);
-            boot.skyMaterial.SetFloat("_Length", layout.skyStrokeLength);
-            boot.skyMaterial.SetFloat("_Width", layout.skyStrokeWidth);
-            boot.skyMaterial.SetFloat("_Ridge", layout.skyStrokeRidge);
-            boot.skyMaterial.SetFloat("_Top", layout.skyDeeperTop);
+            // the painted sky: the ChatGPT picture if it is there (Textures/Sky/AS_Sky.jpg/.png, repeating), else soft dabs
+            Texture2D skyPicture = null;
+            foreach (var ext in new[] { ".jpg", ".png" })
+                if (skyPicture == null) skyPicture = AssetDatabase.LoadAssetAtPath<Texture2D>(Root + "/Textures/Sky/AS_Sky" + ext);
+            if (skyPicture != null && AssetImporter.GetAtPath(AssetDatabase.GetAssetPath(skyPicture)) is TextureImporter ti &&
+                (ti.wrapMode != TextureWrapMode.Repeat || ti.maxTextureSize < 2048))
+            {
+                ti.wrapMode = TextureWrapMode.Repeat; ti.maxTextureSize = Mathf.Max(ti.maxTextureSize, 2048); ti.anisoLevel = 4;
+                ti.SaveAndReimport();
+            }
+            boot.skyMaterial.SetTexture("_BaseMap", skyPicture);
+            boot.skyMaterial.SetFloat("_UseMap", skyPicture != null ? 1f : 0f);
+            boot.skyMaterial.SetVector("_Tiles", new Vector4(layout.skyTiles.x, layout.skyTiles.y, 0f, 0f));
+            boot.skyMaterial.SetColor("_Tint", layout.skyTint);
+            // the fallback's colours (the shader's own; the material may hold older ones)
+            boot.skyMaterial.SetColor("_C0", new Color(0.486f, 0.682f, 0.686f)); boot.skyMaterial.SetColor("_C1", new Color(0.400f, 0.620f, 0.660f));
+            boot.skyMaterial.SetColor("_C2", new Color(0.560f, 0.750f, 0.735f)); boot.skyMaterial.SetColor("_C3", new Color(0.390f, 0.560f, 0.680f));
+            boot.skyMaterial.SetFloat("_Dabs", 90f);
+            if (skyPicture == null) Debug.Log("[AS Setup] No " + Root + "/Textures/Sky/AS_Sky.jpg: the sky stays soft painted dabs.");
             EditorUtility.SetDirty(boot.skyMaterial);
             boot.blossom = Mat("AS_Blossom", blossomShader);
             var atlas = AssetDatabase.LoadAssetAtPath<Texture2D>(AtlasPath);

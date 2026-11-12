@@ -22,10 +22,12 @@ public static class VanGoghSpawner
     const float CaptionOut = 0.25f;   // its caption hangs this far out from the wall's frame, so turning keeps it off the wall
 
     // Vincent in PaintedBedroom: on the floor by the left wall, between the front corner and Chair_Front,
-    // facing the arrival point (0.04, 0, 0.60). Chosen from a dump of the scene; see the A2 report.
+    // facing where the player arrives (the room's Marker_Spawn, moved back to (0.2, 0, -0.45) for #144 so the first
+    // view is closer to the painting). Chosen from a dump of the scene; see the A2 report.
     // In the room's data units: SpawnVincent multiplies by the room's scale (#144). He himself is sized from the rig, not the room.
     static readonly Vector3 VincentAt = new Vector3(-1.6f, 0f, 0.85f);
-    const float VincentTurn = 99f;
+    static readonly Vector3 ArrivalAt = new Vector3(0.2f, 0f, -0.45f);
+    static readonly float VincentTurn = Mathf.Atan2(ArrivalAt.x - VincentAt.x, ArrivalAt.z - VincentAt.z) * Mathf.Rad2Deg;   // about 126
     // His eyes are level with the player's, so the two of you look at each other while you talk. The XR rig is
     // scaled 0.8 here (PaintedBedroomPhysicsTable.rigScale), so a standing visitor's eyes, about 1.60 m, are at
     // 1.28 m in the room; his are 1.55 m up the 1.70 m model (measured on the mesh). Follow the rig scale if it

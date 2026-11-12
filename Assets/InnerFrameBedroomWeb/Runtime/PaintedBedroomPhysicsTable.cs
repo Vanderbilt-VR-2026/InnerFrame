@@ -49,6 +49,12 @@ namespace InnerFrame.PaintedBedroom
         [Tooltip("How far the controller rays reach, in metres. The teleport ray keeps its own distance.")]
         [Min(0.1f)] public float rayDistance = 1f;
 
+        [Header("Room")]
+        [Tooltip("Size of the whole room against the generated data (1 = as generated). Below 1 the room is smaller. " +
+                 "The rig stays at the project's shared scale, so this is what makes the room feel real-sized (#144). " +
+                 "It feels like: rig scale / this, as a rig change would (0.8 / 0.667 = 1.2 times smaller than the data).")]
+        [Range(0.3f, 1f)] public float roomScale = 1f;
+
         [Header("Desktop rig (Play mode without a headset)")]
         [Tooltip("Player size on desktop, like Rig Scale in VR: eye height and body shrink with it. " +
                  "The painter's view (P) keeps the painter's own eye position.")]
@@ -62,6 +68,13 @@ namespace InnerFrame.PaintedBedroom
 
         /// <summary>Raised when the table is edited in the Inspector, so Play mode can show the change at once.</summary>
         public static event Action<PaintedBedroomPhysicsTable> Changed;
+
+        /// <summary>The room's scale for code outside the applier (what is placed in the room in room units); 1 with no table.</summary>
+        public static float LoadRoomScale()
+        {
+            var table = Resources.Load<PaintedBedroomPhysicsTable>(ResourceName);
+            return table != null ? table.roomScale : 1f;
+        }
 
         public Row Find(string objectName)
         {

@@ -3,8 +3,45 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using System.IO;
 
+[InitializeOnLoad]
 public static class DeliveryTestTools
 {
+    const string PreviewKey = "InnerFrame.GalleryMusicPreview";
+    static int previewStep;
+    static double nextPreviewClick;
+    static readonly string[] PreviewButtons = { "Begin sign", "Boy portrait", "Enter the Story sign", "New Room sign", "Start sign", "Continue" };
+    static DeliveryTestTools()
+    {
+        EditorApplication.playModeStateChanged += state =>
+        {
+            if (state == PlayModeStateChange.EnteredPlayMode && SessionState.GetBool(PreviewKey, false))
+            {
+                SessionState.SetBool(PreviewKey, false);
+                previewStep = 0; nextPreviewClick = EditorApplication.timeSinceStartup + 1;
+                EditorApplication.update += PreviewTick;
+            }
+            if (state == PlayModeStateChange.ExitingPlayMode) EditorApplication.update -= PreviewTick;
+        };
+    }
+    [MenuItem("Tools/InnerFrame/Preview Gallery Music from Entrance")]
+    public static void PreviewGalleryMusic()
+    {
+        if (EditorApplication.isPlaying) { Debug.LogWarning("Stop Play before starting the music preview."); return; }
+        EditorSceneManager.OpenScene("Assets/Entrance/Scenes/Entrance.unity", OpenSceneMode.Single);
+        SessionState.SetBool(PreviewKey, true);
+        EditorApplication.isPlaying = true;
+    }
+    static void PreviewTick()
+    {
+        if (!EditorApplication.isPlaying || previewStep >= PreviewButtons.Length)
+        { EditorApplication.update -= PreviewTick; return; }
+        if (EditorApplication.timeSinceStartup < nextPreviewClick) return;
+        var menu = Object.FindAnyObjectByType<InnerFrame.Entrance.EntranceMenu>();
+        if (menu == null || !menu.Ready) return;
+        menu.ReviewClick(PreviewButtons[previewStep++]);
+        nextPreviewClick = EditorApplication.timeSinceStartup + .8;
+    }
+
     public static void RunEntranceWithLayout()
     {
         var paths = new[]{"Assets/Entrance/Scenes/Entrance.unity", "Assets/Scenes/Gallery.unity", "Assets/InnerFrameBedroomWeb/Scenes/PaintedBedroom.unity", "Assets/StarryNight/Scenes/StarryNight.unity"};

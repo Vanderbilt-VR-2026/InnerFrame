@@ -31,6 +31,15 @@ namespace InnerFrame.Entrance.Editor
                 importer.forceToMono = effect;
                 importer.SaveAndReimport();
             }
+            var galleryImporter = AssetImporter.GetAtPath(Root + "Audio/GalleryWarmStringsLoop.wav") as AudioImporter;
+            if (galleryImporter == null) throw new InvalidOperationException("Missing Gallery loop.");
+            var gallerySettings = galleryImporter.defaultSampleSettings;
+            gallerySettings.loadType = AudioClipLoadType.DecompressOnLoad;
+            gallerySettings.compressionFormat = AudioCompressionFormat.PCM;
+            gallerySettings.sampleRateSetting = AudioSampleRateSetting.PreserveSampleRate;
+            galleryImporter.defaultSampleSettings = gallerySettings;
+            galleryImporter.forceToMono = false;
+            galleryImporter.SaveAndReimport();
             MaterialAt("GoldRay", "InnerFrame/Entrance/GoldRay");
             MaterialAt("GoldRayTip", "InnerFrame/Entrance/GoldRayTip");
             AssetDatabase.SaveAssets();

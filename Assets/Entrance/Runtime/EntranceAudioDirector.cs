@@ -14,11 +14,15 @@ namespace InnerFrame.Entrance
         readonly AudioSource[] music = new AudioSource[2];
         readonly float[] weights = new float[2];
         AudioSource clicks, handwriting;
-        AudioClip opening, landing1, landing2, gold, arrival;
+        AudioClip opening, landing1, landing2, gold, arrival, galleryLoop;
         Coroutine crossfade, writingRoutine, arrivalRoutine;
         int active;
         float nextScan, duck = 1f;
         bool enteringGallery;
+        SpeechToProxy[] talkers = System.Array.Empty<SpeechToProxy>();
+        VG_DialogueUI[] dialogueViews = System.Array.Empty<VG_DialogueUI>();
+        float voiceHoldUntil;
+        public float VoiceMusicGain { get; private set; } = 1f;
         public int ClickCount { get; private set; }
         public string CurrentCue { get; private set; }
         public bool HandwritingPlaying => handwriting != null && handwriting.isPlaying;
@@ -45,8 +49,19 @@ namespace InnerFrame.Entrance
             clicks = Source(); handwriting = Source();
             opening = Load("OpeningLoop"); landing1 = Load("Landing1Loop");
             landing2 = Load("Landing2Loop"); gold = Load("GoldLoop"); arrival = Load("GalleryArrival");
+            galleryLoop = Load("GalleryWarmStringsLoop");
             clicks.clip = Load("SoftClick"); handwriting.clip = Load("Handwriting");
             SceneManager.sceneLoaded += Loaded;
+        }
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        static void StartGalleryAudio()
+        {
+            if (SceneManager.GetActiveScene().name == "Gallery") Ensure();
+        }
+        void Start()
+        {
+            if (SceneManager.GetActiveScene().name == "Gallery")
+                Loaded(SceneManager.GetActiveScene(), LoadSceneMode.Single);
         }
         AudioClip Load(string name)
         {
@@ -141,33 +156,77 @@ namespace InnerFrame.Entrance
         }
         void Loaded(Scene scene, LoadSceneMode mode)
         {
-            if (enteringGallery && scene.name == "Gallery")
+            if (mode != LoadSceneMode.Single) return;
+            if (arrivalRoutine != null) { StopCoroutine(arrivalRoutine); arrivalRoutine = null; }
+            if (scene.name == "Gallery")
+                arrivalRoutine = StartCoroutine(AwaitGalleryReveal(scene, enteringGallery));
+            else if (CurrentCue == "Gallery loop" || CurrentCue == "Gallery arrival")
             {
-                if (arrivalRoutine != null) StopCoroutine(arrivalRoutine);
-                arrivalRoutine = StartCoroutine(AwaitGalleryReveal(scene));
+                if (crossfade != null) StopCoroutine(crossfade);
+                CurrentCue = "Outside Gallery";
+                crossfade = StartCoroutine(FadeGalleryOut());
             }
             nextScan = 0;
         }
-        IEnumerator AwaitGalleryReveal(Scene scene)
+        IEnumerator AwaitGalleryReveal(Scene scene, bool fromGold)
         {
             var fader = SceneFader.Instance;
-            while (enteringGallery && scene.isLoaded && fader.IsTransitioning && fader.Coverage >= .98f)
+            while (scene.isLoaded && fader.IsTransitioning && fader.Coverage >= .98f)
                 yield return null;
-            if (enteringGallery && scene.isLoaded && SceneManager.GetActiveScene().name == "Gallery")
+            enteringGallery = false;
+            if (scene.isLoaded && SceneManager.GetActiveScene() == scene)
             {
-                enteringGallery = false; Switch(arrival, false, "Gallery arrival", .3f);
+                if (fromGold && arrival != null)
+                {
+                    Switch(arrival, false, "Gallery arrival", .3f);
+                    double loopStart = AudioSettings.dspTime + Mathf.Max(0f, arrival.length - 2.4f);
+                    while (AudioSettings.dspTime < loopStart && scene.isLoaded) yield return null;
+                }
+                if (scene.isLoaded && SceneManager.GetActiveScene() == scene)
+                    Switch(galleryLoop, true, "Gallery loop", fromGold ? 2.4f : 1.2f);
             }
             arrivalRoutine = null;
         }
+        IEnumerator FadeGalleryOut()
+        {
+            float first = weights[0], second = weights[1];
+            for (float t = 0; t < .6f; t += Time.unscaledDeltaTime)
+            {
+                float gain = 1f - Mathf.SmoothStep(0, 1, t / .6f);
+                weights[0] = first * gain; weights[1] = second * gain;
+                yield return null;
+            }
+            for (int i = 0; i < 2; i++) { weights[i] = 0; music[i].Stop(); }
+            crossfade = null;
+        }
         void Update()
         {
-            duck = Mathf.MoveTowards(duck, HandwritingPlaying ? .75f : 1f, Time.unscaledDeltaTime * 2f);
-            for (int i = 0; i < 2; i++) music[i].volume = weights[i] * duck;
             if (Time.unscaledTime < nextScan) return;
-            nextScan = Time.unscaledTime + .5f;
+            nextScan = Time.unscaledTime + .25f;
+            talkers = FindObjectsByType<SpeechToProxy>(FindObjectsSortMode.None);
+            dialogueViews = FindObjectsByType<VG_DialogueUI>(FindObjectsSortMode.None);
             // Also covers buttons created later in other scenes. Existing bindings remain single.
             foreach (var button in FindObjectsByType<Button>(FindObjectsSortMode.None))
                 EntranceButtonSound.Bind(button);
+        }
+        void LateUpdate()
+        {
+            // Protect both live questions/replies and scripted/remote Vincent lines.
+            bool voicePriority = false;
+            foreach (var talker in talkers)
+                if (talker != null && talker.isActiveAndEnabled &&
+                    (talker.IsBusy || (talker.voice != null && talker.voice.isPlaying)))
+                { voicePriority = true; break; }
+            if (!voicePriority)
+                foreach (var ui in dialogueViews)
+                    if (ui != null && ui.isActiveAndEnabled && ui.Voice != null && ui.Voice.isPlaying)
+                    { voicePriority = true; break; }
+            if (voicePriority) voiceHoldUntil = Time.unscaledTime + .35f;
+            float target = Time.unscaledTime < voiceHoldUntil ? .1f : 1f;
+            float seconds = target < VoiceMusicGain ? .08f : 1.2f;
+            VoiceMusicGain = Mathf.MoveTowards(VoiceMusicGain, target, .9f * Time.unscaledDeltaTime / seconds);
+            duck = Mathf.MoveTowards(duck, HandwritingPlaying ? .75f : 1f, Time.unscaledDeltaTime * 2f);
+            for (int i = 0; i < 2; i++) music[i].volume = weights[i] * duck * VoiceMusicGain;
         }
         void OnDestroy()
         {

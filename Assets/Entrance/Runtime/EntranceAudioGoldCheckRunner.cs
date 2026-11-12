@@ -137,6 +137,55 @@ namespace InnerFrame.Entrance
             float goldElapsed=Time.realtimeSinceStartup-goldStarted;
             Check(goldElapsed<15.5f,"Full gold-to-Gallery transition finishes within 15 seconds plus frame tolerance");
             Debug.Log("[AudioGold Check] Gold-to-Gallery elapsed: "+goldElapsed.ToString("F3")+" s");
+            float loopDeadline = Time.realtimeSinceStartup + 7f;
+            while (audioDirector.CurrentCue != "Gallery loop" && Time.realtimeSinceStartup < loopDeadline) yield return null;
+            Check(audioDirector.CurrentCue == "Gallery loop", "Arrival transitions into the selected Gallery strings");
+            yield return new WaitForSecondsRealtime(2.5f);
+            var loop = audioDirector.GetComponents<AudioSource>().Single(x => x.isPlaying && x.clip != null && x.clip.name == "GalleryWarmStringsLoop");
+            Check(loop.loop && Mathf.Abs(loop.clip.length - 36f) < .01f, "Gallery loop is a 36-second looping PCM clip");
+            Check(audioDirector.GetComponents<AudioSource>().Count(x => x.isPlaying && x.clip != null && x.clip != loop.clip) == 0,
+                "Arrival and gold sources stop after their crossfades");
+            float[] boundary = new float[loop.clip.channels * 128];
+            Check(loop.clip.GetData(boundary, loop.clip.samples - 64), "Imported loop exposes PCM across its wrap point");
+            Check(Mathf.Abs(boundary[63 * 2] - boundary[64 * 2]) < .0001f && Mathf.Abs(boundary[63 * 2 + 1] - boundary[64 * 2 + 1]) < .0001f,
+                "Imported stereo loop has continuous boundary samples");
+            // Exercise the real playback wrap without waiting through a whole phrase.
+            loop.time = loop.clip.length - .25f;
+            yield return new WaitForSecondsRealtime(.6f);
+            Check(loop.isPlaying && loop.time < 1f && loop.volume > .9f, "Gallery music wraps with no stop or fade-out");
+            var speaker = FindObjectsByType<SpeechToProxy>(FindObjectsSortMode.None).First();
+            float voiceVolume = speaker.voice.volume;
+            var spoken = Resources.Load<AudioClip>("Entrance/Audio/Handwriting");
+            speaker.Say(spoken, "Voice priority regression fixture");
+            yield return new WaitForSecondsRealtime(.2f);
+            Check(audioDirector.VoiceMusicGain <= .11f && loop.volume <= .11f,
+                "Vincent speech ducks the playing Gallery BGM to ten percent");
+            Check(Mathf.Approximately(speaker.voice.volume, voiceVolume), "Voice priority leaves Vincent's voice volume unchanged");
+            speaker.voice.Stop();
+            yield return new WaitForSecondsRealtime(.2f);
+            Check(audioDirector.VoiceMusicGain <= .11f, "Short speech gaps keep BGM ducked");
+            yield return new WaitForSecondsRealtime(1.5f);
+            Check(audioDirector.VoiceMusicGain >= .99f && loop.isPlaying, "BGM recovers smoothly after speech without restarting its loop");
+            // Asking and error states use the same path as hold-B; no microphone or API is called here.
+            var setSpeechState = typeof(SpeechToProxy).GetMethod("SetState", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            var stateType = setSpeechState.GetParameters()[0].ParameterType;
+            foreach (string state in new[] { "Recording", "Waiting" })
+            {
+                setSpeechState.Invoke(speaker, new[] { Enum.Parse(stateType, state) });
+                yield return new WaitForSecondsRealtime(.2f);
+                Check(audioDirector.VoiceMusicGain <= .11f, state + " also ducks BGM");
+            }
+            setSpeechState.Invoke(speaker, new[] { Enum.Parse(stateType, "Error") });
+            yield return new WaitForSecondsRealtime(1.7f);
+            Check(audioDirector.VoiceMusicGain >= .99f, "Failed requests restore BGM instead of leaving it quiet");
+            setSpeechState.Invoke(speaker, new[] { Enum.Parse(stateType, "Idle") });
+            yield return SceneManager.LoadSceneAsync("Assets/StarryNight/Scenes/StarryNight.unity");
+            yield return new WaitForSecondsRealtime(.8f);
+            Check(!loop.isPlaying, "Gallery music fades out in a painting scene");
+            yield return SceneManager.LoadSceneAsync("Assets/Scenes/Gallery.unity");
+            yield return new WaitForSecondsRealtime(1.5f);
+            Check(audioDirector.CurrentCue == "Gallery loop", "Returning to Gallery resumes music without replaying the entrance cue");
+            Check(FindObjectsByType<EntranceAudioDirector>(FindObjectsSortMode.None).Length == 1, "Returning keeps exactly one music director");
             yield return SceneManager.LoadSceneAsync("Assets/Entrance/Scenes/Entrance.unity");
             menu=null; yield return Ready();
             yield return Click("Begin sign"); yield return Click("Boy portrait"); yield return Click("Enter the Story sign"); yield return Click("New Room sign"); yield return Click("Start sign"); yield return Click("Continue");

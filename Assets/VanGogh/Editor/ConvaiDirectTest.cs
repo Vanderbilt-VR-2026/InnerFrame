@@ -61,6 +61,10 @@ public static class ConvaiDirectTest
                 break;
             case 1:   // his answer arrived and his voice is playing
                 if (string.IsNullOrEmpty(talker.LastReply) || !talker.voice.isPlaying || talker.voice.clip == null) return;
+                if (EditorApplication.timeSinceStartup - stepStarted < .25) return;
+                var music = InnerFrame.Entrance.EntranceAudioDirector.Ensure();
+                if (music.VoiceMusicGain > .11f) { Finish(false, "Vincent replied but the BGM did not duck"); return; }
+                Debug.Log("[ConvaiDirectTest] Voice priority PASS: BGM at " + music.VoiceMusicGain.ToString("F2") + " gain");
                 bool voiced = talker.voice.clip.name == "Convai reply";
                 Finish(voiced, $"Vincent said \"{talker.LastReply}\" with {talker.voice.clip.length:F1} s of " +
                                (voiced ? $"his Convai voice ({talker.voice.clip.frequency} Hz, {talker.voice.clip.channels} ch)" : "silence (no voice came back)"));

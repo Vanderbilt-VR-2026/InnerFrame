@@ -449,7 +449,7 @@ namespace InnerFrame.PaintedBedroom.EditorTools
         }
 
         // Daylight tuning (10/29): matched to the target sheet's brightness in the fixed painter view.
-        static float SunIntensity = 9f / Mathf.PI;   // RIG sun energy 9.0 (W/m2) -> Unity directional intensity
+        static float SunIntensity = 9.9f / Mathf.PI;   // RIG sun energy 9.9 (W/m2) -> Unity directional intensity (11/11, x1.65)
         static float SkyIntensity = 10f;
         static float IndirectBoost = 1.4f;
         static float Exposure = 0.0f;   // 0 with the Blender-baked lightmaps

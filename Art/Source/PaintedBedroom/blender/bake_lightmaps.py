@@ -68,13 +68,15 @@ NEVER_BAKED = {"Window_View"}   # the scenery outside the window: it is lit by i
 # azimuth from +Y towards +X), so the light comes in through the window at ~50 deg. Sky: a rectangle
 # behind the window opening, standing in for the bright sky; moved back to y=4.12 so it sits outside
 # the open casements. World: a dim neutral fill so nothing is pitch black.
-# 11/10 (Charlyne, blender_light/W2-W4, W10): no material glow (it lit every face evenly, like a ceiling light, and
-# flattened the shadows), window light x1.5 and warmer (sun 1,0.87,0.66; sky 1,0.91,0.78). The world fill never
+# 11/10-11 (Charlyne, blender_light/W2-W4, W10-W12): no material glow (it lit every face evenly, like a ceiling light, and
+# flattened the shadows), window light x1.65 and warmer (sun 1,0.87,0.66; sky 1,0.91,0.78); the sky light is tilted down
+# and does not reach the ceiling directly (it is lit by bounce only). The world fill never
 # reached the room (the scenery outside the window closes it), so it is 0. The dark end is now lower than the
 # target sheet's (床尾, corners): accepted as physically right; to be re-judged once the room shrinks (#144).
 RIG = {
-    "sun": {"energy": 9.0, "color": (1.0, 0.87, 0.66), "angle_deg": 4.0, "elevation_deg": 50.0, "azimuth_deg": 28.0},
-    "sky": {"energy": 540.0, "color": (1.0, 0.91, 0.78), "location": (-1.16, 4.12, 2.30), "size": (1.10, 1.90), "tilt_deg": 25.0},
+    "sun": {"energy": 9.9, "color": (1.0, 0.87, 0.66), "angle_deg": 4.0, "elevation_deg": 50.0, "azimuth_deg": 28.0},
+    "sky": {"energy": 594.0, "color": (1.0, 0.91, 0.78), "location": (-1.16, 4.12, 2.30), "size": (1.10, 1.90), "tilt_deg": 25.0,
+            "no_direct": ["Window", "Room_Ceiling"]},   # objects the sky light skips (light linking): the frame it sits against, the ceiling (W11/W12: lit directly it read as a ceiling lamp)
     "world": {"color": (0.95, 0.93, 0.90), "strength": 0.0},
     "material_glow": 0.0,     # multiplies every material's if_emission in the bake (1 = as the data says); unlit stays
     "clamp_indirect": 8.0, "max_bounces": 8, "roughness": 0.85,
@@ -223,7 +225,7 @@ def set_emit_white(materials, v):
             n.outputs[0].default_value = v
 
 
-def make_rig(scene, window_parts):
+def make_rig(scene, window_parts, extra_excluded=()):
     for o in [o for o in bpy.data.objects if o.type == "LIGHT"]:
         bpy.data.objects.remove(o)
     s = RIG["sun"]
@@ -250,11 +252,11 @@ def make_rig(scene, window_parts):
     try:
         coll = bpy.data.collections.new("LM_SkyReceivers")
         sky.light_linking.receiver_collection = coll
-        for ob in window_parts:
-            coll.objects.link(ob)
+        for ob in list(window_parts) + list(extra_excluded):
+            if ob.name not in coll.objects: coll.objects.link(ob)
         for co in coll.collection_objects:
             co.light_linking.link_state = "EXCLUDE"
-        log(f"sky light excludes {len(window_parts)} window parts")
+        log(f"sky light excludes {len(coll.objects)} parts (window frame, ceiling)")
     except Exception as e:   # older Blender: no light linking
         log(f"WARNING light linking unavailable ({e}); the window frame may clip")
     w = RIG["world"]
@@ -595,8 +597,8 @@ def main():
         for ob in parts_of(emp):
             if emp.name == "Window_View" or any(s.material and s.material.get("lm_opacity", 1) < 1 for s in ob.material_slots):
                 ob.visible_shadow = False              # sun passes through glass and the scenery outside
-    window_parts = parts_of(bpy.data.objects["Window"]) if "Window" in bpy.data.objects else []
-    sun, sky = make_rig(scene, window_parts)
+    excluded = [ob for name in RIG["sky"].get("no_direct", []) if name in bpy.data.objects for ob in parts_of(bpy.data.objects[name])]
+    sun, sky = make_rig(scene, [], excluded)
     setup_cycles(scene, samples)
 
     # 3. bake

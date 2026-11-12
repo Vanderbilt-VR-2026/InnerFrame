@@ -87,7 +87,8 @@ def main():
                 ob.hide_render = True              # the probe sees the room, not the object that will use it
             if emp.name == "Window_View" or any(sl.material and sl.material.get("lm_opacity", 1) < 1 for sl in ob.material_slots):
                 ob.visible_shadow = False
-    sun, sky = B.make_rig(scene, B.parts_of(bpy.data.objects["Window"]) if "Window" in bpy.data.objects else [])
+    excluded = [ob for name in B.RIG["sky"].get("no_direct", []) if name in bpy.data.objects for ob in B.parts_of(bpy.data.objects[name])]
+    sun, sky = B.make_rig(scene, [], excluded)
     if hasattr(sky, "visible_camera"):
         sky.visible_camera = True     # the probe must see the sky light to get its direct light; a sun lamp is never seen, Unity's realtime sun supplies that
     B.setup_cycles(scene, samples)

@@ -25,7 +25,11 @@ public static class VanGoghSpawner
     // facing where the player arrives (the room's Marker_Spawn, moved back to (0.2, 0, -0.45) for #144 so the first
     // view is closer to the painting). Chosen from a dump of the scene; see the A2 report.
     // In the room's data units: SpawnVincent multiplies by the room's scale (#144). He himself is sized from the rig, not the room.
-    static readonly Vector3 VincentAt = new Vector3(-1.6f, 0f, 0.85f);
+    // Moved in from (-1.6, 0, 0.85) after #144 narrowed the room: there the mirror's place beside his canvas
+    // (MirrorScene.ParkPose) sank 3.9 cm into the left wall, the canvas touched it and he stood in Chair_Front.
+    // Here, measured in Play mode at room scale 0.889: the parked mirror is 12.7 cm off the left wall, the canvas
+    // 13.7 cm, and he is 11 cm clear of the chair.
+    static readonly Vector3 VincentAt = new Vector3(-1.45f, 0f, 0.65f);
     static readonly Vector3 ArrivalAt = new Vector3(0.2f, 0f, -0.45f);
     static readonly float VincentTurn = Mathf.Atan2(ArrivalAt.x - VincentAt.x, ArrivalAt.z - VincentAt.z) * Mathf.Rad2Deg;   // about 126
     // His eyes are level with the player's, so the two of you look at each other while you talk. The XR rig is

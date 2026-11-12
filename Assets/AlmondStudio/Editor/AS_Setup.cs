@@ -232,6 +232,7 @@ namespace InnerFrame.AlmondStudio.EditorTools
             boot.vincentModel = AssetDatabase.LoadAssetAtPath<GameObject>(VincentFbx);
             boot.vincentModelMaterial = AssetDatabase.LoadAssetAtPath<Material>(VincentMat);
             boot.vincentController = boot.vincentModel != null ? VincentControllerAsset() : null;
+            boot.vincentAvatar = AssetDatabase.LoadAllAssetsAtPath(VincentAvatarClip).OfType<Avatar>().FirstOrDefault(a => a.isHuman);
             if (boot.vincentModel == null) Debug.LogWarning("[AS Setup] No Vincent v2 at " + VincentFbx + " (git lfs pull?): the capsule stands in.");
             boot.chestModel = AssetDatabase.LoadAssetAtPath<GameObject>(ChestModel);
             if (boot.chestModel == null) Debug.Log("[AS Setup] No chest at " + ChestModel + "; the corner keeps its boxes.");

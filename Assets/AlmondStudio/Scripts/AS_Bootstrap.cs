@@ -36,6 +36,7 @@ namespace InnerFrame.AlmondStudio
         public GameObject vincentModel;
         public Material vincentModelMaterial;
         public RuntimeAnimatorController vincentController;
+        [Tooltip("His humanoid avatar (made from his BreathingIdle skeleton, as The Starry Night does); set on him if his model has none.")] public Avatar vincentAvatar;
         [Tooltip("The work table (Art/Props/AS_Table.fbx). The built table if missing.")] public GameObject tableModel;
         [Tooltip("One per AS_Layout.sideCanvases entry (null = blank), made by Build from Textures/Canvases.")] public Material[] sideCanvasMaterials = new Material[0];
         public Material easelMaterial;
@@ -981,6 +982,10 @@ namespace InnerFrame.AlmondStudio
             vin.transform.SetPositionAndRotation(layout.vincentSpot, Quaternion.Euler(0f, layout.vincentYaw, 0f));
             var anim = vin.GetComponent<Animator>();
             if (anim == null) anim = vin.AddComponent<Animator>();
+            // his model may come without the avatar (it is copied from BreathingIdle's skeleton by SN_Setup): without it
+            // the humanoid clips can't play and he stands in his raw, sunk bind pose
+            if ((anim.avatar == null || !anim.avatar.isHuman) && vincentAvatar != null) { anim.avatar = vincentAvatar; anim.Rebind(); }
+            if (!anim.isHuman) Debug.LogWarning("[AS] Vincent v2 has no humanoid avatar: his clips can't play (run Build; check VincentV2@BreathingIdle.fbx is imported as Humanoid).");
             anim.runtimeAnimatorController = vincentController;
             anim.applyRootMotion = false;
             anim.cullingMode = AnimatorCullingMode.CullUpdateTransforms;

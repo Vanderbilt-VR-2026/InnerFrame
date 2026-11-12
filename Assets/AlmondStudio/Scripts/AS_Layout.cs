@@ -117,6 +117,8 @@ namespace InnerFrame.AlmondStudio
         [Tooltip("The door's panels: columns x rows.")] public Vector2Int doorPanels = new Vector2Int(2, 3);
         [Tooltip("Where the paint box stands on the table (x, z), and its turn.")] public Vector2 paintBoxSpot = new Vector2(-0.3f, 1.9f);
         public float paintBoxYaw = 12f;
+        [Tooltip("Turns the Tripo paint box upright, front toward the room (as the other Tripo props); paintBoxYaw is added.")] public Vector3 paintBoxModelEuler = new Vector3(270f, 180f, 0f);
+        [Tooltip("The closed box's height, metres: sets the model's scale.")] public float paintBoxModelHeight = 0.08f;
         [Tooltip("Where the pot of brushes stands on the table (x, z).")] public Vector2 brushPotSpot = new Vector2(0.38f, 1.65f);
 
         [Header("Sill still life (Tripo model Art/Props/AS_SillStillLife.fbx)")]

@@ -30,6 +30,7 @@ namespace InnerFrame.AlmondStudio
         [Tooltip("The sill's five objects as one Tripo model (Art/Props/AS_SillStillLife.fbx). Cylinders if missing.")] public GameObject sillModel;
         [Tooltip("The chest with its boxes (Art/Props/AS_ChestBoxes.fbx). Boxes if missing.")] public GameObject chestModel;
         [Tooltip("The Tripo casement, left leaf (Art/Props/AS_Casement.fbx); the right leaf is its mirror.")] public GameObject casementModel;
+        [Tooltip("His closed paint box (Art/Props/AS_PaintBox.fbx). The built open box if missing.")] public GameObject paintBoxModel;
         [Tooltip("One per AS_Layout.sideCanvases entry (null = blank), made by Build from Textures/Canvases.")] public Material[] sideCanvasMaterials = new Material[0];
         public Material easelMaterial;
 
@@ -131,7 +132,10 @@ namespace InnerFrame.AlmondStudio
             Chair(world, new Vector3(-1.05f, 0f, 1.8f), 90f);
             Chair(world, new Vector3(1.05f, 0f, 1.8f), -90f);
             // on the table: his paint box, lid open, and a pot of brushes
-            PaintBox(world, new Vector3(layout.paintBoxSpot.x, TableTop, layout.paintBoxSpot.y), layout.paintBoxYaw);
+            if (paintBoxModel != null)
+                PropModel(world, "Paint box (Tripo)", paintBoxModel, layout.paintBoxModelEuler + new Vector3(0f, layout.paintBoxYaw, 0f), layout.paintBoxModelHeight, new Vector3(layout.paintBoxSpot.x, TableTop, layout.paintBoxSpot.y));
+            else
+                PaintBox(world, new Vector3(layout.paintBoxSpot.x, TableTop, layout.paintBoxSpot.y), layout.paintBoxYaw);
             BrushPot(world, new Vector3(layout.brushPotSpot.x, TableTop, layout.brushPotSpot.y));
             // Theo's letter and the printed birth card, lying on the table (pictures in Textures/Table)
             if (letter != null) PaperOnTable(world, "Theo's letter", letter, 0.21f, layout.letterSpot, layout.letterYaw);

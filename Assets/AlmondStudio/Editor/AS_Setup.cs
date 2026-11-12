@@ -210,6 +210,7 @@ namespace InnerFrame.AlmondStudio.EditorTools
             boot.sideCanvasMaterials = new Material[layout.sideCanvases.Length];
             for (int i = 0; i < layout.sideCanvases.Length; i++)
                 boot.sideCanvasMaterials[i] = Picture("AS_Canvas" + i, surface, Root + "/Textures/Canvases", layout.sideCanvases[i].file);
+            boot.almondBlossom = Picture("AS_AlmondBlossomPainting", surface, ReferenceFolder, "AS_AlmondBlossom");
             boot.letterSheet = Picture("AS_Letter", surface, Root + "/Textures/Table", "AS_Letter");
             boot.birthCard = Picture("AS_BirthCard", surface, Root + "/Textures/Table", "AS_BirthCard");
             boot.sillTop = Lit("AS_Sill", surface, "EEE8DA");
@@ -364,7 +365,10 @@ namespace InnerFrame.AlmondStudio.EditorTools
                         if (scaleFrom != null) { c.useFileScale = scaleFrom.useFileScale; c.globalScale = scaleFrom.globalScale; }
                         c.importAnimation = true; c.resampleCurves = true;
                         var take = (c.clipAnimations != null && c.clipAnimations.Length > 0 ? c.clipAnimations : c.defaultClipAnimations).First();
-                        take.name = name; take.loopTime = true; take.loopPose = true;
+                        // a hand-over or a gesture plays once and holds its last pose (he keeps holding the letter out);
+                        // idles, talking and joy loop
+                        bool loop = !(name.Contains("Giv") || name.Contains("Hand") || name.Contains("Point") || name.Contains("Offer"));
+                        take.name = name; take.loopTime = loop; take.loopPose = loop;
                         take.lockRootRotation = true; take.keepOriginalOrientation = true;
                         take.lockRootHeightY = true; take.keepOriginalPositionY = true;
                         take.lockRootPositionXZ = true; take.keepOriginalPositionXZ = false;
@@ -386,11 +390,7 @@ namespace InnerFrame.AlmondStudio.EditorTools
             foreach (var (name, clip) in extra)
             {
                 var st = sm.AddState(name); st.motion = clip;
-                if (name == "Talking")
-                {
-                    sm.defaultState = st;                       // he is speaking his line when you arrive
-                    var t = st.AddTransition(idleState); t.hasExitTime = true; t.exitTime = 1f; t.duration = 0.4f;
-                }
+                // AS_Game crossfades between the states by name (Idle, Giving, Happy, Talking...)
             }
             Debug.Log($"[AS Setup] Vincent v2: controller {VincentController} with Idle{string.Concat(extra.Select(e => ", " + e.name))}.");
             return ctrl;

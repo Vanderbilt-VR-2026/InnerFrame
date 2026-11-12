@@ -3,7 +3,7 @@ using UnityEngine.XR.Interaction.Toolkit.Interactables;
 
 namespace InnerFrame.AlmondStudio
 {
-    public enum AS_State { Arrive, TakeBrush, Paint, Done }
+    public enum AS_State { Arrive, ReadLetter, Invite, TakeBrush, Paint, Done }
 
     /// <summary>
     /// The Almond Blossom act, blockout (step 1): arrive with the window shut and Vincent holding Theo's letter; open
@@ -21,6 +21,11 @@ namespace InnerFrame.AlmondStudio
         public XRGrabInteractable brush;
         public Transform brushTip;
         public VG_DialogueUI ui;
+        [Header("The story around the painting")]
+        [Tooltip("Vincent v2's Animator (null: the capsule).")] public Animator vincent;
+        [Tooltip("Theo's letter in Vincent's hand (taken in Arrive).")] public Transform letterInHand;
+        public AS_LetterView letterView;
+        [Tooltip("Almond Blossom on his easel, shown at the end.")] public GameObject endPainting;
         public AS_IInput Input { get; set; }
 
         public AS_Branch[] Branches { get; set; }
@@ -32,6 +37,8 @@ namespace InnerFrame.AlmondStudio
 
         const string Speaker = "Vincent";
         float offBranchFor, stateTime;
+        bool triggerWas, letterTaken;
+        Vector3 endPaintingScale = Vector3.one;
 
         public bool BrushHeld => BrushHeldInEditor || (brush != null && brush.isSelected);
 
@@ -41,18 +48,42 @@ namespace InnerFrame.AlmondStudio
             tree?.SetProgress(Branches);
             blossoms?.ResetAll();
             guides.Show(false);
+            letterTaken = false;
+            if (letterInHand != null) letterInHand.gameObject.SetActive(true);
+            if (letterView != null) letterView.Hide();
+            if (endPainting != null) { endPaintingScale = endPainting.transform.localScale == Vector3.zero ? endPaintingScale : endPainting.transform.localScale; endPainting.SetActive(false); }
             Enter(AS_State.Arrive);
         }
 
         void Enter(AS_State s)
         {
+            if (s == AS_State.Invite) invited = false;
             State = s;
             stateTime = 0f;
             switch (s)
             {
                 case AS_State.Arrive:
+                    // he holds Theo's letter out to you
+                    Pose(layout.vincentGiveClip);
                     Say(layout.lineArrive);
-                    Hint(layout.hintOpen);
+                    Hint(letterInHand != null ? layout.hintLetter : layout.hintOpen);
+                    break;
+                case AS_State.ReadLetter:
+                    // the letter comes up in front of you: Theo's news
+                    Pose(layout.vincentIdleClip);
+                    if (letterInHand != null) letterInHand.gameObject.SetActive(false);
+                    var cam = Camera.main;
+                    if (letterView != null && cam != null) letterView.Show(cam.transform, layout.letterText);
+                    if (ui != null) ui.Clear();
+                    Hint(layout.hintRead);
+                    Input?.Haptic(0.3f, 0.1f);
+                    break;
+                case AS_State.Invite:
+                    // his joy, then he asks you to help him paint something for the baby's room
+                    if (letterView != null) letterView.Hide();
+                    Pose(layout.vincentHappyClip);
+                    Say(layout.lineHappy);
+                    Hint(null);
                     break;
                 case AS_State.TakeBrush:
                     Hint(layout.hintBrush);
@@ -63,9 +94,11 @@ namespace InnerFrame.AlmondStudio
                     guides.Show(true);
                     break;
                 case AS_State.Done:
-                    Hint(null);
+                    Hint(layout.hintDone);
                     guides.Show(false);
+                    Pose(layout.vincentHappyClip);
                     Say(layout.lineDone);
+                    if (endPainting != null) { endPainting.SetActive(true); endPainting.transform.localScale = Vector3.zero; }
                     Input?.Haptic(0.5f, 0.3f);
                     break;
             }
@@ -73,12 +106,27 @@ namespace InnerFrame.AlmondStudio
 
         void Update()
         {
+            bool held = Input != null && Input.TriggerHeld;   // the trigger's press, once per frame
+            triggerPressed = held && !triggerWas;
+            triggerWas = held;
             float dt = Time.deltaTime;
             stateTime += dt;
             switch (State)
             {
                 case AS_State.Arrive:
-                    if (window.IsOpening) { if (ui != null) ui.Clear(); Enter(AS_State.TakeBrush); }
+                    // take the letter: point at it and press (XRI / the desktop rig's E), or pull the trigger near him
+                    bool near = letterInHand != null && Camera.main != null && Vector3.Distance(Camera.main.transform.position, letterInHand.position) < layout.letterReach;
+                    if (letterInHand == null) { if (window.IsOpening) { if (ui != null) ui.Clear(); Enter(AS_State.TakeBrush); } }
+                    else if (letterTaken || (near && TriggerPressed())) Enter(AS_State.ReadLetter);
+                    else if (window.IsOpening) { if (ui != null) ui.Clear(); Enter(AS_State.TakeBrush); }   // skipped the letter
+                    break;
+                case AS_State.ReadLetter:
+                    // put it away: the trigger again (after a moment), or it closes by itself
+                    if ((stateTime > layout.letterMinSeconds && TriggerPressed()) || stateTime > layout.letterMaxSeconds) Enter(AS_State.Invite);
+                    break;
+                case AS_State.Invite:
+                    if (stateTime > layout.happySeconds && !invited) { invited = true; Pose(layout.vincentTalkClip); Say(layout.lineInvite); Hint(layout.hintOpen); }
+                    if (window.IsOpening) { if (ui != null) ui.Clear(); Pose(layout.vincentIdleClip); Enter(AS_State.TakeBrush); }
                     break;
                 case AS_State.TakeBrush:
                     if (BrushHeld) Enter(AS_State.Paint);
@@ -89,6 +137,8 @@ namespace InnerFrame.AlmondStudio
                     break;
                 case AS_State.Done:
                     guides.HideBeam();
+                    if (endPainting != null)   // Almond Blossom grows in on his easel
+                        endPainting.transform.localScale = endPaintingScale * Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(stateTime / layout.endPaintingSeconds));
                     break;
             }
             var cam = Camera.main;
@@ -177,6 +227,24 @@ namespace InnerFrame.AlmondStudio
             if (State != AS_State.Paint) return;
             if (blossoms != null) { blossoms.OpenAllInAWave(layout.blossomWaveSeconds); Enter(AS_State.Done); return; }
             for (int i = 0; i < Branches.Length; i++) if (Branches[i].Paintable && !Branches[i].Done) { Finish(i); return; }
+        }
+
+        bool invited;
+
+        /// <summary>Called when the letter is picked (XRI select, or E on the desktop rig).</summary>
+        public void TakeLetter() { if (State == AS_State.Arrive) letterTaken = true; }
+
+        /// <summary>The trigger's press (not hold): true on the frame it goes down.</summary>
+        bool triggerPressed;
+        bool TriggerPressed() => triggerPressed;
+
+        /// <summary>Crossfades Vincent v2 to the controller state of that name, if he has it.</summary>
+        void Pose(string state)
+        {
+            if (vincent == null || string.IsNullOrEmpty(state) || vincent.runtimeAnimatorController == null) return;
+            int id = Animator.StringToHash(state);
+            if (vincent.HasState(0, id)) vincent.CrossFadeInFixedTime(id, 0.35f);
+            else if (state != layout.vincentIdleClip) Pose(layout.vincentIdleClip);
         }
 
         void Say(string line)

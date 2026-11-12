@@ -21,7 +21,7 @@ namespace InnerFrame.AlmondStudio
     {
         public AS_Layout layout;
         [Tooltip("Assets/AlmondStudio/Data/AS_Branches.json: the branch paths.")] public TextAsset branchesJson;
-        public Material wall, floor, ceiling, wood, frame, windowFrame, sillTop, wallPictures, letterSheet, birthCard, casementLeft, casementRight, fanlightPainted, revealLeft, revealRight, canvas, brushHead, vincent, bark, ink, skyMaterial, groundMaterial, glow, guideDot, blossom;
+        public Material wall, floor, ceiling, wood, frame, windowFrame, sillTop, wallPictures, letterSheet, birthCard, almondBlossom, casementLeft, casementRight, fanlightPainted, revealLeft, revealRight, canvas, brushHead, vincent, bark, ink, skyMaterial, groundMaterial, glow, guideDot, blossom;
         [Tooltip("VG_DialogueUI.prefab: Vincent's words and the hint, as in every scene.")] public GameObject uiPrefab;
         public VG_DialogueSettings uiSettings;
         [Tooltip("The comparison pictures, one per AS_Layout.compareViews entry (Textures/Reference), set by Build.")] public Texture[] references = new Texture[0];
@@ -322,6 +322,11 @@ namespace InnerFrame.AlmondStudio
             Game.brushTip = tip;
             Game.ui = ui;
             Game.Branches = branches;
+            // the story: the letter he hands you, reading it, and Almond Blossom on his easel at the end
+            Game.vincent = vincentAnimator;
+            Game.letterInHand = handLetter;
+            Game.letterView = AS_LetterView.Make(world, letterSheet != null ? letterSheet.GetTexture("_BaseMap") : null, ui != null ? ui.font : null);
+            Game.endPainting = EndPainting(world);
         }
 
         /// <summary>A painted casement: one picture (panes cut out) on a leaf that swings on its hinge, with the same grab
@@ -807,6 +812,25 @@ namespace InnerFrame.AlmondStudio
         }
 
         Vector3? brushStand;   // where the brush stands, if the still life was cut (SplitSill)
+        Animator vincentAnimator;
+
+        /// <summary>Almond Blossom on his easel: the painting on a 2 cm canvas, leaning back, hidden until the end.</summary>
+        GameObject EndPainting(Transform world)
+        {
+            if (almondBlossom == null) { Debug.Log("[AS] No Textures/Reference/AS_AlmondBlossom (.jpg/.png): the end has no painting on the easel."); return null; }
+            var tex = almondBlossom.GetTexture("_BaseMap");
+            float h = layout.endPaintingHeight, w = tex != null && tex.height > 0 ? h * tex.width / tex.height : h * 1.26f;
+            var root = new GameObject("Almond Blossom (the end)").transform;
+            root.SetParent(world, false);
+            // faces the room (+z): the picture quad faces -z, so turn it round, then lean its top back
+            root.SetLocalPositionAndRotation(layout.endPaintingCentre, Quaternion.Euler(0f, 180f, 0f) * Quaternion.Euler(layout.endPaintingTilt, 0f, 0f));
+            var face = Quad(root, "Painting", w, h, almondBlossom);
+            face.localPosition = new Vector3(0f, 0f, -0.011f);
+            Box(root, "Canvas", Vector3.zero, new Vector3(w, h, 0.02f), canvas, collider: false);
+            root.gameObject.SetActive(false);
+            return root.gameObject;
+        }
+        Transform handLetter;   // Theo's letter in Vincent's hand (null with the capsule)
         readonly List<(Transform t, float yaw)> chairs = new List<(Transform, float)>();   // turned live by chairYawOffset in the Editor
 
         /// <summary>A picture pinned on the north wall, showing its own part of the painting: a 2 cm slab whose front face
@@ -982,6 +1006,7 @@ namespace InnerFrame.AlmondStudio
             vin.transform.SetPositionAndRotation(layout.vincentSpot, Quaternion.Euler(0f, layout.vincentYaw, 0f));
             var anim = vin.GetComponent<Animator>();
             if (anim == null) anim = vin.AddComponent<Animator>();
+            vincentAnimator = anim;
             // his model may come without the avatar (it is copied from BreathingIdle's skeleton by SN_Setup): without it
             // the humanoid clips can't play and he stands in his raw, sunk bind pose
             if ((anim.avatar == null || !anim.avatar.isHuman) && vincentAvatar != null) { anim.avatar = vincentAvatar; anim.Rebind(); }
@@ -999,6 +1024,10 @@ namespace InnerFrame.AlmondStudio
             if (hand != null)
             {
                 var paper = Quad(hand, "Theo's letter (in his hand)", 0.21f, 0.27f, letterSheet != null ? letterSheet : ceiling);
+                handLetter = paper;
+                // you take it by pointing at it and pressing (XRI; E on the desktop rig)
+                var lc = paper.gameObject.AddComponent<BoxCollider>(); lc.size = new Vector3(0.21f, 0.27f, 0.06f);
+                paper.gameObject.AddComponent<XRSimpleInteractable>().selectEntered.AddListener(_ => { if (Game != null) Game.TakeLetter(); });
                 paper.localPosition = layout.vincentLetterOffset;
                 paper.localRotation = Quaternion.Euler(layout.vincentLetterEuler);
                 // Quad culls its back: draw both sides with a two-sided copy
@@ -1251,6 +1280,7 @@ namespace InnerFrame.AlmondStudio
             if (kb == null || cam == null || Game == null) return;
             if (kb.oKey.wasPressedThisFrame) Game.window.Open();
             if (kb.nKey.wasPressedThisFrame) Game.FinishNextBranch();
+            if (kb.lKey.wasPressedThisFrame) Game.TakeLetter();   // L: take Theo's letter (Space puts it down)
             if (kb.rKey.wasPressedThisFrame) { Game.BrushHeldInEditor = false; ReturnBrush(); brushT.SetParent(Game.transform, true); Game.Begin(); }
             if (kb.gKey.wasPressedThisFrame)
             {

@@ -237,6 +237,27 @@ namespace InnerFrame.AlmondStudio
         public string hintSweep = "Hold the trigger and brush over the branches";
         public string hintOthers = "Wake the other branches";
 
+        [Header("The story: the letter, his joy, the invitation, the painting (2026-11-12)")]
+        [Tooltip("When you arrive he holds the letter out.")] public string hintLetter = "Take the letter";
+        public string hintRead = "Pull the trigger to put the letter down";
+        [Tooltip("After you've read it.")] public string lineHappy = "A boy, and they have named him Vincent! After me. I could not be happier.";
+        [Tooltip("Then, a few seconds later.")] public string lineInvite = "I want to paint something for his room, to hang above his cradle. The almond tree outside is just coming into blossom. Will you help me? Open the window.";
+        public string hintDone = "Almond Blossom, Saint-Rémy, February 1890";
+        [Tooltip("Theo's letter, as you read it. Facts from Letters 847-848 (31 Jan 1890); check the wording at vangoghletters.org.")]
+        [TextArea(8, 16)] public string letterText =
+            "Paris, 31 January 1890\n\nMy dear Vincent,\n\nJo has given birth to our son, a beautiful boy.\n\nAs we told you, we are naming him after you: Vincent Willem. I wish that he may be as persevering and as courageous as you.\n\nJo sends you her love, and so do I.\n\nYour brother,\nTheo";
+        [Tooltip("How close (metres) you need to be to take the letter with the trigger.")] public float letterReach = 1.8f;
+        [Tooltip("Reading: the trigger puts it down after this long; it goes down by itself after the max.")] public float letterMinSeconds = 2f, letterMaxSeconds = 25f;
+        [Tooltip("His joy before he asks you to help.")] public float happySeconds = 4f;
+        [Tooltip("Vincent's controller states (VincentV2@<Name>.fbx in Art/Vincent; Idle is BreathingIdle). Missing ones fall back to Idle.")]
+        public string vincentIdleClip = "Idle", vincentGiveClip = "Giving", vincentHappyClip = "Happy", vincentTalkClip = "Talking";
+
+        [Header("The end: Almond Blossom on his easel (Textures/Reference/AS_AlmondBlossom.jpg)")]
+        [Tooltip("The canvas's middle, world space (the easel stands at -1.15, 0, 0.35).")] public Vector3 endPaintingCentre = new Vector3(-1.15f, 1.18f, 0.4f);
+        [Tooltip("Metres; the width follows the painting (73.3 x 92.4 cm).")] public float endPaintingHeight = 0.62f;
+        [Tooltip("Leans back against the easel, degrees.")] public float endPaintingTilt = 8f;
+        public float endPaintingSeconds = 2f;
+
         public float Springing => windowTop - windowWidth / 2f;
         public Vector3 WindowCentreInner => new Vector3(0f, (windowBottom + windowTop) * 0.5f, roomDepth);
         public Vector3 WindowCentreOuter => new Vector3(0f, (windowBottom + windowTop) * 0.5f, roomDepth + wallThickness);

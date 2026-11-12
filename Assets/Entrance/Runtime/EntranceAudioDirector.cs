@@ -15,7 +15,7 @@ namespace InnerFrame.Entrance
         readonly AudioSource[] music = new AudioSource[2];
         readonly float[] weights = new float[2];
         AudioSource clicks, handwriting;
-        AudioClip opening, landing1, landing2, gold, arrival, galleryLoop, bedroomLoop, starryLoop;
+        AudioClip opening, landing1, landing2, gold, arrival, galleryLoop, bedroomLoop, starryLoop, cafeLoop;
         Coroutine crossfade, writingRoutine, arrivalRoutine;
         int active;
         float nextScan, duck = 1f;
@@ -52,6 +52,7 @@ namespace InnerFrame.Entrance
             landing2 = Load("Landing2Loop"); gold = Load("GoldLoop"); arrival = Load("GalleryArrival");
             galleryLoop = Load("GalleryWarmStringsLoop");
             bedroomLoop = Load("BedroomHiraethLoop"); starryLoop = Load("StarryNightAdriftLoop");
+            cafeLoop = Load("CafeParisianLoop");
             clicks.clip = Load("SoftClick"); handwriting.clip = Load("Handwriting");
             SceneManager.sceneLoaded += Loaded;
         }
@@ -60,9 +61,11 @@ namespace InnerFrame.Entrance
         {
             if (HasSceneMusic(SceneManager.GetActiveScene().name)) Ensure();
         }
-        static bool HasSceneMusic(string scene) => scene == "Gallery" || scene == "PaintedBedroom" || scene == "StarryNight";
+        static bool HasSceneMusic(string scene) => scene == "Gallery" || scene == "PaintedBedroom" || scene == "StarryNight" || scene == "CafeTerrace";
         public static string MusicCredit(string scene)
         {
+            if (scene == "CafeTerrace")
+                return "Parisian · Kevin MacLeod\nCC BY 4.0 · incompetech.com\nLoop edit for InnerFrame";
             string title = scene == "PaintedBedroom" ? "Hiraeth" : scene == "StarryNight" ? "Adrift Among Infinite Stars" : null;
             return title == null ? null : title + " · Scott Buckley\nCC BY 4.0 · scottbuckley.com.au\nLoop edit for InnerFrame";
         }
@@ -168,12 +171,12 @@ namespace InnerFrame.Entrance
             if (arrivalRoutine != null) { StopCoroutine(arrivalRoutine); arrivalRoutine = null; }
             if (scene.name == "Gallery")
                 arrivalRoutine = StartCoroutine(AwaitGalleryReveal(scene, enteringGallery));
-            else if (scene.name == "PaintedBedroom" || scene.name == "StarryNight")
+            else if (scene.name == "PaintedBedroom" || scene.name == "StarryNight" || scene.name == "CafeTerrace")
             {
                 enteringGallery = false;
                 arrivalRoutine = StartCoroutine(AwaitPaintingReveal(scene));
             }
-            else if (CurrentCue == "Gallery loop" || CurrentCue == "Gallery arrival" || CurrentCue == "Bedroom loop" || CurrentCue == "Starry Night loop")
+            else if (CurrentCue == "Gallery loop" || CurrentCue == "Gallery arrival" || CurrentCue == "Bedroom loop" || CurrentCue == "Starry Night loop" || CurrentCue == "Cafe loop")
             {
                 if (crossfade != null) StopCoroutine(crossfade);
                 CurrentCue = "Outside Gallery";
@@ -187,8 +190,8 @@ namespace InnerFrame.Entrance
             var fader = SceneFader.Instance;
             while (scene.isLoaded && fader.IsTransitioning && fader.Coverage >= .98f) yield return null;
             if (scene.isLoaded && SceneManager.GetActiveScene() == scene)
-                Switch(scene.name == "PaintedBedroom" ? bedroomLoop : starryLoop, true,
-                    scene.name == "PaintedBedroom" ? "Bedroom loop" : "Starry Night loop", 2.4f);
+                Switch(scene.name == "PaintedBedroom" ? bedroomLoop : scene.name == "CafeTerrace" ? cafeLoop : starryLoop, true,
+                    scene.name == "PaintedBedroom" ? "Bedroom loop" : scene.name == "CafeTerrace" ? "Cafe loop" : "Starry Night loop", 2.4f);
             arrivalRoutine = null;
         }
         IEnumerator AwaitGalleryReveal(Scene scene, bool fromGold)
@@ -206,7 +209,7 @@ namespace InnerFrame.Entrance
                     while (AudioSettings.dspTime < loopStart && scene.isLoaded) yield return null;
                 }
                 if (scene.isLoaded && SceneManager.GetActiveScene() == scene)
-                    Switch(galleryLoop, true, "Gallery loop", fromGold || CurrentCue == "Bedroom loop" || CurrentCue == "Starry Night loop" ? 2.4f : 1.2f);
+                    Switch(galleryLoop, true, "Gallery loop", fromGold || CurrentCue == "Bedroom loop" || CurrentCue == "Starry Night loop" || CurrentCue == "Cafe loop" ? 2.4f : 1.2f);
             }
             arrivalRoutine = null;
         }

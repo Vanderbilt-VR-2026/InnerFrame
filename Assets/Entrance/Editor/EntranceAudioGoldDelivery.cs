@@ -40,7 +40,7 @@ namespace InnerFrame.Entrance.Editor
             galleryImporter.defaultSampleSettings = gallerySettings;
             galleryImporter.forceToMono = false;
             galleryImporter.SaveAndReimport();
-            foreach (string name in new[] { "BedroomHiraethLoop", "StarryNightAdriftLoop" })
+            foreach (string name in new[] { "BedroomHiraethLoop", "StarryNightAdriftLoop", "CafeParisianLoop" })
             {
                 var importer = AssetImporter.GetAtPath(Root + "Audio/" + name + ".wav") as AudioImporter;
                 if (importer == null) throw new InvalidOperationException("Missing painting music: " + name);

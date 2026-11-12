@@ -1,0 +1,11 @@
+Café music review — 2026-11-12
+Scope: Parisian addition and five-scene APK build entry; baseline 3f2a5e4.
+Three independent angles: runtime/build routing, licensing/assets, verification validity.
+
+CONFIRMED and FIXED: old IntegratedQuestBuild overwrote enabled scenes with four paths, dropping CafeTerrace. It now validates and uses the current scene list, including all five required scenes with Entrance first. No serialized Player/XR/BuildSettings changes.
+CONFIRMED and FIXED: music verification repaired importer settings before verification. Authoring is now separate from Begin(), which checks delivered settings without changing them.
+CONFIRMED and FIXED: recovery assertion checked internal multiplier but not AudioSource gain. It now checks intermediate gain and restoration to the actual baseline.
+VERIFIED: Cafe changes preserve the shared LateUpdate gain/duck implementation and Fade implementation byte-for-byte.
+VERIFIED: full official source and CC BY 4.0 attribution, loop edits, names and independent audio metrics match. 36.5-second PCM stereo loop at -27 LUFS, same level as existing paintings; no clipping, zero boundary sample delta.
+VERIFIED: Unity 6000.3.23f1 compiled; 45 offline Play-mode checks passed; process exited 0.
+LIMITATION: synthetic dialogue fixture verifies shared speech detection, not live conversation, Photon voice, device audio or physical Quest playback. Existing local Photon authentication limitation remains.

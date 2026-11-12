@@ -29,6 +29,7 @@ namespace InnerFrame.AlmondStudio.EditorTools
         // Vincent's easel (Cici's Tripo model, read only; see its docs/ASSETS.md row)
         const string EaselModel = "Assets/VanGogh/Art/Props/VG_Easel.fbx";
         const string EaselMaterial = "Assets/VanGogh/Art/Props/M_Easel.mat";
+        const string SillModel = Root + "/Art/Props/AS_SillStillLife.fbx";   // Serena's Tripo model, 11 Nov
         const string XrOriginPrefab = "Assets/Samples/XR Interaction Toolkit/3.3.2/Starter Assets/Prefabs/XR Origin (XR Rig).prefab";
         const string XrOriginName = "XR Origin (XR Rig)";
         const string DialoguePrefab = "Assets/VanGogh/Prefabs/VG_DialogueUI.prefab";
@@ -174,6 +175,8 @@ namespace InnerFrame.AlmondStudio.EditorTools
                 if (boot.references[i] == null) Debug.LogWarning("[AS Setup] No comparison picture at " + path + " (view " + (i + 1) + ").");
             }
             boot.chairPrefab = ChairFromBedroom();
+            boot.sillModel = AssetDatabase.LoadAssetAtPath<GameObject>(SillModel);
+            if (boot.sillModel == null) Debug.Log("[AS Setup] No sill still life at " + SillModel + "; the sill keeps its cylinders.");
             boot.easelModel = AssetDatabase.LoadAssetAtPath<GameObject>(EaselModel);
             boot.easelMaterial = AssetDatabase.LoadAssetAtPath<Material>(EaselMaterial);
             if (boot.easelModel == null || boot.easelMaterial == null)

@@ -95,6 +95,12 @@ namespace InnerFrame.AlmondStudio
         public float paintBoxYaw = 12f;
         [Tooltip("Where the pot of brushes stands on the table (x, z).")] public Vector2 brushPotSpot = new Vector2(0.38f, 1.65f);
 
+        [Header("Sill still life (Tripo model Art/Props/AS_SillStillLife.fbx)")]
+        [Tooltip("Turns the model so it stands up with its front toward the room (-z). Tripo FBX often needs X 270 (as the tree did) and/or Y 180.")]
+        public Vector3 sillModelEuler = new Vector3(0f, 180f, 0f);
+        [Tooltip("The tallest object (the lidded jar), metres: sets the model's scale.")] public float sillModelHeight = 0.32f;
+        [Tooltip("Moves the model from the sill's middle (x across, y up, z toward the glass).")] public Vector3 sillModelOffset = new Vector3(-0.03f, 0f, 0.01f);
+
         [Header("Blossoms on the Tripo tree (AS_Blossoms)")]
         [Tooltip("A blossom's petal length, metres.")] public float blossomSize = 0.07f;
         [Tooltip("Share of the buds that never open, as in the painting.")] [Range(0f, 1f)] public float blossomStayBud = 0.2f;

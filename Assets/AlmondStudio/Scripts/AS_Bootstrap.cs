@@ -27,6 +27,7 @@ namespace InnerFrame.AlmondStudio
         [Tooltip("The comparison pictures, one per AS_Layout.compareViews entry (Textures/Reference), set by Build.")] public Texture[] references = new Texture[0];
         [Tooltip("The Bedroom's chair, saved for this scene by AS_Setup (Prefabs/AS_Chair.prefab). Boxes if missing.")] public GameObject chairPrefab;
         [Tooltip("Vincent's easel (VanGogh/Art/Props/VG_Easel.fbx) and its painted material M_Easel. Boxes if missing.")] public GameObject easelModel;
+        [Tooltip("The sill's five objects as one Tripo model (Art/Props/AS_SillStillLife.fbx). Cylinders if missing.")] public GameObject sillModel;
         public Material easelMaterial;
 
         public AS_Game Game { get; private set; }
@@ -110,7 +111,8 @@ namespace InnerFrame.AlmondStudio
             float[] xs = { -0.42f, -0.12f, 0.02f, 0.2f, 0.36f };
             float[] hs = { 0.32f, 0.16f, 0.3f, 0.12f, 0.12f };
             float[] rs = { 0.055f, 0.035f, 0.04f, 0.04f, 0.05f };
-            for (int i = 0; i < 5; i++)
+            if (sillModel != null) SillStillLife(world, new Vector3(0f, y0, zs));   // the Tripo model; the cylinders only without it
+            else for (int i = 0; i < 5; i++)
             {
                 var c = Prim(world, PrimitiveType.Cylinder, "Sill object " + (i + 1), new Vector3(xs[i], y0 + hs[i] / 2f, zs), new Vector3(rs[i] * 2f, hs[i] / 2f, rs[i] * 2f), frame);
                 DestroyImmediate(c.GetComponent<Collider>());
@@ -416,6 +418,51 @@ namespace InnerFrame.AlmondStudio
             Box(c, "Back", new Vector3(0f, 0.7f, -0.19f), new Vector3(0.42f, 0.5f, 0.03f), wood);
             foreach (var p in new[] { new Vector2(-0.18f, -0.17f), new Vector2(0.18f, -0.17f), new Vector2(-0.18f, 0.17f), new Vector2(0.18f, 0.17f) })
                 Box(c, "Leg", new Vector3(p.x, 0.21f, p.y), new Vector3(0.03f, 0.42f, 0.03f), wood, collider: false);
+        }
+
+        /// <summary>The Tripo still life on the sill: turned by AS_Layout.sillModelEuler, scaled so its tallest object (the
+        /// lidded jar) is sillModelHeight tall, its feet on the sill and its middle at `at` + sillModelOffset. With flat
+        /// shading its texture goes on an AS_Painted copy, so it reads like the room.</summary>
+        void SillStillLife(Transform parent, Vector3 at)
+        {
+            var root = new GameObject("Sill still life").transform;
+            root.SetParent(parent, false);
+            var m = Instantiate(sillModel, root);
+            m.name = sillModel.name;
+            m.transform.localPosition = Vector3.zero;
+            m.transform.localRotation = Quaternion.Euler(layout.sillModelEuler);
+            m.transform.localScale = Vector3.one;
+            var rs = m.GetComponentsInChildren<Renderer>(true);
+            if (rs.Length == 0) { Debug.LogWarning("[AS] The sill model has no renderer."); return; }
+            var b = rs[0].bounds;
+            foreach (var r in rs) b.Encapsulate(r.bounds);
+            // the model's height should be the middle of its three sizes (the row is wider, a jar is less deep)
+            var e = b.size;
+            if (e.y < e.x && e.y < e.z || e.y > e.x && e.y > e.z)
+                Debug.LogWarning($"[AS] The sill model is {e.x:0.00} x {e.y:0.00} x {e.z:0.00} (x y z) before scaling: it may be lying down or turned. Change AS_Layout.sillModelEuler (try X 270 or X 90) and Play again.");
+            float k = e.y > 1e-5f ? layout.sillModelHeight / e.y : 1f;
+            m.transform.localScale = Vector3.one * k;
+            // after scaling: feet on the sill, centred
+            b = rs[0].bounds;
+            foreach (var r in rs) b.Encapsulate(r.bounds);
+            Vector3 target = at + layout.sillModelOffset;
+            m.transform.position += new Vector3(target.x - b.center.x, target.y - b.min.y, target.z - b.center.z);
+            foreach (var c in m.GetComponentsInChildren<Collider>(true)) Destroy(c);
+            if (layout.flatShading && wall != null)
+                foreach (var r in rs)
+                {
+                    var src = r.sharedMaterials;
+                    var dst = new Material[src.Length];
+                    for (int i = 0; i < src.Length; i++)
+                    {
+                        dst[i] = new Material(wall.shader) { name = (src[i] != null ? src[i].name : "Sill") + " (painted)" };
+                        var tex = src[i] != null ? src[i].mainTexture : null;
+                        if (tex != null) dst[i].SetTexture("_BaseMap", tex);
+                        dst[i].SetColor("_BaseColor", Color.white);
+                    }
+                    r.sharedMaterials = dst;
+                }
+            Debug.Log($"[AS] Sill still life: {sillModel.name}, scaled x{k:0.000}, now {b.size.x:0.00} m wide, {b.size.y:0.00} m tall, {b.size.z:0.00} m deep.");
         }
 
         const float TableTop = 0.765f;   // the table top's upper face (0.74 + half its 0.05)

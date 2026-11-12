@@ -50,7 +50,7 @@ namespace InnerFrame.AlmondStudio
             blossoms?.ResetAll();
             guides.Show(false);
             letterTaken = false;
-            pointing = false;
+            invitePhase = 0;
             if (vincent != null)
             {
                 if (!vincentYawRead) { vincentYaw = vincent.transform.eulerAngles.y; vincentYawRead = true; }
@@ -71,7 +71,6 @@ namespace InnerFrame.AlmondStudio
 
         void Enter(AS_State s)
         {
-            if (s == AS_State.Invite) invited = false;
             State = s;
             stateTime = 0f;
             switch (s)
@@ -99,10 +98,10 @@ namespace InnerFrame.AlmondStudio
                     Pose(layout.vincentHappyClip);
                     Say(layout.lineHappy);
                     Hint(null);
-                    pointing = false;
+                    invitePhase = 0;
                     break;
                 case AS_State.TakeBrush:
-                    pointing = false; turnTo = vincentYaw;
+                    invitePhase = 0; turnTo = vincentYaw;
                     Pose(layout.vincentRestClip);
                     Hint(layout.hintBrush);
                     break;
@@ -143,19 +142,23 @@ namespace InnerFrame.AlmondStudio
                     if ((stateTime > layout.letterMinSeconds && (letterView == null || letterView.Arrived) && TriggerPressed()) || stateTime > layout.letterMaxSeconds) Enter(AS_State.Invite);
                     break;
                 case AS_State.Invite:
-                    if (stateTime > layout.happySeconds && !invited)
+                    // after his joy: he turns to the window, points at the tree, then turns back to you and asks
+                    if (invitePhase == 0 && stateTime > layout.happySeconds)
                     {
-                        // he asks you, turning toward the window and pointing at the tree
-                        invited = true; invitedAt = stateTime; pointing = true;
-                        turnTo = YawToWindow();
-                        if (!Pose(layout.vincentPointClip, holdAt: () => layout.pointHoldAt, fallBackToIdle: false)) Pose(layout.vincentTalkClip);
-                        Say(layout.lineInvite); Hint(layout.hintOpen);
+                        invitePhase = 1; turnTo = YawToWindow();
+                        Pose(layout.vincentRestClip);
+                        Say(layout.linePoint);
                     }
-                    if (pointing && stateTime > invitedAt + layout.pointSeconds)
+                    else if (invitePhase == 1 && (vincent == null || Mathf.Abs(Mathf.DeltaAngle(vincent.transform.eulerAngles.y, turnTo)) < 4f))
                     {
-                        // then turns back to you, talking
-                        pointing = false; turnTo = vincentYaw;
+                        invitePhase = 2; phaseAt = stateTime;
+                        Pose(layout.vincentPointClip, holdAt: () => layout.pointHoldAt, fallBackToIdle: false);
+                    }
+                    else if (invitePhase == 2 && stateTime > phaseAt + layout.pointSeconds)
+                    {
+                        invitePhase = 3; turnTo = vincentYaw;
                         Pose(layout.vincentTalkClip);
+                        Say(layout.lineInvite); Hint(layout.hintOpen);
                     }
                     if (window.IsOpening) { if (ui != null) ui.Clear(); Enter(AS_State.TakeBrush); }
                     break;
@@ -261,7 +264,6 @@ namespace InnerFrame.AlmondStudio
             for (int i = 0; i < Branches.Length; i++) if (Branches[i].Paintable && !Branches[i].Done) { Finish(i); return; }
         }
 
-        bool invited;
 
         /// <summary>Called when the letter is picked (XRI select, or E on the desktop rig).</summary>
         public void TakeLetter() { if (State == AS_State.Arrive) letterTaken = true; }
@@ -273,8 +275,9 @@ namespace InnerFrame.AlmondStudio
         // Vincent's body: which clip he holds on a frame, and his turn
         int holdState;
         System.Func<float> holdAt;
-        bool pointing, vincentYawRead;
-        float invitedAt, vincentYaw, turnTo;
+        bool vincentYawRead;
+        int invitePhase;   // Invite: 0 his joy, 1 turning to the window, 2 pointing, 3 back to you, asking
+        float phaseAt, vincentYaw, turnTo;
 
         /// <summary>Crossfades Vincent v2 to the first of these controller states he has ("HappyIdle,Idle"). With
         /// holdAt, the clip stops on that point of itself (0-1) and holds it, as the hand-over does with his arm out.

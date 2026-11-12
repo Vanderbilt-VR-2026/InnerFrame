@@ -147,6 +147,19 @@ namespace InnerFrame.AlmondStudio.EditorTools
                 layout.layoutVersion = 8;
                 EditorUtility.SetDirty(layout);
             }
+            if (layout.layoutVersion < 9)
+            {
+                // version 9 (2026-11-12): Cici's idle again (no Happy Idle); he turns to the window, points, then talks on
+                var d9 = ScriptableObject.CreateInstance<AS_Layout>();
+                if (layout.vincentHappyClip == "HappyIdle,Happy") layout.vincentHappyClip = d9.vincentHappyClip;
+                if (layout.vincentTalkClip == "Talking,HappyIdle") layout.vincentTalkClip = d9.vincentTalkClip;
+                if (layout.vincentRestClip == "HappyIdle,Idle") layout.vincentRestClip = d9.vincentRestClip;
+                if (Mathf.Approximately(layout.pointTurn, 0.6f)) layout.pointTurn = d9.pointTurn;
+                if (layout.lineInvite == AS_Layout.LineInviteV7) layout.lineInvite = d9.lineInvite;
+                Object.DestroyImmediate(d9);
+                layout.layoutVersion = 9;
+                EditorUtility.SetDirty(layout);
+            }
 
             var lit = Shader.Find("Universal Render Pipeline/Lit");
             var unlit = Shader.Find("Universal Render Pipeline/Unlit");

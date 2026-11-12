@@ -153,6 +153,9 @@ namespace InnerFrame.AlmondStudio
         [Header("Vincent v2 (Cici's, from The Starry Night)")]
         [Tooltip("The letter in his right hand: position in the hand bone's space, metres.")] public Vector3 vincentLetterOffset = new Vector3(0.02f, 0.12f, 0.04f);
         [Tooltip("The letter's turn in the hand bone's space.")] public Vector3 vincentLetterEuler = new Vector3(0f, 90f, 0f);
+        [Tooltip("The letter pinched between thumb and index (AS_HeldLetter, tune live on the letter): paper inside the grip, metres.")] public float letterGripInset = 0.025f;
+        [Tooltip("Turns the held letter round the line it sticks out along, degrees.")] public float letterGripRoll = 0f;
+        [Tooltip("Tips the held letter up (+) or down (-) from the line of his fingers, degrees.")] public float letterGripTip = 0f;
 
         [Header("Theo's letter and the birth card on the table (Textures/Table)")]
         [Tooltip("The letter's middle on the table (x, z), and its turn.")] public Vector2 letterSpot = new Vector2(0.1f, 1.95f);
@@ -241,7 +244,9 @@ namespace InnerFrame.AlmondStudio
         [Tooltip("When you arrive he holds the letter out.")] public string hintLetter = "Take the letter";
         public string hintRead = "Pull the trigger to put the letter down";
         [Tooltip("After you've read it.")] public string lineHappy = "A boy, and they have named him Vincent! After me. I could not be happier.";
-        [Tooltip("Then, a few seconds later.")] public string lineInvite = "I want to paint something for his room, to hang above his cradle. The almond tree outside is just coming into blossom. Will you help me? Open the window.";
+        [Tooltip("Then, a few seconds later.")] public string lineInvite = "I want to paint it for his room, to hang above his cradle. Will you help me? Open the window.";
+        public const string LineInviteV7 = "I want to paint something for his room, to hang above his cradle. The almond tree outside is just coming into blossom. Will you help me? Open the window.";
+        [Tooltip("Said as he turns to the window and points at the tree, before lineInvite.")] public string linePoint = "Look, the almond tree outside is just coming into blossom.";
         public string hintDone = "Almond Blossom, Saint-Rémy, February 1890";
         [Tooltip("At the top of the letter, in small italics: where and when we are, so the story is clear.")]
         [TextArea(2, 5)] public string letterBackground =
@@ -256,14 +261,14 @@ namespace InnerFrame.AlmondStudio
         [Tooltip("His joy before he asks you to help.")] public float happySeconds = 4f;
         [Tooltip("Vincent's controller states: the file name after VincentV2@, spaces dropped (VincentV2@Happy Idle.fbx -> HappyIdle). " +
                  "Each can list several, first found wins (\"HappyIdle,Idle\"); missing ones fall back to Idle (BreathingIdle).")]
-        public string vincentIdleClip = "Idle", vincentGiveClip = "Giving", vincentHappyClip = "HappyIdle,Happy", vincentTalkClip = "Talking,HappyIdle";
-        [Tooltip("How he stands once you have the letter: happily, from then on.")] public string vincentRestClip = "HappyIdle,Idle";
+        public string vincentIdleClip = "Idle", vincentGiveClip = "Giving", vincentHappyClip = "Happy", vincentTalkClip = "Talking";
+        [Tooltip("How he stands once you have the letter: Cici's BreathingIdle (Idle).")] public string vincentRestClip = "Idle";
         [Tooltip("When he asks you to help: turns toward the window and points at the tree (VincentV2@Pointing.fbx; none = he only turns).")]
         public string vincentPointClip = "Pointing";
         [Tooltip("The hand-over stops here (0-1 of the clip), arm out, before the clip lowers his hand: Mixamo's frame / total frames. Tune live.")]
         [Range(0.05f, 1f)] public float giveHoldAt = 0.6f;
         [Tooltip("The point stops here (0-1 of the clip), arm up.")] [Range(0.05f, 1f)] public float pointHoldAt = 0.6f;
-        [Tooltip("How far he turns toward the window to point (0 = not at all, 1 = facing it).")] [Range(0f, 1f)] public float pointTurn = 0.6f;
+        [Tooltip("How far he turns toward the window to point (0 = not at all, 1 = facing it).")] [Range(0f, 1f)] public float pointTurn = 0.9f;
         [Tooltip("Seconds he points before turning back to you.")] public float pointSeconds = 3.5f;
         [Tooltip("Degrees per second he turns.")] public float vincentTurnSpeed = 140f;
 

@@ -1030,6 +1030,9 @@ namespace InnerFrame.AlmondStudio
                 paper.gameObject.AddComponent<XRSimpleInteractable>().selectEntered.AddListener(_ => { if (Game != null) Game.TakeLetter(); });
                 paper.localPosition = layout.vincentLetterOffset;
                 paper.localRotation = Quaternion.Euler(layout.vincentLetterEuler);
+                // held between his thumb and index finger, sticking out past his fingers (not flat on his palm)
+                var grip = AS_HeldLetter.On(paper, anim, 0.27f);
+                grip.gripInset = layout.letterGripInset; grip.roll = layout.letterGripRoll; grip.tip = layout.letterGripTip;
                 // Quad culls its back: draw both sides with a two-sided copy
                 var mr = paper.GetComponent<MeshRenderer>();
                 var two = new Material(mr.sharedMaterial) { name = "Letter (two-sided)" };

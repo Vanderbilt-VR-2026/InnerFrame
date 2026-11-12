@@ -897,6 +897,8 @@ namespace InnerFrame.AlmondStudio
             g.SetLocalPositionAndRotation(new Vector3(spot.x, TableTop, spot.y), Quaternion.Euler(0f, yaw, 0f));
             var tin = new Material(brushHead) { name = "AS_Ferrule (runtime)" };
             tin.SetColor("_BaseColor", new Color(0.62f, 0.6f, 0.55f));
+            var handleWood = new Material(wood) { name = "AS_BrushHandle (runtime)" };   // darker than the table, so they show
+            handleWood.SetColor("_BaseColor", new Color(0.45f, 0.27f, 0.14f));
             for (int i = 0; i < 2; i++)
             {
                 var b = new GameObject("Brush").transform;
@@ -904,7 +906,7 @@ namespace InnerFrame.AlmondStudio
                 b.localPosition = new Vector3(i * 0.012f, 0.006f, i * 0.045f);
                 b.localRotation = Quaternion.Euler(0f, i * 4f, 90f);   // lying along local x
                 float len = 0.26f + i * 0.03f;
-                Prim(b, PrimitiveType.Cylinder, "Handle", new Vector3(0f, -len / 2f, 0f), new Vector3(0.009f, len / 2f, 0.009f), wood);
+                Prim(b, PrimitiveType.Cylinder, "Handle", new Vector3(0f, -len / 2f, 0f), new Vector3(0.009f, len / 2f, 0.009f), handleWood);
                 Prim(b, PrimitiveType.Cylinder, "Ferrule", new Vector3(0f, 0.015f, 0f), new Vector3(0.011f, 0.015f, 0.011f), tin);
                 Prim(b, PrimitiveType.Cube, "Bristles", new Vector3(0f, 0.045f, 0f), new Vector3(0.006f, 0.035f, 0.014f), brushHead);
             }

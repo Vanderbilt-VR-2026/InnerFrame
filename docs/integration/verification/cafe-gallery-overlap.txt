@@ -1,14 +1,14 @@
 Cafe/Gallery overlap snapshot — 2026-11-12
-HEAD: 64593578acabb51481bf5d4c511833d582a95295
+Tested implementation HEAD: 73d595be8d911a71575474ef07bbcb4388e4c39a
 origin/main: b94d86e5228ad0b26f8f2274f9544afcf4982373
-Command: git merge-tree --write-tree --name-only HEAD origin/pr/<number>
-The HEAD checks include the committed music update. Pending Cafe/Gallery working-tree edits are not included; rerun after their commit.
+Command: git merge-tree --write-tree --name-only HEAD <open-PR-head>
+Includes the committed Cafe integration, 1888 portrait, card geometry and approved music. Later verification-only documentation does not change these overlapping implementation files.
 
 #192 a016e42a867ba58e9fc9512b9e1c6308419f9f72: CLEAN
-#191 6095f030665114d270df849fbdff1b4fe4da536f: CLEAN
+#191 6095f030665114d270df849fbdff1b4fe4da536f: CONFLICT
+  docs/ASSETS.md
 #190 95553bbce673544c9aba8554615a84a47c1bca0e: CLEAN
 #189 09cd5fbbdbd4cfa4699e4ea4e8905c3b6a00d462: CLEAN
-#188 c8ede5664c43dac47d068d19181f39fc0b08a4bd: CLEAN
 #187 4eebec349720af9d5dd16dbe9ce348c1fdaa8fe8: CONFLICT
   Assets/Scenes/Gallery.unity
 #184 412a5e036dec4e5a098b0592d2236c581c6fe9a1: CONFLICT
@@ -108,3 +108,10 @@ The HEAD checks include the committed music update. Pending Cafe/Gallery working
   Assets/InnerFrameBedroomWeb/Generated/PaintedBedroom.prefab
   Assets/InnerFrameBedroomWeb/Generated/PaintedBedroom_Meshes.asset
   Assets/InnerFrameBedroomWeb/Scenes/PaintedBedroom.unity
+
+Coordination: current main is checked separately by ci-local. Keep #188 draft.
+#191 Cafe implementation files are reused exactly; reconcile docs/ASSETS.md wording rather than replacing the integrated Gallery.
+#187 lighting overlaps Gallery.unity; preserve the approved three-card layout when incorporating its lighting.
+#180 requires preserving both its streamed/headset speech checks and the 25% BGM assertion.
+#184 shared UI and #112 older Entrance/cards need coordinated reconciliation; #109 has the pre-existing generated Bedroom overlap.
+No open PR was merged, changed or closed.

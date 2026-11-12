@@ -96,7 +96,22 @@
 *.[pP][rR][iI] filter=lfs diff=lfs merge=lfs -text
 *.[wW][iI][nN][mM][dD] filter=lfs diff=lfs merge=lfs -text
 
+
+# Embedded portrait texture serialized by Unity; keep this 69 MB asset in LFS.
+"Assets/ArtworkCici/OtherArtworks/StarryNight Orsay Portrait.asset" filter=lfs diff=lfs merge=lfs -text
+
 # Unity binaries (LightingData.asset must stay below *.asset so LFS wins)
 *.[uU][nN][iI][tT][yY][pP][aA][cC][kK][aA][gG][eE] filter=lfs diff=lfs merge=lfs -text
 *.[bB][yY][tT][eE][sS] filter=lfs diff=lfs merge=lfs -text
 **/LightingData.asset filter=lfs diff=lfs merge=lfs -text
+
+# Machine-learning models (Vincent's headset voice, #157), and the espeak-ng
+# phoneme data next to it: binary files with no extension (their .meta files
+# and the text files beside them stay in git).
+*.[oO][nN][nN][xX] filter=lfs diff=lfs merge=lfs -text
+*.[oO][rR][tT] filter=lfs diff=lfs merge=lfs -text
+Assets/StreamingAssets/VincentVoice/espeak-ng-data/en_dict filter=lfs diff=lfs merge=lfs -text
+Assets/StreamingAssets/VincentVoice/espeak-ng-data/intonations filter=lfs diff=lfs merge=lfs -text
+Assets/StreamingAssets/VincentVoice/espeak-ng-data/phondata filter=lfs diff=lfs merge=lfs -text
+Assets/StreamingAssets/VincentVoice/espeak-ng-data/phonindex filter=lfs diff=lfs merge=lfs -text
+Assets/StreamingAssets/VincentVoice/espeak-ng-data/phontab filter=lfs diff=lfs merge=lfs -text

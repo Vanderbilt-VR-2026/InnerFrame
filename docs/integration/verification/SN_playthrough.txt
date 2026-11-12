@@ -1,0 +1,147 @@
+
+== A full playthrough
+  t=   0.0  [SN] Arrive  (title: "Walk up to Vincent", hint: "Walk up the path to Vincent")
+  PASS  starts in Arrive
+  t=   2.3  [SN] Sit  (title: "Sit beside Vincent", hint: "Sit on the blanket next to him.")
+  t=   2.3  line L01 (4.4 s): "Ah, a visitor. Sit with me. The night is just beginning."
+  PASS  within 3 m of Vincent -> Sit (L01, his words in the box)
+  t=   3.1  [SN] Lantern  (title: "Dim the lantern", hint: "Point at it, pull the trigger (index finger).")
+  PASS  head in SN_PlayerSeat -> Lantern (L02)
+  PASS  the trigger while holding the lantern starts turning it down
+  t=   5.4  [SN] Stars  (title: "Wake the stars", hint: "Point at the star he names, pull the trigger.")
+  PASS  lantern down after 1.5 s -> Stars (L03, L04)
+  t=   6.8  line L03 (2.1 s): "There. Now they can find us."
+  PASS  all twelve stars visible after the lantern
+  t=   8.8  trigger on S8: woken=True, named progress 0
+  PASS  an unnamed star wakes, the story waits
+  t=   8.9  trigger on N1: woken=True, named progress 1
+  PASS  N1 woken -> Vincent names N2 (L05)
+  t=   9.0  line L05 (2.0 s): "Now the one over the church."
+  t=  14.4  [SN] Sketchbook  (title: "unchanged: Wake the stars", hint: "unchanged: Point at the star he names, pull the trigger.")
+  t=  14.4  line L10 (4.5 s): "You found my sketch. The hills are right. The sky is not, yet."
+  PASS  sketchbook held up toward the valley for 1.5 s -> letter found (L10)
+  PASS  letter during Stars: after L10 the hint is the Stars hint ("Point at the star he names, pull the trigger.")
+  t=  40.5  line L05 (2.0 s): "Now the one over the church."
+  PASS  after the letter, nothing for 25 s -> he repeats L05 (still naming N2)
+  t=  45.9  line L06 (3.8 s): "And the brightest, just right of the cypress. Do you see it?"
+  t=  46.0  trigger on N2: woken=True, named progress 2
+  PASS  N2 woken -> Vincent names N3 (L06)
+  t=  50.6  trigger on N3: woken=True, named progress 3
+  PASS  N3 woken -> the sky starts to paint (_Paint 0 -> 0.5 over 3 s)
+  t=  53.5  [SN] Wind  (title: "Trace the wind", hint: "Hold the trigger and follow the dots.")
+  t=  53.5  line L07 (3.0 s): "Do you feel the wind? Follow it across the sky."
+  PASS  _Paint at 0.5 -> Wind (L07)
+  PASS  the dotted guide is shown
+  t=  81.7  line L07 (3.0 s): "Do you feel the wind? Follow it across the sky."
+  PASS  nothing for 25 s in Wind -> he repeats L07
+  t=  86.8  line L08 (5.9 s): "Yes. That is how it moves, when you look long enough."
+  t=  87.0  sweep done: wind progress 21/21
+  PASS  the path traced forward with the trigger held -> 100 % (L08)
+  PASS  _Paint 0.5 -> 1 and the swirl fully painted
+  t=  96.7  [SN] Dawn  (title: "Dawn", hint: "Wait for dawn")
+  PASS  10 s after the wind -> Dawn
+  t= 116.7  line L09 (3.8 s): "The morning star is always the last to go. This page is for you."
+  PASS  _Dawn reaches 1 -> the page appears (L09)
+  PASS  the stars faded, the morning star still there
+  t= 123.4  [SN] Done  (title: "A Night with Vincent", hint: "The night is painted")
+  PASS  the page taken -> Done
+  PASS  the morning star fades last
+  score: stars=4/12 named=3/3 wind=yes letter=yes
+  PASS  score: 4/12 stars, 3/3 named, wind, letter
+  PASS  transitions: Arrive, Sit, Lantern, Stars, Sketchbook, Wind, Dawn, Done
+  dialogue box: 0.233 m tall on its last page; speaking False; title: "A Night with Vincent"; hint: "The night is painted"
+  the hint's title in each state, as drawn after every step:
+    Arrive: shown "Walk up to Vincent"; the table: "Walk up to Vincent"
+    Sit: shown "Sit beside Vincent"; the table: "Sit beside Vincent"
+    Lantern: shown "Dim the lantern"; the table: "Dim the lantern"
+    Stars: shown "Wake the stars"; the table: "Wake the stars"
+    Wind: shown "Trace the wind"; the table: "Trace the wind"
+    Dawn: shown "Dawn" / "Take his page"; the table: "Dawn" / "Take his page"
+    Done: shown "A Night with Vincent"; the table: "A Night with Vincent"
+  PASS  in each state the hint's title is that state's title (Cici's table, 2026-11-10)
+    Done: shown "A Night with Vincent" / "Wake the stars"; the table: "A Night with Vincent"
+  PASS  positive control: "Wake the stars" shown during Done -> FAIL
+
+== B trigger aimed 10 deg away from every star
+  t=   0.0  [SN] Arrive  (title: "Walk up to Vincent", hint: "Walk up the path to Vincent")
+  t=   2.1  [SN] Sit  (title: "Sit beside Vincent", hint: "Sit on the blanket next to him.")
+  t=   2.1  line L01 (4.4 s): "Ah, a visitor. Sit with me. The night is just beginning."
+  t=   2.6  [SN] Lantern  (title: "Dim the lantern", hint: "Point at it, pull the trigger (index finger).")
+  t=   4.9  [SN] Stars  (title: "Wake the stars", hint: "Point at the star he names, pull the trigger.")
+  t=   6.7  line L03 (2.1 s): "There. Now they can find us."
+  PASS  set-up: in Stars
+  t=   8.8  line L04 (2.8 s): "Wake that one for me, above the hills."
+  PASS  12 pulls, each 10 deg or more from every star: nothing woken
+  t=   9.3  trigger on S2: woken=True, named progress 0
+  PASS  positive control: aimed at S2 -> woken
+  PASS  positive control: 3.5 deg off S5 (inside the 4 deg aim assist) -> woken
+
+== C N3 before N1
+  t=   0.0  [SN] Arrive  (title: "Walk up to Vincent", hint: "Walk up the path to Vincent")
+  t=   2.1  [SN] Sit  (title: "Sit beside Vincent", hint: "Sit on the blanket next to him.")
+  t=   2.1  line L01 (4.4 s): "Ah, a visitor. Sit with me. The night is just beginning."
+  t=   2.6  [SN] Lantern  (title: "Dim the lantern", hint: "Point at it, pull the trigger (index finger).")
+  t=   4.9  [SN] Stars  (title: "Wake the stars", hint: "Point at the star he names, pull the trigger.")
+  t=   6.7  line L03 (2.1 s): "There. Now they can find us."
+  PASS  set-up: in Stars
+  t=   8.1  trigger on N3: woken=True, named progress 0
+  t=   8.8  line L04 (2.8 s): "Wake that one for me, above the hills."
+  PASS  N3 first: it wakes, the story doesn't move (still naming N1)
+  t=  10.2  trigger on N1: woken=True, named progress 1
+  PASS  positive control: N1 -> progress 1 (L05)
+
+== D the wind traced backwards
+  t=   0.0  [SN] Arrive  (title: "Walk up to Vincent", hint: "Walk up the path to Vincent")
+  t=   2.1  [SN] Sit  (title: "Sit beside Vincent", hint: "Sit on the blanket next to him.")
+  t=   2.1  line L01 (4.4 s): "Ah, a visitor. Sit with me. The night is just beginning."
+  t=   2.6  [SN] Lantern  (title: "Dim the lantern", hint: "Point at it, pull the trigger (index finger).")
+  t=   4.9  [SN] Stars  (title: "Wake the stars", hint: "Point at the star he names, pull the trigger.")
+  t=   6.7  line L03 (2.1 s): "There. Now they can find us."
+  PASS  set-up: in Stars
+  t=   8.1  trigger on N1: woken=True, named progress 1
+  t=   8.2  trigger on N2: woken=True, named progress 2
+  t=   8.3  trigger on N3: woken=True, named progress 3
+  t=  11.3  [SN] Wind  (title: "Trace the wind", hint: "Hold the trigger and follow the dots.")
+  t=  11.3  line L07 (3.0 s): "Do you feel the wind? Follow it across the sky."
+  PASS  in Wind
+  t=  13.6  sweep done: wind progress 0/21
+  PASS  traced backwards from the end to point 3: progress 0/21
+  t=  13.8  sweep done: wind progress 2/21
+  PASS  then on to the start: progress 2/21 (only the first points, which are next in order), not traced
+  t=  15.8  line L08 (5.9 s): "Yes. That is how it moves, when you look long enough."
+  t=  16.0  sweep done: wind progress 21/21
+  PASS  positive control: traced forward -> 100 %
+
+== E lantern down before sitting
+  t=   0.0  [SN] Arrive  (title: "Walk up to Vincent", hint: "Walk up the path to Vincent")
+  t=   2.4  [SN] Sit  (title: "Sit beside Vincent", hint: "Sit on the blanket next to him.")
+  t=   2.4  line L01 (4.4 s): "Ah, a visitor. Sit with me. The night is just beginning."
+  PASS  near the lantern, not in the seat: Sit
+  t=   5.0  [SN] Stars  (title: "Wake the stars", hint: "Point at the star he names, pull the trigger.")
+  PASS  lantern down before sitting: Sit skipped, Stars, no Lantern state
+
+== F the lantern pointed at or touched, not held
+  t=   0.0  [SN] Arrive  (title: "Walk up to Vincent", hint: "Walk up the path to Vincent")
+  t=   2.3  [SN] Sit  (title: "Sit beside Vincent", hint: "Sit on the blanket next to him.")
+  t=   2.3  line L01 (4.4 s): "Ah, a visitor. Sit with me. The night is just beginning."
+  t=   3.1  [SN] Lantern  (title: "Dim the lantern", hint: "Point at it, pull the trigger (index finger).")
+  the lantern on its hook: base (0.640, 0.184, -0.492), centre (0.640, 0.344, -0.492); 0.54 m from the floor-seated eye; held False
+  PASS  seated: Lantern, the lantern calling (its light pulses)
+  PASS  the trigger aimed 20 deg off the lantern: nothing (control for the aim)
+  PASS  the trigger aimed at it from 2.5 m: nothing (reach 1.6 m; control for the reach)
+  PASS  the ray on it: targeted, brighter (x1.18), one buzz (1)
+  PASS  the hand 0.1 m from its box, aimed away: touching it
+  PASS  the trigger while touching it: it turns down, never held
+  t=   5.9  [SN] Stars  (title: "Wake the stars", hint: "Point at the star he names, pull the trigger.")
+  PASS  down -> Stars; Progress.lanternDown (what StarryNightLink shares) set; it stops calling
+
+== F2 the lantern pointed at from the seat
+  t=   0.0  [SN] Arrive  (title: "Walk up to Vincent", hint: "Walk up the path to Vincent")
+  t=   2.3  [SN] Sit  (title: "Sit beside Vincent", hint: "Sit on the blanket next to him.")
+  t=   2.3  line L01 (4.4 s): "Ah, a visitor. Sit with me. The night is just beginning."
+  t=   3.1  [SN] Lantern  (title: "Dim the lantern", hint: "Point at it, pull the trigger (index finger).")
+  PASS  chair eye, the trigger with the ray on it (0.66 m): it turns down, never held
+
+  PASS  no stale line: of 23 lines started, 0 asked for something already done
+Errors logged during the run: 0
+RESULT: 50 passed, 0 failed

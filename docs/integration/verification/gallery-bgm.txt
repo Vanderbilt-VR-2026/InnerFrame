@@ -1,0 +1,55 @@
+PASS
+Opening cue starts
+Begin sign emits exactly one click
+Disabled continue does not click or navigate
+Boy portrait emits exactly one click
+Girl portrait emits exactly one click
+Chosen portrait keeps a non-blocking yellow outline
+No duplicate sound binding
+Enter the Story sign emits exactly one click
+New Room sign emits exactly one click
+Room code remains four digits
+Back sign emits exactly one click
+Join Room sign emits exactly one click
+Key 1 emits exactly one click
+Key 2 emits exactly one click
+Key 3 emits exactly one click
+Key 4 emits exactly one click
+Key DEL emits exactly one click
+Delete preserves code workflow
+Key 4 emits exactly one click
+Join enables after four digits
+New player-menu Close clicks immediately before hiding
+Selection can wait through a full music loop without extra clicks
+Join sign emits exactly one click
+Controller tutorial opens before the intro
+Continue emits exactly one click
+Landing 1 switches on actual Start/Join
+Handwriting audio runs during the actual title video
+Title advances directly to gold and writing stops
+Gold cue starts on gold flash
+Gold prelude lasts about 1.1 seconds (half duration)
+Shorter music transitions keep original playback pitch and speed
+Gold music survives Gallery scene loading
+Arrival cue waits for visible Gallery reveal
+Gallery reveal completes in the shorter fade window
+Full gold-to-Gallery transition finishes within 15 seconds plus frame tolerance
+Arrival transitions into the selected Gallery strings
+Gallery loop is a 36-second looping PCM clip
+Arrival and gold sources stop after their crossfades
+Imported loop exposes PCM across its wrap point
+Imported stereo loop has continuous boundary samples
+Gallery music wraps with no stop or fade-out
+Gallery music fades out in a painting scene
+Returning to Gallery resumes music without replaying the entrance cue
+Returning keeps exactly one music director
+Begin sign emits exactly one click
+Boy portrait emits exactly one click
+Enter the Story sign emits exactly one click
+New Room sign emits exactly one click
+Start sign emits exactly one click
+Continue emits exactly one click
+Skip intro sign emits exactly one click
+Skip immediately stops writing audio
+One audio director after returning to Entrance
+All local checks passed. Physical Quest verification is not performed.

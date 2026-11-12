@@ -6,7 +6,7 @@ public enum VG_CaptionStyle { Box, Sign }
 
 /// <summary>
 /// Vincent's captions, one sentence at a time in time with his voice (VG_Paging). Box style (the default; Cici's concepts
-/// V1-V3, 2026-11-04): the reusable dialogue UI (Scripts/UI, VG_DialogueUI) with his words, and its hint with his state,
+/// V1-V3, 2026-11-04): the reusable dialogue UI (Assets/Shared/UI, VG_DialogueUI) with his words, and its hint with his state,
 /// the mirror's next step or how to ask him. Sign
 /// style (2026-10-27): his words on the wooden sign Cici made with Tripo, baked flat into a picture
 /// (Art/Source/VanGogh/Caption/bake_sign.py), and hints such as "Hold B to ask Vincent" on a small pill, both over his

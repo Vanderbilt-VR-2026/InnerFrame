@@ -1,0 +1,47 @@
+Cafe Parisian music regression — Editor test; no headset or live multiplayer claim.
+PASS Cafe loop has a persisted AudioImporter
+PASS Delivered Cafe importer settings are streaming PCM stereo (not repaired by verification)
+PASS Imported Cafe clip is 36.5 seconds and stereo
+PASS Cafe direct-open starts its selected cue
+PASS CafeTerrace has exactly one music director
+PASS Cafe plays its stereo streaming loop at 36.5 seconds
+PASS Cafe preserves original playback speed
+PASS Cafe has correct music attribution
+PASS Cafe uses unchanged normal music source gain
+PASS Cafe passes its loop boundary without stopping
+PASS Existing narration clip is available for voice-priority test
+PASS Shared speech priority lowers Cafe BGM to 25 percent
+PASS Speech priority preserves voice source volume
+PASS Short speech gap keeps existing 25-percent music hold
+PASS Cafe source gain passes an intermediate level during recovery
+PASS Cafe BGM source gain recovers to its pre-speech baseline and keeps playing
+PASS Voice volume remains unchanged after recovery
+PASS Gallery is enabled for scene loading
+PASS Gallery selects Gallery loop
+PASS Gallery plays expected loop GalleryWarmStringsLoop
+PASS Gallery has exactly one music director
+PASS Gallery overlaps old and new music during crossfade
+PASS Gallery stops previous cue after crossfade
+PASS Gallery retains only one active music loop after transition
+PASS CafeTerrace is enabled for scene loading
+PASS CafeTerrace selects Cafe loop
+PASS CafeTerrace plays expected loop CafeParisianLoop
+PASS CafeTerrace has exactly one music director
+PASS CafeTerrace overlaps old and new music during crossfade
+PASS CafeTerrace stops previous cue after crossfade
+PASS CafeTerrace retains only one active music loop after transition
+PASS StarryNight is enabled for scene loading
+PASS StarryNight selects Starry Night loop
+PASS StarryNight plays expected loop StarryNightAdriftLoop
+PASS StarryNight has exactly one music director
+PASS StarryNight overlaps old and new music during crossfade
+PASS StarryNight stops previous cue after crossfade
+PASS StarryNight retains only one active music loop after transition
+PASS PaintedBedroom is enabled for scene loading
+PASS PaintedBedroom selects Bedroom loop
+PASS PaintedBedroom plays expected loop BedroomHiraethLoop
+PASS PaintedBedroom has exactly one music director
+PASS PaintedBedroom overlaps old and new music during crossfade
+PASS PaintedBedroom stops previous cue after crossfade
+PASS PaintedBedroom retains only one active music loop after transition
+ALL PASSED — Cafe import, direct playback, looping, shared speech attenuation, scene routes and crossfades. Editor only.

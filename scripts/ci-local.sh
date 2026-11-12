@@ -120,6 +120,11 @@ case $? in
      exit 1 ;;
   *) stop "the asset check couldn't run" ;;
 esac
+# Warn-only, once, on the same merged commit: docs/ASSETS.md against the files.
+echo
+echo "--- docs/ASSETS.md register check (warnings only, never fails ci-local)"
+bash "$scripts_dir/check-asset-register.sh" "$merged" ||
+  echo "ci-local: WARNING the register check couldn't run; ignored" >&2
 
 # ---- 3/3 ----
 

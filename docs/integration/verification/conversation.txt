@@ -1,0 +1,40 @@
+PASS conversation reuses Starry Night's dialogue UI
+PASS one talk listener on Vincent
+PASS Recording pauses story progress
+PASS Recording retains the current story line
+PASS Waiting pauses story progress
+PASS Waiting retains the current story line
+PASS Playing pauses story progress
+PASS Playing retains the current story line
+PASS Error pauses story progress
+PASS Error retains the current story line
+PASS story resumes after conversation/error
+PASS story audio restored to shared UI
+PASS resumes same line without losing queue position
+PASS B is the displayed speech button
+PASS Arrive retains its title and instruction alongside B
+PASS Arrive renders instruction above B and keeps the plate within dialogue width
+PASS Arrive does not append B repeatedly
+PASS Sit retains its title and instruction alongside B
+PASS Sit renders instruction above B and keeps the plate within dialogue width
+PASS Sit does not append B repeatedly
+PASS Lantern retains its title and instruction alongside B
+PASS Lantern renders instruction above B and keeps the plate within dialogue width
+PASS Lantern does not append B repeatedly
+PASS Stars retains its title and instruction alongside B
+PASS Stars renders instruction above B and keeps the plate within dialogue width
+PASS Stars does not append B repeatedly
+PASS Wind retains its title and instruction alongside B
+PASS Wind renders instruction above B and keeps the plate within dialogue width
+PASS Wind does not append B repeatedly
+PASS Dawn retains its title and instruction alongside B
+PASS Dawn renders instruction above B and keeps the plate within dialogue width
+PASS Dawn does not append B repeatedly
+PASS Done retains its title and instruction alongside B
+PASS Done renders instruction above B and keeps the plate within dialogue width
+PASS Done does not append B repeatedly
+PASS conversation restores the combined hint without duplication
+PASS B reminder retains Dawn's specific page title and instruction
+PASS conversation restores the exact page title and instruction
+PASS B reminder does not resurrect a deliberately hidden hint
+RESULT: 39 passed, 0 failed. AI service/microphone not exercised.

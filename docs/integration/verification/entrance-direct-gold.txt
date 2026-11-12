@@ -1,0 +1,54 @@
+PASS
+Opening cue starts
+Begin sign emits exactly one click
+Disabled continue does not click or navigate
+Boy portrait emits exactly one click
+Girl portrait emits exactly one click
+Chosen portrait keeps a non-blocking yellow outline
+No duplicate sound binding
+Enter the Story sign emits exactly one click
+New Room sign emits exactly one click
+Room code remains four digits
+Back sign emits exactly one click
+Join Room sign emits exactly one click
+Key 1 emits exactly one click
+Key 2 emits exactly one click
+Key 3 emits exactly one click
+Key 4 emits exactly one click
+Key DEL emits exactly one click
+Delete preserves code workflow
+Key 4 emits exactly one click
+Join enables after four digits
+New player-menu Close clicks immediately before hiding
+Selection can wait through a full music loop without extra clicks
+Join sign emits exactly one click
+Controller tutorial opens before the intro
+Continue emits exactly one click
+Landing 1 switches on actual Start/Join
+Handwriting audio runs during the actual title video
+Title advances directly to gold and writing stops
+Gold cue starts on gold flash
+Gold prelude lasts about 1.1 seconds (half duration)
+Shorter music transitions keep original playback pitch and speed
+Gold music survives Gallery scene loading
+Arrival cue waits for visible Gallery reveal
+Gallery reveal completes in the shorter fade window
+Full gold-to-Gallery transition finishes within 15 seconds plus frame tolerance
+Begin sign emits exactly one click
+Boy portrait emits exactly one click
+Enter the Story sign emits exactly one click
+New Room sign emits exactly one click
+Start sign emits exactly one click
+Continue emits exactly one click
+Skip intro sign emits exactly one click
+Skip immediately stops writing audio
+One audio director after returning to Entrance
+All local checks passed. Physical Quest verification is not performed.
+Unity 6000.3.23f1; batch Editor Play mode, -verifyGoldBudget; exit 0.
+Measured gold-to-Gallery time with unavailable multiplayer: 15.007 s (frame tolerance).
+No C# compilation errors or SearchDatabase indexing exception in the final run.
+The initial indexing exception was resolved using the delivery project's local UserSettings/Search.index (not committed).
+Gold prelude screenshot visually inspected: bright gold across the frame, no black region.
+Music cue timing and unchanged pitch validated; subjective listening and Quest are not claimed.
+Photon settings are absent from this public checkout; network startup errors are expected in this timeout test. Multiplayer is not claimed.
+User cancelled the new recording; no new video is included.

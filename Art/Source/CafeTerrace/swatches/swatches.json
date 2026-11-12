@@ -1,0 +1,121 @@
+{
+ "_about": [
+  "Painted colour swatches per surface, for make_environment.py --swatches and make_unity_export.py.",
+  "PROTOTYPES for now: crops of the approved target images (ChatGPT), not tileable art. Replace the PNGs in Assets/CafeTerrace/Textures with generated swatches of the same names (notes: SWATCH_PROMPTS.md) and adjust tile_m / strips / windows here.",
+  "file is relative to this folder. ref = the swatch's mean colour, so a surface's own colour still tints it. strips = the board columns of the plank picture (u ranges). windows = single stones of the cobble picture (u0, v0, u1, v1)."
+ ],
+ "WallCafe": {
+  "file": "../../../../Assets/CafeTerrace/Textures/CT_WallCafe.png",
+  "tile_m": 1.65,
+  "ref": "#f5b833",
+  "bump": 0.5
+ },
+ "Cloth": {
+  "file": "../../../../Assets/CafeTerrace/Textures/CT_Cloth.png",
+  "tile_m": 2.0,
+  "ref": "#d68c2c",
+  "bump": 0.15
+ },
+ "Plank": {
+  "file": "../../../../Assets/CafeTerrace/Textures/CT_Plank.png",
+  "bump": 0.3,
+  "length_m": 2.74,
+  "strips": [
+   [
+    0.05137931034482759,
+    0.16241379310344828
+   ],
+   [
+    0.1824137931034483,
+    0.2968965517241379
+   ],
+   [
+    0.31689655172413794,
+    0.43137931034482757
+   ],
+   [
+    0.4513793103448276,
+    0.5624137931034483
+   ],
+   [
+    0.5824137931034483,
+    0.6968965517241379
+   ],
+   [
+    0.7168965517241379,
+    0.8313793103448276
+   ],
+   [
+    0.8513793103448276,
+    0.9624137931034482
+   ]
+  ]
+ },
+ "Cobble": {
+  "file": "../../../../Assets/CafeTerrace/Textures/CT_Cobble.png",
+  "bump": 0.2,
+  "windows": [
+   [
+    0.36235294117647066,
+    0.7517580872011251,
+    0.7356862745098038,
+    0.8052039381153305
+   ],
+   [
+    0.2786928104575163,
+    0.6652601969057665,
+    0.5971241830065359,
+    0.7158931082981717
+   ],
+   [
+    0.5803921568627451,
+    0.6216596343178622,
+    0.9098039215686274,
+    0.6891701828410689
+   ],
+   [
+    0.37098039215686274,
+    0.5682137834036568,
+    0.7662745098039216,
+    0.6300984528832629
+   ],
+   [
+    0.07424836601307191,
+    0.4655414908579466,
+    0.5793464052287581,
+    0.549929676511955
+   ],
+   [
+    0.42954248366013076,
+    0.4163150492264416,
+    0.890718954248366,
+    0.5007032348804501
+   ],
+   [
+    0.3573856209150327,
+    0.2911392405063291,
+    0.8844444444444445,
+    0.38677918424753865
+   ],
+   [
+    0.054901960784313725,
+    0.18706047819971872,
+    0.49411764705882355,
+    0.2939521800281294
+   ],
+   [
+    0.09568627450980395,
+    0.07102672292545709,
+    0.6886274509803921,
+    0.17791842475386777
+   ],
+   [
+    0.0457516339869281,
+    0.33333333333333337,
+    0.3202614379084967,
+    0.4289732770745429
+   ]
+  ],
+  "desat": 0.3
+ }
+}

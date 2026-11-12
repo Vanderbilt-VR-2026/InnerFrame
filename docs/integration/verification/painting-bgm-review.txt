@@ -1,0 +1,39 @@
+Painting music integration review — 2026-11-12
+
+Effort: small incremental change (under 200 added code lines), self-review of
+runtime audio behavior and evidence/licensing. No shared settings or scenes changed.
+
+# | Angle | Finding | Verdict | Evidence | Severity | Fix
+1 | Audio balance | 10% speech gain was inaudible to the user | CONFIRMED by in-Editor user feedback | EntranceAudioDirector speech target; user listening feedback | Resolved | Raised to 25%; retained 80 ms attack, 350 ms hold and 1.2 s recovery
+2 | Test quality | Upper-bound-only ducking assertions could pass for muted music | CONFIRMED | Previous assertions only checked <= .11 | Resolved | Actual music source and shared gain now checked within .24–.26 during speech; checks pass
+
+Refuted concerns:
+- Music stops at a painting boundary: both imported stereo PCM streams wrap while
+  playing; loop-QA reports identical endpoint samples. See painting-bgm.txt and
+  painting-bgm-loop-QA.json.
+- Painting music overlaps indefinitely: the previous source stops after each
+  crossfade; return through the actual menu button leaves one persistent director.
+- Scripted narration bypasses speech priority: the Starry Night narration source
+  lowers the active BGM to 25% and restores it after playback; voice gain is unchanged.
+- Credits clipped by the return menu: both scene menus were inspected in the GUI;
+  each title, artist, CC BY 4.0 and loop-edit attribution is fully visible.
+
+Verification:
+- Unity 6000.3.23f1 batch compilation: no C# compiler errors, exit 0.
+- Updated audio/scene Play-mode check: 83 assertions passed (plus completion entry).
+- Existing menu check: 22 assertions passed before the speech-gain-only adjustment.
+- Tested runtime scripts and both loop WAVs match the open InnerFrame-TestProject.
+- GUI: started Bedroom in Play, clicked Back to Gallery; after the 25% adjustment,
+  played Gallery, transitioned to Starry Night, inspected its menu, closed it and
+  walked up to Vincent. His greeting subtitle appeared; left Starry Night playing.
+- The user can now judge the subjective conversation/music balance at 25%.
+
+Scope limits:
+- No new microphone or live Convai request was made by this check.
+- Existing Photon InvalidAuthentication warnings remain; multiplayer is not verified.
+- No Quest deployment or headset validation. No new screen recording.
+- Local changes only; no push, PR readiness change, or merge to main in this task.
+
+Questions: none needed for this local audition. Headset listening remains pending.
+Merge order: no merge requested. Retain the existing branch overlap review; recheck
+main and open PRs with ci-local before a later push or merge.

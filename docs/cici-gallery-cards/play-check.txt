@@ -1,0 +1,75 @@
+PASS local viewer A switches cards without closing viewer B
+PASS local viewer A closes X without closing viewer B
+PASS unowned network avatar is not local input
+PASS unowned avatar cannot enter a painting for this client
+PASS mouse button is on screen
+PASS Bedroom actual desktop mouse More opens
+PASS detail keeps mouse free
+PASS mouse button is on screen
+PASS Bedroom actual desktop mouse X closes
+PASS mouse button is on screen
+PASS Bedroom actual desktop mouse More opens
+PASS detail keeps mouse free
+PASS mouse button is on screen
+PASS StarryNight actual desktop mouse More opens
+PASS detail keeps mouse free
+PASS mouse button is on screen
+PASS StarryNight actual desktop mouse X closes
+PASS mouse button is on screen
+PASS StarryNight actual desktop mouse More opens
+PASS detail keeps mouse free
+PASS switching to Bedroom closes the other detail
+PASS background pedestal mouse click blocked while reading
+PASS mouse button is on screen
+PASS Bedroom mouse ENTER loads PaintedBedroom (actual PaintedBedroom)
+PASS switching to StarryNight closes the other detail
+PASS background pedestal mouse click blocked while reading
+PASS mouse button is on screen
+PASS StarryNight mouse ENTER loads StarryNight (actual StarryNight)
+PASS Bedroom pedestal target is PaintedBedroom
+PASS Bedroom pedestal legacy mouse callback loads PaintedBedroom (actual PaintedBedroom)
+PASS StarryNight pedestal target is StarryNight
+PASS StarryNight pedestal legacy mouse callback loads StarryNight (actual StarryNight)
+PASS Bedroom pedestal target is PaintedBedroom
+PASS XR ray reaches original pedestal Button_Bedroom
+PASS Bedroom pedestal XR select loads PaintedBedroom (actual PaintedBedroom)
+PASS StarryNight pedestal target is StarryNight
+PASS XR ray reaches original pedestal Button_TheStarryNight
+PASS StarryNight pedestal XR select loads StarryNight (actual StarryNight)
+PASS two cards; details initially hidden
+PASS original Gallery self portrait present
+PASS camera available
+PASS existing desktop XR ray available
+PASS existing ray settings hit More →
+PASS Bedroom XR More opens
+PASS camera available
+PASS existing desktop XR ray available
+PASS existing ray settings hit ×
+PASS Bedroom XR Close hides
+PASS camera available
+PASS existing desktop XR ray available
+PASS existing ray settings hit More →
+PASS Bedroom XR More reopens
+PASS camera available
+PASS existing desktop XR ray available
+PASS existing ray settings hit More →
+PASS StarryNight XR More opens
+PASS camera available
+PASS existing desktop XR ray available
+PASS existing ray settings hit ×
+PASS StarryNight XR Close hides
+PASS camera available
+PASS existing desktop XR ray available
+PASS existing ray settings hit More →
+PASS StarryNight XR More reopens
+PASS camera available
+PASS existing desktop XR ray available
+PASS existing ray settings hit ENTER →
+PASS Bedroom Enter loads PaintedBedroom through SceneFader
+PASS Gallery reload retains two cards
+PASS camera available
+PASS existing desktop XR ray available
+PASS existing ray settings hit ENTER →
+PASS StarryNight Enter loads StarryNight through SceneFader
+PASS return resets details to hidden
+ALL PASSED — Editor offline; headset not tested

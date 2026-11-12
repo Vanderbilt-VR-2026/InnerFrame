@@ -50,6 +50,13 @@ namespace InnerFrame.AlmondStudio
             blossoms?.ResetAll();
             guides.Show(false);
             letterTaken = false;
+            pointing = false;
+            if (vincent != null)
+            {
+                if (!vincentYawRead) { vincentYaw = vincent.transform.eulerAngles.y; vincentYawRead = true; }
+                turnTo = vincentYaw;
+                var e = vincent.transform.eulerAngles; vincent.transform.rotation = Quaternion.Euler(e.x, vincentYaw, e.z);
+            }
             if (letterInHand != null) letterInHand.gameObject.SetActive(true);
             if (letterView != null) letterView.Hide(atOnce: true);
             if (endPainting != null)
@@ -70,14 +77,14 @@ namespace InnerFrame.AlmondStudio
             switch (s)
             {
                 case AS_State.Arrive:
-                    // he holds Theo's letter out to you
-                    Pose(layout.vincentGiveClip);
+                    // he holds Theo's letter out to you: the hand-over stops with his arm out (giveHoldAt)
+                    Pose(layout.vincentGiveClip, holdAt: () => layout.giveHoldAt);
                     Say(layout.lineArrive);
                     Hint(letterInHand != null ? layout.hintLetter : layout.hintOpen);
                     break;
                 case AS_State.ReadLetter:
-                    // the letter comes up in front of you: Theo's news
-                    Pose(layout.vincentIdleClip);
+                    // the letter comes up in front of you: Theo's news; he stands happily from now on
+                    Pose(layout.vincentRestClip);
                     // the blurry sheet in his hand flies to you and grows; the words come in as it arrives
                     var cam = Camera.main;
                     if (letterView != null && cam != null) letterView.Show(cam.transform, layout.letterBackground, layout.letterText, letterInHand);
@@ -92,8 +99,11 @@ namespace InnerFrame.AlmondStudio
                     Pose(layout.vincentHappyClip);
                     Say(layout.lineHappy);
                     Hint(null);
+                    pointing = false;
                     break;
                 case AS_State.TakeBrush:
+                    pointing = false; turnTo = vincentYaw;
+                    Pose(layout.vincentRestClip);
                     Hint(layout.hintBrush);
                     break;
                 case AS_State.Paint:
@@ -133,8 +143,21 @@ namespace InnerFrame.AlmondStudio
                     if ((stateTime > layout.letterMinSeconds && (letterView == null || letterView.Arrived) && TriggerPressed()) || stateTime > layout.letterMaxSeconds) Enter(AS_State.Invite);
                     break;
                 case AS_State.Invite:
-                    if (stateTime > layout.happySeconds && !invited) { invited = true; Pose(layout.vincentTalkClip); Say(layout.lineInvite); Hint(layout.hintOpen); }
-                    if (window.IsOpening) { if (ui != null) ui.Clear(); Pose(layout.vincentIdleClip); Enter(AS_State.TakeBrush); }
+                    if (stateTime > layout.happySeconds && !invited)
+                    {
+                        // he asks you, turning toward the window and pointing at the tree
+                        invited = true; invitedAt = stateTime; pointing = true;
+                        turnTo = YawToWindow();
+                        if (!Pose(layout.vincentPointClip, holdAt: () => layout.pointHoldAt, fallBackToIdle: false)) Pose(layout.vincentTalkClip);
+                        Say(layout.lineInvite); Hint(layout.hintOpen);
+                    }
+                    if (pointing && stateTime > invitedAt + layout.pointSeconds)
+                    {
+                        // then turns back to you, talking
+                        pointing = false; turnTo = vincentYaw;
+                        Pose(layout.vincentTalkClip);
+                    }
+                    if (window.IsOpening) { if (ui != null) ui.Clear(); Enter(AS_State.TakeBrush); }
                     break;
                 case AS_State.TakeBrush:
                     if (BrushHeld) Enter(AS_State.Paint);
@@ -149,6 +172,7 @@ namespace InnerFrame.AlmondStudio
                         endPainting.transform.localScale = endPaintingScale * Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(stateTime / layout.endPaintingSeconds));
                     break;
             }
+            HoldAndTurn(dt);
             var cam = Camera.main;
             guides.Refresh(Branches, Active, cam != null ? cam.transform.position : layout.paintEye, dt);
         }
@@ -246,18 +270,65 @@ namespace InnerFrame.AlmondStudio
         bool triggerPressed;
         bool TriggerPressed() => triggerPressed;
 
-        /// <summary>Crossfades Vincent v2 to the controller state of that name, if he has it.</summary>
-        void Pose(string state)
+        // Vincent's body: which clip he holds on a frame, and his turn
+        int holdState;
+        System.Func<float> holdAt;
+        bool pointing, vincentYawRead;
+        float invitedAt, vincentYaw, turnTo;
+
+        /// <summary>Crossfades Vincent v2 to the first of these controller states he has ("HappyIdle,Idle"). With
+        /// holdAt, the clip stops on that point of itself (0-1) and holds it, as the hand-over does with his arm out.
+        /// Returns false if he has none of them (then he goes to Idle, unless fallBackToIdle is false).</summary>
+        bool Pose(string states, System.Func<float> holdAt = null, bool fallBackToIdle = true)
         {
-            if (vincent == null || string.IsNullOrEmpty(state) || vincent.runtimeAnimatorController == null) return;
-            int id = Animator.StringToHash(state);
-            if (vincent.HasState(0, id)) vincent.CrossFadeInFixedTime(id, 0.35f);
-            else if (state != layout.vincentIdleClip) Pose(layout.vincentIdleClip);
+            if (vincent == null || string.IsNullOrEmpty(states) || vincent.runtimeAnimatorController == null) return false;
+            vincent.speed = 1f; holdState = 0; this.holdAt = null;
+            foreach (var raw in states.Split(','))
+            {
+                string name = raw.Trim().Replace(" ", "");
+                if (name.Length == 0) continue;
+                int id = Animator.StringToHash(name);
+                if (!vincent.HasState(0, id)) continue;
+                vincent.CrossFadeInFixedTime(id, 0.35f);
+                if (holdAt != null) { holdState = id; this.holdAt = holdAt; }
+                return true;
+            }
+            if (fallBackToIdle && states != layout.vincentIdleClip) Pose(layout.vincentIdleClip);
+            return false;
+        }
+
+        /// <summary>Stops a held clip on its frame (read live, so giveHoldAt can be tuned in Play: R replays it) and
+        /// turns him toward turnTo.</summary>
+        void HoldAndTurn(float dt)
+        {
+            if (vincent == null) return;
+            if (holdState != 0 && holdAt != null && !vincent.IsInTransition(0))
+            {
+                var st = vincent.GetCurrentAnimatorStateInfo(0);
+                if (st.shortNameHash == holdState && st.normalizedTime >= holdAt()) vincent.speed = 0f;
+            }
+            if (vincentYawRead)
+            {
+                var e = vincent.transform.eulerAngles;
+                float y = Mathf.MoveTowardsAngle(e.y, turnTo, layout.vincentTurnSpeed * dt);
+                if (!Mathf.Approximately(y, e.y)) vincent.transform.rotation = Quaternion.Euler(e.x, y, e.z);
+            }
+        }
+
+        /// <summary>His yaw part-way (pointTurn) from facing the room to facing the window's middle.</summary>
+        float YawToWindow()
+        {
+            var to = transform.TransformPoint(layout.WindowCentreInner) - vincent.transform.position;
+            float full = Mathf.Atan2(to.x, to.z) * Mathf.Rad2Deg;
+            return Mathf.LerpAngle(vincentYaw, full, layout.pointTurn);
         }
 
         void Say(string line)
         {
-            if (ui != null && !string.IsNullOrEmpty(line)) ui.Say(Speaker, line, null);
+            if (ui == null || string.IsNullOrEmpty(line)) return;
+            ui.Say(Speaker, line, null);
+            // he talks while the line is up: nods and a slight sway, in code (AS_VincentLook), over any clip
+            if (vincent != null && vincent.TryGetComponent<AS_VincentLook>(out var look)) look.Talk(Mathf.Clamp(line.Length * 0.065f, 2f, 9f));
         }
 
         void Hint(string line)

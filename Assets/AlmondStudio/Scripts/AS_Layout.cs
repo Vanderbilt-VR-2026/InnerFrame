@@ -254,8 +254,18 @@ namespace InnerFrame.AlmondStudio
         [Tooltip("How close (metres) you need to be to take the letter with the trigger.")] public float letterReach = 1.8f;
         [Tooltip("Reading: the trigger puts it down after this long; it goes down by itself after the max.")] public float letterMinSeconds = 2f, letterMaxSeconds = 25f;
         [Tooltip("His joy before he asks you to help.")] public float happySeconds = 4f;
-        [Tooltip("Vincent's controller states (VincentV2@<Name>.fbx in Art/Vincent; Idle is BreathingIdle). Missing ones fall back to Idle.")]
-        public string vincentIdleClip = "Idle", vincentGiveClip = "Giving", vincentHappyClip = "Happy", vincentTalkClip = "Talking";
+        [Tooltip("Vincent's controller states: the file name after VincentV2@, spaces dropped (VincentV2@Happy Idle.fbx -> HappyIdle). " +
+                 "Each can list several, first found wins (\"HappyIdle,Idle\"); missing ones fall back to Idle (BreathingIdle).")]
+        public string vincentIdleClip = "Idle", vincentGiveClip = "Giving", vincentHappyClip = "HappyIdle,Happy", vincentTalkClip = "Talking,HappyIdle";
+        [Tooltip("How he stands once you have the letter: happily, from then on.")] public string vincentRestClip = "HappyIdle,Idle";
+        [Tooltip("When he asks you to help: turns toward the window and points at the tree (VincentV2@Pointing.fbx; none = he only turns).")]
+        public string vincentPointClip = "Pointing";
+        [Tooltip("The hand-over stops here (0-1 of the clip), arm out, before the clip lowers his hand: Mixamo's frame / total frames. Tune live.")]
+        [Range(0.05f, 1f)] public float giveHoldAt = 0.6f;
+        [Tooltip("The point stops here (0-1 of the clip), arm up.")] [Range(0.05f, 1f)] public float pointHoldAt = 0.6f;
+        [Tooltip("How far he turns toward the window to point (0 = not at all, 1 = facing it).")] [Range(0f, 1f)] public float pointTurn = 0.6f;
+        [Tooltip("Seconds he points before turning back to you.")] public float pointSeconds = 3.5f;
+        [Tooltip("Degrees per second he turns.")] public float vincentTurnSpeed = 140f;
 
         [Header("The end: Almond Blossom on his easel (Textures/Reference/AS_AlmondBlossom.jpg)")]
         [Tooltip("The canvas's middle, world space (the easel stands at -1.15, 0, 0.35).")] public Vector3 endPaintingCentre = new Vector3(-1.15f, 1.18f, 0.4f);

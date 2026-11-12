@@ -137,6 +137,16 @@ namespace InnerFrame.AlmondStudio.EditorTools
                 layout.layoutVersion = 7;
                 EditorUtility.SetDirty(layout);
             }
+            if (layout.layoutVersion < 8)
+            {
+                // version 8 (2026-11-12): Happy Idle after the letter, talking in code when there is no Talking clip
+                var d8 = ScriptableObject.CreateInstance<AS_Layout>();
+                if (layout.vincentHappyClip == "Happy") layout.vincentHappyClip = d8.vincentHappyClip;
+                if (layout.vincentTalkClip == "Talking") layout.vincentTalkClip = d8.vincentTalkClip;
+                Object.DestroyImmediate(d8);
+                layout.layoutVersion = 8;
+                EditorUtility.SetDirty(layout);
+            }
 
             var lit = Shader.Find("Universal Render Pipeline/Lit");
             var unlit = Shader.Find("Universal Render Pipeline/Unlit");
@@ -379,7 +389,7 @@ namespace InnerFrame.AlmondStudio.EditorTools
             if (Directory.Exists(VincentClipsDir))
                 foreach (var f in Directory.GetFiles(VincentClipsDir, "VincentV2@*.fbx"))
                 {
-                    string path = f.Replace('\\', '/'), name = Path.GetFileNameWithoutExtension(path).Substring("VincentV2@".Length);
+                    string path = f.Replace('\\', '/'), name = Path.GetFileNameWithoutExtension(path).Substring("VincentV2@".Length).Replace(" ", "");   // Happy Idle -> HappyIdle
                     if (AssetImporter.GetAtPath(path) is ModelImporter c)
                     {
                         string was = EditorJsonUtility.ToJson(c);

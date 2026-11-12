@@ -31,6 +31,7 @@ namespace InnerFrame.AlmondStudio
         [Tooltip("The chest with its boxes (Art/Props/AS_ChestBoxes.fbx). Boxes if missing.")] public GameObject chestModel;
         [Tooltip("The Tripo casement, left leaf (Art/Props/AS_Casement.fbx); the right leaf is its mirror.")] public GameObject casementModel;
         [Tooltip("His closed paint box (Art/Props/AS_PaintBox.fbx). The built open box if missing.")] public GameObject paintBoxModel;
+        [Tooltip("The work table (Art/Props/AS_Table.fbx). The built table if missing.")] public GameObject tableModel;
         [Tooltip("One per AS_Layout.sideCanvases entry (null = blank), made by Build from Textures/Canvases.")] public Material[] sideCanvasMaterials = new Material[0];
         public Material easelMaterial;
 
@@ -126,9 +127,10 @@ namespace InnerFrame.AlmondStudio
 
             // furniture after the concept S03 (looking south): the table in the middle, a rush chair at each end facing it;
             // its near edge stays 0.3 m short of the arrival spot (S02's viewpoint, z 2.52)
-            Box(world, "Table top", new Vector3(0f, 0.74f, 1.8f), new Vector3(1.3f, 0.05f, 0.8f), wood);
-            foreach (var p in new[] { new Vector2(-0.6f, 1.45f), new Vector2(0.6f, 1.45f), new Vector2(-0.6f, 2.15f), new Vector2(0.6f, 2.15f) })
-                Box(world, "Table leg", new Vector3(p.x, 0.36f, p.y), new Vector3(0.05f, 0.72f, 0.05f), wood);
+            if (tableModel != null)
+                PropModel(world, "Table (Tripo)", tableModel, layout.tableModelEuler, TableTop, new Vector3(0f, 0f, 1.8f));
+            else
+                Table(world, new Vector3(0f, 0f, 1.8f), 1.3f, 0.8f);
             Chair(world, new Vector3(-1.05f, 0f, 1.8f), 90f);
             Chair(world, new Vector3(1.05f, 0f, 1.8f), -90f);
             // on the table: his paint box, lid open, and a pot of brushes
@@ -136,7 +138,8 @@ namespace InnerFrame.AlmondStudio
                 PropModel(world, "Paint box (Tripo)", paintBoxModel, layout.paintBoxModelEuler + new Vector3(0f, layout.paintBoxYaw, 0f), layout.paintBoxModelHeight, new Vector3(layout.paintBoxSpot.x, TableTop, layout.paintBoxSpot.y));
             else
                 PaintBox(world, new Vector3(layout.paintBoxSpot.x, TableTop, layout.paintBoxSpot.y), layout.paintBoxYaw);
-            BrushPot(world, new Vector3(layout.brushPotSpot.x, TableTop, layout.brushPotSpot.y));
+            if (layout.brushesLying) LyingBrushes(world, layout.brushPotSpot, layout.brushesYaw);   // two brushes, as in S06
+            else BrushPot(world, new Vector3(layout.brushPotSpot.x, TableTop, layout.brushPotSpot.y));
             // Theo's letter and the printed birth card, lying on the table (pictures in Textures/Table)
             if (letter != null) PaperOnTable(world, "Theo's letter", letter, 0.21f, layout.letterSpot, layout.letterYaw);
             if (birthCard != null) PaperOnTable(world, "Birth card", birthCard, 0.13f, layout.cardSpot, layout.cardYaw);
@@ -639,6 +642,7 @@ namespace InnerFrame.AlmondStudio
                 var ch = Instantiate(chairPrefab, parent);
                 ch.name = "Chair (Bedroom)";
                 ch.transform.SetPositionAndRotation(at, Quaternion.Euler(0f, yaw + layout.chairYawOffset, 0f));
+                ToPainted(ch.GetComponentsInChildren<Renderer>(true), "Chair");
                 return;
             }
             var c = new GameObject("Chair").transform;
@@ -846,6 +850,88 @@ namespace InnerFrame.AlmondStudio
             q.SetLocalPositionAndRotation(new Vector3(spot.x, TableTop + 0.002f, spot.y), Quaternion.Euler(0f, yaw, 0f) * Quaternion.Euler(90f, 0f, 0f));
         }
 
+        /// <summary>A square bar from a to b (local to `parent`), `t` thick.</summary>
+        static GameObject Strut(Transform parent, string name, Vector3 a, Vector3 b, float t, Material m)
+        {
+            var d = b - a;
+            var go = Box(parent, name, (a + b) / 2f, new Vector3(t, d.magnitude, t), m, collider: false);
+            go.transform.localRotation = Quaternion.FromToRotation(Vector3.up, d.normalized);
+            return go;
+        }
+
+        /// <summary>The work table, after the concept: a top of four planks with a little gap between them, an apron
+        /// under it, four square legs set in from the corners and stretchers low down; one merged mesh, one collider.</summary>
+        void Table(Transform parent, Vector3 at, float w, float d)
+        {
+            var g = new GameObject("Table").transform;
+            g.SetParent(parent, false);
+            g.localPosition = at;
+            const float top = 0.045f, gap = 0.006f, inset = 0.07f, leg = 0.055f, apron = 0.09f;
+            float h = TableTop;
+            for (int i = 0; i < 4; i++)
+            {
+                float pd = (d - 3f * gap) / 4f, z = -d / 2f + pd / 2f + i * (pd + gap);
+                Box(g, "Plank", new Vector3(0f, h - top / 2f, z), new Vector3(w, top, pd), wood, collider: false);
+            }
+            float ax = w / 2f - inset, az = d / 2f - inset;
+            Box(g, "Apron F", new Vector3(0f, h - top - apron / 2f, -az), new Vector3(2f * ax, apron, 0.022f), wood, collider: false);
+            Box(g, "Apron B", new Vector3(0f, h - top - apron / 2f, az), new Vector3(2f * ax, apron, 0.022f), wood, collider: false);
+            Box(g, "Apron L", new Vector3(-ax, h - top - apron / 2f, 0f), new Vector3(0.022f, apron, 2f * az), wood, collider: false);
+            Box(g, "Apron R", new Vector3(ax, h - top - apron / 2f, 0f), new Vector3(0.022f, apron, 2f * az), wood, collider: false);
+            foreach (var (x, z) in new[] { (-ax, -az), (ax, -az), (-ax, az), (ax, az) })
+                Box(g, "Leg", new Vector3(x, (h - top) / 2f, z), new Vector3(leg, h - top, leg), wood, collider: false);
+            Box(g, "Stretcher L", new Vector3(-ax, 0.16f, 0f), new Vector3(0.03f, 0.04f, 2f * az), wood, collider: false);
+            Box(g, "Stretcher R", new Vector3(ax, 0.16f, 0f), new Vector3(0.03f, 0.04f, 2f * az), wood, collider: false);
+            Box(g, "Stretcher middle", new Vector3(0f, 0.16f, 0f), new Vector3(2f * ax, 0.04f, 0.03f), wood, collider: false);
+            Merge(g);
+            var col = g.gameObject.AddComponent<BoxCollider>();
+            col.center = new Vector3(0f, h / 2f, 0f); col.size = new Vector3(w, h, d);
+            g.name = "Table top";   // the desktop rig's log names what it walks into
+        }
+
+        /// <summary>Two flat bristle brushes lying on the table side by side, as in S06.</summary>
+        void LyingBrushes(Transform parent, Vector2 spot, float yaw)
+        {
+            var g = new GameObject("Brushes on the table").transform;
+            g.SetParent(parent, false);
+            g.SetLocalPositionAndRotation(new Vector3(spot.x, TableTop, spot.y), Quaternion.Euler(0f, yaw, 0f));
+            var tin = new Material(brushHead) { name = "AS_Ferrule (runtime)" };
+            tin.SetColor("_BaseColor", new Color(0.62f, 0.6f, 0.55f));
+            for (int i = 0; i < 2; i++)
+            {
+                var b = new GameObject("Brush").transform;
+                b.SetParent(g, false);
+                b.localPosition = new Vector3(i * 0.012f, 0.006f, i * 0.045f);
+                b.localRotation = Quaternion.Euler(0f, i * 4f, 90f);   // lying along local x
+                float len = 0.26f + i * 0.03f;
+                Prim(b, PrimitiveType.Cylinder, "Handle", new Vector3(0f, -len / 2f, 0f), new Vector3(0.009f, len / 2f, 0.009f), wood);
+                Prim(b, PrimitiveType.Cylinder, "Ferrule", new Vector3(0f, 0.015f, 0f), new Vector3(0.011f, 0.015f, 0.011f), tin);
+                Prim(b, PrimitiveType.Cube, "Bristles", new Vector3(0f, 0.045f, 0f), new Vector3(0.006f, 0.035f, 0.014f), brushHead);
+            }
+            Merge(g);
+        }
+
+        /// <summary>Puts each renderer's texture on an AS_Painted copy, so a reused or Tripo model reads like the room
+        /// (flat shading only).</summary>
+        void ToPainted(Renderer[] rs, string name)
+        {
+            if (!layout.flatShading || wall == null) return;
+            foreach (var r in rs)
+            {
+                var src = r.sharedMaterials;
+                var dst = new Material[src.Length];
+                for (int i = 0; i < src.Length; i++)
+                {
+                    dst[i] = new Material(wall.shader) { name = (src[i] != null ? src[i].name : name) + " (painted)" };
+                    var tex = src[i] != null ? src[i].mainTexture : null;
+                    if (tex != null) dst[i].SetTexture("_BaseMap", tex);
+                    var col = src[i] != null && src[i].HasProperty("_BaseColor") ? src[i].GetColor("_BaseColor") : Color.white;
+                    dst[i].SetColor("_BaseColor", col);
+                }
+                r.sharedMaterials = dst;
+            }
+        }
+
         const float TableTop = 0.765f;   // the table top's upper face (0.74 + half its 0.05)
 
         /// <summary>The door in the south wall: a casing on the wall, the leaf, raised mouldings round
@@ -976,21 +1062,35 @@ namespace InnerFrame.AlmondStudio
                 model.transform.SetPositionAndRotation(at, Quaternion.Euler(0f, layout.easelYaw, 0f));
                 var r = model.GetComponent<Renderer>();
                 if (r != null && easelMaterial != null) r.sharedMaterial = easelMaterial;
+                ToPainted(model.GetComponentsInChildren<Renderer>(true), "Easel");
                 var blank = model.transform.Find("VG_Canvas");
                 if (blank != null) blank.gameObject.SetActive(layout.easelCanvas);
                 return;
             }
-            var e = new GameObject("Easel").transform;
+            Debug.Log("[AS] Vincent's easel (VanGogh/Art/Props/VG_Easel.fbx) isn't loaded (git lfs pull?): the built easel stands in.");
+            // a tall studio easel after the concept S03: an A of two front legs, a mast up the middle, a back leg, two
+            // cross bars, the ledge toward the room and a clamp at the top; one merged mesh
+            var e = new GameObject("Easel (built)").transform;
             e.SetParent(parent, false);
-            e.SetPositionAndRotation(at, Quaternion.identity);   // its ledge toward the room, as S03 shows it
-            foreach (var x in new[] { -0.25f, 0.25f })
+            e.SetPositionAndRotation(at, Quaternion.Euler(0f, layout.easelYaw, 0f));
+            const float t = 0.042f;
+            Vector3 fl0 = new Vector3(-0.3f, 0f, 0f), fl1 = new Vector3(-0.05f, 1.86f, -0.08f);
+            Vector3 fr0 = new Vector3(0.3f, 0f, 0f), fr1 = new Vector3(0.05f, 1.86f, -0.08f);
+            Strut(e, "Leg L", fl0, fl1, t, wood);
+            Strut(e, "Leg R", fr0, fr1, t, wood);
+            Strut(e, "Back leg", new Vector3(0f, 0f, -0.3f), new Vector3(0f, 1.62f, -0.1f), t, wood);
+            Strut(e, "Mast", new Vector3(0f, 0.5f, -0.035f), new Vector3(0f, 2.0f, -0.09f), t * 0.9f, wood);
+            foreach (float y in new[] { 0.32f, 1.38f })
             {
-                var leg = Box(e, "Leg", new Vector3(x, 0.85f, 0f), new Vector3(0.04f, 1.75f, 0.04f), wood);
-                leg.transform.localRotation = Quaternion.Euler(-8f, 0f, x > 0 ? 6f : -6f);   // tops lean in (an A, not a V)
+                float k = y / 1.86f;
+                Strut(e, "Cross bar", Vector3.Lerp(fl0, fl1, k), Vector3.Lerp(fr0, fr1, k), t * 0.8f, wood);
             }
-            var back = Box(e, "Back leg", new Vector3(0f, 0.8f, -0.25f), new Vector3(0.04f, 1.65f, 0.04f), wood);
-            back.transform.localRotation = Quaternion.Euler(18f, 0f, 0f);
-            Box(e, "Ledge", new Vector3(0f, 0.8f, 0.07f), new Vector3(0.6f, 0.04f, 0.06f), wood);
+            Box(e, "Ledge", new Vector3(0f, 0.8f, 0.02f), new Vector3(0.66f, 0.03f, 0.08f), wood, collider: false);
+            Box(e, "Ledge lip", new Vector3(0f, 0.825f, 0.055f), new Vector3(0.66f, 0.03f, 0.012f), wood, collider: false);
+            Box(e, "Clamp", new Vector3(0f, 1.78f, -0.055f), new Vector3(0.18f, 0.045f, 0.05f), wood, collider: false);
+            Merge(e);
+            var ec = e.gameObject.AddComponent<BoxCollider>();
+            ec.center = new Vector3(0f, 1.0f, -0.12f); ec.size = new Vector3(0.66f, 2.0f, 0.4f);
         }
 
         static GameObject Box(Transform parent, string name, Vector3 at, Vector3 size, Material m, bool collider = true)

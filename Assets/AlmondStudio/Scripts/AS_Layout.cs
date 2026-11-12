@@ -119,7 +119,10 @@ namespace InnerFrame.AlmondStudio
         public float paintBoxYaw = 12f;
         [Tooltip("Turns the Tripo paint box upright, front toward the room (as the other Tripo props); paintBoxYaw is added.")] public Vector3 paintBoxModelEuler = new Vector3(270f, 180f, 0f);
         [Tooltip("The closed box's height, metres: sets the model's scale.")] public float paintBoxModelHeight = 0.08f;
-        [Tooltip("Where the pot of brushes stands on the table (x, z).")] public Vector2 brushPotSpot = new Vector2(0.38f, 1.65f);
+        [Tooltip("Where the pot of brushes stands on the table (x, z), or where the two lying brushes are.")] public Vector2 brushPotSpot = new Vector2(0.38f, 1.65f);
+        [Tooltip("Two brushes lying on the table, as in the concept S06 (off: the pot of five brushes).")] public bool brushesLying = true;
+        public float brushesYaw = -25f;
+        [Tooltip("Turns the Tripo table upright (Art/Props/AS_Table.fbx), as the other Tripo props.")] public Vector3 tableModelEuler = new Vector3(270f, 180f, 0f);
 
         [Header("Sill still life (Tripo model Art/Props/AS_SillStillLife.fbx)")]
         [Tooltip("Turns the model so it stands up with its front toward the room (-z). Tripo FBX often needs X 270 (as the tree did) and/or Y 180.")]

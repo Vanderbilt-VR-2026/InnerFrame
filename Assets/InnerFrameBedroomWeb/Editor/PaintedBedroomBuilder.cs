@@ -61,8 +61,7 @@ namespace InnerFrame.PaintedBedroom.EditorTools
         {
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
 
-            EnsureFolder(MaterialsDir);
-            EnsureFolder(ScenesDir);
+            EnsureFolder(ScenesDir);   // MaterialsDir is made by MakeMaterial when the FBX path needs it; the data path left it empty (review 11/12)
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
             // the room
@@ -179,6 +178,7 @@ namespace InnerFrame.PaintedBedroom.EditorTools
 
         static Material MakeMaterial(Material src, string key, Shader lit, Shader unlit)
         {
+            EnsureFolder(MaterialsDir);
             string path = MaterialsDir + "/" + key + ".mat";
             Texture tex = GetTexture(src);
             Color col = GetColor(src);

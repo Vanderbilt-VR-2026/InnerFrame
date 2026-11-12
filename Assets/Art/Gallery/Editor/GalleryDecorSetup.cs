@@ -73,8 +73,11 @@ namespace InnerFrame.Gallery.EditorTools
         // standing on the wick; the light sits just above it, as in SN_Setup. Light: about 2700 K, a candle-warm lamp.
         public const float CandleTop = 0.417f, FlameScale = 1.3f, FlameH = 0.09f * FlameScale;
         public static float FlameY => -CandleTop + FlameH * 0.45f;   // below the ring's top; its bottom just into the wick
-        public static readonly Color LampColour = new Color(1f, 0.70f, 0.42f);
-        public const float LampIntensity = 3f, LampRange = 6f;
+        // 2026-11-11: decoration now, not the room's main light (the fill and the painting spotlights do that): dimmer and
+        // shorter-reaching (3 and 6 m before), so the bright patch each throws on its wall is smaller.
+        public const float LampKelvin = 2800f;
+        public static Color LampColour => GalleryLightingSetup.Kelvin(LampKelvin);
+        public const float LampIntensity = 1.6f, LampRange = 4f;
         public static readonly Color GlassColour = new Color(1f, 0.9f, 0.75f, 0.3f);   // over the amber texture: tinted, see-through
         const string FlameMesh = "Assets/StarryNight/Meshes/SN_FlameCross.asset";
         const string FlameMat = "Assets/StarryNight/Materials/SN_Flame.mat";
@@ -105,7 +108,7 @@ namespace InnerFrame.Gallery.EditorTools
         // opening even from a far corner; the clouds repeat every 4 m. It casts no shadow, so the sun still falls
         // through the skylight.
         public const float SkyY = 6.4f, SkySize = 14f, SkyMetres = 4f;
-        public static readonly Color SkyTint = new Color(0.72f, 0.72f, 0.72f);   // unlit at full strength it glared against the warm room
+        public static readonly Color SkyTint = new Color(0.95f, 0.95f, 0.95f);   // unlit; 0.72 until 2026-11-11, raised with the brighter room (at 1 it glared against the old, darker one)
         public const string SkyMat = Folder + "/GP_Sky.mat", SkyTex = "Assets/Art/Gallery/Textures/GT_Sky_BaseColor.jpg";
         public static IEnumerable<(string name, Vector3 at)> Spots()
         {
@@ -145,11 +148,22 @@ namespace InnerFrame.Gallery.EditorTools
             ("Lantern_EastWall", new Vector3(-3.26f, 2.35f, 1.0f), 0.24f, -90f), ("Lantern_WestWall", new Vector3(3.26f, 2.35f, 1.0f), 0.24f, 90f),
         };
 
+
         static string Fbx(string n) => $"{Folder}/GP_{n}.fbx";
         static string Tex(string n) => $"{Folder}/GP_{n}_BaseColor.jpg";
         static string Mat(string n) => $"{Folder}/GP_{n}.mat";
         public const string GlassMat = Folder + "/GP_LanternGlass.mat";
         public const string GlassPart = "GP_Lantern_Glass";
+
+        /// <summary>
+        /// Two ways to run (2026-11-11). Add Decor keeps what is there: it only adds what is missing (the decor instance,
+        /// the prefab, a material, the painting spotlights) and fills a material's empty texture slot, so whatever the
+        /// Gallery looks like after hand edits in the editor stays as it is. Reset to Built (Reset true) puts everything
+        /// back to this code's values: the decor instance's overrides reverted and the prefab rebuilt, the materials, the
+        /// sun, ambient, spotlights and the render pipeline assets rewritten. Edits made in Play mode are not kept by
+        /// Unity itself (they end with Play mode), so make them in Edit mode.
+        /// </summary>
+        public static bool Reset;
 
         [MenuItem("Tools/InnerFrame/Gallery/Add Decor")]
         public static void Run()
@@ -158,6 +172,21 @@ namespace InnerFrame.Gallery.EditorTools
             var changes = Apply();
             Debug.Log($"{Tag} {(changes.Count == 0 ? "nothing to change" : string.Join("\n", changes))}");
         }
+
+        [MenuItem("Tools/InnerFrame/Gallery/Reset to Built (discards hand edits)")]
+        public static void RunReset()
+        {
+            if (!EditorUtility.DisplayDialog("Reset the Gallery to built",
+                    "This puts the decor, its materials, the lighting and the render settings back to the setup code's values, " +
+                    "discarding hand edits to them. Continue?", "Reset", "Cancel")) return;
+            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+            Reset = true;
+            try { var changes = Apply(); Debug.Log($"{Tag} reset: {(changes.Count == 0 ? "nothing to change" : string.Join("\n", changes))}"); }
+            finally { Reset = false; }
+        }
+
+        /// <summary>Batch: -executeMethod InnerFrame.Gallery.EditorTools.GalleryDecorSetup.RunBatchReset -quit</summary>
+        public static void RunBatchReset() { Reset = true; RunBatch(); }
 
         public static void RunBatch()
         {
@@ -196,8 +225,24 @@ namespace InnerFrame.Gallery.EditorTools
             var prefab = MakePrefab(mats, changes);
             var scene = EditorSceneManager.OpenScene(GalleryPath, OpenSceneMode.Single);
             PlaceInGallery(scene, prefab, changes);
+            GalleryLightingSetup.Apply(scene, changes);
+            KeepEntranceLast(scene, changes);
             AssetDatabase.SaveAssets();
             return changes;
+        }
+
+        /// <summary>SN_GalleryEntrance stays the scene's last root (its own check wants it so): anything put after it, such
+        /// as a light added by hand in the editor, moves to just before it.</summary>
+        static void KeepEntranceLast(Scene scene, List<string> changes)
+        {
+            var roots = scene.GetRootGameObjects();
+            var entrance = roots.FirstOrDefault(g => g.name == KeepLastRoot);
+            if (entrance == null || entrance.transform.GetSiblingIndex() == roots.Length - 1) return;
+            var after = roots.Where(g => g.transform.GetSiblingIndex() > entrance.transform.GetSiblingIndex()).Select(g => g.name).ToList();
+            entrance.transform.SetAsLastSibling();
+            EditorSceneManager.MarkSceneDirty(scene);
+            if (!EditorSceneManager.SaveScene(scene)) throw new Exception($"{Tag} Could not save {GalleryPath}");
+            changes.Add($"{GalleryPath}: {KeepLastRoot} back to the last root (after {string.Join(", ", after)})");
         }
 
         // ------------------------------------------------------------------------------------------- imports
@@ -239,11 +284,28 @@ namespace InnerFrame.Gallery.EditorTools
         /// <summary>URP Lit with a base map, no emission; opaque, or transparent (premultiplied) as SN_Setup's Lit does.
         /// Everything is set every run, exactly as URP's own material validation leaves it, so the file only changes when
         /// a value does.</summary>
-        public static Material MakeMaterial(string path, string texPath, Color colour, float smooth, bool twoSided, bool transparent, List<string> changes, Vector2? tiling = null, Vector2? offset = null)
+        /// <summary>Add Decor's rule for an existing material: leave it as it is, only filling an empty texture slot.
+        /// True when the caller should return it untouched.</summary>
+        static bool KeepMaterial(Material m, Texture tex, string path, List<string> changes)
+        {
+            if (Reset || m == null) return false;
+            if (tex != null && m.HasProperty("_BaseMap") && m.GetTexture("_BaseMap") == null)
+            {
+                m.SetTexture("_BaseMap", tex);
+                if (m.HasProperty("_MainTex")) m.SetTexture("_MainTex", tex);
+                EditorUtility.SetDirty(m);
+                AssetDatabase.SaveAssetIfDirty(m);
+                changes.Add($"{path}: its texture (it had none)");
+            }
+            return true;
+        }
+
+        public static Material MakeMaterial(string path, string texPath, Color colour, float smooth, bool twoSided, bool transparent, List<string> changes, Vector2? tiling = null, Vector2? offset = null, Color? glow = null)
         {
             var shader = Shader.Find("Universal Render Pipeline/Lit") ?? throw new Exception($"{Tag} URP Lit shader not found");
             var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(texPath);
             var m = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (KeepMaterial(m, tex, path, changes)) return m;
             bool created = m == null;
             if (created) { m = new Material(shader) { name = System.IO.Path.GetFileNameWithoutExtension(path) }; AssetDatabase.CreateAsset(m, path); }
             string before = created ? "" : System.IO.File.ReadAllText(path);
@@ -258,9 +320,19 @@ namespace InnerFrame.Gallery.EditorTools
             m.SetColor("_BaseColor", colour); m.SetColor("_Color", m.GetColor("_BaseColor"));
             m.SetFloat("_Smoothness", smooth);
             m.SetFloat("_Metallic", 0f);
-            m.SetFloat("_EmissionEnabled", 0f); m.DisableKeyword("_EMISSION");
-            m.SetColor("_EmissionColor", Color.black); m.SetTexture("_EmissionMap", null);
-            m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.EmissiveIsBlack;
+            if (glow is Color g && g.maxColorComponent > 0f)
+            {
+                // the base image glows in this colour on top of the light it gets (the paintings: GalleryLightingSetup)
+                m.SetFloat("_EmissionEnabled", 1f); m.EnableKeyword("_EMISSION");
+                m.SetColor("_EmissionColor", new Color(g.r, g.g, g.b, 1f)); m.SetTexture("_EmissionMap", tex);
+                m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
+            }
+            else
+            {
+                m.SetFloat("_EmissionEnabled", 0f); m.DisableKeyword("_EMISSION");
+                m.SetColor("_EmissionColor", Color.black); m.SetTexture("_EmissionMap", null);
+                m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.EmissiveIsBlack;
+            }
             m.SetFloat("_AlphaClip", 0f); m.DisableKeyword("_ALPHATEST_ON");
             m.SetFloat("_Surface", transparent ? 1f : 0f);
             m.SetFloat("_Blend", 0f);
@@ -302,6 +374,7 @@ namespace InnerFrame.Gallery.EditorTools
             var shader = Shader.Find("Universal Render Pipeline/Unlit") ?? throw new Exception($"{Tag} URP Unlit shader not found");
             var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(texPath);
             var m = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (KeepMaterial(m, tex, path, changes)) return m;
             bool created = m == null;
             if (created) { m = new Material(shader) { name = System.IO.Path.GetFileNameWithoutExtension(path) }; AssetDatabase.CreateAsset(m, path); }
             string before = created ? "" : System.IO.File.ReadAllText(path);
@@ -375,6 +448,7 @@ namespace InnerFrame.Gallery.EditorTools
             var shader = Shader.Find(GlowShader) ?? throw new Exception($"{Tag} {GlowShader} not found");
             var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(HaloTex) ?? throw new Exception($"{Tag} {HaloTex} missing");
             var m = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (KeepMaterial(m, tex, path, changes)) return m;
             bool created = m == null;
             if (created) { m = new Material(shader) { name = System.IO.Path.GetFileNameWithoutExtension(path) }; AssetDatabase.CreateAsset(m, path); }
             string before = created ? "" : System.IO.File.ReadAllText(path);
@@ -472,26 +546,7 @@ namespace InnerFrame.Gallery.EditorTools
                 Primitive("Cylinder.fbx", metal, g, "Hook", new Vector3(0f, BracketRise / 2, 0f), new Vector3(d, BracketRise / 2, d), false);
                 Primitive("Cylinder.fbx", metal, g, "Arm", new Vector3(0f, BracketRise, arm / 2), new Vector3(d, arm / 2, d), false, Quaternion.Euler(90f, 0f, 0f));
                 Primitive("Cube.fbx", metal, g, "WallPlate", new Vector3(0f, BracketRise, arm - 0.01f), new Vector3(0.08f, 0.14f, 0.02f), false);
-                Model("Lantern", mats["Lantern"], g, "GP_Lantern", Vector3.zero, Quaternion.identity, one, mats["LanternGlass"]);
-                var flame = new GameObject("Flame");
-                flame.transform.SetParent(g, false);
-                flame.transform.localPosition = new Vector3(0f, FlameY, 0f);
-                flame.transform.localScale = Vector3.one * FlameScale;
-                flame.AddComponent<MeshFilter>().sharedMesh = flameMesh;
-                var fr = flame.AddComponent<MeshRenderer>();
-                fr.sharedMaterial = flameMat;
-                fr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                fr.receiveShadows = false;
-                var lamp = new GameObject("Lamp");
-                lamp.transform.SetParent(g, false);
-                lamp.transform.localPosition = new Vector3(0f, FlameY + 0.01f, 0f);
-                var light = lamp.AddComponent<Light>();
-                light.type = LightType.Point;
-                light.color = LampColour;
-                light.intensity = LampIntensity;
-                light.range = LampRange;
-                light.shadows = LightShadows.None;
-                light.lightmapBakeType = LightmapBakeType.Realtime;
+                LanternBody(g, mats, flameMesh, flameMat, LampIntensity, LampRange);
             }
             // Unity's Plane, facing up, turned over to face down into the room; scaled from its own size (it measured 1 m
             // here, not the 10 m Unity documents, so a fixed 1.4 made a 1.4 m card)
@@ -532,6 +587,34 @@ namespace InnerFrame.Gallery.EditorTools
             return root.gameObject;
         }
 
+        /// <summary>The lantern, its candle flame and its warm realtime light, hanging from the group's origin (the ring's top).</summary>
+        static void LanternBody(Transform g, Dictionary<string, Material> mats, Mesh flameMesh, Material flameMat, float intensity, float range)
+        {
+            Model("Lantern", mats["Lantern"], g, "GP_Lantern", Vector3.zero, Quaternion.identity, Vector3.one, mats["LanternGlass"]);
+            var flame = new GameObject("Flame");
+            flame.transform.SetParent(g, false);
+            flame.transform.localPosition = new Vector3(0f, FlameY, 0f);
+            flame.transform.localScale = Vector3.one * FlameScale;
+            flame.AddComponent<MeshFilter>().sharedMesh = flameMesh;
+            var fr = flame.AddComponent<MeshRenderer>();
+            fr.sharedMaterial = flameMat;
+            fr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            fr.receiveShadows = false;
+            var lamp = new GameObject("Lamp");
+            lamp.transform.SetParent(g, false);
+            lamp.transform.localPosition = new Vector3(0f, FlameY + 0.01f, 0f);
+            var light = lamp.AddComponent<Light>();
+            light.type = LightType.Point;
+            light.color = LampColour;
+            light.intensity = intensity;
+            light.range = range;
+            light.shadows = LightShadows.None;
+            light.lightmapBakeType = LightmapBakeType.Realtime;
+            // URP's per-light data, in the prefab: without it the editor adds one to each lamp whenever the scene opens, as
+            // an override on this instance, which the next run then reverts
+            lamp.AddComponent<UnityEngine.Rendering.Universal.UniversalAdditionalLightData>();
+        }
+
         /// <summary>Everything the prefab is made of, as text: names, poses, meshes, materials and colliders.</summary>
         public static string Describe(GameObject go)
         {
@@ -542,7 +625,8 @@ namespace InnerFrame.Gallery.EditorTools
                 var mf = t.GetComponent<MeshFilter>(); if (mf) sb.Append($" mesh={mf.sharedMesh?.name}");
                 var mr = t.GetComponent<MeshRenderer>(); if (mr) sb.Append($" mat={string.Join(",", mr.sharedMaterials.Select(m => m ? m.name : "null"))}");
                 var l = t.GetComponent<Light>();
-                if (l) sb.Append($" light={l.type}/{l.color}/{l.intensity:F3}/{l.range:F3}/{l.shadows}/{l.lightmapBakeType}");
+                if (l) sb.Append($" light={l.type}/{l.color}/{l.intensity:F3}/{l.range:F3}/{l.shadows}/{l.lightmapBakeType}"
+                                 + (t.GetComponent<UnityEngine.Rendering.Universal.UniversalAdditionalLightData>() ? "/urp" : ""));
                 foreach (var c in t.GetComponents<Collider>())
                     sb.Append(c is BoxCollider b ? $" box={b.center:F3}/{b.size:F3}" : $" {c.GetType().Name}");
                 sb.Append('\n');
@@ -552,6 +636,8 @@ namespace InnerFrame.Gallery.EditorTools
 
         static GameObject MakePrefab(Dictionary<string, Material> mats, List<string> changes)
         {
+            var kept = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
+            if (!Reset && kept != null) return kept;   // Add Decor: the prefab as it is (hand edits in Prefab Mode stay)
             var built = Build(mats);
             try
             {
@@ -579,15 +665,17 @@ namespace InnerFrame.Gallery.EditorTools
             var found = Instances(scene, prefab);
             var keep = found.FirstOrDefault(g => g.transform.parent == null && PrefabUtility.IsAnyPrefabInstanceRoot(g)
                                                  && PrefabUtility.GetCorrespondingObjectFromOriginalSource(g) == prefab);
-            foreach (var g in found.Where(g => g != keep && g != null)) { why.Add($"removed an extra '{g.name}'"); Object.DestroyImmediate(g); }
+            if (Reset)
+                foreach (var g in found.Where(g => g != keep && g != null)) { why.Add($"removed an extra '{g.name}'"); Object.DestroyImmediate(g); }
             if (keep == null) { keep = (GameObject)PrefabUtility.InstantiatePrefab(prefab, scene); why.Add("added the decor"); }
-            if (PrefabUtility.HasPrefabInstanceAnyOverrides(keep, false))
+            var t = keep.transform;
+            // Add Decor keeps the instance's overrides and its place (hand edits in the scene); Reset to Built reverts them
+            if (Reset && PrefabUtility.HasPrefabInstanceAnyOverrides(keep, false))
             {
                 PrefabUtility.RevertPrefabInstance(keep, InteractionMode.AutomatedAction);
                 why.Add("reverted overrides");
             }
-            var t = keep.transform;
-            if (t.localPosition != Vector3.zero || t.localRotation != Quaternion.identity || t.localScale != Vector3.one)
+            if (Reset && (t.localPosition != Vector3.zero || t.localRotation != Quaternion.identity || t.localScale != Vector3.one))
             {
                 t.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
                 t.localScale = Vector3.one;

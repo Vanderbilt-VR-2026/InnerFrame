@@ -194,9 +194,9 @@ namespace InnerFrame.StarryNight.EditorTools
                 Check(tex.format == TextureFormat.ASTC_6x6, $"on Android it is compressed: ASTC 6x6 ({tex.format}), about 2.5 MB with mipmaps");
             else W($"  (the Editor's target is {EditorUserBuildSettings.activeBuildTarget}, so the Android format is checked from the importer only)");
             var mat = painting.GetComponent<Renderer>().sharedMaterial;
-            Check(mat != null && AssetDatabase.GetAssetPath(mat) == G.MaterialPath && mat.shader.name == "Universal Render Pipeline/Unlit"
+            Check(mat != null && AssetDatabase.GetAssetPath(mat) == G.MaterialPath && mat.shader.name == "Universal Render Pipeline/Lit"
                   && mat.GetTexture("_BaseMap") == tex && mat.GetColor("_BaseColor") == Color.white,
-                $"the painting draws {G.MaterialPath}: URP Unlit, the image, white");
+                $"the painting draws {G.MaterialPath}: URP Lit, the image, white");
 
             // ------------------------------------------------------------------ controls: each of these must fail
             W("# controls (in memory; nothing is saved)");

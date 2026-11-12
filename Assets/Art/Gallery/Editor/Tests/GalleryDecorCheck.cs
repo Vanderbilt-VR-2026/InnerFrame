@@ -60,7 +60,10 @@ namespace InnerFrame.Gallery.EditorTools.Tests
             var decor = found[0];
             var roots = scene.GetRootGameObjects();
             Check(roots.Last().name == G.KeepLastRoot, $"{G.KeepLastRoot} is still the last root (last: {roots.Last().name})");
-            Check(!PrefabUtility.HasPrefabInstanceAnyOverrides(decor, false), "no overrides on the instance");
+            // hand edits on the instance are allowed (Add Decor keeps them since 2026-11-11): listed, not failed
+            var overrides = PrefabUtility.GetObjectOverrides(decor, false).Count + PrefabUtility.GetAddedComponents(decor).Count
+                            + PrefabUtility.GetRemovedComponents(decor).Count + PrefabUtility.GetAddedGameObjects(decor).Count;
+            log.Add($"  hand edits on the {G.InstanceName} instance: {overrides} (kept by Add Decor; Reset to Built reverts them)");
             Check(roots.Count(r => r.GetComponentsInChildren<Unity.XR.CoreUtils.XROrigin>(true).Any()) == 1, "one XR Origin in the scene");
 
             int tris = decor.GetComponentsInChildren<MeshFilter>(true).Sum(m => m.sharedMesh.triangles.Length / 3);
@@ -69,14 +72,23 @@ namespace InnerFrame.Gallery.EditorTools.Tests
             foreach (var g in decor.GetComponentsInChildren<MeshFilter>(true).GroupBy(m => m.sharedMesh).OrderByDescending(g => g.Count() * g.Key.triangles.Length))
                 log.Add($"  {g.Key.name,-28} {g.Key.triangles.Length / 3,6} triangles x {g.Count(),2} = {g.Count() * g.Key.triangles.Length / 3,6}");
 
-            // the lanterns' lights: one per lantern, warm, realtime, no shadows, and no more than URP's 4 per object anywhere
+            // the lanterns' lights: one per lantern, warm, realtime, no shadows, and no more than Mobile_RPAsset's per-object
+            // limit anywhere
             var lights = decor.GetComponentsInChildren<Light>(true);
             Check(lights.Length == G.Lanterns.Length, $"{lights.Length} lamp lights, one per lantern ({G.Lanterns.Length})");
             foreach (var l in lights)
                 Check(l.type == LightType.Point && l.shadows == LightShadows.None && l.lightmapBakeType == LightmapBakeType.Realtime && l.color.r > l.color.b,
                     $"{PathOf(l.transform, decor.transform)}: a warm realtime point light without shadows ({l.color}, {l.intensity}, range {l.range})");
             int sceneLights = roots.SelectMany(r => r.GetComponentsInChildren<Light>(true)).Count(l => l.type != LightType.Directional);
-            Check(sceneLights <= 4, $"{sceneLights} point/spot lights in the scene, within Mobile_RPAsset's 4 per object");
+            var mobile = AssetDatabase.LoadAssetAtPath<ScriptableObject>("Assets/Settings/Mobile_RPAsset.asset");
+            var limitProp = mobile ? new SerializedObject(mobile).FindProperty("m_AdditionalLightsPerObjectLimit") : null;
+            Check(limitProp != null && limitProp.intValue >= sceneLights,
+                $"{sceneLights} point/spot lights in the scene, within Mobile_RPAsset's {(limitProp != null ? limitProp.intValue : -1)} per object");
+            var suns = roots.SelectMany(r => r.GetComponentsInChildren<Light>(true)).Where(l => l.type == LightType.Directional && l.enabled).ToList();
+            Check(suns.Count == 1 && suns[0].shadows != LightShadows.None, $"one sun, casting shadows through the skylight ({suns.Count})");
+            var bedroomMat = AssetDatabase.LoadAssetAtPath<Material>(GalleryLightingSetup.BedroomMat);
+            Check(bedroomMat != null && bedroomMat.shader.name == "Universal Render Pipeline/Lit" && bedroomMat.GetColor("_BaseColor") == Color.white,
+                $"The Bedroom's painting is URP Lit and white, so the lamps light it ({(bedroomMat ? bedroomMat.shader.name : "missing")})");
             // each lantern as SN_Lantern: see-through glass, a flame on the candle and the light just above it, inside the glass
             var glass = AssetDatabase.LoadAssetAtPath<Material>(G.GlassMat);
             Check(glass != null && glass.GetFloat("_Surface") == 1f && glass.GetColor("_BaseColor").a < 0.5f && glass.renderQueue == 3000,

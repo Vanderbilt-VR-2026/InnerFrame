@@ -25,8 +25,14 @@ namespace InnerFrame.PaintedBedroom
         const float TapSeconds = 0.35f;            // a press shorter than this, with the hand barely moving, is a tap
         const float TapMetres = 0.03f;
 
+        /// <summary>Into the room, square to the window (for tests).</summary>
+        public static Vector3 Inward { get; private set; }
+
         /// <summary>The casements, left then right, once the scene has started.</summary>
         public static readonly List<Casement> All = new List<Casement>();
+
+        /// <summary>Both casements back to as painted (with PaintedBedroomMovable.ResetAll).</summary>
+        public static void ShutAll() { foreach (var c in All) if (c != null) c.Shut(); }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         static void Init()
@@ -77,32 +83,45 @@ namespace InnerFrame.PaintedBedroom
             }
             if (left.Count == 0 || right.Count == 0) { Debug.LogWarning("[InnerFrame] Window: no casements found, so it doesn't open.", this); enabled = false; return; }
 
-            // Opening turns the casement's free edge into the room: toward the middle of the walls.
-            Vector3 inside = roomWalls != null
-                ? Bounds(roomWalls).center
-                : transform.position - transform.forward;
-            All.Add(Make("Casement_Left", left, leftHinge, +1f, inside));
-            All.Add(Make("Casement_Right", right, rightHinge, -1f, inside));
+            // Opening turns the casement's free edge into the room. The panes lie across the window's forward axis, so
+            // into the room is forward or backward along it, whichever side the room's middle is on.
+            Vector3 middle = roomWalls != null ? Bounds(roomWalls).center : transform.position - transform.forward;
+            Inward = transform.forward * Mathf.Sign(Vector3.Dot(middle - transform.position, transform.forward));
+            All.Add(Make("Casement_Left", left, leftHinge, +1f, Inward));
+            All.Add(Make("Casement_Right", right, rightHinge, -1f, Inward));
             Debug.Log($"[InnerFrame] Window: two casements on hinges ({left.Count} and {right.Count} parts)");
         }
 
-        Casement Make(string name, List<Transform> parts, Vector3 hingeLocal, float freeEdgeSide, Vector3 inside)
+        Casement Make(string name, List<Transform> parts, Vector3 hingeLocal, float freeEdgeSide, Vector3 inward)
         {
             var hinge = new GameObject(name).transform;
             hinge.SetParent(transform, false);
             hinge.localPosition = hingeLocal;
             foreach (var p in parts) p.SetParent(hinge, true);
-            foreach (var p in parts)
-                if (p.GetComponent<Collider>() == null) p.gameObject.AddComponent<BoxCollider>();   // something to point at
 
-            // Which way about the vertical turns the free edge toward the room?
-            Vector3 freeEdge = hinge.position + transform.right * (freeEdgeSide * 0.3f * transform.lossyScale.x);
-            float Toward(float sign)
+            // The builder gives the window one box per part, all on the window itself. The boxes on this casement's side
+            // move onto its hinge, so they swing with it: left behind, they would stay as an invisible closed casement.
+            int moved = 0;
+            foreach (var box in GetComponents<BoxCollider>())
             {
-                var turned = hinge.position + Quaternion.AngleAxis(sign * 30f, transform.up) * (freeEdge - hinge.position);
-                return Vector3.Distance(turned, inside);
+                float min = box.center.x - box.size.x / 2f, max = box.center.x + box.size.x / 2f;
+                bool onThisSide = freeEdgeSide > 0f ? max <= 0.01f : min >= -0.01f;   // left casement: all left of the middle
+                if (!onThisSide) continue;
+                var copy = hinge.gameObject.AddComponent<BoxCollider>();
+                copy.center = hinge.InverseTransformPoint(transform.TransformPoint(box.center));
+                copy.size = box.size;   // the hinge has the window's rotation and scale, so sizes carry over
+                copy.sharedMaterial = box.sharedMaterial;
+                Destroy(box);
+                moved++;
             }
-            float openSign = Toward(+1f) < Toward(-1f) ? +1f : -1f;
+            if (moved == 0)   // no boxes from the builder: something to point at and to stop things
+                foreach (var p in parts)
+                    if (p.GetComponent<Collider>() == null && p.GetComponent<MeshFilter>() != null) p.gameObject.AddComponent<BoxCollider>();
+
+            // Which way about the vertical turns the free edge into the room?
+            Vector3 arm = transform.right * (freeEdgeSide * 0.3f * transform.lossyScale.x);
+            float Into(float sign) => Vector3.Dot(Quaternion.AngleAxis(sign * 30f, transform.up) * arm - arm, inward);
+            float openSign = Into(+1f) > Into(-1f) ? +1f : -1f;
 
             var casement = hinge.gameObject.AddComponent<Casement>();
             casement.Setup(openSign);
@@ -152,6 +171,12 @@ namespace InnerFrame.PaintedBedroom
 
             /// <summary>Swing open if shut, shut if open (what a tap does).</summary>
             public void Toggle() => target = IsOpen ? 0f : OpenDegrees;
+
+            /// <summary>Back to as painted at once (the room's reset).</summary>
+            public void Shut() { holder = null; angle = target = 0f; transform.localRotation = closedLocal; }
+
+            /// <summary>Where the hinge is, for tests.</summary>
+            public Vector3 HingePosition => transform.position;
 
             void OnPressed(SelectEnterEventArgs args)
             {

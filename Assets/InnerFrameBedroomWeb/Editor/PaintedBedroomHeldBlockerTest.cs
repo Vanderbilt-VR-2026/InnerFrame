@@ -12,7 +12,8 @@ namespace InnerFrame.PaintedBedroom.EditorTools
     /// <summary>
     /// Play-mode check of PaintedBedroomHeldBlocker, no headset needed: a test hand takes the mirror off the wall and
     /// moves 1.2 m out through the wall behind it. Passes when the mirror stays in the room, and then follows the hand
-    /// back into the room. Command-line flag -noBlocker switches the blocker off, to show the test fails without it.
+    /// 0.6 m back toward the room's middle (sliding along anything it brushes on the way). Command-line flag -noBlocker
+    /// switches the blocker off, to show the test fails without it.
     /// Menu: InnerFrame > Bedroom > Test Held Blocker.
     /// Command line: -executeMethod InnerFrame.PaintedBedroom.EditorTools.PaintedBedroomHeldBlockerTest.RunFromCommandLine
     /// </summary>
@@ -28,7 +29,7 @@ namespace InnerFrame.PaintedBedroom.EditorTools
         static double stepStarted;
         static XRGrabInteractable mirror;
         static XRDirectInteractor hand;
-        static Vector3 start, outward;
+        static Vector3 start, outward, toMiddle, roomMiddle;
         static string failure;
 
         [MenuItem("InnerFrame/Bedroom/Test Held Blocker")]
@@ -91,6 +92,7 @@ namespace InnerFrame.PaintedBedroom.EditorTools
                     if (walls == null) { Finish(false, "no Room_Walls"); return; }
                     var bounds = walls.GetComponentsInChildren<Renderer>().Select(r => r.bounds).Aggregate((a, b) => { a.Encapsulate(b); return a; });
                     start = mirror.transform.position;
+                    roomMiddle = bounds.center;
                     outward = start - bounds.center; outward.y = 0f; outward.Normalize();
                     // straight through the wall it hangs on, not toward the room's middle (which can graze the window)
                     foreach (var hit in Physics.RaycastAll(start - outward * 0.3f, outward, 1.5f, ~0, QueryTriggerInteraction.Ignore)
@@ -124,7 +126,8 @@ namespace InnerFrame.PaintedBedroom.EditorTools
                     var blocker = mirror.GetComponent<PaintedBedroomHeldBlocker>();
                     Debug.Log($"[HeldBlockerTest] hand out: mirror went {through:F3} m out (held back {blocker.LastHeldBack:F3} m), at {mirror.transform.position:F3}, stopped by {blocker.LastBlockedBy}");
                     if (through > AllowedThrough) failure = $"the mirror went {through:F2} m out through the wall (allowed {AllowedThrough})";
-                    hand.transform.position = start - outward * In;   // back into the room
+                    toMiddle = roomMiddle - start; toMiddle.y = 0f; toMiddle.Normalize();
+                    hand.transform.position = start + toMiddle * In;   // back into the room, toward its middle, as a player would
                     Next();
                     break;
                 }
@@ -132,7 +135,7 @@ namespace InnerFrame.PaintedBedroom.EditorTools
                 case 4:   // and it still follows the hand into the room
                 {
                     if (Elapsed < 1) return;
-                    float inward = Vector3.Dot(mirror.transform.position - start, -outward);
+                    float inward = Vector3.Dot(mirror.transform.position - start, toMiddle);
                     Debug.Log($"[HeldBlockerTest] hand in: mirror came {inward:F3} m into the room, at {mirror.transform.position:F3}; last stopped by {mirror.GetComponent<PaintedBedroomHeldBlocker>().LastBlockedBy}");
                     if (failure == null && inward < In - 0.1f) failure = $"the mirror came only {inward:F2} m into the room, the hand {In} m: stuck";
                     hand.interactionManager.SelectExit((IXRSelectInteractor)hand, (IXRSelectInteractable)mirror);

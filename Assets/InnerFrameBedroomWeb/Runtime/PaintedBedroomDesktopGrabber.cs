@@ -67,7 +67,7 @@ namespace InnerFrame.PaintedBedroom
 
             bool locked = Cursor.lockState == CursorLockMode.Locked;
 
-            if (kb.backspaceKey.wasPressedThisFrame) { Release(); EndInspect(); PaintedBedroomMovable.ResetAll(); }
+            if (kb.backspaceKey.wasPressedThisFrame) { Release(); EndInspect(); PaintedBedroomMovable.ResetAll(); PaintedBedroomWindowHinges.ShutAll(); }
 
             if (inspected != null)
             {

@@ -16,8 +16,8 @@ namespace InnerFrame.PaintedBedroom
     /// Objects with physics are already stopped by their collisions (velocity tracking).
     ///
     /// It is one more step after the grab's own pose calculation (an XR Interaction Toolkit grab transformer): it sweeps
-    /// the object's colliders from where it is toward where the hand wants it, and stops it just short of the first
-    /// thing in the way (see Blocking for what counts). Turning is not swept, so twisting an object against a
+    /// the object's colliders from where it is toward where the hand wants it, stops it just short of the first thing in
+    /// the way (see Blocking for what counts), and slides the rest of the way along that surface. Turning is not swept, so twisting an object against a
     /// wall can still push a corner in a little. MirrorScene's own moves (back to the wall, beside the canvas) don't go
     /// through the grab, so they are not affected.
     ///
@@ -89,20 +89,40 @@ namespace InnerFrame.PaintedBedroom
             if (wanted < 1e-5f) { LastHeldBack = 0f; return; }
             Vector3 direction = move / wanted;
 
-            float allowed = wanted;
+            if (!Sweep(direction, wanted, out float allowed, out Vector3 normal)) { LastHeldBack = 0f; return; }
+
+            // Stopped: slide the rest of the way along what it hit (once), as a hand pushing it against a wall would,
+            // instead of sticking where it touched.
+            allowed = Mathf.Max(0f, allowed - Skin);
+            Vector3 stopped = from + direction * allowed;
+            Vector3 rest = targetPose.position - stopped;
+            Vector3 slide = rest - Vector3.Dot(rest, normal) * normal;
+            float slideLength = slide.magnitude;
+            Vector3 end = stopped;
+            if (slideLength > 1e-4f)
+            {
+                var saved = body.position;
+                body.position = stopped;   // sweep from where it stopped; put straight back, no physics step between
+                bool hitAgain = Sweep(slide / slideLength, slideLength, out float slideAllowed, out _);
+                body.position = saved;
+                end = stopped + slide / slideLength * (hitAgain ? Mathf.Max(0f, slideAllowed - Skin) : slideLength);
+            }
+            targetPose.position = end;
+            LastHeldBack = Vector3.Distance(end, from + move);
+        }
+
+        // The nearest thing in the way along this direction, if any within this distance.
+        bool Sweep(Vector3 direction, float distance, out float allowed, out Vector3 normal)
+        {
+            allowed = distance; normal = Vector3.zero;
             Collider stopper = null;
-            foreach (var hit in body.SweepTestAll(direction, wanted, QueryTriggerInteraction.Ignore))
+            foreach (var hit in body.SweepTestAll(direction, distance, QueryTriggerInteraction.Ignore))
             {
                 if (hit.distance >= allowed || Ignored(hit.collider)) continue;
-                allowed = hit.distance;
-                stopper = hit.collider;
+                allowed = hit.distance; normal = hit.normal; stopper = hit.collider;
             }
             if (stopper != null) LastBlockedBy = $"{stopper.name} (under {stopper.transform.root.name})";
-            if (allowed >= wanted) { LastHeldBack = 0f; return; }
-
-            allowed = Mathf.Max(0f, allowed - Skin);
-            targetPose.position = from + direction * allowed;
-            LastHeldBack = wanted - allowed;
+            return stopper != null;
         }
 
         // What stops it: the room itself (walls, floor, ceiling, door frames: colliders that belong to no movable

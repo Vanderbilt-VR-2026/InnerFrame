@@ -22,7 +22,7 @@ namespace InnerFrame.StarryNight.EditorTools
     /// loads The Starry Night by name, as the Bedroom's does.
     /// What it writes, each only when it differs:
     ///   - the image's import settings (2048 x 1622 stretched to 2048 x 2048 on import, mipmaps, ASTC 6x6 on Android);
-    ///   - SN_GalleryPainting.mat (URP Unlit, the image, white) and SN_GalleryEntrance.prefab. The frame and pedestal are
+    ///   - SN_GalleryPainting.mat (URP Lit, the image, white, matte: lit by the room) and SN_GalleryEntrance.prefab. The frame and pedestal are
     ///     Gallery.fbx's own Frame_Bedroom and Pedestal_Bedroom meshes and materials, by reference. Frame, pedestal, button and
     ///     painting keep The Bedroom's offsets from the north wall, turned 90 degrees onto the east wall; the offsets are read
     ///     on every run from The Bedroom's objects in Gallery.unity (the scene's own adjustments included: its button is
@@ -147,27 +147,10 @@ namespace InnerFrame.StarryNight.EditorTools
             return new Vector2Int(w, h);
         }
 
-        static Material BuildMaterial(List<string> changes)
-        {
-            var shader = Shader.Find("Universal Render Pipeline/Unlit") ?? throw new Exception($"{Tag} URP Unlit shader not found");
-            var image = AssetDatabase.LoadAssetAtPath<Texture2D>(ImagePath);
-            var m = AssetDatabase.LoadAssetAtPath<Material>(MaterialPath);
-            if (m == null)
-            {
-                m = new Material(shader) { name = Path.GetFileNameWithoutExtension(MaterialPath) };
-                m.SetTexture("_BaseMap", image);
-                m.SetColor("_BaseColor", Color.white);   // true colours (The Bedroom's material is tinted blue-grey)
-                AssetDatabase.CreateAsset(m, MaterialPath);
-                changes.Add($"{MaterialPath}: created");
-                return m;
-            }
-            var why = new List<string>();
-            if (m.shader != shader) { m.shader = shader; why.Add("shader"); }
-            if (m.GetTexture("_BaseMap") != image) { m.SetTexture("_BaseMap", image); why.Add("image"); }
-            if (m.GetColor("_BaseColor") != Color.white) { m.SetColor("_BaseColor", Color.white); why.Add("colour"); }
-            if (why.Count > 0) { EditorUtility.SetDirty(m); changes.Add($"{MaterialPath}: {string.Join(", ", why)}"); }
-            return m;
-        }
+        /// <summary>URP Lit, the image, white and matte, as The Bedroom's painting (GalleryLightingSetup): the room's
+        /// lanterns and sun light it (2026-11-11; it was URP Unlit, so no light reached it).</summary>
+        static Material BuildMaterial(List<string> changes) =>
+            InnerFrame.Gallery.EditorTools.GalleryLightingSetup.MakePainting(MaterialPath, ImagePath, changes);
 
         // ---------------------------------------------------------------------------------------------- prefab
 

@@ -67,7 +67,7 @@ namespace InnerFrame.PaintedBedroom
 
             bool locked = Cursor.lockState == CursorLockMode.Locked;
 
-            if (kb.backspaceKey.wasPressedThisFrame) { Release(); EndInspect(); PaintedBedroomMovable.ResetAll(); }
+            if (kb.backspaceKey.wasPressedThisFrame) { Release(); EndInspect(); PaintedBedroomMovable.ResetAll(); PaintedBedroomWindowHinges.ShutAll(); }
 
             if (inspected != null)
             {
@@ -124,6 +124,7 @@ namespace InnerFrame.PaintedBedroom
         void Grab(PaintedBedroomMovable m, float distance)
         {
             m.Claim();
+            if (m.TryGetComponent(out PaintedBedroomObjectSound sound)) sound.PlayPickUp();
             held = m;
             holdDistance = Mathf.Max(distance, minDistance);
             spin = 0f;

@@ -100,6 +100,11 @@ namespace InnerFrame.AlmondStudio.EditorTools
                 return;
             }
 
+            // the room's surfaces: flat painted shading (AS_Painted) or the old URP Lit look (AS_Layout.flatShading)
+            var painted = Shader.Find("InnerFrame/AlmondStudio/Painted");
+            if (layout.flatShading && painted == null) Debug.LogWarning("[AS Setup] AS_Painted did not compile; the room stays URP Lit. See the Console.");
+            var surface = layout.flatShading && painted != null ? painted : lit;
+
             var scene = File.Exists(ScenePath)
                 ? EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single)
                 : EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
@@ -121,17 +126,17 @@ namespace InnerFrame.AlmondStudio.EditorTools
             if (boot == null) boot = bootGo.AddComponent<AS_Bootstrap>();
             boot.layout = layout;
             boot.branchesJson = AssetDatabase.LoadAssetAtPath<TextAsset>(BranchesPath);
-            boot.wall = Lit("AS_Wall", lit, "C9923F");            // the ochre of Window in the Studio (Van Gogh Museum)
+            boot.wall = Lit("AS_Wall", surface, "C9923F");            // the ochre of Window in the Studio (Van Gogh Museum)
             boot.revealLeft = Unlit("AS_RevealLeft", unlit, "C4DCDC");   // pale blue
             boot.revealRight = Unlit("AS_RevealRight", unlit, "A6D2C0");  // green
             boot.revealLeft.SetFloat("_Cull", 0f); boot.revealRight.SetFloat("_Cull", 0f);
-            boot.canvas = Lit("AS_Canvas", lit, "D9C9A3");
-            boot.floor = Lit("AS_Floor", lit, "A0623A");
-            boot.ceiling = Lit("AS_Ceiling", lit, "E8DCC0");
-            boot.wood = Lit("AS_Wood", lit, "8A5A2E");
-            boot.frame = Lit("AS_Frame", lit, "2C3A2C");
-            boot.brushHead = Lit("AS_BrushHead", lit, "E6D3A3");
-            boot.vincent = Lit("AS_Vincent", lit, "3E5C8A");
+            boot.canvas = Lit("AS_Canvas", surface, "D9C9A3");
+            boot.floor = Lit("AS_Floor", surface, "A0623A");
+            boot.ceiling = Lit("AS_Ceiling", surface, "E8DCC0");
+            boot.wood = Lit("AS_Wood", surface, "8A5A2E");
+            boot.frame = Lit("AS_Frame", surface, "2C3A2C");
+            boot.brushHead = Lit("AS_BrushHead", surface, "E6D3A3");
+            boot.vincent = Lit("AS_Vincent", surface, "3E5C8A");
             boot.bark = Mat("AS_Bark", barkShader);
             boot.ink = Mat("AS_Ink", inkShader);
             boot.skyMaterial = Mat("AS_Sky", skyShader);

@@ -115,6 +115,16 @@ namespace InnerFrame.AlmondStudio
         public Color sunColour = new Color(1f, 0.93f, 0.8f);
         public float sunIntensity = 1.1f;
 
+        [Header("Flat painted shading (as in Window in the Studio)")]
+        [Tooltip("On: the room's surfaces use AS_Painted (unlit, one shade per face, no shadows); the sun lights only the Tripo props, softly. Off: the old URP Lit look. Run Build after changing it.")]
+        public bool flatShading = true;
+        [Tooltip("Toward the light: faces turned this way are the full colour. Default: from above and from the window (north).")]
+        public Vector3 shadeDirection = new Vector3(0.25f, 0.8f, 0.55f);
+        [Tooltip("What a face turned right away from the light keeps (1 = no shade at all).")] [Range(0.4f, 1f)] public float shadeMin = 0.78f;
+        [Tooltip("With flat shading: the ambient light on the Tripo chairs and easel (URP Lit), bright so they match the room.")]
+        public Color flatAmbient = new Color(0.82f, 0.78f, 0.72f);
+        [Tooltip("With flat shading: the sun on the Tripo chairs and easel, without shadows.")] public float flatSunIntensity = 0.45f;
+
         [Header("Editor fallback (no headset)")]
         public float editorGrabReach = 3f;
         public Vector3 editorHoldOffset = new Vector3(0.18f, -0.22f, 0.35f);

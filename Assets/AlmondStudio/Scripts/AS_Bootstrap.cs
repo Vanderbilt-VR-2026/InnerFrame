@@ -69,7 +69,8 @@ namespace InnerFrame.AlmondStudio
 
             RenderSettings.skybox = null;
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
-            RenderSettings.ambientLight = layout.ambient;
+            RenderSettings.ambientLight = layout.flatShading ? layout.flatAmbient : layout.ambient;
+            ApplyShade();
             var cam = Camera.main;
             if (cam != null) { cam.clearFlags = CameraClearFlags.SolidColor; cam.backgroundColor = layout.skyBehind; }
 
@@ -146,8 +147,9 @@ namespace InnerFrame.AlmondStudio
             sun.transform.SetParent(world, false);
             sun.type = LightType.Directional;
             sun.color = layout.sunColour;
-            sun.intensity = layout.sunIntensity;
-            sun.shadows = LightShadows.Soft;
+            // with flat shading the room ignores lights (AS_Painted); the sun only touches the Tripo props, softly, no shadows
+            sun.intensity = layout.flatShading ? layout.flatSunIntensity : layout.sunIntensity;
+            sun.shadows = layout.flatShading ? LightShadows.None : LightShadows.Soft;
             sun.transform.rotation = Quaternion.Euler(35f, 200f, 0f);
 
             // the window's casements
@@ -618,10 +620,23 @@ namespace InnerFrame.AlmondStudio
             return go;
         }
 
+        static readonly int ShadeDirId = Shader.PropertyToID("_AS_ShadeDir"), ShadeMinId = Shader.PropertyToID("_AS_ShadeMin");
+
+        /// <summary>Hands AS_Layout's shade direction and depth to AS_Painted (globals, so every painted material follows).</summary>
+        void ApplyShade()
+        {
+            Vector3 d = layout.shadeDirection.sqrMagnitude > 1e-6f ? layout.shadeDirection.normalized : Vector3.up;
+            Shader.SetGlobalVector(ShadeDirId, new Vector4(d.x, d.y, d.z, 0f));
+            Shader.SetGlobalFloat(ShadeMinId, layout.shadeMin);
+        }
+
         // ------------------------------------------------------------------------------------------------ Editor keys
 
         void Update()
         {
+#if UNITY_EDITOR
+            ApplyShade();   // so shadeDirection and shadeMin can be tuned in AS_Layout during Play
+#endif
             if (XRSettings.isDeviceActive) return;
             var kb = Keyboard.current;
             var cam = Camera.main;

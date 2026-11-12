@@ -28,15 +28,18 @@
 #      "code ref (Resources.Load, by name, not verified)". The script holding
 #      such a line, and each script in "possible code references" at the end,
 #      is then followed by its own GUID like any asset ("via script
-#      <file>:<line>"), up to the prefabs and scenes that carry it. A script
-#      that starts itself ([RuntimeInitializeOnLoadMethod], a static class) is
-#      on no prefab or scene, so its tree ends at "no references".
+#      <file>:<line>"), up to the prefabs and scenes that carry it.
+#   6. A script that nothing refers to by GUID (one that starts itself, e.g. a
+#      static class with [RuntimeInitializeOnLoadMethod]) may pick its scene by
+#      name. Its string literals that equal a scene's name (a .unity file under
+#      Assets/, without the extension) are listed as "scene named in code, by
+#      name, not verified", with the scene's build mark.
 #
 # Not covered, and said so at the end of every run: Addressables, a load key
-# built at run time, a scene a script picks by its name, and file names inside
-# model files (an OBJ's .mtl names its textures). The script lists the *.cs
-# lines that contain the asset's file name (those with the whole name first),
-# as "possible code references, not checked".
+# or scene name built at run time, and file names inside model files (an
+# OBJ's .mtl names its textures). The script lists the *.cs lines that
+# contain the asset's file name (those with the whole name first), as
+# "possible code references, not checked".
 #
 # No Unity, no network. Works when LFS files are still pointers: models,
 # images and audio don't refer to other assets, and they aren't searched.
@@ -83,6 +86,8 @@ awk '
   $1 == "-" && $2 == "enabled:" { enabled = $3 }
   $1 == "path:" { sub(/^[ \t]*path:[ \t]*/, ""); print $0 "\t" enabled }
 ' ProjectSettings/EditorBuildSettings.asset > "$tmp/build" 2> /dev/null
+# Every scene (for scene names written in code).
+git ls-files -- 'Assets/*.unity' > "$tmp/scenes"
 
 # scene_mark PATH: [in build], [in build, disabled] or [not in build].
 scene_mark() {
@@ -157,6 +162,37 @@ show() {
     fi
   done < "$tmp/users.$depth"
   code_refs "$asset" "$depth" "$indent"
+  case $asset in
+    *.cs) [ -s "$tmp/users.$depth" ] || scenes_named_in "$asset" "$indent" ;;
+  esac
+}
+
+# scenes_named_in SCRIPT INDENT: the string literals in SCRIPT that equal the
+# name of a scene (a .unity file under Assets/), each with that scene's mark.
+scenes_named_in() {
+  local script=$1 indent=$2 lineno name scene
+  awk -v scene_list="$tmp/scenes" '
+    BEGIN {
+      while ((getline p < scene_list) > 0) {
+        n = p; sub(/^.*\//, "", n); sub(/\.unity$/, "", n); is_scene[n] = 1
+      }
+    }
+    {
+      rest = $0
+      while (match(rest, /"[^"]*"/)) {
+        lit = substr(rest, RSTART + 1, RLENGTH - 2)
+        rest = substr(rest, RSTART + RLENGTH)
+        if (lit in is_scene) print FNR "\t" lit
+      }
+    }' "$script" > "$tmp/named"
+  while IFS="$(printf '\t')" read -r lineno name; do
+    awk -v n="$name" '{ b = $0; sub(/^.*\//, "", b); sub(/\.unity$/, "", b) } b == n' \
+      "$tmp/scenes" > "$tmp/named.scenes"
+    while IFS= read -r scene; do
+      echo "${indent}scene named in code, by name, not verified: $scene" \
+           "($script:$lineno \"$name\")  $(scene_mark "$scene")"
+    done < "$tmp/named.scenes"
+  done < "$tmp/named"
 }
 
 # code_refs NODE DEPTH INDENT: if NODE sits under a Resources/ folder, print the
@@ -208,8 +244,8 @@ while IFS= read -r asset; do
   echo
 done < "$tmp/assets"
 
-echo "Not covered: Addressables, a load key built at run time, a scene a script picks"
-echo "by its name, and file names inside model files (an OBJ's .mtl)."
+echo "Not covered: Addressables, a load key or scene name built at run time, and"
+echo "file names inside model files (an OBJ's .mtl)."
 echo "possible code references, not checked (each script followed by its GUID):"
 found=0
 while IFS= read -r asset; do

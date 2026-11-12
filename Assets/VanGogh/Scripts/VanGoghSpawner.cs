@@ -30,8 +30,8 @@ public static class VanGoghSpawner
     // Here, measured in Play mode at room scale 0.889: the parked mirror is 12.7 cm off the left wall, the canvas
     // 13.7 cm, and he is 11 cm clear of the chair.
     static readonly Vector3 VincentAt = new Vector3(-1.45f, 0f, 0.65f);
-    static readonly Vector3 ArrivalAt = new Vector3(0.2f, 0f, -0.45f);
-    static readonly float VincentTurn = Mathf.Atan2(ArrivalAt.x - VincentAt.x, ArrivalAt.z - VincentAt.z) * Mathf.Rad2Deg;   // about 126
+    static readonly Vector3 ArrivalAt = new Vector3(0.2f, 0f, -0.45f);   // keep equal to Marker_Spawn in the room data
+    static readonly float VincentTurn = Mathf.Atan2(ArrivalAt.x - VincentAt.x, ArrivalAt.z - VincentAt.z) * Mathf.Rad2Deg;   // about 124
     // His eyes are level with the player's, so the two of you look at each other while you talk. The XR rig is
     // scaled 0.8 here (PaintedBedroomPhysicsTable.rigScale), so a standing visitor's eyes, about 1.60 m, are at
     // 1.28 m in the room; his are 1.55 m up the 1.70 m model (measured on the mesh). Follow the rig scale if it

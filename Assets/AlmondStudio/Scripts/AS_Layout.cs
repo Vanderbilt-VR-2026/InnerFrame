@@ -243,8 +243,13 @@ namespace InnerFrame.AlmondStudio
         [Tooltip("After you've read it.")] public string lineHappy = "A boy, and they have named him Vincent! After me. I could not be happier.";
         [Tooltip("Then, a few seconds later.")] public string lineInvite = "I want to paint something for his room, to hang above his cradle. The almond tree outside is just coming into blossom. Will you help me? Open the window.";
         public string hintDone = "Almond Blossom, Saint-Rémy, February 1890";
-        [Tooltip("Theo's letter, as you read it. Facts from Letters 847-848 (31 Jan 1890); check the wording at vangoghletters.org.")]
+        [Tooltip("At the top of the letter, in small italics: where and when we are, so the story is clear.")]
+        [TextArea(2, 5)] public string letterBackground =
+            "Saint-R\u00e9my, February 1890. Vincent has lived in the asylum here since last May, painting whenever he is well enough. A letter comes from his brother Theo in Paris.";
+        [Tooltip("Theo's letter, as you read it. A paraphrase from his letters of January 1890 (the birth: Letter 847, 31 Jan); check the wording at vangoghletters.org.")]
         [TextArea(8, 16)] public string letterText =
+            "Paris, 31 January 1890\n\nMy dear Vincent,\n\nToday Jo gave birth to a fine boy, and mother and child are both well. As we promised, we are naming him after you: Vincent Willem. I wish that he may be as determined and as courageous as you.\n\nThere is good news of your work too: Aurier has written about your paintings in the Mercure de France, and your canvases are hanging in Brussels with Les Vingt.\n\nJo sends you her love.\n\nYour brother,\nTheo";
+        public const string LetterTextV5 =
             "Paris, 31 January 1890\n\nMy dear Vincent,\n\nJo has given birth to our son, a beautiful boy.\n\nAs we told you, we are naming him after you: Vincent Willem. I wish that he may be as persevering and as courageous as you.\n\nJo sends you her love, and so do I.\n\nYour brother,\nTheo";
         [Tooltip("How close (metres) you need to be to take the letter with the trigger.")] public float letterReach = 1.8f;
         [Tooltip("Reading: the trigger puts it down after this long; it goes down by itself after the max.")] public float letterMinSeconds = 2f, letterMaxSeconds = 25f;

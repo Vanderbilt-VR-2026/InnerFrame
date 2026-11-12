@@ -51,7 +51,7 @@ namespace InnerFrame.AlmondStudio
             guides.Show(false);
             letterTaken = false;
             if (letterInHand != null) letterInHand.gameObject.SetActive(true);
-            if (letterView != null) letterView.Hide();
+            if (letterView != null) letterView.Hide(atOnce: true);
             if (endPainting != null)
             {
                 // its full size, read once (a restart in the middle of growing in must not keep the half size)
@@ -78,9 +78,10 @@ namespace InnerFrame.AlmondStudio
                 case AS_State.ReadLetter:
                     // the letter comes up in front of you: Theo's news
                     Pose(layout.vincentIdleClip);
-                    if (letterInHand != null) letterInHand.gameObject.SetActive(false);
+                    // the blurry sheet in his hand flies to you and grows; the words come in as it arrives
                     var cam = Camera.main;
-                    if (letterView != null && cam != null) letterView.Show(cam.transform, layout.letterText);
+                    if (letterView != null && cam != null) letterView.Show(cam.transform, layout.letterBackground, layout.letterText, letterInHand);
+                    if (letterInHand != null) letterInHand.gameObject.SetActive(false);
                     if (ui != null) ui.Clear();
                     Hint(layout.hintRead);
                     Input?.Haptic(0.3f, 0.1f);
@@ -129,7 +130,7 @@ namespace InnerFrame.AlmondStudio
                     break;
                 case AS_State.ReadLetter:
                     // put it away: the trigger again (after a moment), or it closes by itself
-                    if ((stateTime > layout.letterMinSeconds && TriggerPressed()) || stateTime > layout.letterMaxSeconds) Enter(AS_State.Invite);
+                    if ((stateTime > layout.letterMinSeconds && (letterView == null || letterView.Arrived) && TriggerPressed()) || stateTime > layout.letterMaxSeconds) Enter(AS_State.Invite);
                     break;
                 case AS_State.Invite:
                     if (stateTime > layout.happySeconds && !invited) { invited = true; Pose(layout.vincentTalkClip); Say(layout.lineInvite); Hint(layout.hintOpen); }

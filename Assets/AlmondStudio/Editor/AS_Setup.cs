@@ -124,6 +124,19 @@ namespace InnerFrame.AlmondStudio.EditorTools
                 layout.layoutVersion = 6;
                 EditorUtility.SetDirty(layout);
             }
+            if (layout.layoutVersion < 7)
+            {
+                // version 7 (2026-11-12): the letter says a little more of what has happened (his paintings in Paris
+                // and Brussels) under a line of background; only if it hadn't been edited
+                if (layout.letterText == AS_Layout.LetterTextV5)
+                {
+                    var d7 = ScriptableObject.CreateInstance<AS_Layout>();
+                    layout.letterText = d7.letterText;
+                    Object.DestroyImmediate(d7);
+                }
+                layout.layoutVersion = 7;
+                EditorUtility.SetDirty(layout);
+            }
 
             var lit = Shader.Find("Universal Render Pipeline/Lit");
             var unlit = Shader.Find("Universal Render Pipeline/Unlit");

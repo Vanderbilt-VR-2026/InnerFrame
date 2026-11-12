@@ -31,6 +31,7 @@ namespace InnerFrame.AlmondStudio
         [Tooltip("The chest with its boxes (Art/Props/AS_ChestBoxes.fbx). Boxes if missing.")] public GameObject chestModel;
         [Tooltip("The Tripo casement, left leaf (Art/Props/AS_Casement.fbx); the right leaf is its mirror.")] public GameObject casementModel;
         [Tooltip("His closed paint box (Art/Props/AS_PaintBox.fbx). The built open box if missing.")] public GameObject paintBoxModel;
+        [Tooltip("The door with its frame (Art/Props/AS_Door.fbx). The built door if missing.")] public GameObject doorModel;
         [Tooltip("The work table (Art/Props/AS_Table.fbx). The built table if missing.")] public GameObject tableModel;
         [Tooltip("One per AS_Layout.sideCanvases entry (null = blank), made by Build from Textures/Canvases.")] public Material[] sideCanvasMaterials = new Material[0];
         public Material easelMaterial;
@@ -159,7 +160,20 @@ namespace InnerFrame.AlmondStudio
             compare.layout = layout;
             compare.references = references;
             // S03: the door a little east of the middle of the south wall, the easel west of it (both seen facing south)
-            Door(world, new Vector3(0.3f, 0f, 0f), 1.0f, 2.15f);   // grey-green, as in S03
+            if (doorModel != null)
+            {
+                // the Tripo door, its back against the south wall's face (z = 0), front toward the room
+                var door = PropModel(world, "Door (Tripo)", doorModel, layout.doorModelEuler, layout.doorModelHeight, new Vector3(0.3f, 0f, 0.1f));
+                var drs = door.GetComponentsInChildren<Renderer>();
+                if (drs.Length > 0)
+                {
+                    var db = drs[0].bounds;
+                    foreach (var r in drs) db.Encapsulate(r.bounds);
+                    door.transform.position += new Vector3(0f, 0f, 0.005f - db.min.z);
+                }
+            }
+            else
+                Door(world, new Vector3(0.3f, 0f, 0f), 1.0f, 2.15f);   // grey-green, as in S03
             Easel(world, new Vector3(-1.15f, 0f, 0.35f));
             if (chestModel != null)
                 PropModel(world, "Chest and boxes", chestModel, layout.chestModelEuler, layout.chestModelHeight, new Vector3(layout.chestSpot.x, 0f, layout.chestSpot.y));

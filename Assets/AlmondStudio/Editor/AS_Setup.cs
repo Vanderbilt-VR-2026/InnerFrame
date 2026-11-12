@@ -34,6 +34,7 @@ namespace InnerFrame.AlmondStudio.EditorTools
         const string CasementModel = Root + "/Art/Props/AS_Casement.fbx";    // Serena's Tripo casement (left leaf), 11 Nov
         const string PaintBoxModel = Root + "/Art/Props/AS_PaintBox.fbx";    // Serena's Tripo paint box, 11 Nov
         const string TableModel = Root + "/Art/Props/AS_Table.fbx";          // the Tripo work table, when it is made
+        const string DoorModel = Root + "/Art/Props/AS_Door.fbx";            // the Tripo door, when it is made
         const string WindowFolder = Root + "/Textures/Window";               // the painted window (ChatGPT, panes cut out)
         const string XrOriginPrefab = "Assets/Samples/XR Interaction Toolkit/3.3.2/Starter Assets/Prefabs/XR Origin (XR Rig).prefab";
         const string XrOriginName = "XR Origin (XR Rig)";
@@ -219,6 +220,7 @@ namespace InnerFrame.AlmondStudio.EditorTools
             if (boot.casementModel == null) Debug.Log("[AS Setup] No Tripo casement at " + CasementModel + "; the painted or built casements are used.");
             boot.paintBoxModel = AssetDatabase.LoadAssetAtPath<GameObject>(PaintBoxModel);
             boot.tableModel = AssetDatabase.LoadAssetAtPath<GameObject>(TableModel);
+            boot.doorModel = AssetDatabase.LoadAssetAtPath<GameObject>(DoorModel);
             boot.chestModel = AssetDatabase.LoadAssetAtPath<GameObject>(ChestModel);
             if (boot.chestModel == null) Debug.Log("[AS Setup] No chest at " + ChestModel + "; the corner keeps its boxes.");
             boot.casementLeft = Cutout("AS_CasementL", surface, "AS_CasementL.png");

@@ -116,6 +116,8 @@ namespace InnerFrame.AlmondStudio
         [Tooltip("Turns the easel; 0 = its ledge toward the room (north).")] public float easelYaw = 0f;
         [Tooltip("Shows the easel's blank canvas (VG_Canvas). Off: Act 4 has no canvas to paint.")] public bool easelCanvas = false;
         [Tooltip("The door's panels: columns x rows.")] public Vector2Int doorPanels = new Vector2Int(2, 3);
+        [Tooltip("Turns the Tripo door upright with its front toward the room (north, +z: Y 0, unlike the north-wall props).")] public Vector3 doorModelEuler = new Vector3(270f, 0f, 0f);
+        [Tooltip("The Tripo door with its frame, floor to top, metres: sets its scale.")] public float doorModelHeight = 2.3f;
         [Tooltip("Where the paint box stands on the table (x, z), and its turn.")] public Vector2 paintBoxSpot = new Vector2(-0.3f, 1.9f);
         public float paintBoxYaw = 12f;
         [Tooltip("Turns the Tripo paint box upright, front toward the room (as the other Tripo props); paintBoxYaw is added.")] public Vector3 paintBoxModelEuler = new Vector3(270f, 180f, 0f);

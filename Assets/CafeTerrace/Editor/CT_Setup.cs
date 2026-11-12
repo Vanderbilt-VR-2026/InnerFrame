@@ -250,6 +250,7 @@ namespace InnerFrame.CafeTerrace.EditorTools
                     m.SetFloat("_TexGain", 1f); m.SetFloat("_TexDesat", 0f);
                     m.SetFloat("_VertexLight", 1f); m.SetFloat("_LightRange", l.lightRange); m.SetFloat("_Saturation", l.saturation);
                     m.SetColor("_Tint", Color.white);     // lit in place: the light is in the mesh's vertices
+                    m.SetFloat("_Cull", row.name == "CT_Tree" ? 0f : 2f);   // leaves are seen from both sides
                 });
             Mat("CT_LanternGlass", "InnerFrame/CafeTerrace/Glass", m => m.SetColor("_Color", new Color(0.42f, 0.3f, 0.1f, 1f)));
             Mat("CT_Flame", painted, m =>
@@ -479,6 +480,12 @@ namespace InnerFrame.CafeTerrace.EditorTools
                     var model = Model(root, row.name);
                     var r = model.GetComponentInChildren<MeshRenderer>(true);
                     r.sharedMaterials = row.glass ? new[] { M(row.name), M("CT_LanternGlass") } : new[] { M(row.name) };
+                    if (row.name == "CT_Tree")
+                    {
+                        var colliders = Child(root, "Colliders");
+                        foreach (var o in e.objects.Where(o => o.model == row.name))
+                            Box(colliders, "Trunk", CT_Layout.ToUnity(o.x, o.y, o.z + 1.75f), new Vector3(0.5f, 3.5f, 0.5f));
+                    }
                     if (row.name == "CT_Tables")
                     {
                         var colliders = Child(root, "Colliders");
@@ -522,7 +529,7 @@ namespace InnerFrame.CafeTerrace.EditorTools
             b.layout = Load<CT_Layout>(LayoutPath);
             GameObject P(string n) => AssetDatabase.LoadAssetAtPath<GameObject>($"{Prefabs}/{n}.prefab");
             b.setPrefab = P("CT_Set"); b.placeholdersPrefab = P("CT_Placeholders");
-            b.chairsPrefab = P("CT_Chairs"); b.tablesPrefab = P("CT_Tables"); b.lanternPrefab = P("CT_Lantern");
+            b.chairsPrefab = P("CT_Chairs"); b.tablesPrefab = P("CT_Tables"); b.lanternPrefab = P("CT_Lantern"); b.treePrefab = P("CT_Tree");
             b.flamePrefab = P("CT_Flame"); b.skyPrefab = P("CT_Sky");
         }
 

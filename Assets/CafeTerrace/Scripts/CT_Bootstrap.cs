@@ -14,7 +14,7 @@ namespace InnerFrame.CafeTerrace
     public class CT_Bootstrap : MonoBehaviour
     {
         public CT_Layout layout;
-        public GameObject setPrefab, placeholdersPrefab, chairsPrefab, tablesPrefab, lanternPrefab, flamePrefab, skyPrefab;
+        public GameObject setPrefab, placeholdersPrefab, chairsPrefab, tablesPrefab, lanternPrefab, treePrefab, flamePrefab, skyPrefab;
 
         public Transform World { get; private set; }
 
@@ -61,6 +61,7 @@ namespace InnerFrame.CafeTerrace
             Spawn(chairsPrefab, "CT_Chairs");
             Spawn(tablesPrefab, "CT_Tables");
             Spawn(lanternPrefab, "CT_Lantern");
+            Spawn(treePrefab, "CT_Tree");
 
             var flame = Spawn(flamePrefab, "CT_Flame");
             if (flame != null) flame.transform.localPosition = CT_Layout.ToUnity(layout.flame);

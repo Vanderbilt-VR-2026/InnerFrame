@@ -216,6 +216,13 @@
    "triangles": 37350,
    "copies": 9,
    "glass": false
+  },
+  {
+   "name": "CT_Tree",
+   "texture": "CT_Tree.png",
+   "triangles": 20000,
+   "copies": 1,
+   "glass": false
   }
  ],
  "objects": [
@@ -636,6 +643,17 @@
    "sx": 0.65115,
    "sy": 0.65115,
    "sz": 0.75066
+  },
+  {
+   "name": "Tree",
+   "model": "CT_Tree",
+   "x": 2.0,
+   "y": 3.0,
+   "z": 0.0,
+   "rotZ": 0.0,
+   "sx": 8.66345,
+   "sy": 8.66345,
+   "sz": 8.66345
   }
  ],
  "placeholders": [
@@ -710,9 +728,6 @@
   },
   {
    "name": "PH_Vincent"
-  },
-  {
-   "name": "PH_Tree"
   },
   {
    "name": "PH_Easel"

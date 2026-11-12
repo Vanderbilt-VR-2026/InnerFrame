@@ -42,6 +42,9 @@ namespace InnerFrame.PaintedBedroom
             if (grab != null) grab.selectExited.AddListener(_ => Wake());
         }
 
+        /// <summary>The room was resized about the world origin: its place in the painting moves with it.</summary>
+        public void ScaleHome(float ratio) => homePosition *= ratio;
+
         /// <summary>About to be moved by code (desktop carry, inspect): when shared, ask to own it so the move is seen by everyone.</summary>
         public void Claim()
         {

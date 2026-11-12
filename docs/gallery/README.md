@@ -29,12 +29,12 @@ The room is 7 × 9 × 4 m: x from −3.5 (east wall) to 3.5 (west wall), z from 
 
 | Part | What | Material (texture slot) |
 |---|---|---|
-| Walls, arch spandrels | 0.2 m thick | `Mat_Wall` (`wall.png`, 2 m per repeat) |
+| Walls, arch spandrels | 0.2 m thick | `Mat_Wall` (`wall.png`, 2 m per repeat; shifted from crimson to orange-red by `make_textures.py`'s `GAIN`) |
 | Wainscot | 1.0 m panelling on every wall, stopping at the two frames and the arch | `Mat_Wainscot` (`wainscot.png`, 1.5 m per repeat, once upwards) |
 | Cornice (0.25 m under the ceiling) | | `Mat_Cornice` (`cornice.png`, a moulding profile mapped once up the band, 0.5 m across) |
 | Wainscot rail (0.06 m) | | `Mat_Rail` (`trim.png`, mapped once up the band) |
 | Arch moulding, skylight frame | | `Mat_Trim` (a plain panel cut from `trim.png`, 0.5 m) |
-| Ceiling, with the 3 × 2.5 m skylight in its middle | | `Mat_Ceiling` (`ceiling.png`, 2 m) |
+| Ceiling, with the 3 × 2.5 m skylight in its middle | | `Mat_Ceiling` (`ceiling.png`, 2 m; lightened to cream by `GAIN`) |
 | Floor | | `Mat_Floor` (`floor.png`, 2 m) |
 | Arch | 1.6 m wide, round-headed, 2.6 m to the crown; the door fills it at the wall's outer face | door: `Mat_Door` (`door.png`, once) |
 | Frame (`Frame_Bedroom`, and The Starry Night's copy of it) | A carved baroque frame made in `build_gallery.py`, after the team's reference: a moulded profile (stepped sight edge, inner bead, hollow, broad flat band, bold rounded outer rim) swept round the opening, and at each corner a cartouche: a raised cushion, a C-scroll curling along each rail, a fan of five acanthus leaves and a boss. 0.18 m wide (the cartouches stand 1.5 cm past its edge; the wainscot's cut-outs leave 3 cm round it), about 2,600 triangles | `Mat_Frame` (`frame.png`, ChatGPT gilt): its UVs run along each rail and up the profile from the inner edge, so the strokes follow the moulding; each ornament takes a patch of the gilt's middle band, smooth-shaded (also Vincent's portrait's frame) |
@@ -53,7 +53,7 @@ ChatGPT sheet: 423 × 546 pixels, so it is soft up close; a full-size `door.png`
 | Potted plant (0.7×, 0.9 m tall) | 3 | The two north corners, and one on the east side of the arch, beside the door (the one behind the statue was taken out) |
 | Hydrangeas on a turned walnut column stand (top 0.45 m square at 0.9 m) | 2 | East wall by the arch (−3.0, 2.4); west wall (3.0, −1.0) |
 | Lantern with a lit candle inside, on a wall arm | 4 | Each side of the arch (x = ±1.45, its ring at 2.35 m), and one on each side wall at z = 1 (just south of The Starry Night's frame, so neither covers a painting) |
-| Sky | 1 | A painted sky card (`GT_Sky`, ChatGPT clouds) seen through the skylight: unlit at 72 % brightness (full glared against the warm room), facing down, 14 m square, 2 m above the ceiling, so its edge never shows; the clouds repeat every 4 m. It casts no shadow, so the sun still comes in |
+| Sky | 1 | A painted sky card (`GT_Sky`, ChatGPT clouds) seen through the skylight: unlit at 95 % brightness (72 % until the room was brightened on 2026-11-11), facing down, 14 m square, 2 m above the ceiling, so its edge never shows; the clouds repeat every 4 m. It casts no shadow, so the sun still comes in |
 | Ceiling spotlight: a dark fitting, a warm bulb, a ball of light under it, a glow on the ceiling and a pool of light on the floor below | 16 | A ring 0.3 m outside the skylight's frame, five along each long side and three along each short one, as in the concept sheet. Not lights (the four lanterns use the four the Quest lights per object): the bulb is unlit; the ceiling glow (2 m), the ball (0.8 m) and the floor pool (1.8 m, just above the rug) are The Starry Night's glow shader and soft dot added on top. The ball is a card that `Scripts/GP_GlowBillboards.cs` turns to face each camera as it renders (and puts back after, so the scene never saves it turned); the ceiling hides its upper half. The floor pools brighten the floor, not the objects standing on it |
 
 ### Lamp light
@@ -66,11 +66,41 @@ Each lantern is built like The Starry Night's (`SN_Lantern`):
   a few centimetres from the panes and would light them white.
 - **Flame:** The Starry Night's own flame (`SN_FlameCross` mesh, `SN_Flame` material), 1.3× its size, standing on the
   candle's wick (0.417 m below the ring's top, measured into `tripo_props.json`).
-- **Light:** a warm (about 2700 K) realtime point light 1 cm above the flame: intensity 3, range 6 m, no shadows.
+- **Light:** a warm (2800 K, `LampKelvin`) realtime point light 1 cm above the flame: intensity 1.6, range 4 m, no
+  shadows. Decoration, not the room's main light (intensity 3 and range 6 m until 2026-11-11): dimmer, so its bright patch on the wall is small.
 
-The Quest's render asset (`Mobile_RPAsset`) draws up to 4 extra per-pixel lights per object and no extra-light shadows.
-Four lamps use all four; the table lamp the concept sheet has (below) would have to replace one. `GalleryDecorCheck` fails if the scene has more
-than 4.
+The Quest's render asset (`Mobile_RPAsset`) draws up to 6 extra per-pixel lights per object and no extra-light shadows.
+The four lanterns and the two painting spotlights use all six (the floor, walls and rug are one mesh each across the
+room, so they meet every light); the table lamp the concept sheet has (below) would have to replace one. `GalleryDecorCheck`
+fails if the scene has more point and spot lights than the limit. (A fifth, hanging in front of The Bedroom, was tried on 2026-11-11 and
+taken out: it added little.)
+
+### Sun, shadows, fill and spotlights (`GalleryLightingSetup.cs`, added by Add Decor, reset by Reset Lighting to Built)
+
+Three kinds of light, by colour temperature: the lanterns warmest (2800 K), the painting spotlights white (6600 K,
+`SpotKelvin`, so the paintings keep their true colours), the fill 3800 K (`AmbientKelvin`). `Kelvin()` turns a temperature into a colour.
+
+- **Sun:** the scene's one directional light, aimed through the skylight onto the floor about 2.5 m in front of The
+  Bedroom (`SunEuler` 58, 180, 0), warm, intensity 1.6, soft shadows. A second directional light is switched off, not deleted.
+- **Shadows** (both render assets, so the editor matches the headset): 12 m distance over one 2048 map (about 1 cm per
+  texel), depth and normal bias 0.3, soft shadows at low quality. Before, 50 m over a 1024 map on the Quest with a
+  normal bias of 1 made the skylight's shadow blocky, and the bias ate its 6 cm bars, so light leaked between them.
+- **Fill (ambient):** trilight, soft and neutral-warm, so the room isn't dark between the lamps: 3800 K at 0.8 from above,
+  0.65 at the walls' height and 0.55 from below (`AmbientSkyLevel`, `AmbientEquatorLevel`, `AmbientGroundLevel`; the last
+  lights the ceiling, which faces down). The default skybox ambient was dim and blue,
+  and without a lighting bake the headset doesn't get the editor's skybox ambient.
+- **The Bedroom's painting** (`Mat_TheBedroom.mat`): URP Lit, white, smoothness 0.1
+  (no glow: its spotlight lights it). It was URP Unlit tinted
+  blue-grey (0.42, 0.58, 0.71), so no lamp lit it and the tint halved its brightness.
+  The Starry Night's (`SN_GalleryPainting.mat`) is URP Lit, white and matte too.
+- **Painting spotlights** (`PaintingLights`, a scene root after the sun): one per painting, on a small dark fitting (a stem
+  and a can) 0.12 m below the ceiling and 1.2 m out from the painting, aimed at its middle, its cone 6° wider than the
+  painting's diagonal; white (6600 K), intensity 5 (`SpotIntensity`), no shadows. Placed from the paintings' own positions in
+  the scene, so they follow a painting that moves.
+
+Don't tune the light in Play mode: Unity throws away every change made in Play mode when you stop. Tune it in Edit mode
+and save (Add Decor keeps it), or change the constants at the top of `GalleryLightingSetup.cs` and run
+**Tools > InnerFrame > Gallery > Reset Lighting to Built**.
 
 Only the plinths and plant pots (boxes) and the shell (Gallery.fbx's generated mesh colliders) stop you; the lanterns and
 the frames' carving has its generated collider like the rest of the shell. Nothing covers the spawn point's view of The Bedroom or Vincent's portrait.
@@ -87,9 +117,16 @@ the frames' carving has its generated collider like the rest of the shell. Nothi
 
 ## Change the decoration
 
-Don't move the props in the scene: the next run of the setup reverts any override. Change the spots in
-`GalleryDecorSetup.cs` (the `Statues`, `Plants`, `Vases`, `Lanterns` and `Frames` tables), then run
-**Tools > InnerFrame > Gallery > Add Decor** and **Tools > InnerFrame > Gallery > Check Decor**. The check also renders
+**Hand edits stay.** Since 2026-11-11, **Tools > InnerFrame > Gallery > Add Decor** only adds what is missing (the decor,
+its prefab, a material, the painting spotlights, an empty texture slot) and leaves everything already there as it is. Move
+a lantern, tune the sun or a material in the editor, save, and Add Decor keeps it. Make those edits in **Edit mode**: Unity
+itself throws away changes made in Play mode when Play mode ends.
+
+To go back to the code's values, run **Tools > InnerFrame > Gallery > Reset to Built (discards hand edits)**. It reverts the
+decor instance's overrides, rebuilds the prefab, and rewrites the materials, the lighting and the render settings. It never
+deletes objects you added yourself. **Reset Lighting to Built** does the same for the lighting only. Changing the spots in
+`GalleryDecorSetup.cs` (the `Statues`, `Plants`, `Vases` and `Lanterns` tables) takes a Reset to Built to show. Then run
+**Tools > InnerFrame > Gallery > Check Decor**. The check also renders
 nine views (five from eye height; a side-wall lamp, the frame's corner, the ceiling spots and a pedestal close up) to `Logs/GalleryDecor/`.
 
 To change the room itself, edit the parameters at the top of `build_gallery.py`, run it, then Add Decor. If the east
@@ -116,6 +153,8 @@ Blender --background --factory-startup --python Art/Source/Gallery/make_tripo_pr
 - Spawn: The Bedroom and Vincent's portrait are in full view; nothing is in the way.
 - Teleport onto the rug and round the bench; you can't walk through the bench, the plinths, the pots or the door.
 - Look back at the arch: the door fills it; the four lanterns glow, you see each candle through the amber glass.
+- Look up at the skylight: its bars throw crisp shadows on the floor, no light leaks between the bars and the frame.
+  The Bedroom is lit, not dim and blue.
 - The wainscot stops cleanly at both paintings' frames; the frames' carving reads as one piece with the frame.
 - The plant leaves, hydrangea petals and lantern panes look solid from every side.
 - With textures in: no visible seam where the wall, floor, wainscot, wood or fabric repeat.

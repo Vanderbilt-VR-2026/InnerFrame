@@ -137,7 +137,7 @@ and teleport (the hilltop is a teleport area out to 5.5 m; low invisible walls s
 | 1 / 2 | jump to the player start / the player seat |
 
 Vincent's words and the hint use the shared dialogue box, the same as in every scene: `VG_DialogueUI`
-(`Assets/VanGogh/Prefabs/VG_DialogueUI.prefab`, spawned by `SN_Bootstrap` like everything else) with this scene's
+(`Assets/Shared/UI/Prefabs/VG_DialogueUI.prefab`, spawned by `SN_Bootstrap` like everything else) with this scene's
 settings, `VG_Dialogue_StarryNight.asset`: 1.6 m ahead, its top edge 22° below the gaze (at a level gaze the box spans
 −29° to −22° and the hint's plate −19° to −14°, under the village's lowest windows; looking 25° up the hint's top is at
 10°, under the swirl), 33° wide, 4.0 cm capitals for his line, the hint (the step's title and its line, see "The story";
@@ -261,7 +261,7 @@ The Gallery entrance check (`Editor/Tests/SN_GalleryCheck.cs`, edit mode;
    its top, no Gallery collider crossing the frame or the pedestal (physics), the gap to the nearest bench (0.42 m);
 4. the same offsets, meshes, materials and button settings as The Bedroom's (in the same scene);
 5. the build list (enabled, after the Gallery, not first); the image (2048 × 1622, imported 2048 × 2048, ASTC 6×6 on
-   Android) and its material (URP Unlit, white);
+   Android) and its material (URP Lit, white, matte, so the Gallery's lamps light it);
 6. `SN_GallerySetup` run again changes nothing (the files' hashes are equal); with the entrance moved in memory it puts it
    back and saves `Gallery.unity` byte for byte as it was.
 Controls that must fail: a button aimed at PaintedBedroom, no persistent call, a second entrance, the entrance moved

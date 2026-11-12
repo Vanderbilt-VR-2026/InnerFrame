@@ -10,7 +10,7 @@ namespace InnerFrame.StarryNight
     /// <summary>
     /// The only thing in StarryNight.unity besides the player rig: at runtime it spawns the hilltop, the rock, the
     /// cypress, the lantern, the sketchbook, the page, Vincent (his charcoal in his hand), the sky and the beam from the prefabs in
-    /// Assets/StarryNight/Prefabs, and the shared dialogue box (Assets/VanGogh/Prefabs/VG_DialogueUI.prefab with the
+    /// Assets/StarryNight/Prefabs, and the shared dialogue box (Assets/Shared/UI/Prefabs/VG_DialogueUI.prefab with the
     /// VG_Dialogue_StarryNight settings), places them from SN_Layout, and starts SN_Game.
     /// Editor fallback (no XR device): the mouse aims, Space is the trigger, G grabs or releases the nearest grabbable
     /// within SN_Layout.editorGrabReach, 1 and 2 jump to the player start and the player seat (DesktopTestRig walks

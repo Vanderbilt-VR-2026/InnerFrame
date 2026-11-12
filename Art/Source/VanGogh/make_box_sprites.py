@@ -1,4 +1,4 @@
-"""Sprites for Vincent's dialogue box and hint (Cici's concepts V1-V3, 2026-11-04), into Assets/VanGogh/Art/UI/.
+"""Sprites for Vincent's dialogue box and hint (Cici's concepts V1-V3, 2026-11-04), into Assets/Shared/UI/Art/.
 
 Run from the project folder:  python3 Art/Source/VanGogh/make_box_sprites.py   (needs Pillow)
 Then Tools > InnerFrame > Van Gogh > Rebuild assets, which imports them with the 9-slice borders below.
@@ -18,7 +18,7 @@ Everything is drawn 4x larger and scaled down (premultiplied), so the edges are 
 import os
 from PIL import Image, ImageDraw, ImageFilter
 
-OUT = "Assets/VanGogh/Art/UI"
+OUT = "Assets/Shared/UI/Art"
 SS = 4
 NIGHT = (0x0E, 0x1A, 0x3F)
 CHROME = (0xE9, 0xC1, 0x4A)

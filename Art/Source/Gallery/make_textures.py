@@ -99,7 +99,13 @@ def save(px, name, size):
 
 
 # brightness lifts, for images too dark to show their strokes under the room's lights (linear colour times this)
-GAIN = {"Pedestal": 2.6}   # ChatGPT's ebonised wood: mean ~8 %; at 1.8 it still read black from 2 m
+# A tuple is per channel (R, G, B), to shift the colour. The Wall and Ceiling gains (2026-11-11) were applied to the
+# GT_*_BaseColor.jpg already in the repo, so don't apply them again by hand; running this script from the source images does.
+GAIN = {
+    "Pedestal": 2.6,               # ChatGPT's ebonised wood: mean ~8 %; at 1.8 it still read black from 2 m
+    "Wall": (1.55, 3.7, 3.2),      # crimson (mean sRGB 147, 31, 16) to the concept sheet's orange-red (179, 63, 35)
+    "Ceiling": (1.22, 1.43, 1.6),  # beige (203, 162, 122) to a light cream (222, 190, 152): the room's biggest surface
+}
 
 os.makedirs(OUT, exist_ok=True)
 done = []
@@ -123,6 +129,6 @@ for stem, outputs in SLOTS.items():
         if kind in ("tile", "tile_turned", "plain"):
             px = wrap(px, 0)
         if name in GAIN:
-            px = px.copy(); px[:, :, :3] = np.clip(px[:, :, :3] * GAIN[name], 0.0, 1.0)
+            px = px.copy(); px[:, :, :3] = np.clip(px[:, :, :3] * np.asarray(GAIN[name], dtype=np.float32), 0.0, 1.0)
         done.append(f"{os.path.basename(found[0])} ({w} x {h}) -> {save(np.ascontiguousarray(px), name, size)} ({kind})")
 print("\n".join(done) if done else f"no textures found in {IN} (looked for {', '.join(SLOTS)})")

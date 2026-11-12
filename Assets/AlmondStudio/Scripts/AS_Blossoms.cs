@@ -66,8 +66,8 @@ namespace InnerFrame.AlmondStudio
                     Vector3 offset = Vector3.zero;
                     if (c > 0)
                     {
-                        float a = (float)rnd.NextDouble() * Mathf.PI * 2f, r = l.blossomClusterSpread * Mathf.Lerp(0.45f, 1f, (float)rnd.NextDouble());
-                        offset = (u * Mathf.Cos(a) + w * Mathf.Sin(a)) * r;
+                        float a = (float)rnd.NextDouble() * Mathf.PI * 2f, spread = l.blossomClusterSpread * Mathf.Lerp(0.45f, 1f, (float)rnd.NextDouble());
+                        offset = (u * Mathf.Cos(a) + w * Mathf.Sin(a)) * spread;
                     }
                     var b = new Blossom
                     {

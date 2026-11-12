@@ -6,18 +6,18 @@ namespace InnerFrame.AlmondStudio
     /// <summary>
     /// The epilogue: a card in front of the player at the very end, with the real Almond Blossom, its title and a few
     /// lines of what became of it (painted for the newborn nephew; he grew up to found the Van Gogh Museum, where it
-    /// hangs). World-space canvas, 46 x 50 cm at 70 cm, cream paper; fades in and eases after a head turn like the
+    /// hangs). World-space canvas, 46 x 62 cm at 75 cm, cream paper; fades in and eases after a head turn like the
     /// letter. Built hidden by AS_Bootstrap; AS_Game shows it once you have looked at the painting on his easel.
     /// </summary>
     public class AS_EpilogueView : MonoBehaviour
     {
-        const float CardW = 460f, CardH = 500f, MmToM = 0.001f;
+        const float CardW = 460f, CardH = 620f, MmToM = 0.001f;
         Text title, body, credit;
         RawImage picture;
         CanvasGroup group;
         Transform follow;
         float shown = -1f;
-        public float distance = 0.7f, drop = 0.05f, fadeSeconds = 1.5f;
+        public float distance = 0.75f, drop = 0.05f, fadeSeconds = 1.5f;
 
         public static AS_EpilogueView Make(Transform parent, Texture painting, Font font)
         {

@@ -43,3 +43,11 @@ Café Terrace now uses the selected Parisian by Kevin MacLeod. The 36.5-second s
 `CafeMusicVerification.Begin` verifies delivered import settings, direct Café startup, loop wrapping, speech attenuation and recovery, voice gain preservation, and Café/Gallery/Starry/Bedroom routes. `PrepareAndBegin` is the separate initial authoring entry. The 45-check Editor report is `verification/cafe-music-play.txt`; audio measurements and review are alongside it. These checks do not claim physical Quest or live multiplayer validation.
 
 `IntegratedQuestBuild.Run` builds the current enabled scenes and requires Entrance first plus Gallery, PaintedBedroom, StarryNight and CafeTerrace. It no longer replaces Build Settings with an old four-scene list. Build output is `../InnerFrame-Integrated-Quest3.apk`; the build report is `Logs/CafeMusic/android-build.txt`.
+
+### Slack-shareable APK and local credentials
+
+`IntegratedQuestBuild.Run` and `RunForSlack` exclude `ConvaiApiKey.txt` before building. The tool verifies a durable backup outside Assets, uses Unity to remove the resource, checks the detailed packed-asset report, and restores the local key and its metadata in `finally`. It rejects duplicate key assets and refuses to overwrite a concurrently edited local key. An interrupted Editor can be recovered using the private backup's RECOVERY.txt; do not distribute that folder.
+
+`RunForSlack` writes `../deliverables/Quest3-Slack-Test/InnerFrame-Quest3-Slack-Test.apk`. The prior personal Cafe-Test APK contains a local credential and must not be distributed. The replacement preserves all five scenes, cards and music, but direct Convai replies require a separately configured service; without a key, the existing code falls back to the local AI proxy.
+
+The replacement built successfully in Unity 6000.3.23f1. Signature, APK archive, ARM64, minimum API 32, GameActivity, immersive VR and Quest 3 declarations were verified. Every decompressed APK ZIP entry was scanned for the local key in UTF-8, UTF-16 and Base64; no matches were found. The previous APK was used as a positive control. Local developer key and .meta were verified byte-for-byte after restoration. See `verification/slack-apk-credential-check.txt`. Physical Quest and multiplayer validation remain pending.

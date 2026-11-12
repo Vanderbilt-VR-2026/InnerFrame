@@ -201,7 +201,7 @@ namespace InnerFrame.AlmondStudio.EditorTools
             boot.sideCanvasMaterials = new Material[layout.sideCanvases.Length];
             for (int i = 0; i < layout.sideCanvases.Length; i++)
                 boot.sideCanvasMaterials[i] = Picture("AS_Canvas" + i, surface, Root + "/Textures/Canvases", layout.sideCanvases[i].file);
-            boot.letter = Picture("AS_Letter", surface, Root + "/Textures/Table", "AS_Letter");
+            boot.letterSheet = Picture("AS_Letter", surface, Root + "/Textures/Table", "AS_Letter");
             boot.birthCard = Picture("AS_BirthCard", surface, Root + "/Textures/Table", "AS_BirthCard");
             boot.sillTop = Lit("AS_Sill", surface, "EEE8DA");
             Paint(boot.sillTop, "AS_Ceiling.jpg", 0.8f, "E9E6DC");

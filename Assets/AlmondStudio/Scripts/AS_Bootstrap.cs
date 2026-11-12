@@ -21,7 +21,7 @@ namespace InnerFrame.AlmondStudio
     {
         public AS_Layout layout;
         [Tooltip("Assets/AlmondStudio/Data/AS_Branches.json: the branch paths.")] public TextAsset branchesJson;
-        public Material wall, floor, ceiling, wood, frame, windowFrame, sillTop, wallPictures, letter, birthCard, casementLeft, casementRight, fanlightPainted, revealLeft, revealRight, canvas, brushHead, vincent, bark, ink, skyMaterial, groundMaterial, glow, guideDot, blossom;
+        public Material wall, floor, ceiling, wood, frame, windowFrame, sillTop, wallPictures, letterSheet, birthCard, casementLeft, casementRight, fanlightPainted, revealLeft, revealRight, canvas, brushHead, vincent, bark, ink, skyMaterial, groundMaterial, glow, guideDot, blossom;
         [Tooltip("VG_DialogueUI.prefab: Vincent's words and the hint, as in every scene.")] public GameObject uiPrefab;
         public VG_DialogueSettings uiSettings;
         [Tooltip("The comparison pictures, one per AS_Layout.compareViews entry (Textures/Reference), set by Build.")] public Texture[] references = new Texture[0];
@@ -141,7 +141,7 @@ namespace InnerFrame.AlmondStudio
             if (layout.brushesLying) LyingBrushes(world, layout.brushPotSpot, layout.brushesYaw);   // two brushes, as in S06
             else BrushPot(world, new Vector3(layout.brushPotSpot.x, TableTop, layout.brushPotSpot.y));
             // Theo's letter and the printed birth card, lying on the table (pictures in Textures/Table)
-            if (letter != null) PaperOnTable(world, "Theo's letter", letter, 0.21f, layout.letterSpot, layout.letterYaw);
+            if (letterSheet != null) PaperOnTable(world, "Theo's letter", letterSheet, 0.21f, layout.letterSpot, layout.letterYaw);
             if (birthCard != null) PaperOnTable(world, "Birth card", birthCard, 0.13f, layout.cardSpot, layout.cardYaw);
 
             var compare = world.gameObject.AddComponent<AS_Compare>();

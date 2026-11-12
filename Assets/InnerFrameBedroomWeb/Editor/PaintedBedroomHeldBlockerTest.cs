@@ -135,7 +135,8 @@ namespace InnerFrame.PaintedBedroom.EditorTools
                     Debug.Log($"[HeldBlockerTest] hand out: mirror went {through:F3} m out, at {mirror.transform.position:F3}; carried with physics {blocker.CarriedWithPhysics}, grab {mirror.movementType}");
                     if (through > AllowedThrough) failure = $"the mirror went {through:F2} m out through the wall (allowed {AllowedThrough})";
                     var hat = UnityEngine.Object.FindObjectsByType<XRGrabInteractable>(FindObjectsSortMode.None).FirstOrDefault(g => g.name == "Hat");
-                    if (hat != null && hat.predictedVisualsTransform != null) failure ??= "the hat still has predicted visuals, drawn ahead of its body (through walls)";
+                    if (hat == null) failure ??= "no Hat in the scene, so predicted visuals can't be checked";
+                    else if (hat.predictedVisualsTransform != null) failure ??= "the hat still has predicted visuals, drawn ahead of its body (through walls)";
                     toMiddle = roomMiddle - start; toMiddle.y = 0f; toMiddle.Normalize();
                     hand.transform.position = start + toMiddle * In;   // back into the room, toward its middle, as a player would
                     Next();

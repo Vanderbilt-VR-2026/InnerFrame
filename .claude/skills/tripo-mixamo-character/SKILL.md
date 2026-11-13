@@ -5,7 +5,7 @@ description: Rig and animate a humanoid character for free: a Tripo model in a n
 
 # Tripo → Mixamo character (v0)
 
-**Status: v0, 4 Nov 2026, written from the first real run.** Vincent v2 went from a Tripo multi-view model to a Mixamo rig with eight clips, and Claude Code checked them in Blender (report on Cici's Mac: `cc-reports/2026-11-04-vincent-mixamo/`). Steps 1–5 are what was done there. Step 6 (Unity) hasn't run yet; update it after The Starry Night's step 3.
+**Status: v0, 4 Nov 2026, written from the first real run.** Vincent v2 went from a Tripo multi-view model to a Mixamo rig with eight clips, and Claude Code checked them in Blender (report on Cici's Mac: `cc-reports/2026-11-04-vincent-mixamo/`). Steps 1–5 are what was done there. Step 6 (Unity) was run in #137, for Vincent v2 in The Starry Night.
 
 Tags: `[V]` done and checked in this project · `[I]` expected, not yet tried here · `[docs: …]` from the vendor's page, with the date it was read.
 
@@ -40,7 +40,7 @@ So the whole pipeline costs the person asking nothing.
 - **Our repo is public.**
   - Adobe's FAQ allows use in games but doesn't say whether the raw files may be published. `[docs: Adobe Mixamo FAQ, 2026-11-04]`
   - A 2022 community FAQ (not Adobe staff) says raw character and animation files must not be given to anyone outside the team. `[docs: Adobe Community, 2022-09-29]`
-  - Until the team has checked with Molvig and decided, keep Mixamo files out of the repo, in a folder outside it, e.g. `CS-VR/refs/<name>-mixamo/`.
+  - Decided (Cici, 2026-11-04, after asking the professor; D22): commit the Mixamo character and the clips a scene uses. Clips no scene uses stay outside the repo, in `CS-VR/refs/<name>-mixamo/`. Give each committed file a row in `docs/ASSETS.md`.
 - **No face.** Mixamo makes body bones only: no jaw, no eyes. Vincent v2 has 33 bones and none of them is on his face. `[V]` A talking face needs its own plan. InnerFrame's plan is a jaw bone and eyelid cards, after Sonya's Convai answer.
 
 ## 1. Reference sheet: the 大 pose
@@ -136,12 +136,12 @@ Ask Cici for the 11/04 check prompt; it's written for her Mac's folders, so the 
 
 - **Seats:** sitting clips assume a seat at a fixed height relative to the body. Vincent's is 0.185 of his height: 0.26 m when he's 1.40 m tall. `[V]` Build the seat to match the clip, not the clip to the seat.
 
-## 6. Unity (the scene's owner) `[I: not yet run]`
+## 6. Unity (the scene's owner) `[V: run in #137, Vincent v2 in The Starry Night]`
 
 Cici's quest-asset-import skill has the general import steps for this project (folders, LFS, importer settings by script, budget); ask her. For a Mixamo character:
 
-- **Character FBX:** Rig → Animation Type **Humanoid**; Avatar Definition **Create From This Model**. If Unity says the character isn't in a T-pose: Configure → Pose → Enforce T-Pose.
-- **Clip FBXs:** Humanoid, then **Copy From Other Avatar** with the character's avatar. Tick Loop Time on idles and talking. For clips that travel, choose root motion or Bake Into Pose.
+- **Avatar** `[V]` (ground truth #48, from #137): build the Avatar from one clip's skeleton, not from the character. Pick a standing clip (Vincent: Breathing Idle): Rig → Animation Type **Humanoid**, Avatar Definition **Create From This Model**. The character FBX and every other clip: Humanoid, **Copy From Other Avatar** with that clip's avatar. "Create From This Model" on the Tripo → Mixamo character gave a rig mismatch: its own rest pose has the hips offset along Z, and every clip retargeted wrongly. Vincent's importer script does this: `Assets/StarryNight/Editor/SN_Setup.cs` (`ImportVincent`).
+- **Clips:** Tick Loop Time on idles and talking. For clips that travel, choose root motion or Bake Into Pose.
 - **Scale:** from Tripo's 1.00 m to the character's real height (Vincent: ×1.70 for 1.70 m). Set it on the importer, by script.
 - **Material:** Metallic 0, since Tripo's FBX gives 1.0 and that makes him dark and mirror-like. Texture 2048.
 - **Quest:**
@@ -149,7 +149,7 @@ Cici's quest-asset-import skill has the general import steps for this project (f
   - elbows and hips may crease, so check them in the headset;
   - changing QualitySettings affects the whole team, so agree on it first.
 - **Mitten hands, looking, pointing:** Unity's Humanoid IK turns the head to look at a target and moves a hand to a target. A prop held in a mitten hand can do the pointing.
-- **Licence rows** in `docs/ASSETS.md`: Tripo (who, paid plan, §5.2.2) and Mixamo (Adobe ID, date). Add them only once the repo question is answered.
+- **Licence rows** in `docs/ASSETS.md`: Tripo (who, paid plan, §5.2.2) and Mixamo (Adobe ID, date), one for each committed file or its folder, in the same commit as the files.
 
 ## Don't
 
@@ -157,7 +157,7 @@ Cici's quest-asset-import skill has the general import steps for this project (f
 - Don't model props, hats or bent arms into the character.
 - Don't upload a second character before downloading the first one rigged.
 - Don't download every clip With Skin: one character, many motions.
-- Don't commit Mixamo files to the public repo until the team decides.
+- Don't commit clips no scene uses: keep them in `CS-VR/refs/<name>-mixamo/`.
 
 ## Sources
 

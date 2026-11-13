@@ -102,6 +102,7 @@ Tag every claim in the PR body **[V]** (verified: say how and where) or
 | CI | `.github/workflows/check-assets.yml` |
 | Git hooks (installed by `scripts/setup.sh`) | `.githooks/` |
 | Asset inventory (source, license) | `docs/ASSETS.md` |
+| Every LFS file under `Assets/` needs a row in `docs/ASSETS.md`: warn-only register check (CI's blocking check stays `scripts/check-assets.sh`); what uses an asset | `scripts/check-asset-register.sh`, `scripts/asset-usage.sh <path>` |
 | Per-feature docs | `docs/<feature>/README.md` |
 | Review skill for AI agents | `.claude/skills/adversarial-review/` |
 | Known review false positives | `.claude/skills/adversarial-review/references/known-false-positives.md` |

@@ -59,7 +59,8 @@ namespace InnerFrame.Gallery.EditorTools
         // No shadows (the Quest's render asset has none for extra lights). Raise SpotIntensity for brighter paintings.
         public const float SpotOut = 1.2f, SpotDrop = 0.12f, SpotIntensity = 5f, SpotMargin = 6f, SpotInnerRatio = 0.7f;
         public const string SpotRoot = "PaintingLights";
-        public static readonly string[] Paintings = { "Painting_TheBedroom", StarryNight.EditorTools.SN_GallerySetup.PaintingName };
+        // One spotlight per painting in GalleryLayout.asset (Part B, 2026-11-12; it was The Bedroom and The Starry Night).
+        public static string[] Paintings => GalleryLayoutSetup.CanvasNames();
         const string MetalMat = "Assets/Art/Gallery/Materials/Mat_Metal.mat";
 
         // The sun: from the skylight's middle (0, 4, 0) down onto the floor about 2.5 m north (z -2.5), toward The Bedroom.
@@ -176,7 +177,7 @@ namespace InnerFrame.Gallery.EditorTools
 
         /// <summary>PaintingLights: one spotlight per painting, on a small fitting (a stem from the ceiling and a can that
         /// points at the painting), rebuilt only when what it would be differs from what is there.</summary>
-        static void PaintingLights(Scene scene, List<string> why)
+        internal static void PaintingLights(Scene scene, List<string> why)
         {
             var metal = AssetDatabase.LoadAssetAtPath<Material>(MetalMat) ?? throw new Exception($"{Tag} {MetalMat} missing");
             var roots = scene.GetRootGameObjects();

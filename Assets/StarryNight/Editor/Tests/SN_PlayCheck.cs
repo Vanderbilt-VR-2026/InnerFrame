@@ -86,8 +86,10 @@ namespace InnerFrame.StarryNight.EditorTools
             // the shared dialogue box, in Play mode: the hint set by the game, the follow group in front of the camera
             var follow = game != null && game.ui != null ? game.ui.GetComponentInChildren<VG_FollowGroup>(true) : null;
             float uiDistance = follow != null && cam != null ? Vector3.Distance(follow.transform.position, cam.transform.position) : -1f;
-            bool uiOk = game != null && game.ui != null && game.ui.HintLine == SN_Game.HintFor(SN_State.Arrive)
-                        && follow != null && Mathf.Abs(uiDistance - game.ui.settings.distance) < 0.05f;
+            // the Arrive hint; since #188 SN_Conversation adds a second line, how to ask Vincent (SN_Conversation.cs: "\nHold {B} to ask Vincent")
+            string arrive = SN_Game.HintFor(SN_State.Arrive);
+            bool hintOk = game != null && game.ui != null && (game.ui.HintLine == arrive || game.ui.HintLine == arrive + "\nHold {B} to ask Vincent");
+            bool uiOk = hintOk && follow != null && Mathf.Abs(uiDistance - game.ui.settings.distance) < 0.05f;
             Debug.Log($"[SN PlayCheck] dialogue UI: hint '{(game != null && game.ui != null ? game.ui.HintLine : "none")}', follow group {uiDistance:F3} m from the camera " +
                       $"(settings {(game != null && game.ui != null ? game.ui.settings.distance : -1f):F2} m): {(uiOk ? "ok" : "WRONG")}");
             Debug.Log($"[SN PlayCheck] after {now - playStart:F1} s of Play: NetworkRunner objects {runners}, NetworkPlayer objects {players}, NetworkSession connected {connected}");

@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Reflection;
 using UnityEditor;
 using UnityEngine;
@@ -22,7 +23,8 @@ public static class GalleryCardLivePreview {
  static void Update(){
  string key=SessionState.GetString(Pending,"");if(key==""||!EditorApplication.isPlaying||EditorApplication.isPaused)return;
  var rig=Object.FindAnyObjectByType<DesktopTestRig>();var cam=Camera.main;if(!rig||!cam)return;
- var cards=Object.FindObjectsByType<ArtworkCiciActions>(FindObjectsSortMode.None);if(cards.Length!=GalleryCardInstaller.Keys.Length)return;
+ // the three cards (Gallery Part B adds wall labels for Vincent's self-portrait and Almond Blossom beside them)
+ var cards=Object.FindObjectsByType<ArtworkCiciActions>(FindObjectsSortMode.None).Where(c=>GalleryCardInstaller.Keys.Any(k=>c.name==k+" Introduction")).ToArray();if(cards.Length!=GalleryCardInstaller.Keys.Length)return;
  SessionState.SetString(Pending,"");
  var n=NetworkSession.Instance;if(n){n.StopAllCoroutines();n.enabled=false;n.StartCoroutine(n.Leave());}
  var selected=System.Array.Find(cards,c=>key.StartsWith(c.name.Replace(" Introduction","")));if(!selected)return;

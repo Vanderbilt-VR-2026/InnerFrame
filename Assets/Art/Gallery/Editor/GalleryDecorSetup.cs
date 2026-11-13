@@ -22,7 +22,7 @@ namespace InnerFrame.Gallery.EditorTools
     ///     light them white (about 100x what it gives a wall), hiding the flame. Every property is written on every run with
     ///     the values URP's own validation leaves, and a change is reported only when the saved file differs;
     ///   - GalleryDecor.prefab: every prop at its spot below. Plinths and lantern chains are Unity's cube and cylinder with
-    ///     Gallery.fbx's own Mat_Bench and Mat_Metal. Only the plinths and plant pots have colliders (boxes), so nobody
+    ///     Gallery.fbx's own Mat_Bench and Mat_Metal (the lanterns' hooks, arms and wall plates: GP_Copper since 2026-11-12). Only the plinths and plant pots have colliders (boxes), so nobody
     ///     walks through them; the frame corners and lanterns have none. Each lantern holds a candle flame and a warm realtime
     ///     point light without shadows, as SN_Lantern does: The Starry Night's own flame (SN_FlameCross mesh, SN_Flame
     ///     material, by reference) on the Tripo candle's wick, and the light just above it (Mobile_RPAsset: per-pixel
@@ -49,6 +49,11 @@ namespace InnerFrame.Gallery.EditorTools
         public const float MarbleMetres = 0.6f;   // GP_Plinth's UVs are in metres (make_stands.py)
         static readonly string[] Stands = { "Plinth", "FlowerStand" };
         const string MetalMat = "Assets/Art/Gallery/Materials/Mat_Metal.mat";
+        // The lanterns' hooks, arms and wall plates (2026-11-12, Cici: the old copper of the lanterns, not black): the
+        // median colour of GP_Lantern_BaseColor.jpg's brass (its pixels below the panes' green, make_tripo_props.py GLASS),
+        // sRGB 143, 86, 33; as smooth as the lantern.
+        public const string CopperMat = Folder + "/GP_Copper.mat";
+        public static readonly Color CopperColour = new Color32(143, 86, 33, 255);
         const string Tag = "[GalleryDecor]";
 
         // name, texture size, smoothness, both faces
@@ -63,7 +68,10 @@ namespace InnerFrame.Gallery.EditorTools
         public const float VasePlinthH = 0.9f, VasePlinthW = 0.45f;
         // The room (Gallery.fbx, 2026-11-10): x from -3.5 (east wall) to 3.5 (west), z from -4.5 (north wall, The Bedroom)
         // to 4.5 (south wall, the arch), 4 m tall.
-        public const float HalfW = 3.5f, HalfL = 4.5f, CeilingY = 4f;
+        // The room's size comes from GalleryLayout.asset (Part B, 2026-11-12; it was 3.5 / 4.5 / 4 here, the 7 x 9 x 4 m room).
+        public static float HalfW => GalleryLayoutSetup.RoomWidth / 2f;
+        public static float HalfL => GalleryLayoutSetup.RoomLength / 2f;
+        public static float CeilingY => GalleryLayoutSetup.RoomHeight;
         public const float BracketRadius = 0.012f, BracketRise = 0.06f;   // a wall lantern's arm, above its ring
         public const float PlantScale = 0.7f;   // 0.91 m tall, 0.6 m from the pot's centre to a leaf tip: room for the corners
         static readonly Vector3 PotBox = new Vector3(0.6f, 0.55f, 0.6f);   // a plant's collider, round its pot (before PlantScale)
@@ -218,6 +226,7 @@ namespace InnerFrame.Gallery.EditorTools
             if (marble) ImportTexture(MarbleTex, 1024, changes);
             mats["Marble"] = MakeMaterial(MarbleMat, marble ? MarbleTex : null, marble ? Color.white : MarbleColour, 0.45f, false, false, changes,
                 marble ? Vector2.one / MarbleMetres : (Vector2?)null);
+            mats["Copper"] = MakeMaterial(CopperMat, null, CopperColour, 0.4f, false, false, changes);
             mats["Halo"] = MakeHalo(HaloMat, HaloColour, changes);
             mats["Pool"] = MakeHalo(PoolMat, PoolColour, changes);
             MakeHaloMesh(changes);
@@ -300,7 +309,7 @@ namespace InnerFrame.Gallery.EditorTools
             return true;
         }
 
-        public static Material MakeMaterial(string path, string texPath, Color colour, float smooth, bool twoSided, bool transparent, List<string> changes, Vector2? tiling = null, Vector2? offset = null, Color? glow = null)
+        public static Material MakeMaterial(string path, string texPath, Color colour, float smooth, bool twoSided, bool transparent, List<string> changes, Vector2? tiling = null, Vector2? offset = null, Color? glow = null, string glowTex = null)
         {
             var shader = Shader.Find("Universal Render Pipeline/Lit") ?? throw new Exception($"{Tag} URP Lit shader not found");
             var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(texPath);
@@ -324,7 +333,9 @@ namespace InnerFrame.Gallery.EditorTools
             {
                 // the base image glows in this colour on top of the light it gets (the paintings: GalleryLightingSetup)
                 m.SetFloat("_EmissionEnabled", 1f); m.EnableKeyword("_EMISSION");
-                m.SetColor("_EmissionColor", new Color(g.r, g.g, g.b, 1f)); m.SetTexture("_EmissionMap", tex);
+                // the base image glows, or, with glowTex, that image (the corridor door's panes, 2026-11-12)
+                var emission = glowTex != null ? AssetDatabase.LoadAssetAtPath<Texture2D>(glowTex) ?? throw new Exception($"{Tag} {glowTex} missing") : tex;
+                m.SetColor("_EmissionColor", new Color(g.r, g.g, g.b, 1f)); m.SetTexture("_EmissionMap", emission);
                 m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
             }
             else
@@ -543,9 +554,10 @@ namespace InnerFrame.Gallery.EditorTools
                 // the group's origin is the top of the lantern's ring; its +Z runs back to the wall
                 var g = Group(root, name, at, yaw).transform;
                 float d = BracketRadius * 2;   // Unity's cylinder is 2 m tall, 1 m across, along its Y
-                Primitive("Cylinder.fbx", metal, g, "Hook", new Vector3(0f, BracketRise / 2, 0f), new Vector3(d, BracketRise / 2, d), false);
-                Primitive("Cylinder.fbx", metal, g, "Arm", new Vector3(0f, BracketRise, arm / 2), new Vector3(d, arm / 2, d), false, Quaternion.Euler(90f, 0f, 0f));
-                Primitive("Cube.fbx", metal, g, "WallPlate", new Vector3(0f, BracketRise, arm - 0.01f), new Vector3(0.08f, 0.14f, 0.02f), false);
+                var copper = mats["Copper"];
+                Primitive("Cylinder.fbx", copper, g, "Hook", new Vector3(0f, BracketRise / 2, 0f), new Vector3(d, BracketRise / 2, d), false);
+                Primitive("Cylinder.fbx", copper, g, "Arm", new Vector3(0f, BracketRise, arm / 2), new Vector3(d, arm / 2, d), false, Quaternion.Euler(90f, 0f, 0f));
+                Primitive("Cube.fbx", copper, g, "WallPlate", new Vector3(0f, BracketRise, arm - 0.01f), new Vector3(0.08f, 0.14f, 0.02f), false);
                 LanternBody(g, mats, flameMesh, flameMat, LampIntensity, LampRange);
             }
             // Unity's Plane, facing up, turned over to face down into the room; scaled from its own size (it measured 1 m
@@ -588,7 +600,7 @@ namespace InnerFrame.Gallery.EditorTools
         }
 
         /// <summary>The lantern, its candle flame and its warm realtime light, hanging from the group's origin (the ring's top).</summary>
-        static void LanternBody(Transform g, Dictionary<string, Material> mats, Mesh flameMesh, Material flameMat, float intensity, float range)
+        static void LanternBody(Transform g, Dictionary<string, Material> mats, Mesh flameMesh, Material flameMat, float intensity, float range, bool light = true)
         {
             Model("Lantern", mats["Lantern"], g, "GP_Lantern", Vector3.zero, Quaternion.identity, Vector3.one, mats["LanternGlass"]);
             var flame = new GameObject("Flame");
@@ -600,19 +612,40 @@ namespace InnerFrame.Gallery.EditorTools
             fr.sharedMaterial = flameMat;
             fr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             fr.receiveShadows = false;
+            if (!light) return;
             var lamp = new GameObject("Lamp");
             lamp.transform.SetParent(g, false);
             lamp.transform.localPosition = new Vector3(0f, FlameY + 0.01f, 0f);
-            var light = lamp.AddComponent<Light>();
-            light.type = LightType.Point;
-            light.color = LampColour;
-            light.intensity = intensity;
-            light.range = range;
-            light.shadows = LightShadows.None;
-            light.lightmapBakeType = LightmapBakeType.Realtime;
+            var lit = lamp.AddComponent<Light>();
+            lit.type = LightType.Point;
+            lit.color = LampColour;
+            lit.intensity = intensity;
+            lit.range = range;
+            lit.shadows = LightShadows.None;
+            lit.lightmapBakeType = LightmapBakeType.Realtime;
             // URP's per-light data, in the prefab: without it the editor adds one to each lamp whenever the scene opens, as
             // an override on this instance, which the next run then reverts
             lamp.AddComponent<UnityEngine.Rendering.Universal.UniversalAdditionalLightData>();
+        }
+
+        /// <summary>A lantern hanging by a copper chain, `chain` long, from the point above `ringTop` (local to `parent`): its
+        /// glass and candle flame glow, and it gives no light (2026-11-12, the corridor's: the scene is at its per-object
+        /// light limit). The same lantern as the decor's (GP_Lantern, its glass, SN's flame).</summary>
+        public static GameObject HangingLantern(Transform parent, string name, Vector3 ringTop, float chain)
+        {
+            var mats = new Dictionary<string, Material>
+            {
+                ["Lantern"] = AssetDatabase.LoadAssetAtPath<Material>(Mat("Lantern")) ?? throw new Exception($"{Tag} {Mat("Lantern")} missing: run Add Decor"),
+                ["LanternGlass"] = AssetDatabase.LoadAssetAtPath<Material>(GlassMat) ?? throw new Exception($"{Tag} {GlassMat} missing: run Add Decor"),
+            };
+            var copper = AssetDatabase.LoadAssetAtPath<Material>(CopperMat) ?? throw new Exception($"{Tag} {CopperMat} missing: run Add Decor");
+            var flameMesh = AssetDatabase.LoadAssetAtPath<Mesh>(FlameMesh) ?? throw new Exception($"{Tag} {FlameMesh} missing");
+            var flameMat = AssetDatabase.LoadAssetAtPath<Material>(FlameMat) ?? throw new Exception($"{Tag} {FlameMat} missing");
+            var g = Group(parent, name, ringTop, 0f).transform;
+            LanternBody(g, mats, flameMesh, flameMat, 0f, 0f, light: false);
+            float d = BracketRadius * 2;
+            Primitive("Cylinder.fbx", copper, g, "Chain", new Vector3(0f, chain / 2f, 0f), new Vector3(d, chain / 2f, d), false);
+            return g.gameObject;
         }
 
         /// <summary>Everything the prefab is made of, as text: names, poses, meshes, materials and colliders.</summary>
@@ -637,7 +670,7 @@ namespace InnerFrame.Gallery.EditorTools
         static GameObject MakePrefab(Dictionary<string, Material> mats, List<string> changes)
         {
             var kept = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
-            if (!Reset && kept != null) return kept;   // Add Decor: the prefab as it is (hand edits in Prefab Mode stay)
+            if (!Reset && kept != null) return CopperArms(kept, mats["Copper"], changes);   // Add Decor: the prefab as it is (hand edits in Prefab Mode stay), but for the arms' copper
             var built = Build(mats);
             try
             {
@@ -649,6 +682,38 @@ namespace InnerFrame.Gallery.EditorTools
                 return saved;
             }
             finally { Object.DestroyImmediate(built); }
+        }
+
+        /// <summary>The lanterns' hooks, arms and wall plates in copper (2026-11-12) in a prefab Add Decor otherwise keeps as
+        /// it is: only those three parts of each lantern, and only when they aren't already.</summary>
+        static GameObject CopperArms(GameObject kept, Material copper, List<string> changes)
+        {
+            bool Needs(GameObject root) => Lanterns.Any(l =>
+            {
+                var g = root.transform.Find(l.name);
+                return g != null && new[] { "Hook", "Arm", "WallPlate" }.Select(n => g.Find(n)).Any(t => t != null && t.GetComponent<MeshRenderer>().sharedMaterial != copper);
+            });
+            if (!Needs(kept)) return kept;
+            var contents = PrefabUtility.LoadPrefabContents(PrefabPath);
+            try
+            {
+                int n = 0;
+                foreach (var l in Lanterns)
+                {
+                    var g = contents.transform.Find(l.name);
+                    if (g == null) continue;
+                    foreach (var part in new[] { "Hook", "Arm", "WallPlate" })
+                    {
+                        var r = g.Find(part)?.GetComponent<MeshRenderer>();
+                        if (r != null && r.sharedMaterial != copper) { r.sharedMaterial = copper; n++; }
+                    }
+                }
+                var saved = PrefabUtility.SaveAsPrefabAsset(contents, PrefabPath, out bool ok);
+                if (!ok) throw new Exception($"{Tag} Could not save {PrefabPath}");
+                changes.Add($"{PrefabPath}: the lanterns' hooks, arms and wall plates in copper ({n} parts)");
+                return saved;
+            }
+            finally { PrefabUtility.UnloadPrefabContents(contents); }
         }
 
         // ------------------------------------------------------------------------------------------- the scene

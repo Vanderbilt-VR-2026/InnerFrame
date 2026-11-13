@@ -49,12 +49,14 @@ public class CardCheckOffline : MonoBehaviour {
  var phase=SessionState.GetString(Phase,"");
  if(phase=="mouse"){
  if(!isolationChecked){CheckLocalIsolation();isolationChecked=true;return;}
- if(index==keys.Length){index=0;step=0;SessionState.SetString(Phase,"mouseEntrance");return;}
+ // Gallery Part B (2026-11-12): ENTER is off the cards and the pedestals are gone; entering a painting is checked by
+ // InnerFrame.Gallery.EditorTools.Tests.GalleryLayoutPlayCheck (point, trigger, Enter), so the card phases go on to XR More/X.
+ if(index==keys.Length){index=0;step=0;SessionState.SetString(Phase,"buttons");return;}
  if(step==0){GalleryCardLivePreview.Queue(keys[index]);step++;return;}
  var c=Card(keys[index]);
  if(step==1||step==5){MouseDown(Button(c,"More"));step++;return;}
  if(step==2||step==6){MouseUp();Require(c.IsOpen,keys[index]+" simulated desktop mouse More opens");Require(Cursor.lockState==CursorLockMode.None,"detail keeps mouse free");if(step==2)Capture(keys[index]+" Mouse Detail");if(step==6){c.CloseDetails();index++;step=0;}else step++;return;}
- if(step==3){CheckReadingHints();CheckReadingBounds(c);Capture(keys[index]+" Mouse Detail");MouseDown(Button(c,"×"));step++;return;}
+ if(step==3){CheckReadingBounds(c);Capture(keys[index]+" Mouse Detail");MouseDown(Button(c,"×"));step++;return;}
  MouseUp();Require(!c.IsOpen,keys[index]+" simulated desktop mouse X closes");step++;return;
  }
  if(phase=="mouseEntrance"){
@@ -95,14 +97,15 @@ public class CardCheckOffline : MonoBehaviour {
  index++;step=0;return;
  }
  if(phase=="buttons"){
- if(step==0){var all=Object.FindObjectsByType<ArtworkCiciActions>(FindObjectsSortMode.None);Require(all.Length==keys.Length&&all.All(c=>!c.IsOpen),"three cards; details initially hidden");Require(GameObject.Find("VanGogh_Portrait")!=null,"original Gallery self portrait present");step++;return;}
+ if(step==0){var all=Object.FindObjectsByType<ArtworkCiciActions>(FindObjectsSortMode.None);Require(keys.All(k=>all.Count(c=>c.name==k+" Introduction")==1)&&all.All(c=>!c.IsOpen),"the three cards; details initially hidden");Require(GameObject.Find("VanGogh_Portrait")!=null,"original Gallery self portrait present");step++;return;}
  if(index<keys.Length){var c=Card(keys[index]);
  if(step==1){AimAndPress(Button(c,"More"));step++;return;}
  if(step==2){Require(c.IsOpen,keys[index]+" XR More opens");Capture(keys[index]+" Detail");AimAndPress(Button(c,"×"));step++;return;}
  if(step==3){Require(!c.IsOpen,keys[index]+" XR Close hides");AimAndPress(Button(c,"More"));step++;return;}
  Require(c.IsOpen,keys[index]+" XR More reopens");c.CloseDetails();index++;step=1;return;
  }
- index=0;step=0;SessionState.SetString(Phase,"xrEntrance");return;
+ Require(Object.FindObjectsByType<ArtworkCiciActions>(FindObjectsSortMode.None).All(c=>!c.IsOpen),"details hidden after the XR card buttons");
+ Capture("Gallery Runtime");Log("ALL PASSED — Editor offline; headset not tested");Finish(0);return;
  }
  if(phase=="xrEntrance"){
  if(index==keys.Length){

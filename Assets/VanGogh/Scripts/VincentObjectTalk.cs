@@ -119,7 +119,7 @@ public class VincentObjectTalk : MonoBehaviour
     public bool WaitingForReference => refQuestion != null && Time.time - refAt <= referenceSeconds;
 
     // "this", "that", "it"...: the question is about something the visitor means but doesn't name
-    static readonly Regex Pointing = new Regex(@"\b(this|that|these|those|it|its|here|there)\b", RegexOptions.IgnoreCase);
+    static readonly Regex Pointing = new Regex(@"\b(this|that|these|those)\b", RegexOptions.IgnoreCase);
 
     Notes notes;
     readonly Dictionary<string, Note> byId = new Dictionary<string, Note>();

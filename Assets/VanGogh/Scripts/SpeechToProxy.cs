@@ -613,6 +613,7 @@ public class SpeechToProxy : MonoBehaviour
         var unsaid = new StringBuilder();   // text that doesn't end a sentence yet
 
         var reader = new LineReader();
+        string newId = null;
         using (var req = UnityWebRequest.Post(ConvaiDirectSettings.Endpoint, form))
         {
             req.timeout = TimeoutSeconds;
@@ -631,7 +632,7 @@ public class SpeechToProxy : MonoBehaviour
                     try { chunk = JsonUtility.FromJson<ConvaiReply>(l.Substring(5)); }
                     catch (ArgumentException) { }
                     if (chunk == null) continue;
-                    if (!string.IsNullOrEmpty(chunk.sessionID)) convaiSession = chunk.sessionID;
+                    if (!string.IsNullOrEmpty(chunk.sessionID)) newId = chunk.sessionID;   // kept only if the answer completes
                     if (string.IsNullOrWhiteSpace(chunk.text) || chunk.text.StartsWith("process_failure")) continue;
                     unsaid.Append(unsaid.Length > 0 ? " " : "").Append(chunk.text.Trim());
                     if (EndsSentence(unsaid)) { SendPart(unsaid.ToString()); unsaid.Clear(); }
@@ -649,7 +650,10 @@ public class SpeechToProxy : MonoBehaviour
                 yield break;
             }
         }
-        RecordAnswer(gameObject.scene.name, carriesRoom, startId);   // only now: a failed request told Convai nothing
+        // only now: an abandoned or failed request leaves the conversation as it was (a new ID with no answer would
+        // otherwise keep "the scene is known" for an empty conversation)
+        if (newId != null) convaiSession = newId;
+        RecordAnswer(gameObject.scene.name, carriesRoom, startId);
         answerOpen = false;
         LastAnswerText = answerText;
         LastQuestionText = question;

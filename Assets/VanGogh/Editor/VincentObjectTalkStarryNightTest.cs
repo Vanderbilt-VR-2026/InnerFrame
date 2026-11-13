@@ -11,7 +11,8 @@ using UnityEngine;
 /// - "why did you paint the lantern?" carries it as made for the visit (NotPainted, never the painter's voice);
 /// - "what is this?" with nothing named makes him ask which one, by name (no press);
 /// - a question naming nothing gets nothing more, and in 3 s he sends no prompt on his own;
-/// - the shared conversation (VincentLink): the scene counts as told only once Convai answers; a conversation from
+/// - the shared conversation (VincentLink): building a question doesn't mark the scene as told (RecordAnswer does,
+///   after Convai answers; called by hand here, since there is no Convai); a conversation from
 ///   another player replaces ours, and one resent for a newcomer doesn't; one that hasn't been told the scene makes
 ///   the next question carry it again; other scenes keep their own; questions say who asked when given a name.
 /// Doesn't cover speech to text, Convai's answers, his voice or the story.
@@ -113,7 +114,7 @@ public static class VincentObjectTalkStarryNightTest
             case 1:   // nothing to press, so nothing on his own
                 if (now - stepStarted < 3) return;
                 if (prompts.Count > 0) { Finish(false, $"he sent a prompt on his own: {prompts[0]}"); return; }
-                Finish(true, $"{talk.NoteCount} notes; the cypress as painted, the lantern as made for the visit, \"this\" asks which one by name; no prompts on his own; the shared conversation, the scene told once per conversation, who asked");
+                Finish(true, $"{talk.NoteCount} notes; the cypress as painted, the lantern as made for the visit, \"this\" asks which one by name; no prompts on his own; sharing a conversation (Adopt, not the network), the scene not marked told by asking, who asked");
                 break;
         }
     }

@@ -68,7 +68,12 @@ namespace InnerFrame.PaintedBedroom
                 if (grab.interactionManager != null) select.interactionManager = grab.interactionManager;
                 select.selectEntered.AddListener(_ => movable.RaiseTouched(false));
             }
-            if (select.enabled != needed) select.enabled = needed;
+            if (select.enabled == needed) return;
+            select.enabled = needed;
+            // The grab came back on (the physics table changed in Play mode) while we held its colliders: XRI keeps a
+            // collider with whoever registered it first, and our unregistering just dropped them, so the grab would
+            // never be found. Register it again now that they are free.
+            if (!needed) { grab.enabled = false; grab.enabled = true; }
         }
 
         void OnDisable() { if (select != null) select.enabled = false; }

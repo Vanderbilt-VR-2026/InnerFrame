@@ -43,7 +43,7 @@ against the letter before they ship.
 | `Bottle_Short` | Short glass bottle with a cork | Right of the washstand | bottle | yes | The second, shorter bottle: small pale spots that carry the light across the table. |
 | `SoapDish` | Soap dish | Front of the washstand | soap, soap dish, dish | yes [I: the pale dish at the front of the table] | A little dish for the soap, a few strokes of colour. Nothing in the room is fancy, and that is the point: a plain room made restful by colour alone. |
 | `ClothesBrush` | Clothes brush | Right end of the washstand | brush, clothes brush | yes | He painted the small, plain things with the same care as the bed: the room is a portrait of how he lived. |
-## Objects you can only select (14)
+## Objects you can only select (13, and the mirror)
 
 These can't be picked up (they are fixed in the physics table). Point at one
 and press grip, as if to pick it up: the hover rim shows, nothing moves, and
@@ -120,15 +120,16 @@ pictures never reach Convai. The text above stands in for them.
   of pressing it, and your question goes with that object and its notes:
   `"why did you paint this? (As they ask, they are holding <what>. What you know about it: <knows> If they say this or that, they mean it. <as the painter>)"`.
   The other players see only your question.
-- **"This" with nothing in focus:** when the question says *this, that, it,
-  these, those, here* or *there* and you aren't holding or pointing at
+- **"This" with nothing in focus:** when the question says *this, that,
+  these* or *those* and you aren't holding or pointing at
   anything, he is told to ask which one you mean ("point at it and press
   grip") instead of guessing. The next object you press within 30 s answers
   it: `"(The visitor points at <what>: that is what they meant when they asked "<question>". ...)"`.
   That one goes even if he has talked about the object before, and doesn't
-  wait for the 20 s between comments. It's a word match, so a question like
-  "is it hard to paint?" arms it too; a press in the next 30 s then gets that
-  question answered about the object you pressed.
+  wait for the 20 s between comments. It's a word match, so "is that hard to
+  paint?" arms it too; a press in the next 30 s then gets that question answered
+  about the object you pressed. *It, here* and *there* don't count: they are in too
+  many ordinary questions ("what is it like to paint?").
 - **Only with your question as text** (Headset Speech To Text on, the default):
   when the recording goes as audio, Convai takes nothing else with it.
 - **Never over him:** it waits until his greeting is done and he isn't talking,

@@ -59,7 +59,9 @@ namespace InnerFrame.Gallery.EditorTools.Tests
             if (found.Count == 0) return;
             var decor = found[0];
             var roots = scene.GetRootGameObjects();
-            Check(roots.Last().name == G.KeepLastRoot, $"{G.KeepLastRoot} is still the last root (last: {roots.Last().name})");
+            // (2026-11-12, Gallery Part B: no more "SN_GalleryEntrance is the last root"; the stands' entrances are gone)
+            var retired = roots.Where(r => GalleryLayoutSetup.Retired.Contains(r.name)).Select(r => r.name).ToList();
+            Check(retired.Count == 0, $"none of the stands' old entrances is left ({string.Join(", ", retired)})");
             // hand edits on the instance are allowed (Add Decor keeps them since 2026-11-11): listed, not failed
             var overrides = PrefabUtility.GetObjectOverrides(decor, false).Count + PrefabUtility.GetAddedComponents(decor).Count
                             + PrefabUtility.GetRemovedComponents(decor).Count + PrefabUtility.GetAddedGameObjects(decor).Count;
@@ -79,7 +81,8 @@ namespace InnerFrame.Gallery.EditorTools.Tests
             foreach (var l in lights)
                 Check(l.type == LightType.Point && l.shadows == LightShadows.None && l.lightmapBakeType == LightmapBakeType.Realtime && l.color.r > l.color.b,
                     $"{PathOf(l.transform, decor.transform)}: a warm realtime point light without shadows ({l.color}, {l.intensity}, range {l.range})");
-            int sceneLights = roots.SelectMany(r => r.GetComponentsInChildren<Light>(true)).Count(l => l.type != LightType.Directional);
+            // the lights that are on (Gallery Part B: the lanterns keep their glowing glass but their lamps are off)
+            int sceneLights = roots.SelectMany(r => r.GetComponentsInChildren<Light>(true)).Count(l => l.type != LightType.Directional && l.enabled && l.gameObject.activeInHierarchy);
             var mobile = AssetDatabase.LoadAssetAtPath<ScriptableObject>("Assets/Settings/Mobile_RPAsset.asset");
             var limitProp = mobile ? new SerializedObject(mobile).FindProperty("m_AdditionalLightsPerObjectLimit") : null;
             Check(limitProp != null && limitProp.intValue >= sceneLights,
@@ -144,11 +147,14 @@ namespace InnerFrame.Gallery.EditorTools.Tests
                     if (kb.HasValue && r.bounds.Intersects(kb.Value)) Check(false, $"{PathOf(r.transform, decor.transform)} reaches into {k.name}");
                 }
 
-            // Vincent's portrait (VanGoghSpawner hangs it at run time, beside The Bedroom): nothing of the decor in front of it
-            var slot = roots.SelectMany(r => r.GetComponentsInChildren<Transform>(true)).First(t => t.name == "Slot_Bedroom");
-            var pc = slot.position + slot.rotation * VanGoghSpawner.PortraitOffset;
-            var portrait = new Bounds(pc + slot.forward * 0.3f, new Vector3(VanGoghSpawner.PortraitSize.x + 0.36f, VanGoghSpawner.PortraitSize.y + 0.36f, 0.6f));
-            Check(portrait.min.x > -G.HalfW && portrait.max.x < G.HalfW, $"Vincent's portrait fits on the north wall (x {portrait.min.x:F2}..{portrait.max.x:F2})");
+            // Vincent's portrait (Gallery Part B: GalleryLayoutSetup hangs it at Slot_SelfPortrait, VanGoghSpawner gives it his
+            // voice): on its wall, and nothing of the decor in the 0.6 m in front of it
+            var slot = roots.SelectMany(r => r.GetComponentsInChildren<Transform>(true)).First(t => t.name == "Slot_SelfPortrait");
+            var picture = slot.GetComponentInChildren<Renderer>().bounds;
+            var across = new Vector3(Mathf.Abs(slot.forward.x), 0f, Mathf.Abs(slot.forward.z));   // 1 on the axis out of its wall
+            var portrait = new Bounds(picture.center + slot.forward * 0.3f, Vector3.Scale(picture.size + Vector3.one * 0.36f, Vector3.one - across) + across * 0.6f);
+            Check(portrait.min.x > -G.HalfW - 0.01f && portrait.max.x < G.HalfW + 0.01f && portrait.min.z > -G.HalfL - 0.01f && portrait.max.z < G.HalfL + 0.01f,
+                $"Vincent's portrait fits on its wall (x {portrait.min.x:F2}..{portrait.max.x:F2}, z {portrait.min.z:F2}..{portrait.max.z:F2})");
             foreach (var r in decor.GetComponentsInChildren<Renderer>(true))
                 if (r.bounds.Intersects(portrait)) Check(false, $"{PathOf(r.transform, decor.transform)} stands in front of Vincent's portrait");
 

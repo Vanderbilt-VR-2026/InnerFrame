@@ -31,7 +31,8 @@ public static class GalleryCardInstaller {
  var root=(GameObject)PrefabUtility.InstantiatePrefab(source);PrefabUtility.UnpackPrefabInstance(root,PrefabUnpackMode.Completely,InteractionMode.AutomatedAction);root.transform.SetParent(parent.transform,false);root.name=key+" Introduction";
  var c=root.GetComponent<ArtworkCiciActions>();
  foreach(var text in root.GetComponentsInChildren<TMPro.TMP_Text>(true)){text.font=font;text.fontSharedMaterial=font.material;text.isOrthographic=false;}
- var entrance=targets.SingleOrDefault(x=>key=="Bedroom"?x.name=="Button_Bedroom":key=="CafeTerrace"?x.name=="Button_CafeTerrace":x.targetScene=="StarryNight");
+ // 2026-11-12 (Gallery Part B): each painting's way in, by the scene it opens (the pedestals' Button_* are gone)
+ var entrance=targets.SingleOrDefault(x=>x.targetScene==Destination(key));
  if(!entrance)throw new Exception("Missing existing entrance "+key);
  c.paintingEntrance=entrance;
  c.expectedScene=Destination(key);c.exclusiveDetails=true;
@@ -67,7 +68,8 @@ public static class GalleryCardInstaller {
  File.WriteAllText("Logs/GalleryCards/install-result.txt","PASS: three cards installed; existing painting entries bound; Gallery self-portrait untouched.\n");
  }
  public static void Check(){
- var cards=Object.FindObjectsByType<ArtworkCiciActions>(FindObjectsInactive.Include,FindObjectsSortMode.None);
+ // these three (Gallery Part B adds wall labels for Vincent's self-portrait and Almond Blossom beside them)
+ var cards=Object.FindObjectsByType<ArtworkCiciActions>(FindObjectsInactive.Include,FindObjectsSortMode.None).Where(c=>Keys.Any(k=>c.name==k+" Introduction")).ToArray();
  if(cards.Length!=Keys.Length)throw new Exception("Expected three cards, no self-portrait card");
  foreach(var c in cards){
  if(c.GetComponentInParent<Fusion.NetworkObject>()||c.GetComponentInChildren<Fusion.NetworkObject>(true))throw new Exception("Introduction UI must remain client-local: "+c.name);
@@ -83,7 +85,9 @@ public static class GalleryCardInstaller {
  if(enter.onClick.GetPersistentEventCount()!=1||enter.onClick.GetPersistentTarget(0)!=c||enter.onClick.GetPersistentMethodName(0)!="Enter")throw new Exception("ENTER is bound to the wrong card: "+c.name);
  var entrance=(SceneChangeButton)c.paintingEntrance;
  var xr=entrance.GetComponent<XRSimpleInteractable>();
- if(!xr||xr.selectEntered.GetPersistentEventCount()!=1||xr.selectEntered.GetPersistentTarget(0)!=entrance||xr.selectEntered.GetPersistentMethodName(0)!="Activate")throw new Exception("Pedestal XR event is miswired: "+entrance.name);
+ // Gallery Part B (2026-11-12): a painting entered from its own menu has no pedestal to select (InnerFrame.Gallery.GalleryPainting)
+ bool menuEntrance=entrance.GetComponentInParent<InnerFrame.Gallery.GalleryPainting>(true)!=null;
+ if(!menuEntrance&&(!xr||xr.selectEntered.GetPersistentEventCount()!=1||xr.selectEntered.GetPersistentTarget(0)!=entrance||xr.selectEntered.GetPersistentMethodName(0)!="Activate"))throw new Exception("Pedestal XR event is miswired: "+entrance.name);
  Debug.Log("[Gallery Route Audit] "+c.name+" / "+entrance.name+" -> "+target);
  }
  Debug.Log("[Gallery Cards] PASS: three pairs, entry bindings, XR colliders, serialized button routes");

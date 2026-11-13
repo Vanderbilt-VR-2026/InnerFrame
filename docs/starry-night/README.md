@@ -125,6 +125,8 @@ star, hold to trace the wind. The grip (middle finger) picks up (the lantern, op
 go, the lantern glides back to its hook in 0.4 s. A thin beam shows where you
 point while there are stars to wake or wind to trace (XRI's own rays stop at 2 m). Thumbsticks: the usual move, turn
 and teleport (the hilltop is a teleport area out to 5.5 m; low invisible walls stop you walking off).
+While a menu is open (the player menu: the left Menu button, or Done's way back), the trigger is the menu's: the night
+takes no input (no lantern, no star, no wind; the beam and the stars' glow step aside), 2026-11-12 (`SN_Game.MenuOpen`).
 
 **Editor, no headset** (the team's `DesktopTestRig` swaps in, as in the Gallery):
 
@@ -284,6 +286,14 @@ Session 1 joins `InnerFrame_StarryNight` for real only where Photon's App Settin
 (`Assets/Photon/Fusion/Resources/PhotonAppSettings.asset`, gitignored: the App ID is a key and the repo is public). In a
 checkout without them (2026-11-09) its join is stopped on its first frame, like session 2's, and the real join is reported
 as `SKIP`: before, Fusion's "Photon Application Settings not found" errors failed the session's "no errors" line.
+
+The menu and the trigger (`Editor/Tests/SN_MenuInputCheck.cs`, Play mode, offline, with XRI's simulated headset and
+controllers, and the input `SN_Bootstrap` gives the game on a headset; Tools > InnerFrame > Starry Night > Run Menu Input
+Check, or `-executeMethod InnerFrame.StarryNight.EditorTools.SN_MenuInputCheck.RunBatch -snOut <dir>`, without `-quit`),
+standing at the seat: A. the left Menu button opens the player menu; aimed at the lantern, the trigger leaves it alight
+and the menu open; B. aimed at the menu's ×, the trigger closes the menu (the menu took the press), the lantern still
+alight; C. control, the menu shut: the same trigger turns the lantern down. A picture before and after each press. Before
+the fix (2026-11-12) A failed: the lantern dimmed.
 
 The props' spawn check (`Editor/Tests/SN_SpawnCheck.cs`, Play mode, offline, the scene as `SN_Bootstrap` spawns it;
 `-executeMethod InnerFrame.StarryNight.EditorTools.SN_SpawnCheck.RunBatch -snLog <file>`, without `-quit`):

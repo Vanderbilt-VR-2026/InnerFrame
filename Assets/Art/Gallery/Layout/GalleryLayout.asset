@@ -139,3 +139,6 @@ MonoBehaviour:
     position: {x: 4.26, y: 2.35, z: 0}
     yaw: 90
     lit: 0
+  archWall: 3
+  archAlong: 0
+  corridorLength: 4

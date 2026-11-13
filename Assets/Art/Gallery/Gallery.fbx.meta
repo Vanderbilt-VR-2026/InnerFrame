@@ -32,13 +32,13 @@ ModelImporter:
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
-      name: Mat_Cushion
-    second: {fileID: 2100000, guid: a698c90b254304cb3ab6c771d3f41744, type: 2}
+      name: Mat_CorridorDoor
+    second: {fileID: 2100000, guid: 6315ed2eb8afa4ab1b807aad124a58cd, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
-      name: Mat_Door
-    second: {fileID: 2100000, guid: 57dd574a9d32744a1ab094d6239acee0, type: 2}
+      name: Mat_Cushion
+    second: {fileID: 2100000, guid: a698c90b254304cb3ab6c771d3f41744, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule

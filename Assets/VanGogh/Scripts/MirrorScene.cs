@@ -77,6 +77,9 @@ public class MirrorScene : MonoBehaviour
     public float Painted => painted;
     /// <summary>He has greeted and explained (so a headset taking over doesn't start his introduction again).</summary>
     public bool IntroDone => explained;
+    /// <summary>His greeting has ended, or another headset decides the scene (it greeted there): VincentObjectTalk
+    /// waits for this, so a pickup in the first seconds doesn't come before "hello".</summary>
+    public bool Greeted => greetEnded >= 0f || Follow;
     /// <summary>The scene sentences, so a headset can send one as a number.</summary>
     public static readonly string[] Scenes = { OnWall, HeldNotYet, Sketching, Colouring, Paused, Finished };
 

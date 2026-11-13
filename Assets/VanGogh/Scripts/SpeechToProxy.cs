@@ -49,8 +49,35 @@ public class SpeechToProxy : MonoBehaviour
 
     // ---- Shared Vincent (multiplayer, #65 follow-up): hooks used by Assets/Script/Network/VincentLink.cs ----
 
-    /// <summary>Recording a question or waiting for its answer, on this headset.</summary>
+    /// <summary>Recording a question or waiting for its answer, on this headset (a Prompt counts: the room waits for it too).</summary>
     public bool IsAsking => state == State.Recording || state == State.Waiting;
+
+    // ---- Prompts: something happened that he should react to, sent as text, not spoken by the visitor ----
+
+    /// <summary>A Prompt can go now: Convai streaming with his headset voice (the proxy only takes audio), he is free,
+    /// no other player is asking him, and his scene is the one the player is in.</summary>
+    public bool CanPrompt => ConvaiDirectSettings.Ready && VincentVoice.Enabled && state == State.Idle && !answering
+                             && blockedBy == null && gameObject.scene == SceneManager.GetActiveScene();
+
+    /// <summary>
+    /// Sends `text` to Convai as if the visitor had said it, and he answers as usual: streamed, in his headset voice,
+    /// shared with the room. No thinking line (nobody asked him anything), and the room isn't shown `text`. If it
+    /// fails he goes quiet instead of showing "can't hear you". B still works while it is on its way, and replaces it.
+    /// Returns false, and sends nothing, when CanPrompt is false.
+    /// </summary>
+    public bool Prompt(string text)
+    {
+        if (!CanPrompt || string.IsNullOrWhiteSpace(text)) return false;
+        StartCoroutine(AskConvaiStreaming(null, text.Trim()));
+        return true;
+    }
+
+    bool prompting;   // the Convai request in flight is a Prompt, not the visitor's question
+
+    /// <summary>Called with the visitor's question as this headset heard it (VincentEars) just before it goes to
+    /// Convai; what it returns is sent after the question, in the same userText (null or "": nothing). Not shown to
+    /// the room. Not called for a Prompt, or when the question goes as audio. Set by VincentObjectTalk.</summary>
+    public Func<string, string> QuestionContext { get; set; }
 
     /// <summary>Part of an answer, ready to share: (transcript, text, audio_url, part, last). Part 0 starts the answer.
     /// From the proxy, one part is the whole answer. From Convai's stream (#157), each part is one or more sentences, as
@@ -239,6 +266,7 @@ public class SpeechToProxy : MonoBehaviour
         SetState(State.Idle);
         VincentVoice.Warm();   // load his headset voice now, so his first answer doesn't wait for it
         VincentEars.Warm();    // and the speech-to-text that sends your question to Convai as text
+        VincentObjectTalk.Install(this);   // he talks about what you pick up, in scenes with notes for him
         string why = ConvaiDirectSettings.WhyNotReady();
         Debug.Log(why == null ? $"[VanGogh] {name}: talking through Convai's web API"
                               : $"[VanGogh] {name}: talking through the AI proxy ({why})");
@@ -292,8 +320,9 @@ public class SpeechToProxy : MonoBehaviour
 
     void OnPress()
     {
-        // Only the talker in the scene the player is in listens, and never while a question is in flight.
-        if (gameObject.scene != SceneManager.GetActiveScene() || state == State.Waiting || state == State.Recording) return;
+        // Only the talker in the scene the player is in listens, and never while a question is in flight (a Prompt
+        // in flight is dropped for the visitor's question instead).
+        if (gameObject.scene != SceneManager.GetActiveScene() || (state == State.Waiting && !prompting) || state == State.Recording) return;
         if (blockedBy != null) return;   // shared Vincent: another player is asking him
 #if UNITY_ANDROID && !UNITY_EDITOR
         if (!UnityEngine.Android.Permission.HasUserAuthorizedPermission(UnityEngine.Android.Permission.Microphone))
@@ -458,12 +487,15 @@ public class SpeechToProxy : MonoBehaviour
     // Convai's stream, with his headset voice on (#157): words only (voiceResponse=False, stream=True). Each line is
     // "data: {json}" with a "text" of one or more sentences, as Convai writes them; the last lines carry no text.
     // Each sentence is spoken as soon as it arrives, while the next one is still being written.
-    IEnumerator AskConvaiStreaming(byte[] wav)
+    // With `prompt` (Prompt()), that text is sent instead of a recording, without a thinking line.
+    IEnumerator AskConvaiStreaming(byte[] wav, string prompt = null)
     {
         SetState(State.Waiting);
+        bool isPrompt = prompt != null;
+        prompting = isPrompt;
         double released = Time.realtimeSinceStartupAsDouble;
         int line = UnityEngine.Random.Range(0, VincentVoice.ThinkingLines.Length);
-        if (VincentVoice.Thinking(line) != null)   // he reacts at once, on every headset
+        if (!isPrompt && VincentVoice.Thinking(line) != null)   // he reacts at once, on every headset
         {
             PlayThinking(line);
             ThinkingStarted?.Invoke(line);
@@ -471,8 +503,8 @@ public class SpeechToProxy : MonoBehaviour
 
         // Your question as text when this headset can transcribe it (VincentEars): Convai answers sooner without
         // transcribing, and the room sees what was asked. Otherwise, or if nothing was heard, the audio as before.
-        string question = "";
-        if (VincentEars.Ready)
+        string question = isPrompt ? prompt : "";
+        if (!isPrompt && VincentEars.Ready)
         {
             var samples = WavSamples(wav, out int rate);
             if (samples != null) yield return VincentEars.Transcribe(samples, rate, t => question = t);
@@ -483,18 +515,23 @@ public class SpeechToProxy : MonoBehaviour
         form.AddField("sessionID", convaiSession);
         form.AddField("voiceResponse", "False");
         form.AddField("stream", "True");
-        if (question.Length > 0) form.AddField("userText", question);
+        // what the visitor is holding or pointing at goes with their question (VincentObjectTalk), so "why did you
+        // paint this?" can be answered; only as text: with the recording, Convai takes nothing else
+        string context = !isPrompt && question.Length > 0 && QuestionContext != null ? QuestionContext(question) : null;
+        if (!string.IsNullOrEmpty(context)) Debug.Log($"[VanGogh] Convai: with your question: \"{Shorten(context)}\"");
+        if (question.Length > 0) form.AddField("userText", string.IsNullOrEmpty(context) ? question : question + " " + context);
         else
         {
             form.AddField("sample_rate", SampleRate.ToString());
             form.AddBinaryData("file", wav, "speech.wav", "audio/wav");
         }
-        Debug.Log($"[VanGogh] Convai: sending your question as {(question.Length > 0 ? $"text, {Ms(released, Time.realtimeSinceStartupAsDouble)} ms after release" : "audio")}");
+        Debug.Log(isPrompt ? $"[VanGogh] Convai: sending a prompt: \"{Shorten(question)}\""
+                           : $"[VanGogh] Convai: sending your question as {(question.Length > 0 ? $"text, {Ms(released, Time.realtimeSinceStartupAsDouble)} ms after release" : "audio")}");
 
         int mine = ++streamId;   // B, a scripted line or Cancel abandons this stream (AbandonStream)
         streamLive = true;
         streamParts = 0;
-        streamQuestion = question;
+        streamQuestion = isPrompt ? "" : question;   // a prompt isn't something a player asked: not shown to the room
         streamReleased = released;
         var unsaid = new StringBuilder();   // text that doesn't end a sentence yet
 
@@ -527,9 +564,10 @@ public class SpeechToProxy : MonoBehaviour
             }
             if (unsaid.Length > 0) SendPart(unsaid.ToString());
             streamLive = false;
+            prompting = false;
             if (streamParts == 0)
             {
-                SetState(State.Error);
+                SetState(isPrompt ? State.Idle : State.Error);   // a prompt that fails: he just doesn't comment
                 Debug.LogWarning($"[VanGogh] Convai gave no answer: {req.responseCode} {req.error} {Shorten(reader.All.ToString())}");
                 yield break;
             }
@@ -551,6 +589,7 @@ public class SpeechToProxy : MonoBehaviour
     /// the room is told it has ended (B pressed again, a scripted line, or Cancel).</summary>
     void AbandonStream()
     {
+        prompting = false;
         if (!streamLive) return;
         streamLive = false;
         streamId++;

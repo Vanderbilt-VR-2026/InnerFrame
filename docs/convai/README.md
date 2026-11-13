@@ -106,6 +106,20 @@ who asked.
 - Two players (Quest + Editor): ask from one. Both should hear the same thinking
   line at once, then his answer, sentence by sentence, at about the same time.
 
+## He talks about what you pick up (Painted Bedroom)
+
+`SpeechToProxy.Prompt(text)` sends text to Convai as if the visitor had said it, and he
+answers as usual (streamed, headset voice, shared), without a thinking line.
+`VincentObjectTalk` uses it: the first time you pick up or select an object, it sends
+that object's notes from `Resources/VincentNotes/<scene>.json`. The list, the rules
+(once per object, waits for him, 20 s apart) and the test are in
+[`bedroom-objects.md`](bedroom-objects.md). A scene gets this by having a notes file;
+the Gallery has none. Only with Use Convai and Headset Voice on.
+
+Your questions carry it too (`SpeechToProxy.QuestionContext`): ask while holding an
+object, or just after pressing one, and the question goes with that object's notes.
+Ask about "this" with nothing in focus and he asks which one; press it to answer.
+
 ## Limits
 
 - **His first words still take about 2 s,** because that is how long Convai takes to
@@ -120,4 +134,5 @@ who asked.
 - **The API key ships in the APK.** Fine for team testing. For anything shared more
   widely, move the call to a server (the proxy, hosted online) so the key stays there.
 - **The scene sentence isn't sent.** The mirror scene's `SceneContext` isn't passed
-  to Convai. The proxy ignores it too, today.
+  to Convai. The proxy ignores it too, today. (An object prompt carries the room's
+  description, once, but not the mirror's progress.)

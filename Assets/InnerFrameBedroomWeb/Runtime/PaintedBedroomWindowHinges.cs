@@ -180,6 +180,8 @@ namespace InnerFrame.PaintedBedroom
 
             void OnPressed(SelectEnterEventArgs args)
             {
+                var window = GetComponentInParent<PaintedBedroomMovable>();
+                if (window != null) window.RaiseTouched(false);   // selecting the window (Vincent can talk about it)
                 holder = args.interactorObject;
                 pressedAt = Time.time;
                 handAtPress = HandPosition();

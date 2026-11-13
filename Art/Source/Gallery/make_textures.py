@@ -2,9 +2,9 @@
 
     Blender --background --factory-startup --python make_textures.py -- <folder with wall.png, floor.webp, ...>
 
-The yellow wall and the corridor behind the arch (2026-11-12) keep their source images in the repo, in
-Art/Source/Gallery/textures/ (with the yellow concept photo they follow); run the script on that folder to remake just
-those two. The other sources are still outside the repo (see docs/gallery/TEXTURE_PROMPTS.md).
+The yellow wall and the corridor picture (2026-11-12) keep their source images in the repo, in
+Art/Source/Gallery/textures/ (with the yellow concept photo they follow); run the script on that folder to remake the
+wall and the corridor's door from them. The other sources are still outside the repo (see docs/gallery/TEXTURE_PROMPTS.md).
 
 Each input is found by its name with any image extension (.png, .webp, .jpg); a missing one is skipped. For each it
 writes Assets/Art/Gallery/Textures/GT_<Name>_BaseColor.jpg:
@@ -18,9 +18,10 @@ writes Assets/Art/Gallery/Textures/GT_<Name>_BaseColor.jpg:
   - "fit": a picture mapped once (the rug, 2 x 3 m), cropped from the centre to its shape;
   - "stretch": a picture mapped once and stretched to its shape rather than cropped (the door, 1.6 x 2.6 m, until
     2026-11-12: so its frame stayed whole);
-  - "backdrop": the corridor seen through the arch (1.6 x 2.6 m, mapped once on the slab that closes it), cropped from
-    the centre to the arch's shape, then blurred (a Gaussian, BACKDROP_BLUR of the width) and darkened (BACKDROP_DARK)
-    so it reads as further away, and dimmer, than the lit room in front of it.
+  - "crop": a part of a picture (CROPS: its pixels, from the top left), mapped once: the corridor's end door, from the
+    corridor picture (corridor.png, the ChatGPT original). Its panes also make GT_<Name>_Emission.jpg: the picture where
+    it is as bright as the lit panes (GLOW_FROM..GLOW_FULL of the brightest), black elsewhere, so only they glow. (The
+    corridor was a flat picture behind the arch until the real one, 2026-11-12: a "backdrop", blurred and darkened.)
 For "tile" it prints how strong the seam is before and after: the step across the wrap (last column to first, last row
 to first) over the 99th percentile of the steps between neighbouring columns (rows) inside the image. Under 1, the wrap
 is no sharper than the image's own brushwork.
@@ -38,8 +39,13 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 IN = os.path.expanduser(sys.argv[sys.argv.index("--") + 1])
 OUT = os.path.join(HERE, "../../../Assets/Art/Gallery/Textures")
 SEAM = 0.12
-BACKDROP_BLUR = 0.004   # the blur's sigma, as a fraction of the picture's width (4 px of 1024)
-BACKDROP_DARK = 0.7     # times the colour as stored (sRGB): about half as bright to the eye
+# corridor.png's door: its two leaves, (left, top, right, bottom) in pixels from the top left (the frame round them is
+# modelled); 252 x 418, 0.603 wide for 1 tall (build_gallery.py DOOR_ASPECT). Measured on the 1024 x 1536 original.
+CROPS = {"CorridorDoor": (386, 557, 638, 975)}
+# the panes: the upper part of the door (its top ROWS of the crop's height; the knobs and the lower panels below), as
+# bright as GLOW_FROM..GLOW_FULL (luma, sRGB 0-1)
+GLOW_ROWS = 0.62
+GLOW_FROM, GLOW_FULL = 0.40, 0.55
 
 # input name: [(output name, kind, output size (w, h), shape w / h), ...]
 SLOTS = {
@@ -56,7 +62,7 @@ SLOTS = {
     "marble":       [("Marble", "tile", (1024, 1024), 1.0)],     # the statue's plinth
     "bench_fabric": [("Cushion", "tile", (1024, 1024), 1.0)],
     "rug":          [("Rug", "fit", (683, 1024), 2.0 / 3.0)],
-    "corridor":     [("Corridor", "backdrop", (945, 1536), 1.6 / 2.6)],   # behind the arch, since 2026-11-12 (was the door)
+    "corridor":     [("CorridorDoor", "crop", (512, 1024), None)],   # the corridor's end door (2026-11-12)
 }
 
 
@@ -90,18 +96,6 @@ def seam(px, axis):
     return float(np.abs(a[-1] - a[0]).mean() / np.percentile(inside, 99))
 
 
-def blur(px, sigma):
-    """A Gaussian blur, one axis at a time, the edges repeated outwards."""
-    r = max(1, int(3 * sigma + 0.5))
-    k = np.exp(-np.arange(-r, r + 1) ** 2 / (2.0 * sigma * sigma)); k /= k.sum()
-    for axis in (0, 1):
-        pad = [(0, 0)] * px.ndim; pad[axis] = (r, r)
-        p = np.pad(px, pad, mode="edge")
-        n = px.shape[axis]
-        px = sum(w * np.take(p, range(i, i + n), axis=axis) for i, w in enumerate(k))
-    return px
-
-
 def plain_band(px):
     """A square from the trim image's quietest stretch: the window, a fifth of its height, whose sharpest row-to-row change
     (a moulding line) is smallest, so a panel of plain painted wood with no line across it."""
@@ -114,7 +108,7 @@ def plain_band(px):
     return band[:, (w - n) // 2:(w - n) // 2 + n]
 
 
-def save(px, name, size, wraps=()):
+def save(px, name, size, wraps=(), suffix="BaseColor"):
     """Scale to `size` and write the JPEG. Along each axis in `wraps` (0 up, 1 across) the image is first extended by
     a margin of itself from the opposite edge and cropped back after scaling, so the resampling runs across the
     repeat as it does inside the image (scaled on its own, the edges were resampled differently: a faint seam)."""
@@ -140,7 +134,7 @@ def save(px, name, size, wraps=()):
     scene.view_settings.look = "None"
     scene.render.image_settings.file_format = "JPEG"
     scene.render.image_settings.quality = 90
-    path = os.path.join(OUT, f"GT_{name}_BaseColor.jpg")
+    path = os.path.join(OUT, f"GT_{name}_{suffix}.jpg")
     img.save_render(path, scene=scene)
     if wraps:
         global last_seam
@@ -174,7 +168,10 @@ for stem, outputs in SLOTS.items():
             px = np.ascontiguousarray(np.rot90(px))
         if kind == "plain":
             px = plain_band(px)
-        px = crop(px, shape) if kind not in ("band", "stretch") else px
+        if kind == "crop":
+            x0, y0, x1, y1 = CROPS[name]
+            px = px[h - y1:h - y0, x0:x1]   # row 0 is the image's bottom
+        px = crop(px, shape) if kind not in ("band", "stretch", "crop") else px
         note = ""
         if kind == "tile":
             before = (seam(px, 1), seam(px, 0))
@@ -182,10 +179,13 @@ for stem, outputs in SLOTS.items():
             px = wrap(px, 1)
         if kind in ("tile", "tile_turned", "plain"):
             px = wrap(px, 0)
-        if kind == "backdrop":
-            px = px.copy()
-            px[:, :, :3] = blur(px[:, :, :3], BACKDROP_BLUR * px.shape[1]) * BACKDROP_DARK
-            note = f", blurred (sigma {BACKDROP_BLUR * px.shape[1]:.1f} px) and darkened x{BACKDROP_DARK}"
+        if kind == "crop":
+            luma = px[:, :, 0] * 0.2126 + px[:, :, 1] * 0.7152 + px[:, :, 2] * 0.0722
+            m = np.clip((luma - GLOW_FROM) / (GLOW_FULL - GLOW_FROM), 0.0, 1.0)
+            m[: int(px.shape[0] * (1.0 - GLOW_ROWS))] = 0.0   # the rows below the panes (row 0 is the bottom)
+            glow = px.copy(); glow[:, :, :3] *= m[:, :, None]
+            save(np.ascontiguousarray(glow), name, size, (), "Emission")
+            note = f", {px.shape[1]} x {px.shape[0]} px, its panes ({(m > 0.5).mean() * 100:.0f} % of it) -> GT_{name}_Emission.jpg"
         if name in GAIN:
             px = px.copy(); px[:, :, :3] = np.clip(px[:, :, :3] * np.asarray(GAIN[name], dtype=np.float32), 0.0, 1.0)
         wraps = (0, 1) if kind in ("tile", "tile_turned", "plain") else (1,) if kind in ("tile_x", "band") else ()

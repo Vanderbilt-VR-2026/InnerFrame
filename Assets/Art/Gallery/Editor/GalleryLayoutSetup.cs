@@ -25,7 +25,13 @@ namespace InnerFrame.Gallery.EditorTools
     ///  - the wall labels: Rowling's cards (Cici Artwork Cards), one beside each painting, with "More →", their number and
     ///    time of day, and no ENTER (you enter from the painting's menu);
     ///  - the pointer and the menu ("Gallery Painting Menu"); one spotlight per painting (GalleryLightingSetup);
-    ///  - the decor's places and which lanterns give light (overrides on the GalleryDecor instance); the XR Origin at Spawn_Point.
+    ///  - the decor's places and which lanterns give light (overrides on the GalleryDecor instance); the XR Origin at Spawn_Point;
+    ///  - the arch (2026-11-12, "Gallery Arch"): GP_Arch.prefab (Cici's Tripo model, made by make_arch.py; URP Lit, rough,
+    ///    a mesh collider) with its back ArchInset inside the outer face of the wall the asset names, facing into the room,
+    ///    so it covers the wall's thickness round the doorway build_gallery.py cuts for it (and, seen from the corridor,
+    ///    doesn't flicker against the wall's back); and the corridor's lantern, the decor's hanging one with no light, in the
+    ///    middle of the corridor build_gallery.py builds behind it (corridorLength). (A flat corridor picture on a card, and
+    ///    a blocker in the doorway, stood there until the corridor: removed.)
     /// It removes the stands' entrances (SN_GalleryEntrance, Cafe_GalleryEntrance, the wainscot repair cubes).
     /// Idempotent: objects are found by name and changed only where they differ; the scene is saved only then.
     /// </summary>
@@ -80,6 +86,14 @@ namespace InnerFrame.Gallery.EditorTools
                 AssetDatabase.SaveAssets();
                 changes.Add($"{LayoutPath}: hanging sizes worked out (scale {layout.scale}): rebuild Gallery.fbx if The Bedroom's changed");
             }
+            var text = System.IO.File.ReadAllText(LayoutPath);
+            if (!text.Contains("archWall:") || !text.Contains("corridorLength:") || text.Contains("corridorGap:"))
+            {
+                EditorUtility.SetDirty(layout);
+                AssetDatabase.SaveAssets();
+                changes.Add($"{LayoutPath}: the arch's place and the corridor's length (archWall, archAlong, corridorLength)");
+            }
+            var archPrefab = ArchAssets(changes);
             var scene = EditorSceneManager.OpenScene(GalleryDecorSetup.GalleryPath, OpenSceneMode.Single);
             Shell(layout, scene);
             var why = new List<string>();
@@ -88,6 +102,7 @@ namespace InnerFrame.Gallery.EditorTools
             Labels(scene, layout, why);
             Pointer(scene, layout, why);
             Decor(scene, layout, why);
+            Arch(scene, layout, archPrefab, why);
             Spawn(scene, why);
             GalleryLightingSetup.PaintingLights(scene, why);
             if (why.Count > 0)
@@ -421,6 +436,109 @@ namespace InnerFrame.Gallery.EditorTools
                 foreach (var lamp in t.GetComponentsInChildren<Light>(true))   // the light only: the glass and flame keep glowing
                     if (lamp.enabled != prop.lit) { lamp.enabled = prop.lit; EditorUtility.SetDirty(lamp); why.Add($"{prop.name}'s lamp {(prop.lit ? "on" : "off")}"); }
             }
+        }
+
+        // ------------------------------------------------------------------------------------------------ the arch
+        public const string ArchRoot = "Gallery Arch", ArchName = "GP_Arch";
+        public const string ArchFbx = "Assets/Art/Gallery/Props/GP_Arch.fbx", ArchTex = "Assets/Art/Gallery/Props/GP_Arch_BaseColor.jpg";
+        public const string ArchMat = "Assets/Art/Gallery/Props/GP_Arch.mat", ArchPrefab = "Assets/Art/Gallery/Props/GP_Arch.prefab";
+        /// <summary>Cici: rough (Tripo's roughness 0.9, made 1 by make_arch.py): a matte painted stone, no shine.</summary>
+        public const float ArchSmoothness = 0.05f;
+        /// <summary>The arch's back stands this far inside the wall's outer face: from the corridor the wall's back face is
+        /// in front of it, so the two don't flicker where they meet (the 5 mm doesn't show from the room).</summary>
+        public const float ArchInset = 0.005f;
+        public const string CorridorLantern = "Corridor_Lantern";
+        /// <summary>The corridor's lantern hangs by a chain this long from the corridor's ceiling (Corridor_Ceiling's underside).</summary>
+        public const float LanternChain = 0.25f;
+        static readonly string[] RetiredArchParts = { "Corridor", "Doorway" };   // the flat picture's card and the doorway's blocker
+
+        /// <summary>GP_Arch's import (mesh only), its texture, its URP Lit material and its prefab (the FBX's mesh, the
+        /// material, a mesh collider), each written only when it differs.</summary>
+        static GameObject ArchAssets(List<string> changes)
+        {
+            var mi = AssetImporter.GetAtPath(ArchFbx) as ModelImporter ?? throw new Exception($"{Tag} {ArchFbx} missing: run make_arch.py");
+            if (mi.materialImportMode != ModelImporterMaterialImportMode.None || mi.importAnimation || mi.animationType != ModelImporterAnimationType.None
+                || mi.importCameras || mi.importLights || mi.addCollider || mi.isReadable)
+            {
+                mi.materialImportMode = ModelImporterMaterialImportMode.None; mi.importAnimation = false; mi.animationType = ModelImporterAnimationType.None;
+                mi.importCameras = false; mi.importLights = false; mi.addCollider = false; mi.isReadable = false;
+                mi.SaveAndReimport();
+                changes.Add($"{ArchFbx}: import settings (mesh only)");
+            }
+            GalleryDecorSetup.ImportTexture(ArchTex, 1024, changes, repeat: false);
+            var mat = GalleryDecorSetup.MakeMaterial(ArchMat, ArchTex, Color.white, ArchSmoothness, true, false, changes);
+            var mesh = AssetDatabase.LoadAllAssetsAtPath(ArchFbx).OfType<Mesh>().FirstOrDefault() ?? throw new Exception($"{Tag} {ArchFbx} has no mesh");
+
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(ArchPrefab);
+            if (prefab != null && prefab.TryGetComponent<MeshFilter>(out var pf) && pf.sharedMesh == mesh
+                && prefab.TryGetComponent<MeshRenderer>(out var pr) && pr.sharedMaterial == mat
+                && prefab.TryGetComponent<MeshCollider>(out var pc) && pc.sharedMesh == mesh && prefab.isStatic)
+                return prefab;
+            var go = new GameObject(ArchName);
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            go.AddComponent<MeshRenderer>().sharedMaterial = mat;
+            go.AddComponent<MeshCollider>().sharedMesh = mesh;
+            go.isStatic = true;
+            prefab = PrefabUtility.SaveAsPrefabAsset(go, ArchPrefab);
+            Object.DestroyImmediate(go);
+            changes.Add($"{ArchPrefab}: {(prefab != null ? "saved" : "FAILED")} (GP_Arch.fbx's mesh, {ArchMat}, a mesh collider)");
+            return prefab ?? throw new Exception($"{Tag} could not save {ArchPrefab}");
+        }
+
+        /// <summary>A wall's outer face, from its renderer (Gallery.fbx's Wall_&lt;name&gt;): the point on it level with the
+        /// floor, `along` from the wall's centre.</summary>
+        public static Vector3 WallOuter(Scene scene, GalleryLayout l, GalleryLayout.Wall wall, float along)
+        {
+            var name = "Wall_" + wall;
+            var r = scene.GetRootGameObjects().SelectMany(g => g.GetComponentsInChildren<Renderer>(true)).FirstOrDefault(x => x.name == name)
+                    ?? throw new Exception($"{Tag} Gallery.unity has no {name}");
+            var b = r.bounds;
+            switch (wall)
+            {
+                case GalleryLayout.Wall.North: return new Vector3(along, 0f, b.min.z);
+                case GalleryLayout.Wall.South: return new Vector3(along, 0f, b.max.z);
+                case GalleryLayout.Wall.East: return new Vector3(b.min.x, 0f, along);
+                default: return new Vector3(b.max.x, 0f, along);
+            }
+        }
+
+        static void Arch(Scene scene, GalleryLayout l, GameObject prefab, List<string> why)
+        {
+            var root = RootObject(scene, ArchRoot, why).transform;
+            var at = Round(WallOuter(scene, l, l.archWall, l.archAlong) + GalleryLayout.Normal(l.archWall) * ArchInset);
+            Pose(root, at, GalleryLayout.Facing(l.archWall), Vector3.one, why);
+
+            var arch = root.Find(ArchName);
+            if (arch != null && PrefabUtility.GetCorrespondingObjectFromSource(arch.gameObject) != prefab) { Object.DestroyImmediate(arch.gameObject); arch = null; }
+            if (arch == null)
+            {
+                arch = ((GameObject)PrefabUtility.InstantiatePrefab(prefab, scene)).transform;
+                arch.name = ArchName;
+                arch.SetParent(root, false);
+                why.Add("added GP_Arch");
+            }
+            if (arch.GetSiblingIndex() != 0) arch.SetSiblingIndex(0);
+            Change(arch, "GP_Arch just inside the wall's outer face", () => { arch.localPosition = Vector3.zero; arch.localRotation = Quaternion.identity; arch.localScale = Vector3.one; }, why);
+
+            foreach (var n in RetiredArchParts)
+            {
+                var old = root.Find(n);
+                if (old != null) { Object.DestroyImmediate(old.gameObject); why.Add($"removed {n} (the flat corridor picture's card, the doorway's blocker)"); }
+            }
+
+            // the corridor's lantern: in the corridor's middle, its chain from the ceiling (build_gallery.py's Corridor_Ceiling)
+            var ceiling = scene.GetRootGameObjects().SelectMany(g => g.GetComponentsInChildren<Renderer>(true)).FirstOrDefault(r => r.name == "Corridor_Ceiling")
+                          ?? throw new Exception($"{Tag} Gallery.unity has no Corridor_Ceiling: run build_gallery.py (see this class's summary)");
+            float ceilingY = (float)Math.Round(ceiling.bounds.min.y, 4);
+            var ringTop = new Vector3(0f, ceilingY - LanternChain, -(float)Math.Round(l.corridorLength / 2f + ArchInset, 4));
+            var lantern = root.Find(CorridorLantern);
+            if (lantern == null)
+            {
+                lantern = GalleryDecorSetup.HangingLantern(root, CorridorLantern, ringTop, LanternChain).transform;
+                why.Add("added the corridor's lantern (no light)");
+            }
+            if (lantern.GetSiblingIndex() != 1) lantern.SetSiblingIndex(1);
+            Change(lantern, "the corridor's lantern in its middle", () => { lantern.localPosition = ringTop; lantern.localRotation = Quaternion.identity; lantern.localScale = Vector3.one; }, why);
         }
 
         static void Spawn(Scene scene, List<string> why)

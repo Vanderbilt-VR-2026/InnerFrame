@@ -15,8 +15,9 @@ namespace InnerFrame.Gallery.EditorTools.Tests
     /// </summary>
     public static class GalleryStands
     {
-        /// <summary>Names or meshes (prefix match) of what may stand on the floor; the doorway's moulding comes down to it too.</summary>
-        public static readonly string[] Allowed = { "Bench_", "Rug", "Arch_Moulding", "GP_Plant", "Plant_", "GP_Plinth", "GP_FlowerStand", "GP_Statue", "Statue_", "GP_Vase", "GP_LampTable" };
+        /// <summary>Names or meshes (prefix match) of what may stand on the floor; the doorway's arch (GP_Arch, the Tripo model since
+        /// 2026-11-12; Arch_Moulding before, on main) comes down to it too.</summary>
+        public static readonly string[] Allowed = { "Bench_", "Rug", "Arch_Moulding", "GP_Arch", "GP_Plant", "Plant_", "GP_Plinth", "GP_FlowerStand", "GP_Statue", "Statue_", "GP_Vase", "GP_LampTable" };
 
         public struct Item { public string path, mesh; public Bounds bounds; public bool allowed; }
 

@@ -13,9 +13,13 @@ in the south wall with a closed door in it, and one upholstered bench on a rug i
 ChatGPT textures (docs/gallery/TEXTURE_PROMPTS.md): walls, floor and wood repeat by the metre (UVs in metres); the
 rug and the door are mapped once, edge to edge.
 
-2026-11-12: the walls turn yellow (a texture: make_textures.py), and the slab that closes the arch shows the corridor
-behind it instead of a door, so it has no handles any more.
+2026-11-12: the walls turn yellow (a texture: make_textures.py). Later that day the arch became Cici's Tripo model
+(GP_Arch, made by make_arch.py and placed by Unity's Build Layout): this script no longer builds an arch moulding or a
+door. It cuts the doorway make_arch.py works out for that arch (arch.json), with no reveal: the arch covers the wall's
+thickness. Behind it a real corridor (Corridor_*), GalleryLayout.asset's corridorLength long, ends at a closed double
+door; it replaced a flat corridor picture the same day.
 """
+import json
 import re
 from math import atan2, cos, degrees, exp, pi, radians, sin
 from pathlib import Path
@@ -33,13 +37,30 @@ from mathutils import Matrix, Vector
 WALL_T = 0.2         # thickness of the walls and the floor
 CEILING_T = 0.4      # ceiling thickness, which is also the depth of the skylight
 
-# The arched entrance in the middle of Wall_South, closed at the wall's outer face by a slab ("Door") that shows the
-# corridor beyond (GT_Corridor).
-ARCH_W, ARCH_SPRING = 1.6, 1.8      # opening width; height where the arch starts to curve
-ARCH_R = ARCH_W / 2                 # a round (semicircular) arch: crown at ARCH_SPRING + ARCH_R = 2.6 m
+# The doorway in the middle of Wall_South, for the Tripo arch (GP_Arch): a round-headed opening (straight sides to
+# ARCH_SPRING, then a half circle of radius ARCH_R) that lies between the arch's opening and its outline, so the arch
+# hides the wall's cut edge from every side. make_arch.py measures the arch and writes it to arch.json.
+ARCH = json.loads((Path(__file__).resolve().parent / "arch.json").read_text())
+ARCH_R = ARCH["doorway"]["half_width"]
+ARCH_W, ARCH_SPRING = 2 * ARCH_R, ARCH["doorway"]["spring"]
 ARCH_SEGMENTS = 16                  # straight pieces in the curve
-ARCH_TRIM_W, ARCH_TRIM_D = 0.15, 0.05   # the moulding round the opening, and how far it stands out
-DOOR_T = 0.05
+ARCH_TOP = ARCH["size_m_xyz"][2]    # the arch's own top
+# how far out the arch reaches up to 1.2 m (its plinths and pilasters): the wainscot, its rail and the baseboard stop
+# 2 cm inside that, so their ends are within the arch
+ARCH_OUTLINE_LOW = min(h for z, h in ARCH["outline_half_width_by_height"] if z <= 1.2)
+
+# The corridor behind the arch (2026-11-12, after the corridor picture: corridor.png): straight, CORRIDOR_LENGTH from the
+# south wall's outer face to its end wall; CORRIDOR_W wide inside (the doorway's width + 0.4 m, so its walls start behind
+# the wall round the arch); its ceiling 0.3 m over the arch's top, walnut, with two recessed panels; yellow walls with the
+# room's wainscot, rail and baseboard; its floor (Corridor_Floor) level with the room's, which runs through the doorway.
+# At its end, a closed double door (the picture's own, cropped by make_textures.py) set into the end wall in a walnut frame.
+CORRIDOR_W = round(ARCH_W + 0.4, 3)
+CORRIDOR_H = round(ARCH_TOP + 0.3, 2)
+PANEL_MARGIN, PANEL_GAP, PANEL_DEPTH = 0.25, 0.30, 0.08   # the ceiling's two recessed panels: from the walls, between them, how deep
+DOOR_H, DOOR_ASPECT = 2.2, 252 / 418                      # the door's height; its leaves' shape in the picture (make_textures.py CROPS)
+DOOR_W = round(DOOR_H * DOOR_ASPECT, 3)
+DOOR_INSET, DOOR_T, DOOR_LINING = 0.05, 0.05, 0.02        # the door's face behind the end wall's; its thickness; the lining round it
+CASING_W, CASING_D = 0.10, 0.03                           # the frame on the end wall round the door
 SPAWN_INSET = 1.0                   # how far inside the entrance Spawn_Point stands
 
 # TEAM DECISION: the size and height of the painting the group walks through.
@@ -100,9 +121,9 @@ COLORS = {  # plain colours, linear RGB (the numbers Blender's colour picker sho
     "Mat_Rug": (0.30, 0.05, 0.05),         # red rug
     "Mat_BenchWood": (0.05, 0.025, 0.012), # dark walnut
     "Mat_Cushion": (0.12, 0.06, 0.04),     # dark leather
-    "Mat_Door": (0.10, 0.06, 0.02),        # the corridor beyond the arch, dim (its texture: GT_Corridor)
     "Mat_Bench": (0.01, 0.01, 0.01),       # near-black (the pedestals)
     "Mat_Frame": (0.17, 0.10, 0.025),      # dark gold
+    "Mat_CorridorDoor": (0.25, 0.12, 0.05), # the corridor's end door (its texture: GT_CorridorDoor)
     "Mat_Metal": (0.05, 0.05, 0.05),       # dark grey, skylight bars
     "Mat_Baseboard": (0.13, 0.05, 0.02),   # dark wood
 }
@@ -123,7 +144,9 @@ def read_layout(path):
     for item in re.split(r"^  - ", block, flags=re.M)[1:]:
         fields = dict(re.findall(r"^(?:    )?(\w+): (.*)$", item, re.M))
         paintings.append({k: fields[k] for k in ("key", "wall", "along", "width", "height", "bottom")})
+    corridor = re.search(r"^  corridorLength: (-?[0-9.eE+-]+)$", text, re.M)
     return {"width": num("roomWidth"), "length": num("roomLength"), "height": num("roomHeight"),
+            "corridor_length": float(corridor.group(1)) if corridor else 4.0,
             "bench": (float(bench.group(1)), float(bench.group(2))),
             "paintings": [dict(p, wall=int(p["wall"]), **{k: float(p[k]) for k in ("along", "width", "height", "bottom")})
                           for p in paintings]}
@@ -442,10 +465,10 @@ H, T = ROOM_HEIGHT, WALL_T
 outer_x, outer_y = (x0 - T, x1 + T), (y0 - T, y1 + T)
 assert BENCH_AT[1] + (BENCH_L if BENCH_ALONG_ROOM else BENCH_D) / 2 <= y1 - GATHER_DEPTH, "bench in the gathering area"
 assert abs(BENCH_AT[0]) + BENCH_D < x1 and abs(BENCH_AT[1]) + BENCH_L < y1, "bench inside the room"
-assert ARCH_SPRING + ARCH_R + ARCH_TRIM_W < H - CORNICE_H, "the arch reaches the cornice"
+assert ARCH_TOP < H - CORNICE_H, "the arch reaches the cornice"
 
 # Floor and ceiling; the skylight in the middle of the ceiling, with a moulded frame round it.
-make("Floor", mat["Mat_Floor"], ("xyz", outer_x, outer_y, (-T, 0)))
+make("Floor", mat["Mat_Floor"], ("xyz", outer_x, outer_y, (-T, 0)))   # under the walls, so through the doorway too
 sky = (-SKYLIGHT_W / 2, SKYLIGHT_W / 2, -SKYLIGHT_D / 2, SKYLIGHT_D / 2)
 make("Ceiling", mat["Mat_Ceiling"], ("xyz", outer_x, outer_y, (H, H + CEILING_T), [sky]))
 st = SKYLIGHT_TRIM
@@ -467,30 +490,72 @@ for side in (1, -1):
     prism_xz(bm, outline, (y0 - T, y0), fan_from=corner)
 finish("Arch_Spandrels", mat["Mat_Wall"], bm)
 
-# The moulding round the arch, on the room side: two pilasters up to the spring and a band round the curve.
-bm = bmesh.new()
-tw, td = ARCH_TRIM_W, ARCH_TRIM_D
-for side in (1, -1):
-    xa, xb = sorted((side * ARCH_R, side * (ARCH_R + tw)))
-    add_box(bm, "xzy", (xa, xb), (0, ARCH_SPRING), (y0, y0 + td))
-inner = arc(0, ARCH_SPRING, ARCH_R, 0, pi, ARCH_SEGMENTS)
-outer = arc(0, ARCH_SPRING, ARCH_R + tw, 0, pi, ARCH_SEGMENTS)
-fi = [bm.verts.new((x, y0 + td, z)) for x, z in inner]; fo = [bm.verts.new((x, y0 + td, z)) for x, z in outer]
-bi = [bm.verts.new((x, y0, z)) for x, z in inner]; bo = [bm.verts.new((x, y0, z)) for x, z in outer]
-for k in range(ARCH_SEGMENTS):
-    bm.faces.new([fi[k], fo[k], fo[k + 1], fi[k + 1]])      # front
-    bm.faces.new([fo[k], bo[k], bo[k + 1], fo[k + 1]])      # outer edge
-    bm.faces.new([bi[k], fi[k], fi[k + 1], bi[k + 1]])      # inner edge (the soffit's lip)
-finish("Arch_Moulding", mat["Mat_Trim"], bm)
 
-# The "door": one slab the shape of the opening, at the wall's outer face, seen down the 0.2 m reveal; its picture (the
-# corridor beyond, since 2026-11-12; a pair of doors before) is mapped once, edge to edge (uv_fit). No handles: the
-# corridor's doors are painted at its far end.
-bm = bmesh.new()
-door_outline = [(-ARCH_R, 0.0), (ARCH_R, 0.0)] + arc(0, ARCH_SPRING, ARCH_R, 0, pi, ARCH_SEGMENTS)
-prism_xz(bm, door_outline, (y0 - T, y0 - T + DOOR_T), fan_from=(0.0, ARCH_SPRING))
-finish("Door", mat["Mat_Door"], bm)
-uv_fit(bpy.data.objects["Door"])
+def drop_reveal(name):
+    """Delete an object's faces that face across the doorway inside the wall's thickness (its jambs, soffit and the
+    floor's cut edges): the arch covers the wall's thickness there (2026-11-12, Cici: no real wall or floor between
+    the doorway and the corridor picture)."""
+    obj = bpy.data.objects[name]
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    bm.normal_update()
+    e = 1e-4
+    gone = [f for f in bm.faces if abs(f.normal.y) < 0.5 and all(
+        abs(v.co.x) <= ARCH_R + e and v.co.z <= crown + e and y0 - T - e <= v.co.y <= y0 + e for v in f.verts)]
+    bmesh.ops.delete(bm, geom=gone, context="FACES")
+    bm.to_mesh(obj.data)
+    bm.free()
+    return len(gone)
+
+
+reveal = {n: drop_reveal(n) for n in ("Wall_South", "Arch_Spandrels")}
+print(f"Doorway {ARCH_W:.3f} x {crown:.3f} m (spring {ARCH_SPRING} m); faces taken out of its thickness: {reveal}")
+
+# The corridor (Blender -Y is Unity +Z, away from the room): cy0 at the south wall's outer face, cy1 at the end wall's face.
+cw, ch, cl = CORRIDOR_W / 2, CORRIDOR_H, LAYOUT["corridor_length"]
+cy0 = y0 - T
+cy1 = cy0 - cl
+assert CORRIDOR_W / 2 > ARCH_R + 0.1 and DOOR_W / 2 + CASING_W < cw - 0.1, "the corridor is wider than the doorway and the door"
+make("Corridor_Floor", mat["Mat_Floor"], ("xyz", (-cw - T, cw + T), (cy1 - T, cy0), (-T, 0)))
+door_hole = (-DOOR_W / 2, DOOR_W / 2, 0, DOOR_H)
+make("Corridor_Walls", mat["Mat_Wall"],
+     ("yzx", (cy1 - T, cy0), (0, ch), (-cw - T, -cw)),
+     ("yzx", (cy1 - T, cy0), (0, ch), (cw, cw + T)),
+     ("xzy", (-cw - T, cw + T), (0, ch), (cy1 - T, cy1), [door_hole]))
+# the door's opening has no yellow sides: a walnut lining instead (below)
+bm = bmesh.new(); bm.from_mesh(bpy.data.objects["Corridor_Walls"].data); bm.normal_update()
+gone = [f for f in bm.faces if abs(f.normal.y) < 0.5 and all(
+    abs(v.co.x) <= DOOR_W / 2 + 1e-4 and v.co.z <= DOOR_H + 1e-4 and cy1 - T - 1e-4 <= v.co.y <= cy1 + 1e-4 for v in f.verts)]
+bmesh.ops.delete(bm, geom=gone, context="FACES"); bm.to_mesh(bpy.data.objects["Corridor_Walls"].data); bm.free()
+panel_len = (cl - 2 * PANEL_MARGIN - PANEL_GAP) / 2
+panels = [(-cw + PANEL_MARGIN, cw - PANEL_MARGIN, cy0 - PANEL_MARGIN - panel_len, cy0 - PANEL_MARGIN),
+          (-cw + PANEL_MARGIN, cw - PANEL_MARGIN, cy1 + PANEL_MARGIN, cy1 + PANEL_MARGIN + panel_len)]
+make("Corridor_Ceiling", mat["Mat_BenchWood"],
+     ("xyz", (-cw - T, cw + T), (cy1 - T, cy0), (ch, ch + PANEL_DEPTH), panels),
+     ("xyz", (-cw - T, cw + T), (cy1 - T, cy0), (ch + PANEL_DEPTH, ch + PANEL_DEPTH + 0.05)))
+dl, dw, dh = DOOR_LINING, DOOR_W / 2, DOOR_H
+make("Corridor_DoorFrame", mat["Mat_BenchWood"],
+     ("xzy", (-dw - CASING_W, -dw), (0, dh + CASING_W), (cy1, cy1 + CASING_D)),           # the casing, on the wall
+     ("xzy", (dw, dw + CASING_W), (0, dh + CASING_W), (cy1, cy1 + CASING_D)),
+     ("xzy", (-dw, dw), (dh, dh + CASING_W), (cy1, cy1 + CASING_D)),
+     ("xzy", (-dw, -dw + dl), (0, dh), (cy1 - DOOR_INSET - DOOR_T, cy1)),                  # the lining, in the opening
+     ("xzy", (dw - dl, dw), (0, dh), (cy1 - DOOR_INSET - DOOR_T, cy1)),
+     ("xzy", (-dw + dl, dw - dl), (dh - dl, dh), (cy1 - DOOR_INSET - DOOR_T, cy1)))
+make("Corridor_Door", mat["Mat_CorridorDoor"], ("xzy", (-dw + dl, dw - dl), (0, dh - dl), (cy1 - DOOR_INSET - DOOR_T, cy1 - DOOR_INSET)))
+uv_fit(bpy.data.objects["Corridor_Door"])
+# uv_fit runs u along Blender +X, which is Unity's -x: seen from the corridor that would mirror the picture; turn it back
+door_obj = bpy.data.objects["Corridor_Door"]
+for loop_uv in door_obj.data.uv_layers.active.data:
+    loop_uv.uv = (1.0 - loop_uv.uv[0], loop_uv.uv[1])
+
+
+def corridor_strips(z0, z1, d):
+    """The wainscot's strips in the corridor: both side walls, and its end wall either side of the door's frame."""
+    return [
+        ("yzx", (cy1 + d, cy0), (z0, z1), (-cw, -cw + d)),
+        ("yzx", (cy1 + d, cy0), (z0, z1), (cw - d, cw)),
+        ("xzy", (-cw, cw), (z0, z1), (cy1, cy1 + d), [(-dw - CASING_W, dw + CASING_W, z0, z1)]),
+    ]
 
 # Picture frame around the painting opening, standing FRAME_D off the north wall.
 # The Bedroom's canvas as GalleryLayout.asset hangs it (Build Layout works the sizes out): its frame is built here, on
@@ -518,19 +583,20 @@ frame_obj.matrix_world = (Matrix.Translation((bx_, by_, 0)) @ Matrix.Rotation(ra
 
 # Wainscot, cap rail, cornice and baseboard: strips on the walls' inside faces, unbroken except at the arch's
 # moulding: every painting hangs with its frame above the rail (2026-11-12), so none of them cuts the wainscot.
-gap = ARCH_R + ARCH_TRIM_W                # arch moulding's outer edge
+gap = ARCH_OUTLINE_LOW - 0.02             # inside the arch's plinths and pilasters (GP_Arch)
 wd, rd = WAINSCOT_D, RAIL_D
 def strips(z0, z1, d, _cut_frames=None):   # (frames no longer cut the wainscot)
     return [
         ("xzy", (x0, x1), (z0, z1), (y1 - d, y1)),
-        ("xzy", (x0, x1), (z0, z1), (y0, y0 + d), [(-gap, gap, z0, z1)] if z0 < crown + ARCH_TRIM_W else []),
+        ("xzy", (x0, x1), (z0, z1), (y0, y0 + d), [(-gap, gap, z0, z1)] if z0 < ARCH_TOP else []),
         ("yzx", (y0 + d, y1 - d), (z0, z1), (x1 - d, x1)),
         ("yzx", (y0 + d, y1 - d), (z0, z1), (x0, x0 + d)),
     ]
-make("Wainscot", mat["Mat_Wainscot"], *strips(0, WAINSCOT_H, wd, True))
-make("Wainscot_Rail", mat["Mat_Rail"], *strips(WAINSCOT_H - RAIL_H / 2, WAINSCOT_H + RAIL_H / 2, rd, True))
+make("Wainscot", mat["Mat_Wainscot"], *strips(0, WAINSCOT_H, wd, True), *corridor_strips(0, WAINSCOT_H, wd))
+make("Wainscot_Rail", mat["Mat_Rail"], *strips(WAINSCOT_H - RAIL_H / 2, WAINSCOT_H + RAIL_H / 2, rd, True),
+     *corridor_strips(WAINSCOT_H - RAIL_H / 2, WAINSCOT_H + RAIL_H / 2, rd))
 make("Cornice", mat["Mat_Cornice"], *strips(H - CORNICE_H, H, CORNICE_D, False))
-make("Baseboard", mat["Mat_Baseboard"], *strips(0, BASEBOARD_H, BASEBOARD_D, False))
+make("Baseboard", mat["Mat_Baseboard"], *strips(0, BASEBOARD_H, BASEBOARD_D, False), *corridor_strips(0, BASEBOARD_H, BASEBOARD_D))
 
 # Skylight bars: a grid at the top of the skylight opening; the panes are holes.
 nx, ny = SKYLIGHT_PANES
@@ -592,6 +658,12 @@ spawn_y = y0 + SPAWN_INSET
 empty("Spawn_Point", (0, spawn_y, 0), turn_deg=round(degrees(atan2(bx_, -(by_ - spawn_y))), 1))
 
 tris = sum(len(p.vertices) - 2 for o in scene.objects if o.type == "MESH" for p in o.data.polygons)
+corr = [o for o in scene.objects if o.type == "MESH" and o.name.startswith("Corridor_")]
+corr_tris = sum(len(p.vertices) - 2 for o in corr for p in o.data.polygons)
+corr_mats = sorted({s.material.name for o in corr for s in o.material_slots if s.material})
+print(f"Corridor: {cl} m long, {CORRIDOR_W} m wide, {CORRIDOR_H} m high; door {DOOR_W} x {DOOR_H} m; "
+      f"{corr_tris} triangles in {len(corr)} objects ({', '.join(o.name for o in corr)}), materials {corr_mats} "
+      f"(and its strips in Wainscot, Wainscot_Rail, Baseboard)")
 print(f"Triangles: {tris} (budget 20000)")
 assert tris < 20000, tris
 

@@ -68,6 +68,13 @@ namespace InnerFrame.Gallery
         [Header("Decor, along the walls")]
         public List<Prop> decor = new List<Prop>();
 
+        [Header("The arch (GP_Arch: Cici's Tripo model, made by Art/Source/Gallery/make_arch.py) and the corridor behind it")]
+        [Tooltip("The wall the arch stands in, facing into the room. build_gallery.py cuts its doorway in the south wall.")]
+        public Wall archWall = Wall.South;
+        [Tooltip("Metres from the wall's centre, as a painting's along (the doorway is cut at 0).")] public float archAlong;
+        [Tooltip("The corridor behind the arch, metres from the wall's outer face to its end wall and door (build_gallery.py reads it).")]
+        public float corridorLength = 4f;
+
         public Painting Find(string key) => paintings.Find(p => p.key == key);
 
         /// <summary>Into the room from that wall.</summary>

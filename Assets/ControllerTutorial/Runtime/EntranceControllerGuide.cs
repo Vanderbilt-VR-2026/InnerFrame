@@ -14,7 +14,7 @@ namespace InnerFrame.Tutorial
         public VG_DialogueUI View { get; private set; }
         public int PageIndex { get; private set; }
         Action closed;
-        Button previous, next;
+        Button previous, next, close;
         Text counter;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -22,7 +22,19 @@ namespace InnerFrame.Tutorial
 
         public static EntranceControllerGuide Open(Camera camera, Action onClose = null, bool atEntrance = false)
         {
-            if (IsOpen) return Current;
+            if (IsOpen)
+            {
+                // Entering the story may promote an already-open Menu guide. Keep that continuation on later Menu opens.
+                if (atEntrance)
+                {
+                    Current.closed = onClose;
+                    Current.close.name = "Continue";
+                    var label = Current.close.GetComponentInChildren<Text>();
+                    label.text = "Continue";
+                    VG_UI.Fit(label, Vector2.zero);
+                }
+                return Current;
+            }
             var prefab = Resources.Load<EntranceControllerGuide>("EntranceControllerGuide");
             if (camera == null || prefab == null || prefab.dialoguePrefab == null)
             {
@@ -48,7 +60,7 @@ namespace InnerFrame.Tutorial
             View.gameObject.AddComponent<TrackedDeviceGraphicRaycaster>();
             previous = Button("Previous", -0.31f, () => ShowPage(PageIndex - 1));
             next = Button("Next", 0f, () => ShowPage(PageIndex + 1));
-            Button(atEntrance ? "Continue" : "Close", 0.31f, Close);
+            close = Button(atEntrance ? "Continue" : "Close", 0.31f, Close);
             counter = VG_UI.Label("Page", View.LayoutRoot, View.font, View.settings.Cap(View.settings.nameCap),
                 View.settings.wordsColour, new Vector2(0.5f, 0.5f), TextAnchor.MiddleCenter, View.OverlayMaterial);
             ShowPage(0);

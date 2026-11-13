@@ -2,9 +2,11 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
+using InnerFrame.Gallery;
 
 namespace InnerFrame.Tutorial
 {
+    public enum TutorialPlacement { AtAnchor, BelowAnchor, AboveAnchor }
     /// <summary>One local, contextual instruction at a time. Scene adapters supply availability and real outcomes.</summary>
     [DefaultExecutionOrder(1000)]
     public sealed class TutorialManager : MonoBehaviour
@@ -15,6 +17,7 @@ namespace InnerFrame.Tutorial
             public TutorialStep Step;
             public Vector3 Position;
             public int Order;
+            public TutorialPlacement Placement;
         }
 
         public static TutorialManager Instance { get; private set; }
@@ -22,6 +25,15 @@ namespace InnerFrame.Tutorial
         public TutorialSession Session { get; } = new TutorialSession();
         public TutorialStep? VisibleStep { get; private set; }
         public VG_DialogueUI View => view;
+        // Idle reminders yield to available requests, before visibility arbitration, to avoid a mutual wait.
+        public bool HasAvailablePrompt
+        {
+            get
+            {
+                foreach (var request in requests.Values) if (Available(request)) return true;
+                return false;
+            }
+        }
         readonly Dictionary<int, Request> requests = new Dictionary<int, Request>();
         readonly List<int> expired = new List<int>();
         VG_DialogueUI view;
@@ -35,6 +47,7 @@ namespace InnerFrame.Tutorial
         Camera movementCamera;
         Vector3 lastPosition, moveAnchor;
         bool hasPosition;
+        Bounds layoutBounds;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void ResetStatic() => Instance = null;
@@ -65,13 +78,14 @@ namespace InnerFrame.Tutorial
             Hide();
         }
 
-        public void Offer(TutorialStep step, Object owner, Vector3 worldPosition)
+        public void Offer(TutorialStep step, Object owner, Vector3 worldPosition, TutorialPlacement placement = TutorialPlacement.AtAnchor)
         {
             if (owner == null || Session.IsComplete(step)) return;
             int id = owner.GetInstanceID();
             if (!requests.TryGetValue(id, out var request))
                 requests.Add(id, request = new Request { Owner = owner, Step = step, Order = order++ });
             request.Position = worldPosition;
+            request.Placement = placement;
         }
 
         public void Withdraw(Object owner)
@@ -100,6 +114,19 @@ namespace InnerFrame.Tutorial
         public void RefreshSceneBindings()
         {
             var scene = SceneManager.GetActiveScene();
+            if (scene.name == PaintingNames.Gallery)
+            {
+                var pointer = FindAnyObjectByType<GalleryPaintingPointer>();
+                var menu = FindAnyObjectByType<GalleryPaintingMenu>();
+                if (pointer != null && menu != null && pointer.gameObject.scene == scene && menu.gameObject.scene == scene)
+                    foreach (var painting in FindObjectsByType<GalleryPainting>(FindObjectsSortMode.None))
+                        if (painting.gameObject.scene == scene)
+                        {
+                            if (!painting.TryGetComponent<FirstUsePaintingAdapter>(out var adapter))
+                                adapter = painting.gameObject.AddComponent<FirstUsePaintingAdapter>();
+                            adapter.Bind(painting, pointer, menu);
+                        }
+            }
             talkers = FindObjectsByType<SpeechToProxy>(FindObjectsSortMode.None);
             foreach (var talker in talkers)
                 if (talker.gameObject.scene == scene && !talker.TryGetComponent<FirstUseVincentAdapter>(out _))
@@ -137,6 +164,8 @@ namespace InnerFrame.Tutorial
         bool Blocked()
         {
             if (PlayerMenu.MenuOpen || EntranceControllerGuide.IsOpen || SceneFader.IsFading) return true;
+            var paintingMenu = GalleryPaintingMenu.Instance;
+            if (paintingMenu != null && paintingMenu.isActiveAndEnabled && paintingMenu.IsOpen && paintingMenu.Panel.gameObject.activeInHierarchy) return true;
             foreach (var talker in talkers)
                 if (talker != null && talker.isActiveAndEnabled &&
                     (talker.ConversationActive || (talker.voice != null && talker.voice.isPlaying))) return true;
@@ -151,13 +180,15 @@ namespace InnerFrame.Tutorial
             return false;
         }
 
+        bool Available(Request request) => request.Owner != null && !Session.IsComplete(request.Step) &&
+            (!(request.Owner is Behaviour b) || b.isActiveAndEnabled);
+
         /// <summary>Arbitration runs after ordinary UI updates, so new speech hides a tutorial in the same frame.</summary>
         public void Present(float deltaTime)
         {
             expired.Clear();
             foreach (var pair in requests)
-                if (pair.Value.Owner == null || Session.IsComplete(pair.Value.Step) ||
-                    (pair.Value.Owner is Behaviour b && !b.isActiveAndEnabled)) expired.Add(pair.Key);
+                if (!Available(pair.Value)) expired.Add(pair.Key);
             foreach (int id in expired) requests.Remove(id);
             if (Blocked()) { Hide(); return; }
 
@@ -175,7 +206,8 @@ namespace InnerFrame.Tutorial
                 view.FollowHead = false;
             }
             view.gameObject.SetActive(true);
-            if (current != chosen)
+            bool changed = current != chosen;
+            if (changed)
             {
                 var page = ControlsCatalog.FirstUse(chosen.Step);
                 view.Say(page.Title, page.Words, null);
@@ -183,9 +215,18 @@ namespace InnerFrame.Tutorial
                 current = chosen;
             }
             var away = chosen.Position - Camera.main.transform.position;
+            // Keep the shared text's angular size when its context is farther away than the reference distance.
+            view.LayoutRoot.localScale = Vector3.one * view.settings.Scale * Mathf.Max(.25f, away.magnitude) / view.settings.distance;
             if (away.sqrMagnitude > 0.001f)
                 view.LayoutRoot.SetPositionAndRotation(chosen.Position, Quaternion.LookRotation(away, Vector3.up));
+            else view.LayoutRoot.position = chosen.Position;
             view.Step(deltaTime);
+            if (changed) layoutBounds = RectTransformUtility.CalculateRelativeRectTransformBounds(view.LayoutRoot, view.LayoutRoot);
+            if (chosen.Placement != TutorialPlacement.AtAnchor)
+            {
+                float edge = chosen.Placement == TutorialPlacement.BelowAnchor ? layoutBounds.max.y : layoutBounds.min.y;
+                view.LayoutRoot.position -= view.LayoutRoot.TransformVector(Vector3.up * edge);
+            }
             VisibleStep = chosen.Step;
         }
 

@@ -20,8 +20,9 @@ namespace InnerFrame.Tutorial
         {
             new Page("Move", "Move with the left stick"),
             new Page("Smooth Turn", "Push the right stick left or right to turn smoothly"),
-            new Page("Teleport", "Push the right stick forward, aim at a valid floor destination, then release to teleport"),
+            new Page("Teleport", "Where available, push the right stick forward, aim at a valid floor target and release"),
             new Page("Select", "Point at a UI button and pull the trigger to select it"),
+            new Page("Enter a painting", "In the Gallery, point at a painting and pull the trigger; choose Enter or Back"),
             new Page("Grip", "Hold grip to pick up an object or move a menu by its title bar"),
             new Page("Vincent", "Release to send your question; press again while Vincent speaks to interrupt him", Vincent),
             new Page("Companion", "Release to stop talking to the other player", Companion),

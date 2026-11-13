@@ -366,34 +366,11 @@ namespace InnerFrame.Entrance
         {
             if (busy || (CurrentPage != 3 && CurrentPage != 4) || !EntranceChoice.SetRoomCode(code)) return;
             EntranceChoice.SetRole(role);
-            var template = Resources.Load<GameObject>("EntranceControllerGuide");
-            if (template == null) { Debug.LogError("Missing ControllerTutorial prefab"); return; }
+            var guide = Tutorial.EntranceControllerGuide.Open(eyes, FinishControllerTutorial, true);
+            if (guide == null) return;
             Clear();
             CurrentPage = 5;
-            var panel = new GameObject("Controller Tutorial", typeof(RectTransform));
-            var rect = (RectTransform)panel.transform;
-            rect.SetParent(root, false);
-            rect.sizeDelta = ((RectTransform)template.transform).sizeDelta;
-            rect.anchoredPosition3D = new Vector3(0, 0, -.1f);
-            var layout = Instantiate(template);
-            layout.SetActive(false);
-            // The standalone preview supplies its own painting. Entrance already displays it.
-            for (int i = 0; i < layout.transform.childCount;)
-            {
-                var element = layout.transform.GetChild(i);
-                if (element.name == "Opening background") { i++; continue; }
-                element.SetParent(rect, false);
-            }
-            Destroy(layout);
-            controls.Add(panel);
-            foreach (var button in panel.GetComponentsInChildren<Button>())
-            {
-                button.onClick = new Button.ButtonClickedEvent();
-                EntranceButtonSound.Bind(button);
-                button.gameObject.AddComponent<EntranceHoverFeedback>().Configure(
-                    button, (RectTransform)button.transform, button.targetGraphic);
-                button.onClick.AddListener(FinishControllerTutorial);
-            }
+            controls.Add(guide.gameObject);
         }
 
         void FinishControllerTutorial()

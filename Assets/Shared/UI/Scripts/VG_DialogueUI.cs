@@ -11,6 +11,12 @@ using UnityEngine.UI;
 /// </summary>
 public class VG_DialogueUI : MonoBehaviour
 {
+    static readonly HashSet<VG_DialogueUI> activeViews = new HashSet<VG_DialogueUI>();
+    public static IEnumerable<VG_DialogueUI> ActiveViews => activeViews;
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetViews() => activeViews.Clear();
+    void OnEnable() => activeViews.Add(this);
+    void OnDisable() => activeViews.Remove(this);
     const float FadeSeconds = 0.2f;   // the box and the hint fade in and out
 
     [Tooltip("This scene's placement and look. Set it before the first Say or SetHint.")] public VG_DialogueSettings settings;
@@ -24,6 +30,15 @@ public class VG_DialogueUI : MonoBehaviour
     public Transform Head { get { Build(); return follow.head; } set { Build(); follow.head = value; } }
     /// <summary>Words are on screen: from Say until a second after Clear.</summary>
     public bool IsSpeaking => paging != null && paging.Showing;
+    /// <summary>A visible instruction, including its fade out. Other instruction presenters can yield to it.</summary>
+    public bool HintVisible => hintGroup != null && hintGroup.gameObject.activeInHierarchy && hintGroup.alpha > 0f;
+    /// <summary>False for contextual instructions placed beside an object in the world.</summary>
+    public bool FollowHead { get; set; } = true;
+    /// <summary>True for a guide opened from the player menu itself.</summary>
+    public bool ShowWhileMenuOpen { get; set; }
+    /// <summary>The existing dialogue layout, for placement and accessory buttons using the same assets.</summary>
+    public Transform LayoutRoot { get { Build(); return follow.transform; } }
+    public Material OverlayMaterial { get { Build(); return onTop; } }
     /// <summary>The hint's line as last set, tokens included.</summary>
     public string HintLine { get; private set; }
     /// <summary>The resolved hint title, including a scene's more specific activity title.</summary>
@@ -89,9 +104,10 @@ public class VG_DialogueUI : MonoBehaviour
     {
         Build();
         paging.Step(dt, Voice != null && clip != null && Voice.isPlaying && Voice.clip == clip ? Voice.time : (float?)null);
-        Fade(words, paging.Showing && !PlayerMenu.MenuOpen, dt, FadeSeconds);
-        Fade(hintGroup, hintShown && !PlayerMenu.MenuOpen, dt, settings.hintFadeIn > 0f ? settings.hintFadeIn : FadeSeconds);
-        follow.enabled = words.gameObject.activeSelf || hintGroup.gameObject.activeSelf;   // so it appears in place
+        bool allowed = ShowWhileMenuOpen || !PlayerMenu.MenuOpen;
+        Fade(words, paging.Showing && allowed, dt, FadeSeconds);
+        Fade(hintGroup, hintShown && allowed, dt, settings.hintFadeIn > 0f ? settings.hintFadeIn : FadeSeconds);
+        follow.enabled = FollowHead && (words.gameObject.activeSelf || hintGroup.gameObject.activeSelf);
     }
 
     void OnDestroy() { if (onTop != null) Destroy(onTop); }

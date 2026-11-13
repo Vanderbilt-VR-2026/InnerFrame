@@ -47,7 +47,7 @@ public class PlayerMenuPanel : MonoBehaviour
         Vector3 offset = desktop ? forward * DesktopDistance : forward * SpawnDistance + Vector3.down * SpawnDrop;
         transform.SetPositionAndRotation(eyes.position + offset, Quaternion.LookRotation(forward, Vector3.up));
 
-        moveHint.text = desktop ? "M to close" : "Grip the title to move";
+        moveHint.text = desktop ? "M to close" : InnerFrame.Tutorial.ControlsCatalog.MoveMenu;
         backScene = back;
         backButton.gameObject.SetActive(!string.IsNullOrEmpty(back));
         if (backLabel != null) backLabel.text = "Back to " + back;
@@ -100,7 +100,8 @@ public class PlayerMenuPanel : MonoBehaviour
         close.onClick.AddListener(Hide);
 
         AddText(rect, "Explore InnerFrame", new Vector2(0, 65), new Vector2(W - 80, 40), 25, TextAnchor.MiddleCenter);
-        AddText(rect, "Return to the exhibition", new Vector2(0, 25), new Vector2(W - 80, 32), 16, TextAnchor.MiddleCenter);
+        var controls = AddButton(rect, "Controls", new Vector2(0, 24), new Vector2(360, 48), Navy, out _);
+        controls.onClick.AddListener(() => PlayerMenu.Instance?.OpenControls());
         backButton = AddButton(rect, "Back", new Vector2(0, -38), new Vector2(360, 54), Navy, out backLabel);
         backButton.onClick.AddListener(() => { if (!string.IsNullOrEmpty(backScene)) SceneFader.Instance.FadeToScene(backScene); });
         moveHint = AddText(rect, "", new Vector2(0, -106), new Vector2(W - 110, 30), 13, TextAnchor.MiddleCenter);

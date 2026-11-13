@@ -4,6 +4,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using UnityEngine.XR.Interaction.Toolkit.UI;
+using InnerFrame.Tutorial;
 
 /// <summary>
 /// The player's menu. Left controller Menu button (or M in the Editor) opens a panel in front
@@ -76,13 +77,14 @@ public class PlayerMenu : MonoBehaviour
     /// </summary>
     public static bool OpenOnDesktop => Instance != null && Instance.desktop && Instance.IsOpen;
 
-    bool IsOpen => panel != null && panel.gameObject.activeSelf;
+    bool IsOpen => EntranceControllerGuide.IsOpen || (panel != null && panel.gameObject.activeSelf);
 
     bool desktop, wasOpenOnDesktop;
     CursorLockMode lockBeforeMenu;
 
     public void Toggle()
     {
+        if (EntranceControllerGuide.IsOpen) { EntranceControllerGuide.Current.Close(); return; }
         if (IsOpen) { panel.Hide(); return; }
 
         // In a headset: the XR rig's eyes. Without one (the Painted Bedroom's desktop rig): the active camera.
@@ -95,6 +97,17 @@ public class PlayerMenu : MonoBehaviour
         EnsureXRUIEventSystem();
         if (panel == null) panel = PlayerMenuPanel.Create(eyes);   // belongs to this scene; rebuilt in the next one
         panel.ShowInFrontOf(eyes.transform, BackScene, desktop);
+    }
+
+    public void OpenControls()
+    {
+        var origin = FindAnyObjectByType<XROrigin>();
+        var camera = origin != null ? origin.Camera : Camera.main;
+        if (camera == null) camera = FindAnyObjectByType<Camera>();
+        if (camera == null) return;
+        desktop = origin == null;
+        EnsureXRUIEventSystem();
+        if (EntranceControllerGuide.Open(camera) != null && panel != null) panel.Hide();
     }
 
     // Desktop: free the mouse while the menu is open (every frame, in case something re-captures it),

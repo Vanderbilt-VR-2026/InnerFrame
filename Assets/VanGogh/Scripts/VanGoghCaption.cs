@@ -186,7 +186,7 @@ public class VanGoghCaption : MonoBehaviour
         var eye = Camera.main;
         bool near = eye != null && Vector3.Distance(eye.transform.position, transform.parent.position) <= HintWithin;
         string line = stateHint ?? MirrorHint(mirror != null ? mirror.Now : VG_MirrorStep.None)
-                      ?? idleHint?.Replace($" {idleKey} ", $" {{{idleKey}}} ");
+                      ?? (InnerFrame.Tutorial.TutorialManager.IsRunning ? null : idleHint?.Replace($" {idleKey} ", $" {{{idleKey}}} "));
         ui.SetHint(gameObject.scene.name == HintScene ? null : "", near ? line : null);
     }
 

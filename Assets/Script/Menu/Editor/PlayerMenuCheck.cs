@@ -62,7 +62,7 @@ public static class PlayerMenuCheck
         Check(panel.ShownBackLabel == PlayerMenuPanel.BackLabel, $"in a painting the button reads '{panel.ShownBackLabel}'");
         float distance = Vector3.Distance(camera.transform.position, panel.transform.position);
         Check(distance < 2f, $"it opens {distance:F2} m from the eyes, inside the 2 m ray");
-        Check(Count<Button>(panel) == 2, $"two buttons (X and Back): {Count<Button>(panel)}");
+        Check(Count<Button>(panel) == 3, $"three buttons (close, Controls and Back): {Count<Button>(panel)}");
         Check(panel.GetComponentInChildren<BoxCollider>() != null, "the title bar has a collider to grab");
         foreach (var label in panel.GetComponentsInChildren<Text>(true))
             Check(label.font == MenuLook.Font, "menu text uses the shared Gallery font: " + label.text);

@@ -36,6 +36,8 @@ public class VG_DialogueUI : MonoBehaviour
     public bool FollowHead { get; set; } = true;
     /// <summary>True for a guide opened from the player menu itself.</summary>
     public bool ShowWhileMenuOpen { get; set; }
+    /// <summary>Opt-in for spoken dialogue captions. Tutorials using the same visual style stay readable.</summary>
+    public bool RespectSubtitlePreference { get; set; }
     /// <summary>The existing dialogue layout, for placement and accessory buttons using the same assets.</summary>
     public Transform LayoutRoot { get { Build(); return follow.transform; } }
     public Material OverlayMaterial { get { Build(); return onTop; } }
@@ -105,7 +107,8 @@ public class VG_DialogueUI : MonoBehaviour
         Build();
         paging.Step(dt, Voice != null && clip != null && Voice.isPlaying && Voice.clip == clip ? Voice.time : (float?)null);
         bool allowed = ShowWhileMenuOpen || !PlayerMenu.MenuOpen;
-        Fade(words, paging.Showing && allowed, dt, FadeSeconds);
+        // Hiding subtitles does not end paging or speech priority; hints remain independent.
+        Fade(words, paging.Showing && allowed && (!RespectSubtitlePreference || PlayerMenuPreferences.Subtitles), dt, FadeSeconds);
         Fade(hintGroup, hintShown && allowed, dt, settings.hintFadeIn > 0f ? settings.hintFadeIn : FadeSeconds);
         follow.enabled = FollowHead && (words.gameObject.activeSelf || hintGroup.gameObject.activeSelf);
     }

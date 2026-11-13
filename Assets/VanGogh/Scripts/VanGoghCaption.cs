@@ -112,6 +112,7 @@ public class VanGoghCaption : MonoBehaviour
         if (style == VG_CaptionStyle.Box)
         {
             ui = Instantiate(dialogue, transform);
+            ui.RespectSubtitlePreference = true;
             ui.Voice = voice;
             ui.autoStep = false;   // this caption keeps its clock (Step)
             mirror = GetComponentInParent<MirrorScene>();

@@ -37,6 +37,9 @@ public static class MenuLook
     /// <summary>The 9-slice rounded plate (white: tint it), or null.</summary>
     public static Sprite PlateSprite => Source != null ? Source.hintPlate : null;
     public static Sprite StarSprite => Source != null ? Source.star : null;
+    public static Sprite BoxSprite => Source != null ? Source.box : null;
+    public static Sprite NameTabSprite => Source != null ? Source.nameTab : null;
+    public static Sprite StarRingSprite => Source != null ? Source.starRing : null;
     /// <summary>The button circle a letter sits in, or null.</summary>
     public static Sprite KeySprite => Source != null ? Source.key : null;
     /// <summary>The dialogue settings the hints size themselves from (a copy is made by whoever changes them), or null.</summary>

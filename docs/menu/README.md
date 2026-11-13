@@ -1,109 +1,122 @@
-# Player menu (VR)
+# Player menu
 
-A panel the player opens in front of them, in every scene with an XR Origin.
-Code: `Assets/Script/Menu/`. Nothing needs to be added to a scene: it creates
-itself on startup.
+The selected design is **classification + content in two columns**. The left
+column keeps Controls, Audio, Back to Gallery, Settings, Restart and Leave
+session in place. The right column changes when a category is selected.
+There is no Resume button; the top-right × closes the panel.
 
-It has one job: getting back to the Gallery (#160). It has a title bar to move
-it, **X** to close it, and **Back to Gallery** in every scene except the
-Gallery, where there's nowhere to go back to.
+The panel and the three circular shortcuts are built at runtime from
+`Assets/Shared/UI` through `Resources/VG_Caption`: the original box, name tab,
+star/ring, button-circle sprites and Libre Baskerville font. No scene, prefab
+or shared XR setup needs another menu instance.
 
-**Its look is the plain one for now, on purpose.** The menu style (#161) will be
-redone together with Rowling's artwork detail panel (#112), on Cici's text
-frame prefab, so the two menus share one look. `MenuLook` (the dialogue font,
-plate and button icons) is still used by the wrist tag and the way-finding
-hints (#163); write a line with `{grip}` / `{menu}` in it and
-`MenuLook.IconLine` draws the controller buttons as icons.
+## Controls and behavior
 
-## Controls
+| Entry | Behavior |
+| --- | --- |
+| Left controller Menu / Editor M | Toggle the panel in front of the current camera |
+| Circular Menu / Audio / Gallery | Menu opens the two-column panel; Audio opens only a compact volume/mute popup; Gallery requests confirmation |
+| Controls | Basic binding summary; Open controller guide reopens the existing eleven-page EntranceControllerGuide in the same scene |
+| Audio | Master listener volume and mute/unmute. More settings selects Settings. There are no separate music/voice/effect gains |
+| Back to Gallery | Visible but disabled in Gallery. Elsewhere, confirmation is required before SceneFader returns to Gallery |
+| Settings | Shared Vincent subtitles on/off, menu size 85–115%, read-only English language |
+| Restart | Confirmation before SceneFader reloads the current scene. This does not clear app-session first-use completion |
+| Leave session | Confirmation before leaving the network room and quitting the player; in Editor, stops Play Mode |
+| Cancel | Returns to the previously selected non-confirmation category without executing the action |
+| × | Hides the panel without changing scenes |
+| Grip on title bar | Moves the world-space panel; it stays upright and faces the camera while dragged |
 
-| Do | How |
-|---|---|
-| Open / close the menu | Left controller **Menu button (≡)**. In the Editor: **M** |
-| Move it | Point at the top bar (or touch it) and hold **grip**, then move. It turns to face you |
-| Close it | **X**, or the Menu button again |
-| Go back | **Back to Gallery**, from every scene except the Gallery. It always leads to the Gallery, whatever path brought you here |
+The panel opens 1.05 m ahead in VR (1.1 m on desktop), within the existing
+2 m controller UI ray. Shortcuts follow the lower-right camera view; hover
+shows the label. They hide while the full tutorial or a scene fade is active.
+The shared menu modal flag includes active UI pointer focus and a short
+closing-click guard so that a shortcut click is not passed to a painting
+behind it. The mere presence of the shortcuts is not modal.
 
-The panel opens 0.55 m in front of you, slightly below eye level and inside the
-controllers' 2 m ray.
+In Editor Play Mode, focus Game and press M to free the mouse and use the
+buttons. The menu still supports tracked controller UI rays and the title-bar
+XR grab handle. No A binding is added. Physical headset placement, ray use and
+comfort remain acceptance tests, not claims based on Editor renders.
 
-**The wrist tag.** Outside the Gallery, a small **(≡) Menu** tag rides just
-above the left controller and turns to face you, so a glance at your hand shows
-where the way back is. It hides while the menu is open and in desktop mode.
-To switch it off, untick `PlayerMenu.wristTag`.
+## Preferences and limits
 
-Talking to Vincent isn't on the menu: in the Gallery (his portrait) or the
-Painted Bedroom (his figure), hold the right controller's **B** button (**T**
-in the Editor), speak and let go. See `docs/vangogh/README.md`.
+`PlayerMenuPreferences` stores local keys under `InnerFrame.PlayerMenu.`.
+Master gain uses `AudioListener.volume`, retaining the existing per-source
+music crossfades and speech ducking. Mute remembers the last audible gain.
+Changes are flushed when the menu closes or the app exits.
 
-**Without a headset** (Editor Play mode): click the Game view, press **M**, and
-click the buttons with the mouse. In the Painted Bedroom's desktop mode the
-menu opens in front of the desktop camera and frees the mouse; mouse-look
-pauses until you close it (WASD still walks). Dragging the panel needs a
-controller (a headset or the XR Interaction Simulator).
+Only `VanGoghCaption` opts into `RespectSubtitlePreference`. The full guide,
+first-use tutorial words and instruction hints stay visible when Vincent
+subtitles are off. Paging and speaking priority remain unchanged. This is not
+a promise to hide other independently implemented scene text.
 
-## Getting around: into a painting and back (#163)
+Menu size scales this panel, not every label in every scene. English is the
+only implemented language here; the menu does not offer a nonfunctional
+language selector. Leaving does not promise automatic progress saving.
 
-Two more pieces show players the way in and the way out. Neither needs
-anything added to a scene: both attach themselves when a scene loads.
-Code: `Assets/Script/Wayfinding/`.
+## Implementation
 
-- **In the Gallery, every way into a painting** (each `SceneChangeButton`, the
-  invisible box on a pedestal) gets a soft chrome-yellow glow over that box,
-  so players can see what to grip. A hint floats above it with the painting's
-  title and *Hold (grip icon) on the pedestal to step inside*. The hint shows while a
-  ray points at the box. Until the player has entered a painting once, it also
-  shows whenever they're within 1.6 m.
-- **On arrival in a painting**, a hint says *You're inside The Bedroom / To go
-  back to the Gallery, press (≡) on your left controller* (*press M* on a
-  desktop). It waits for the fade-in and for any words in the dialogue box to
-  finish (at most 20 s), shows for 10 s, and goes as soon as the menu opens.
-  It shows once per visit, a little under the gaze and above the dialogue
-  box, drawn over the room.
+- `PlayerMenu`: one persistent owner; scene-local views and camera are rebound
+  after scene changes or camera replacement. Keeps SceneFader/network cleanup.
+- `PlayerMenuPanel`: two columns, shared sprites, real volume slider, opt-in
+  subtitle preference, confirmations and title-bar grab.
+- `PlayerMenuQuickActions`, `PlayerMenuShortcutPointer`, `PlayerMenuShortcutIcon`:
+  circular entries, line symbols and pointer protection for desktop and XRI.
+- `MenuLook`: original shared assets, colors, font and controller glyphs.
+- `MenuWristTag`: existing left-controller hint, retained.
 
-Both use the same hint plate as Vincent's hints (`VG_Hint`). Players read the
-painting names from `PaintingNames`.
+The current Gallery painting-entry flow is documented in
+`docs/controls/README.md`. Existing arrival/wayfinding hints remain separate
+and yield to menu interaction. Talking to Vincent retains its existing B/T
+binding; the menu does not replace that interaction.
 
-| Script | What it does |
-|---|---|
-| `PaintingEntrancePrompt` | The glow and the hint on each way in (Gallery only) |
-| `ArrivalHint` | The one-time "how to go back" hint in every other scene |
-| `WayfindingHint` | A world-space `VG_Hint`, sized in degrees for a viewing distance, with the ≡ drawn as three bars |
+## Editor checks and previews
 
-Checks: **InnerFrame > Menu > Run Wayfinding Checks** (batch:
-`-executeMethod WayfindingCheck.RunBatch [-wayShots <folder>] -quit`) runs on
-the real Gallery without saving it. With `-wayShots` it renders the Bedroom's
-pedestal and the arrival hint.
+- **InnerFrame > Menu > Check split menu**: temporary additive fixtures,
+  original scene restored without saving it.
+- **InnerFrame > Menu > Preview split menu**: native Unity renders of each
+  right-hand page, shown in an Editor preview window.
+- Batch compatibility: `-executeMethod PlayerMenuCheck.RunBatch
+  [-menuShots <folder>]`. The entry point exits with its result.
+- Explicit automation: `Temp/SplitMenuPreview.request` accepts `status`,
+  `check`, `render`, `preview`, `live`, and `live-audio`. `live` starts the existing clean
+  Gallery in Play Mode and opens the two-column Audio page; `live-audio` opens the compact volume popup. Both refuse a different/dirty scene.
+- Results: `Logs/MenuSplit/status.json`, `checks.json`, `checks.txt`, `Images/`.
+  These generated files are not committed.
+- The render check compares each shortcut with its symbol enabled and disabled.
+  A blank circle fails even if its Image component and sprite reference exist.
 
-## Scripts
+## Validation on 2026-11-13
 
-| Script | What it does |
-|---|---|
-| `PlayerMenu` | Creates itself on startup. Listens for the Menu button, decides where Back goes (`BackFrom`: the Gallery from anywhere else), adds the wrist tag outside the Gallery, adds an XR UI EventSystem if the scene has none |
-| `PlayerMenuPanel` | Builds the panel in code (world-space canvas, plain look until #161), the drag handle (XR Grab Interactable on the title bar) and the buttons |
-| `MenuWristTag` | The **(≡) Menu** tag on the left controller |
-| `MenuLook` | The look the wrist tag and the hints share with the dialogue box: its font and sprites, read from `Resources/VG_Caption`'s dialogue prefab, the colours, and the button icons |
-| `PaintingNames` | What players read for each scene ("The Bedroom", "The Starry Night"). Add a row when a painting joins the Gallery |
+- [V] Unity 6000.3.23f1 recompiled the changed scripts with Android selected.
+  The existing Gallery checkout was used; this was not a new clean import.
+- [V] The final split-menu render fixture completed at 23:40:33 UTC:
+  **100 passed, 0 failed**. It checks actual UI page selection, compact Audio,
+  normal menu restoration, cancel/close behavior, subtitles, viewport bounds,
+  shared artwork, disabled Gallery at home and rendered icon visibility.
+- [V] Native Unity renders show the Menu, speaker and Gallery symbols. Each
+  contributes visible pixels (5062, 5086 and 7589 respectively in the close-up
+  fixture). The compact Audio render contains only the audio controls and ×.
+- [V] Gallery Play Mode was opened and visually inspected: all three shortcut
+  symbols and the compact Audio popup are visible in the actual scene.
+- [V] Three review angles covered runtime interaction, preferences/lifetime and
+  test evidence. Confirmed fixes include subtitle preference leaking into the
+  tutorial, rebinding disabled cameras, blank custom-mesh symbols, button
+  nine-slicing and the volume handle geometry. The symbols now use native
+  Image sprites generated in memory, preserving the shared circular buttons.
+- [I] Automated desktop coordinate clicks could not be completed because the
+  computer-control tool returned `noWindowsAvailable`. The fixture invokes
+  actual UI controls, but this is not a physical mouse/controller acceptance pass.
+- [I] No new APK, Quest 3, multiplayer, microphone/AI, confirmed scene-transition
+  or standalone exit test was performed for this menu update. Earlier controls
+  and Gallery regression runs belong to their recorded earlier commits.
+- [V] Gallery scene YAML, shared render/XR settings and the pre-existing local
+  TMP fallback font-cache edit were not included in this menu change.
 
-## Checks
+## Headset acceptance still required
 
-**InnerFrame > Menu > Run Checks** (or, in batch,
-`-executeMethod PlayerMenuCheck.RunBatch [-menuShots <folder>] -quit`) checks
-the back rule, the Back button's words, the panel's reach, buttons and grab bar, and the wrist tag with
-the dialogue font and sprites.
-With `-menuShots` it also renders the panel and the tag to PNGs.
-
-## Hardware tests (please run on a headset)
-
-1. In a painting, press ≡: the panel appears in front of you, centred, level and readable.
-2. The button says **Back to Gallery**.
-3. Grab the top bar and walk: it follows your hand, faces you, stays put when you let go.
-4. Teleport away and back: the panel hasn't moved.
-5. X closes it; ≡ opens it again in front of you.
-6. **Back to Gallery** fades you back to the Gallery's start, from the Painted Bedroom and from The Starry Night.
-7. In the Gallery, press ≡: no Back button.
-8. Outside the Gallery, look at your left controller: the **(≡) Menu** tag is readable and doesn't block the ray. It's gone in the Gallery.
-9. In the Gallery, walk toward the Bedroom pedestal: its box glows, and from about 1.5 m the hint *The Bedroom / Hold (grip icon)…* appears over it, the grip button drawn as an icon. Point at it from further away: the hint appears too.
-10. Grip it: after the fade, *You're inside The Bedroom* names ≡ for about 10 s, and pressing ≡ closes it at once.
-11. Back in the Gallery, walk to the Starry Night pedestal: the hint now waits until you point at it.
-12. In The Starry Night: the arrival hint doesn't overlap Vincent's opening words or the game's hint.
+Check all five scenes with a physical Quest: circular hit targets and tooltips,
+no trigger click-through, panel readability at each size, title-bar dragging,
+full guide close-in-place, Gallery disabled at home, cancellation and confirmed
+scene transitions, mute restoration, Vincent subtitles versus tutorial words,
+network leave, and actual standalone exit. Editor success is not a Quest pass.

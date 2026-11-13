@@ -418,9 +418,11 @@ namespace InnerFrame.StarryNight.EditorTools
         {
             if (toggle) PlayerMenu.Instance.Toggle();
             var panel = Object.FindAnyObjectByType<PlayerMenuPanel>();
-            var back = panel.GetComponentsInChildren<Button>(true).First(b => b.name.StartsWith("Back"));
+            var back = panel.GetComponentsInChildren<Button>(true).First(b => b.name == "Nav Gallery");
             W($"  menu: '{BackLabel()}'");
             back.onClick.Invoke();
+            Check(panel.CurrentPage == PlayerMenuPage.Gallery && !SceneFader.IsFading, "Back opens confirmation before changing scenes");
+            panel.GetComponentsInChildren<Button>().First(b => b.name == "Confirm Gallery").onClick.Invoke();
         }
 
         static bool MenuOpen() => Object.FindAnyObjectByType<PlayerMenuPanel>() != null;
@@ -428,7 +430,7 @@ namespace InnerFrame.StarryNight.EditorTools
         static string BackLabel()
         {
             var panel = Object.FindAnyObjectByType<PlayerMenuPanel>();
-            var back = panel != null ? panel.GetComponentsInChildren<Button>(true).FirstOrDefault(b => b.name.StartsWith("Back")) : null;
+            var back = panel != null ? panel.GetComponentsInChildren<Button>(true).FirstOrDefault(b => b.name == "Nav Gallery") : null;
             return back != null && back.gameObject.activeInHierarchy ? back.GetComponentInChildren<Text>(true)?.text : null;
         }
 

@@ -74,6 +74,8 @@ public static class ControlsTutorialChecks
             var panel = Object.FindAnyObjectByType<PlayerMenuPanel>();
             var controls = panel.GetComponentsInChildren<Button>().Single(b => b.GetComponentInChildren<Text>().text == "Controls");
             controls.onClick.Invoke();
+            Check(panel.CurrentPage == PlayerMenuPage.Controls, scene.name + ": Controls navigation selects the right-hand page");
+            panel.GetComponentsInChildren<Button>().Single(b => b.name == "Open controller guide").onClick.Invoke();
             var guide = EntranceControllerGuide.Current;
             Check(guide != null && PlayerMenu.MenuOpen && !panel.gameObject.activeSelf, scene.name + ": Controls replaces menu and remains modal");
             Check(guide.View.box == template.box && guide.View.nameTab == template.nameTab && guide.View.font == template.font &&

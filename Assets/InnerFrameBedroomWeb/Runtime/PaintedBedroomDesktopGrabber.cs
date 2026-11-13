@@ -80,10 +80,13 @@ namespace InnerFrame.PaintedBedroom
             if (held == null)
             {
                 float dist = 0f;
-                hovered = locked ? PointedAt(out dist) : null;
+                PaintedBedroomMovable fixedOne = null;
+                hovered = locked ? PointedAt(out dist, out fixedOne) : null;
                 // only grab once the mouse was already captured, so the capturing click doesn't grab
                 if (hovered != null && wasLocked && mouse.leftButton.wasPressedThisFrame) Grab(hovered, dist);
                 else if (hovered != null && wasLocked && (mouse.rightButton.wasPressedThisFrame || kb.iKey.wasPressedThisFrame)) BeginInspect(hovered);
+                // a click on something that can't be lifted selects it, as the trigger does in VR (Vincent talks about it)
+                else if (fixedOne != null && wasLocked && mouse.leftButton.wasPressedThisFrame) fixedOne.RaiseTouched(false);
             }
             else
             {
@@ -100,9 +103,11 @@ namespace InnerFrame.PaintedBedroom
             wasLocked = locked;
         }
 
-        PaintedBedroomMovable PointedAt(out float distance)
+        // `fixedOne`: what the dot is on when it can't be lifted (the bed, a picture...), else null
+        PaintedBedroomMovable PointedAt(out float distance, out PaintedBedroomMovable fixedOne)
         {
             distance = 0f;
+            fixedOne = null;
             var ray = new Ray(cam.transform.position, cam.transform.forward);
             var hits = Physics.RaycastAll(ray, reach, ~0, QueryTriggerInteraction.Ignore);
             float best = float.MaxValue;
@@ -114,7 +119,7 @@ namespace InnerFrame.PaintedBedroom
                 best = h.distance;
                 found = h.collider.GetComponentInParent<PaintedBedroomMovable>();   // a wall in front blocks the pick
             }
-            if (found != null && !found.liftable) found = null;   // set in the physics table
+            if (found != null && !found.liftable) { fixedOne = found; found = null; }   // set in the physics table
             if (found != null) distance = best;
             return found;
         }
@@ -124,6 +129,7 @@ namespace InnerFrame.PaintedBedroom
         void Grab(PaintedBedroomMovable m, float distance)
         {
             m.Claim();
+            m.RaiseTouched(true);
             if (m.TryGetComponent(out PaintedBedroomObjectSound sound)) sound.PlayPickUp();
             held = m;
             holdDistance = Mathf.Max(distance, minDistance);

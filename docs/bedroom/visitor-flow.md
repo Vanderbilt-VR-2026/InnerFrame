@@ -34,7 +34,15 @@ Set in `Assets/InnerFrameBedroomWeb/Resources/PaintedBedroomPhysicsTable.asset`,
 | ClothesBrush | Pick up, throw | 0.4 |
 | Hat | Pick up, throw | 0.3 |
 | Mirror | Off in the table; `MirrorScene` turns its grab on while Vincent is in the room | |
-| Bed, Washstand, Basin, Towel, PegRail, Window, doors, pictures | Fixed | |
+| Bed, Washstand, Basin, Towel, PegRail, Window, doors, pictures | Fixed, but selectable: point and press grip, the rim shows, nothing moves (`PaintedBedroomSelectable`; the window through its casements) | |
+
+The washstand stays fixed on purpose: eight objects stand on it, and seven of them rest kinematic until first
+picked up, so they would hang in the air if it moved; #189 also bakes its light and shadow as a fixed object.
+
+**Vincent talks about it:** the first time you pick up or select an object he has notes for, he says something about
+it, as the painter (`VincentObjectTalk`, `docs/convai/bedroom-objects.md`). Hold or press something and ask
+"why did you paint this?" and he answers about it; ask with nothing in hand and he asks you to point at it and press
+grip. Convai only.
 
 **How weight works:** at 1 kg or less an object keeps up with the hand. Above that it closes `1 / mass` of the gap to
 the hand each physics step (50 a second), so 4 kg takes about 0.2 s to catch up, and throws are scaled down the same

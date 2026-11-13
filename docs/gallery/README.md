@@ -65,7 +65,7 @@ artworks" (`CafeGallerySetup`) now hand the placing to Build Layout.
   the painting (its `SceneChangeButton`, as the pedestals did). **Back** closes it.
 - The menu closes on Back, when you open another painting's, when you walk 2 m from where you opened it, or when you
   turn your back on it. It is yours alone (not shared). Almond Blossom says "Coming soon" until its scene exists.
-- Nothing is rebound: grip is still XRI Select, the trigger Activate (and UI Press), A Jump. The trigger is read from each
+- Grip remains XRI Select and the trigger Activate (and UI Press); A is unassigned and Jump is disabled (see [controls](../controls/README.md)). The trigger is read from each
   hand's own Activate input (`GalleryPaintingPointer`). In the Editor without a headset: the centre dot or the mouse, E or a click.
 - The wall labels' "More →" and "×" work with the trigger as well as the grip. ENTER is off the labels.
 

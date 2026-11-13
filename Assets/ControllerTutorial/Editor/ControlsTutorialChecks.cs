@@ -1,9 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
 using InnerFrame.Tutorial;
+using InnerFrame.Gallery;
 using Unity.XR.CoreUtils;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -36,6 +38,8 @@ public static class ControlsTutorialChecks
         {
             ScenesAndGuide();
             Arbitration();
+            GalleryIntegration();
+            VincentPlacementAndReminder();
         }
         catch (Exception ex) { failed++; report.AppendLine("EXCEPTION " + ex); }
         finally
@@ -117,7 +121,11 @@ public static class ControlsTutorialChecks
             Check(paging.Pages.Count == 1 && paging.Pages[0].lines <= VG_DialogueBox.MostLines, "guide " + page.Title + ": readable as one complete manual page");
             var corners = new Vector3[4];
             bool buttonsVisible = true;
-            foreach (var button in guide.GetComponentsInChildren<Button>())
+            var navigation = guide.GetComponentsInChildren<Button>(true);
+            Check(navigation.Length == 3 && navigation.All(b => b.gameObject.activeInHierarchy) &&
+                navigation.Select(b => b.name).OrderBy(n => n).SequenceEqual(new[] { "Close", "Next", "Previous" }),
+                "guide " + page.Title + ": all three navigation controls are present and active");
+            foreach (var button in navigation)
             {
                 ((RectTransform)button.transform).GetWorldCorners(corners);
                 foreach (var corner in corners)
@@ -134,11 +142,13 @@ public static class ControlsTutorialChecks
             }
         }
         camera.fieldOfView = fieldOfView;
-        bool continued = false;
-        guide.Close();
-        guide = EntranceControllerGuide.Open(Camera.main, () => continued = true, true);
-        guide.Close();
-        Check(continued, "entry guide calls the supplied intro continuation");
+        int continued = 0;
+        var promoted = EntranceControllerGuide.Open(Camera.main, () => continued++, true);
+        Check(promoted == guide && guide.GetComponentsInChildren<Button>().Any(b => b.name == "Continue") && continued == 0,
+            "entry promotes an already-open Menu guide to Continue without advancing the story");
+        EntranceControllerGuide.Open(Camera.main);
+        guide.GetComponentsInChildren<Button>().Single(b => b.name == "Continue").onClick.Invoke();
+        Check(continued == 1, "later Menu open preserves entry continuation and Continue calls it exactly once");
         // Leave a guide open for the caller's Menu-close check.
         EntranceControllerGuide.Open(Camera.main);
     }
@@ -256,6 +266,11 @@ public static class ControlsTutorialChecks
         Check(Vector3.Distance(position, manager.View.LayoutRoot.position) < .001f && !manager.View.GetComponentInChildren<VG_FollowGroup>().enabled,
             "contextual hint stays in the world when head turns");
         eye.transform.rotation = Quaternion.identity;
+        manager.Offer(TutorialStep.GalleryMove, a, eye.transform.position, TutorialPlacement.BelowAnchor);
+        manager.Present(.1f); var closePosition = manager.View.LayoutRoot.position; manager.Present(.1f);
+        Check(Vector3.Distance(closePosition, manager.View.LayoutRoot.position) < .001f,
+            "an eye coincident with the hint anchor cannot make the placement offset accumulate");
+        manager.Offer(TutorialStep.GalleryMove, a, at); manager.Present(.1f);
         manager.Session.AddGalleryTravel(1.9f);
         Check(!manager.Session.IsComplete(TutorialStep.GalleryMove), "1.9 m does not complete Move");
         manager.Session.AddGalleryTravel(.1f); manager.Present(.3f);
@@ -317,5 +332,133 @@ public static class ControlsTutorialChecks
         Check(manager.VisibleStep == null && manager.Session.IsComplete(TutorialStep.Companion), "scene-load handling keeps completed lessons suppressed in this session");
         Check(!new TutorialSession().IsComplete(TutorialStep.GalleryMove), "new play session starts fresh");
         Call(manager, "OnDestroy");
+    }
+
+    // Read-only scene fixtures: no GalleryLayoutSetup.Apply, SaveScene, input hardware, microphone or AI request.
+    static void GalleryIntegration()
+    {
+        var scene = EditorSceneManager.OpenScene("Assets/Scenes/Gallery.unity");
+        var layout = AssetDatabase.LoadAssetAtPath<GalleryLayout>("Assets/Art/Gallery/Layout/GalleryLayout.asset");
+        Check(layout.paintings.Select(p => p.key).SequenceEqual(new[] { "SelfPortrait", "Bedroom", "CafeTerrace", "StarryNight", "AlmondBlossom" }),
+            "latest Gallery hanging order includes the self-portrait and four menu paintings");
+        Check(GameObject.Find("Gallery Arch") != null && Mathf.Approximately(layout.corridorLength, 4f),
+            "latest Gallery includes its arch and 4 m corridor layout");
+        var manager = new GameObject("Gallery binding fixture").AddComponent<TutorialManager>();
+        Call(manager, "Awake");
+        var pointer = Object.FindAnyObjectByType<GalleryPaintingPointer>();
+        var menu = Object.FindAnyObjectByType<GalleryPaintingMenu>();
+        Call(menu, "Awake");
+        manager.RefreshSceneBindings();
+        var paintings = Object.FindObjectsByType<GalleryPainting>(FindObjectsSortMode.None);
+        Check(paintings.Length == 4 && paintings.All(p => p.GetComponent<FirstUsePaintingAdapter>() != null),
+            "all four real Gallery menu paintings receive runtime adapters, without modifying the scene asset");
+        foreach (var p in paintings) Call(p, "OnEnable");
+        foreach (var entry in layout.paintings.Where(p => p.menu))
+        {
+            var p = paintings.Single(p => p.title == entry.title);
+            Check(Vector3.Distance(p.Centre, layout.OnWall(entry)) < .25f && p.CanEnter == !string.IsNullOrEmpty(entry.scene) &&
+                (!p.CanEnter || p.entrance.targetScene == entry.scene), entry.key + ": hung at latest layout position with matching scene/Coming soon destination");
+        }
+        Check(GameObject.Find("Slot_SelfPortrait").GetComponentInChildren<FirstUsePaintingAdapter>() == null,
+            "Vincent's self-portrait is not assigned a painting menu lesson");
+        var bedroom = paintings.Single(p => p.entrance != null && p.entrance.targetScene == "PaintedBedroom");
+        var adapter = bedroom.GetComponent<FirstUsePaintingAdapter>();
+        var eye = Camera.main;
+        eye.transform.position = bedroom.Centre + bedroom.transform.forward * 2f;
+        eye.transform.rotation = Quaternion.LookRotation(bedroom.Centre - eye.transform.position);
+        Physics.SyncTransforms();
+        var ray = new Ray(eye.transform.position, eye.transform.forward);
+        var hovered = (HashSet<GalleryPainting>)typeof(GalleryPaintingPointer).GetField("hovered", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(pointer);
+        var now = (HashSet<GalleryPainting>)typeof(GalleryPaintingPointer).GetField("now", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(pointer);
+        now.Clear();
+        Check(pointer.Point(ray, false, out _) && now.Contains(bedroom), "real raycast hits the rearranged Bedroom painting");
+        // Publish Point's real hit as Update does; the separate Gallery Play suite drives the actual XR actions.
+        hovered.Clear(); hovered.UnionWith(now);
+        Call(adapter, "Update"); manager.Present(1f);
+        Check(manager.VisibleStep == TutorialStep.GalleryPainting && !manager.Session.IsComplete(TutorialStep.GalleryPainting),
+            "actual painting hover offers the lesson without completing it");
+        pointer.enabled = false; Call(adapter, "Update"); manager.Present(1f);
+        Check(!manager.HasAvailablePrompt && !manager.Session.IsComplete(TutorialStep.GalleryPainting),
+            "disabled pointer's stale hover cannot offer or complete a lesson");
+        pointer.enabled = true;
+        var other = paintings.First(p => p != bedroom);
+        menu.Open(other, eye.transform.position); Call(adapter, "Update");
+        Check(!manager.Session.IsComplete(TutorialStep.GalleryPainting), "another painting's open menu cannot complete this adapter");
+        manager.Offer(TutorialStep.GalleryMove, manager, eye.transform.position + eye.transform.forward);
+        manager.Present(1f);
+        Check(manager.VisibleStep == null, "open painting menu blocks competing first-use dialogue");
+        manager.Withdraw(manager); menu.Close();
+        menu.Open(bedroom, eye.transform.position); menu.Panel.gameObject.SetActive(false); Call(adapter, "Update");
+        Check(!manager.Session.IsComplete(TutorialStep.GalleryPainting), "hidden matching menu is not successful completion");
+        menu.Close();
+        Check(pointer.Point(ray, true, out _) && menu.IsOpen && menu.Painting == bedroom, "real trigger ray opens the matching Gallery menu");
+        hovered.Clear(); Call(adapter, "Update");
+        Check(manager.Session.IsComplete(TutorialStep.GalleryPainting), "matching visible menu completes lesson even after pointer leaves canvas");
+        menu.Close(); hovered.Add(bedroom); Call(adapter, "Update"); manager.Present(1f);
+        Check(manager.VisibleStep == null, "completed painting lesson does not repeat in the same session");
+        var almond = paintings.Single(p => !p.CanEnter);
+        menu.Open(almond, eye.transform.position);
+        Check(menu.IsOpen && !menu.EnterButton.Interactable && menu.Painting == almond, "Almond Blossom opens Coming soon without inventing a scene");
+        menu.Close();
+        Call(manager, "OnDestroy"); Object.DestroyImmediate(manager.gameObject);
+        Call(menu, "OnDestroy");
+    }
+
+    static void VincentPlacementAndReminder()
+    {
+        foreach (bool portrait in new[] { false, true })
+        {
+            var scene = portrait ? EditorSceneManager.OpenScene("Assets/Scenes/Gallery.unity") :
+                EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            var eye = Camera.main;
+            if (eye == null) { eye = new GameObject("Eyes").AddComponent<Camera>(); eye.tag = "MainCamera"; }
+            var vincent = portrait ? VanGoghSpawner.SpawnPortrait(scene) : Object.Instantiate(Resources.Load<GameObject>("VG_Vincent"));
+            var talker = vincent.GetComponent<SpeechToProxy>();
+            var adapter = vincent.AddComponent<FirstUseVincentAdapter>(); Call(adapter, "OnEnable");
+            var manager = new GameObject("Vincent regression fixture").AddComponent<TutorialManager>(); Call(manager, "Awake");
+            eye.transform.position = adapter.GazePoint + vincent.transform.forward * 2f;
+            eye.transform.rotation = Quaternion.LookRotation(adapter.GazePoint - eye.transform.position);
+            Check(Vector3.Distance(adapter.GazePoint, portrait ? vincent.transform.position : vincent.transform.TransformPoint(talker.labelOffset)) < .001f,
+                (portrait ? "Gallery portrait" : "Bedroom Vincent") + ": gaze targets the portrait/head rather than the easel");
+            Call(adapter, "Update"); manager.Present(1f);
+            Check(manager.VisibleStep == TutorialStep.Vincent, (portrait ? "Gallery" : "Bedroom") + ": looking at the real Vincent asset within 3 m offers B");
+            var root = manager.View.LayoutRoot;
+            var corners = new Vector3[4];
+            bool correctSide = true;
+            int measured = 0;
+            var box = manager.View.GetComponentInChildren<VG_DialogueBox>();
+            Check(box != null && box.GetComponent<CanvasGroup>().alpha > 0f && manager.View.HintVisible,
+                (portrait ? "Gallery" : "Bedroom") + ": complete dialogue and button hint are visibly active");
+            foreach (var rect in root.GetComponentsInChildren<RectTransform>())
+            {
+                if (rect == root) continue;
+                measured++;
+                rect.GetWorldCorners(corners);
+                foreach (var point in corners)
+                {
+                    float side = Vector3.Dot(point - adapter.HintAnchor, root.up);
+                    correctSide &= portrait ? side <= .002f : side >= -.002f;
+                }
+            }
+            Check(measured > 0 && correctSide, (portrait ? "Gallery" : "Bedroom") + ": full dialogue and key hint stay below the portrait / above the head anchor");
+            Call(adapter, "OnDisable"); Object.DestroyImmediate(adapter);
+            manager.Present(1f);
+            var caption = VanGoghCaption.Make(vincent.transform, talker.labelOffset);
+            caption.Hint("Hold B to ask Vincent", "B"); Call(caption, "Step", 1f);
+            var ui = (VG_DialogueUI)typeof(VanGoghCaption).GetField("ui", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(caption);
+            Call(ui, "OnEnable");
+            Check(ui.HintVisible, "idle B reminder remains available with no pending first-use request");
+            manager.Offer(TutorialStep.Vincent, talker, eye.transform.position + eye.transform.forward * 1.3f);
+            Call(caption, "Step", 1f); manager.Present(1f);
+            Check(!ui.HintVisible && manager.VisibleStep == TutorialStep.Vincent, "idle B yields to a pending lesson without a visibility deadlock");
+            float scale = manager.View.LayoutRoot.lossyScale.x;
+            manager.Offer(TutorialStep.Vincent, talker, eye.transform.position + eye.transform.forward * 2.6f); manager.Present(1f);
+            Check(Mathf.Abs(manager.View.LayoutRoot.lossyScale.x / scale - 2f) < .001f, "contextual dialogue keeps its angular text size at twice the distance");
+            manager.Complete(TutorialStep.Vincent); Call(caption, "Step", 1f); manager.Present(1f);
+            Check(ui.HintVisible && manager.VisibleStep == null, "idle B reminder returns after successful lesson completion");
+            manager.Offer(TutorialStep.Vincent, talker, vincent.transform.position);
+            Check(!manager.HasAvailablePrompt, "completed Vincent first-use lesson cannot reappear during this session");
+            Call(ui, "OnDisable"); Call(manager, "OnDestroy"); Object.DestroyImmediate(manager.gameObject);
+        }
     }
 }

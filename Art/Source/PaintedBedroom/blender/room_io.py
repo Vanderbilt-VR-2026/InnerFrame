@@ -308,15 +308,17 @@ def add_painter_camera(scene, room):
 # ---------------------------------------------------------------------------------------------
 # export: Blender -> data
 
-def part_arrays(ob, relative_to=None):
-    """(P, N, U, T) in Unity space, relative to the part's room object, with modifiers applied.
+def part_arrays(ob, relative_to=None, with_uv2=False):
+    """(P, N, U, T[, U2]) in Unity space, relative to the part's room object, with modifiers applied.
     Vertex i of an untouched mesh stays vertex i; a vertex whose corners disagree on normal or UV is
-    split, the extra copies going at the end."""
+    split, the extra copies going at the end. with_uv2: also return the "Lightmap" UV layer (baked
+    lightmaps, 10/29); a vertex whose corners disagree on it is split too."""
     parent = relative_to if relative_to is not None else ob.parent
     M = (parent.matrix_world.inverted() if parent else Matrix()) @ ob.matrix_world
-    same = untouched_arrays(ob, M)
+    uv2_layer = ob.data.uv_layers.get("Lightmap") if with_uv2 else None
+    same = untouched_arrays(ob, M) if uv2_layer is None else None
     if same is not None:
-        return same
+        return same + ((None,) if with_uv2 else ())
     deps = bpy.context.evaluated_depsgraph_get()
     ev = ob.evaluated_get(deps)
     me = ev.to_mesh()
@@ -327,10 +329,13 @@ def part_arrays(ob, relative_to=None):
         nl = len(me.loops)
         lv = np.empty(nl, np.int32); me.loops.foreach_get("vertex_index", lv)
         cn = np.empty(nl * 3, np.float32); me.corner_normals.foreach_get("vector", cn); cn = cn.reshape(-1, 3)
-        uvl = me.uv_layers.active
+        uvl = me.uv_layers.get("UVMap") or me.uv_layers[0] if me.uv_layers else None
         uv = np.zeros(nl * 2, np.float32)
         if uvl: uvl.data.foreach_get("uv", uv)
         uv = uv.reshape(-1, 2)
+        uv2 = None
+        if uv2_layer is not None and me.uv_layers.get("Lightmap"):
+            uv2 = np.zeros(nl * 2, np.float32); me.uv_layers["Lightmap"].data.foreach_get("uv", uv2); uv2 = uv2.reshape(-1, 2)
         nlt = len(me.loop_triangles)
         tl = np.empty(nlt * 3, np.int32); me.loop_triangles.foreach_get("loops", tl); tl = tl.reshape(-1, 3)
     finally:
@@ -348,10 +353,10 @@ def part_arrays(ob, relative_to=None):
     slot_of = {}
     claimed = set()
     extra = []
-    nk = np.round(cn, 4); uk = np.round(uv, 5)
+    nk = np.round(cn, 4); uk = np.round(uv, 5); u2k = np.round(uv2, 5) if uv2 is not None else None
     for l in range(nl):
         v = int(lv[l])
-        key = (v, *nk[l], *uk[l])
+        key = (v, *nk[l], *uk[l]) + (tuple(u2k[l]) if u2k is not None else ())
         slot = slot_of.get(key)
         if slot is None:
             if v not in claimed:
@@ -369,7 +374,13 @@ def part_arrays(ob, relative_to=None):
     if extra:
         P[nv:] = co[lv[extra]]
     T = out_of_loop[tl][:, ::-1]                                   # mirror back: reverse winding
-    return u2b(P).astype(np.float32), u2b(N).astype(np.float32), U, T.astype(np.int32)
+    out = (u2b(P).astype(np.float32), u2b(N).astype(np.float32), U, T.astype(np.int32))
+    if with_uv2:
+        U2 = None
+        if uv2 is not None:
+            U2 = np.zeros((nv + len(extra), 2), np.float32); U2[out_of_loop] = uv2
+        out = out + (U2,)
+    return out
 
 
 def texture_name(mat):
@@ -381,7 +392,7 @@ def texture_name(mat):
     return None
 
 
-def do_export(data_dir, check_only=False):
+def do_export(data_dir, check_only=False, lm_dir=None):
     scene = bpy.context.scene
     root = bpy.data.collections.get(ROOT_COLLECTION)
     if root is None:
@@ -429,14 +440,21 @@ def do_export(data_dir, check_only=False):
     obj_rows = []
     edited = []
 
-    def add_mesh(name, mat, P, N, U, T):
+    def add_mesh(name, mat, P, N, U, T, U2=None):
         nonlocal fpos, ipos
         n = len(P)
         row = {"name": name, "material": mat, "vertexCount": n, "positions": fpos, "normals": fpos + 3 * n,
                "uvs": fpos + 6 * n, "indexCount": int(T.size), "indices": ipos}
         floats.extend([P.ravel(), N.ravel(), U.ravel()]); ints.append(T.ravel())
-        fpos += 8 * n; ipos += int(T.size)
+        fpos += 8 * n
+        if U2 is not None:                       # baked-lightmap UVs (10/29), after the first UV set
+            row["uvs2"] = fpos; floats.append(U2.ravel()); fpos += 2 * n
+        ipos += int(T.size)
         return row
+    lm_images = []                               # (texture name, source png) copied into Data/Textures
+    lm_meta = {}
+    if lm_dir and os.path.exists(os.path.join(lm_dir, "lightmaps.json")):
+        with open(os.path.join(lm_dir, "lightmaps.json")) as f: lm_meta = json.load(f)
 
     for emp in objects:
         pos = list(emp.get("if_position", [])) or None
@@ -444,12 +462,15 @@ def do_export(data_dir, check_only=False):
         if pos is None or np.abs(np.array(pos) - here).max() > 1e-6:
             pos = here
         rows = []
+        lm_png = os.path.join(lm_dir, f"lm_{emp.name}.png") if lm_dir else None
+        has_lm = bool(lm_png and os.path.exists(lm_png))
         parts = sorted([c for c in emp.children if c.type == "MESH"], key=lambda o: (o.get("if_order", 1e9), o.name))
         for ob in parts:
-            P, N, U, T = part_arrays(ob, relative_to=emp)
+            P, N, U, T, U2 = part_arrays(ob, relative_to=emp, with_uv2=True)
+            if not has_lm: U2 = None
             if not ob.data.materials or ob.data.materials[0] is None:
                 raise SystemExit(f"[room_io] {ob.name} has no material")
-            rows.append(add_mesh(ob.name, mat_index[ob.data.materials[0].name], P, N, U, T))
+            rows.append(add_mesh(ob.name, mat_index[ob.data.materials[0].name], P, N, U, T, U2))
             if "ink_width" in ob:
                 ink = next((c for c in ob.children if c.name.endswith("_ink")), None)
                 changed = ob.get("if_hash") != geom_hash(P, N, U, T)
@@ -463,7 +484,12 @@ def do_export(data_dir, check_only=False):
                     Pi, Ni, Ui, Ti = make_ink(P, N, U, T, float(ob["ink_width"]))
                 ink_mat = ink.data.materials[0].name if ink is not None and ink.data.materials and ink.data.materials[0] else INK_MATERIAL
                 rows.append(add_mesh(ob.name + "_ink", mat_index[ink_mat], Pi, Ni, Ui, Ti))
-        obj_rows.append({"name": emp.name, "position": pos, "meshes": rows})
+        orow = {"name": emp.name, "position": pos, "meshes": rows}
+        if has_lm and any("uvs2" in r for r in rows):
+            tn = f"lm_{emp.name}"
+            if tn not in textures: textures.append(tn)
+            lm_images.append((tn, lm_png)); orow["lightmap"] = textures.index(tn)
+        obj_rows.append(orow)
 
     markers = []
     mk_c = bpy.data.collections.get(MARKER_COLLECTION)
@@ -481,6 +507,8 @@ def do_export(data_dir, check_only=False):
     room = {"version": scene.get("if_version", 1), "objects": obj_rows, "markers": markers, "materials": mat_rows,
             "textures": textures, "floatCount": int(F.size), "intCount": int(I.size),
             "painterFov": scene.get("if_painterFov"), "painterLensShiftY": scene.get("if_painterLensShiftY")}
+    if lm_images:
+        room["lightmapMax"] = lm_meta.get("max", 8.0); room["lightmapEncoding"] = lm_meta.get("encoding", "sqrt(L/max)")
 
     out = tempfile.mkdtemp(prefix="room_io_") if check_only else data_dir
     os.makedirs(os.path.join(out, "Textures"), exist_ok=True)
@@ -495,8 +523,10 @@ def do_export(data_dir, check_only=False):
             src = bpy.path.abspath(img.filepath)
             if os.path.exists(src): shutil.copyfile(src, dst)
             else: img.save(filepath=dst)
+        for tn, src in lm_images:
+            shutil.copyfile(src, os.path.join(out, "Textures", tn + ".png"))
     print(f"[room_io] exported {len(obj_rows)} objects, {sum(len(o['meshes']) for o in obj_rows)} meshes, "
-          f"{len(mat_rows)} materials, {len(textures)} textures -> {out}")
+          f"{len(mat_rows)} materials, {len(textures)} textures, {len(lm_images)} lightmaps -> {out}")
     print(f"[room_io] parts changed since import (outlines rebuilt): {len(edited)} {edited[:20]}")
     return out
 
@@ -557,7 +587,7 @@ def main():
     if cmd == "import":
         do_import(data_dir, opt("--blend", DEFAULT_BLEND))
     elif cmd == "export":
-        do_export(data_dir)
+        do_export(data_dir, lm_dir=opt("--lightmaps", None))   # --lightmaps DIR: folder with lm_<object>.png + lightmaps.json from bake_lightmaps.py
     elif cmd == "check":
         do_check(data_dir)
     else:

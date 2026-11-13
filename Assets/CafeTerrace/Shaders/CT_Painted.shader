@@ -14,6 +14,7 @@ Shader "InnerFrame/CafeTerrace/Painted"
         [Toggle] _VertexLight ("Baked light in the vertex colours", Float) = 1
         _LightRange ("Brightest baked value", Float) = 4
         _Saturation ("Saturation", Range(0, 1.5)) = 1
+        [Enum(UnityEngine.Rendering.CullMode)] _Cull ("Cull (Off for leaves)", Float) = 2
     }
     SubShader
     {
@@ -22,7 +23,7 @@ Shader "InnerFrame/CafeTerrace/Painted"
         {
             Name "Painted"
             Tags { "LightMode" = "UniversalForward" }
-            Cull Back
+            Cull [_Cull]
 
             HLSLPROGRAM
             #pragma vertex vert

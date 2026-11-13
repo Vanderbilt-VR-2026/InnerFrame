@@ -228,6 +228,11 @@ MonoBehaviour:
     position: {x: -1.36, y: 5.12, z: 0}
     rotZ: 144.737
     scale: {x: 0.65115, y: 0.65115, z: 0.75066}
+  - name: Tree
+    model: CT_Tree
+    position: {x: 2, y: 3, z: 0}
+    rotZ: 0
+    scale: {x: 8.66345, y: 8.66345, z: 8.66345}
   shots:
   - name: forward
     target: 01_master_v2.webp

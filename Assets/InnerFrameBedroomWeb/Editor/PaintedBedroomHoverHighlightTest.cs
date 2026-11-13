@@ -12,7 +12,7 @@ namespace InnerFrame.PaintedBedroom.EditorTools
     /// <summary>
     /// Play-mode check of the hover highlight (#94), no headset needed: a test hand hovers a liftable object through
     /// the XR Interaction Manager. Passes when the rim comes on while hovered, gives way while held, comes back after
-    /// letting go, and goes off when the hand moves away. Also checks the bed's grab is off, so it can't be hovered.
+    /// letting go, and goes off when the hand moves away. Also checks the bed's grab is off, so it can't be picked up (it is selectable instead: VincentObjectTalkTest).
     /// Doesn't cover real rays, how the rim looks, or an object held by another player.
     /// Menu: InnerFrame > Bedroom > Test Hover Highlight.
     /// Command line: -executeMethod InnerFrame.PaintedBedroom.EditorTools.PaintedBedroomHoverHighlightTest.RunFromCommandLine
@@ -91,7 +91,7 @@ namespace InnerFrame.PaintedBedroom.EditorTools
                     if (tumbler == null || bed == null) { Finish(false, "Tumbler or Bed not found in the scene"); return; }
                     if (tumbler.GetComponent<PaintedBedroomHoverHighlight>() == null) { Finish(false, "Tumbler has no hover highlight: it did not install itself"); return; }
                     var bedGrab = bed.GetComponent<XRGrabInteractable>();
-                    if (bedGrab != null && bedGrab.enabled) { Finish(false, "the bed's grab is on, so it would light up"); return; }
+                    if (bedGrab != null && bedGrab.enabled) { Finish(false, "the bed's grab is on, so it could be picked up"); return; }
                     target = tumbler.GetComponent<XRGrabInteractable>();
                     if (!target.enabled) { Finish(false, "Tumbler's grab is off"); return; }
                     if (Rim(target).Length != 0) { Finish(false, "the rim was built before anyone pointed at the object"); return; }
@@ -131,7 +131,7 @@ namespace InnerFrame.PaintedBedroom.EditorTools
 
                 case 4:   // pointing away: off
                     if (target.isHovered || !RimOff) return;
-                    Finish(true, $"{target.name}: rim on while hovered, off while held, off after pointing away; the bed can't be hovered");
+                    Finish(true, $"{target.name}: rim on while hovered, off while held, off after pointing away; the bed's grab is off (it is selected instead, PaintedBedroomSelectable)");
                     break;
             }
         }

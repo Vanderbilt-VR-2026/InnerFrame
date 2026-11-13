@@ -434,6 +434,11 @@ every number in `SN_Layout`, the `vincent*` fields):
   greeting at the same place as before; the bushes keep clear of that spot as before.
 - Batch-mode renders (for reports) draw his skin as last skinned, without that frame's IK: draw a `BakeMesh` copy instead.
 
+**Asking him about things (Convai, hold B):** a question that names something in the scene ("why did you paint the
+cypress?", "what is the lantern for?") goes to Convai with that thing's notes and whether it is in the painting or was
+made for this visit, so he doesn't claim to have painted the hilltop. No presses, and the story is unchanged. The list
+and the rules: `docs/convai/starry-night-objects.md` (notes: `Assets/VanGogh/Resources/VincentNotes/StarryNight.json`).
+
 ## Tests
 
 ## Tests

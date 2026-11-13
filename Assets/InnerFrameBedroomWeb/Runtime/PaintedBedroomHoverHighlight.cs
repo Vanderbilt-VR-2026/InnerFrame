@@ -8,8 +8,8 @@ namespace InnerFrame.PaintedBedroom
 {
     /// <summary>
     /// A thin, steady, pale rim around an object the controller is pointing at, so a visitor can see what can be
-    /// picked up (#94). Only grabs that are switched on ever get hovered, so the bed, the pictures and everything
-    /// else the physics table marks as not liftable never light up.
+    /// picked up (#94), or selected: the bed, the pictures and everything else the physics table marks as not liftable
+    /// light up through their select interactable (PaintedBedroomSelectable), which is on exactly while the grab is off.
     ///
     /// Same technique and material as the held outline (NetworkGrabbable): a hidden copy of each mesh drawn with
     /// InnerFrame/Held Outline. It is thinner, steady and pale so that "you could take this" reads differently from
@@ -43,6 +43,7 @@ namespace InnerFrame.PaintedBedroom
         readonly List<Renderer> rim = new List<Renderer>();
         readonly List<(Renderer held, Renderer depth)> heldGlass = new List<(Renderer, Renderer)>();   // the held outline's glass parts
         XRGrabInteractable grab;
+        PaintedBedroomSelectable selectable;
         NetworkGrabbable shared;
         MaterialPropertyBlock block;
         bool built, shown;
@@ -77,7 +78,10 @@ namespace InnerFrame.PaintedBedroom
 
         void Update()
         {
-            Show(grab.isHovered && !grab.isSelected && !HeldByAnotherPlayer());
+            if (selectable == null) selectable = GetComponent<PaintedBedroomSelectable>();   // added after this
+            XRBaseInteractable pointed = grab;
+            if (!grab.enabled && selectable != null && selectable.Select != null && selectable.Select.enabled) pointed = selectable.Select;
+            Show(pointed.isHovered && !pointed.isSelected && !HeldByAnotherPlayer());
             foreach (var (held, depth) in heldGlass)   // follow the held outline on and off (NetworkGrabbable toggles it)
                 if (held != null && depth != null && depth.enabled != held.enabled) depth.enabled = held.enabled;
         }

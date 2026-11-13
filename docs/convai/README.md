@@ -8,7 +8,7 @@ request.
 | | AI proxy (default) | Convai web API |
 |---|---|---|
 | What runs during a test | A Mac with Ollama + `Tools/VanGoghProxy`, and the headset on USB (`adb reverse`) or pointed at the Mac's IP | Nothing. The headset needs internet. |
-| His character | `Tools/VanGoghProxy/persona_*.txt` | Vincent's character on convai.com |
+| His character | `Tools/VanGoghProxy/persona_*.txt` | Vincent's character on convai.com ([`character.md`](character.md): the same in every scene) |
 | API key | None in the app | **In the app** (git-ignored file, but built into the APK) |
 
 ## Set up (each machine)
@@ -105,6 +105,10 @@ who asked.
   thinking line, then every part of Convai's answer in his headset voice.
 - Two players (Quest + Editor): ask from one. Both should hear the same thinking
   line at once, then his answer, sentence by sentence, at about the same time.
+- Shared conversation (Quest + Editor, with Convai): player 1 asks "why did you paint the bed
+  red?", then player 2 asks "and why that colour for the walls, after what you told them?".
+  He should answer player 2 knowing what he told player 1. The Console on player 2 says
+  `[VanGogh] Convai: joined the room's conversation in PaintedBedroom` after the first answer.
 
 ## He talks about what you pick up (Painted Bedroom)
 
@@ -119,6 +123,29 @@ the Gallery has none. Only with Use Convai and Headset Voice on.
 Your questions carry it too (`SpeechToProxy.QuestionContext`): ask while holding an
 object, or just after pressing one, and the question goes with that object's notes.
 Ask about "this" with nothing in focus and he asks which one; press it to answer.
+
+Starry Night has questions only, no press-to-comment: name a thing ("the cypress", "the
+lantern") and its notes go with the question, marked as in the painting or made for the
+visit, so he never claims to have painted our hilltop. List:
+[`starry-night-objects.md`](starry-night-objects.md).
+
+**One Convai conversation per scene** (`SpeechToProxy.convaiSession`, keyed by the scene's
+name): what he heard in the Bedroom doesn't follow him into Starry Night, and each scene's
+first question or prompt tells him where he is and everything that is there. Back in a
+scene, he picks its conversation up again (until the app restarts).
+
+**Shared by everyone in the room.** After each answer, the player who asked sends that
+scene's Convai session ID to the others (`VincentLink.RPC_Conversation`), before the lock is
+released, and every headset uses it for its next question there. So Convai has everyone's
+questions in one history, and a follow-up on someone else's question makes sense. A
+player who joins gets the IDs about 2 s after their avatar appears (only if they have
+none yet). With more than one player here, a question carries who asked:
+`"why the yellow? (Player 2 asks this.) (…notes…)"`.
+
+The scene's notes count as told (`SpeechToProxy.RoomKnown`) only once Convai has answered a
+request that carried them, and that travels with the ID. A failed first request doesn't
+leave him without the scene, and a newcomer doesn't send it again. If Convai ever hands
+back a new ID, the notes go again.
 
 ## Limits
 

@@ -30,7 +30,7 @@ using UnityEngine.XR.Interaction.Toolkit.Interactors;
 public static class VincentObjectTalkTest
 {
     const string ScenePath = "Assets/InnerFrameBedroomWeb/Scenes/PaintedBedroom.unity";
-    const string DocPath = "docs/convai/bedroom-objects.md";
+    const string DocPath = "docs/convai/bedroom-objects.md", StarryNightDocPath = "docs/convai/starry-night-objects.md";
     const string KeyRunning = "VincentObjectTalkTest.running", KeyExit = "VincentObjectTalkTest.exit";
     const double StepTimeout = 60;
 
@@ -106,9 +106,11 @@ public static class VincentObjectTalkTest
                 talker = talk.GetComponent<SpeechToProxy>();
                 if (now - stepStarted < 3) return;   // its Start has run
                 if (talker.QuestionContext == null) { Finish(false, "questions don't get the object in focus (SpeechToProxy.QuestionContext not set)"); return; }
-                string problem = CheckInteractables() ?? CheckNotesMatchDoc();
+                string problem = CheckInteractables() ?? CheckNotesMatchDoc("PaintedBedroom", DocPath)
+                                 ?? CheckNotesMatchDoc("StarryNight", StarryNightDocPath) ?? CheckPaintedOrNot();
                 if (problem != null) { Finish(false, problem); return; }
-                VincentObjectTalk.SendForTest = p => { prompts.Add(p); return true; };
+                // as if Convai answered each one: then the scene counts as told (SpeechToProxy.RecordAnswer)
+                VincentObjectTalk.SendForTest = p => { prompts.Add(p); SpeechToProxy.RecordAnswer(talk.gameObject.scene.name, p.Contains(SpeechToProxy.RoomTag)); return true; };
                 talk.cooldownSeconds = 0f;
                 talk.waitSeconds = (float)StepTimeout;   // his scripted lines may play first
                 Debug.Log("[ObjectTalkTest] One interactable per object; notes match the doc");
@@ -184,6 +186,12 @@ public static class VincentObjectTalkTest
                 if (now < waitUntil) return;
                 talk.focusSeconds = 0f;
                 if (talk.ContextFor("How are you today?") != null) { Finish(false, "an ordinary question got object context"); return; }
+                string named = talk.ContextFor("Why did you paint the bed?");
+                if (named == null || !named.Contains("asking about the big wooden bed") || !named.Contains(VincentObjectTalk.AsThePainter) || talk.WaitingForReference)
+                { Finish(false, $"a question naming the bed doesn't carry it: {named ?? "(nothing)"}"); return; }
+                string two = talk.ContextFor("Is the jug in the basin heavy?");
+                if (two == null || !two.Contains("blue jug") || !two.Contains("blue washbasin")) { Finish(false, $"a question naming two objects: {two ?? "(nothing)"}"); return; }
+                Debug.Log($"[ObjectTalkTest] Naming the bed: {named}");
                 string which = talk.ContextFor("Why did you paint this?");
                 if (which == null || !which.Contains("point at it and press grip") || !talk.WaitingForReference)
                 { Finish(false, $"\"this\" with nothing in focus didn't make him ask which one: {which ?? "(nothing)"}"); return; }
@@ -239,14 +247,15 @@ public static class VincentObjectTalkTest
         return null;
     }
 
-    // Each row of the doc's tables ("| `ID` | ... | text |") against the notes, [I...] tags left out. The mirror's row
-    // is an explanation, not notes.
-    static string CheckNotesMatchDoc()
+    // Each row of a doc's tables ("| `ID` | ... | yes/no | text |") against the scene's notes, [I...] tags left out.
+    // The mirror's row is an explanation, not notes.
+    static string CheckNotesMatchDoc(string scene, string docPath)
     {
-        var notes = VincentObjectTalk.Load("PaintedBedroom");
-        if (notes == null) return "no notes for PaintedBedroom";
-        string path = Path.Combine(Path.GetDirectoryName(Application.dataPath), DocPath);
-        if (!File.Exists(path)) return $"{DocPath} not found";
+        var notes = VincentObjectTalk.Load(scene);
+        if (notes == null) return $"no notes for {scene}";
+        if (notes.objects.Any(n => n.names == null || n.names.Length == 0)) return $"{scene}: an object has no names a question can call it by";
+        string path = Path.Combine(Path.GetDirectoryName(Application.dataPath), docPath);
+        if (!File.Exists(path)) return $"{docPath} not found";
         string Untagged(string s) => Regex.Replace(s, @"\s*\[I[^\]]*\]", "").Trim();
         var doc = new Dictionary<string, (string painted, string knows)>();
         foreach (var line in File.ReadAllLines(path))
@@ -257,15 +266,20 @@ public static class VincentObjectTalkTest
         }
         var ids = notes.objects.Select(n => n.id).ToList();
         var missing = doc.Keys.Except(ids).Concat(ids.Except(doc.Keys)).ToList();
-        if (missing.Count > 0) return $"in only one of the doc and the notes: {string.Join(", ", missing)}";
+        if (missing.Count > 0) return $"{scene}: in only one of the doc and the notes: {string.Join(", ", missing)}";
         foreach (var n in notes.objects)
         {
-            if (doc[n.id].knows != n.knows.Trim()) return $"{n.id}: the doc says \"{doc[n.id].knows}\", the notes \"{n.knows}\"";
+            if (doc[n.id].knows != n.knows.Trim()) return $"{scene} {n.id}: the doc says \"{doc[n.id].knows}\", the notes \"{n.knows}\"";
             if (doc[n.id].painted != (n.inPainting ? "yes" : "no"))
-                return $"{n.id}: the doc says in the painting \"{doc[n.id].painted}\", the notes inPainting {n.inPainting}";
+                return $"{scene} {n.id}: the doc says in the painting \"{doc[n.id].painted}\", the notes inPainting {n.inPainting}";
         }
+        return null;
+    }
 
-        // what's in the painting gets the painter's voice; anything else must not, and a missing flag means "not"
+    // What's in the painting gets the painter's voice; anything else must not, and a missing flag means "not".
+    static string CheckPaintedOrNot()
+    {
+        var notes = VincentObjectTalk.Load("PaintedBedroom");
         var bedNote = notes.objects.First(n => n.id == "Bed");
         if (!bedNote.inPainting || !talk.PromptFor(bedNote, false, false).Contains(VincentObjectTalk.AsThePainter))
             return "the bed isn't treated as in the painting";

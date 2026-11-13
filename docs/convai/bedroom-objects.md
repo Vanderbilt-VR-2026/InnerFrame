@@ -29,20 +29,20 @@ against the letter before they ship.
 
 ## Objects you can pick up (12)
 
-| ID | What it is | Where | In the painting | Vincent knows |
-|---|---|---|---|---|
-| `Chair_Front` | Straw-seated rush chair, yellow wood | Front left, by the wall | yes | He painted the chairs fresh butter yellow, the same yellow as the bed, so the furniture reads as one family against the violet walls. The rush seat is a few thick strokes. A plain chair stood for a simple, honest life; he also painted his own chair on its own. [I: his chair painting is a separate 1888 canvas] |
-| `Chair_Back` | The second rush chair | Between the washstand and the bed | yes | It makes a pair with the first chair. He painted this room in twos: two chairs, two pillows, two portraits. It is the room of a man hoping a friend, Gauguin, would come and share the house. [I: the "pairs" reading is interpretation] |
-| `Pillow_Back` | Pillow at the head of the bed | On the bed | yes | The pillows and sheet are a very light lemon green, so the scarlet blanket glows against them: red and green, opposite colours, side by side. He wanted the bed to look like sleep itself. |
-| `Pillow_Front` | Second pillow | On the bed | yes | A pair with the first pillow. Light colours on the bed and strong ones around it, so the eye comes to rest there. |
-| `Hat` | Straw hat | Hanging on the peg rail | yes | His straw hat, a small spot of yellow among the darker clothes on the pegs. He kept the hanging things to a few strokes so they don't break the calm of the wall. |
-| `Pitcher` | Blue jug | Standing in the basin | yes | He put the cool blue jug and basin on the orange table on purpose: blue against orange, so that small corner sings. Simple shapes with dark outlines, like in a Japanese print. |
-| `Carafe` | Pale green-blue carafe | Left end of the washstand | yes | The carafe is a pale green-blue against the orange table and the violet wall: a few cool notes that keep the warm corner from getting heavy. |
-| `Tumbler` | Glass tumbler | On the washstand | yes | A small glass by the carafe, a touch of pale light. Even the little things on the washstand are there to balance the colour of that corner. |
-| `Bottle_Tall` | Tall glass bottle with a cork | Right of the washstand | yes | Two small bottles on the washstand, painted in a few quick strokes. He put in the ordinary things of his room because the painting is about a simple life, with nothing hidden. |
-| `Bottle_Short` | Short glass bottle with a cork | Right of the washstand | yes | The second, shorter bottle: small pale spots that carry the light across the table. |
-| `SoapDish` | Soap dish | Front of the washstand | yes [I: the pale dish at the front of the table] | A little dish for the soap, a few strokes of colour. Nothing in the room is fancy, and that is the point: a plain room made restful by colour alone. |
-| `ClothesBrush` | Clothes brush | Right end of the washstand | yes | He painted the small, plain things with the same care as the bed: the room is a portrait of how he lived. |
+| ID | What it is | Where | Called | In the painting | Vincent knows |
+|---|---|---|---|---|---|
+| `Chair_Front` | Straw-seated rush chair, yellow wood | Front left, by the wall | chair, rush chair | yes | He painted the chairs fresh butter yellow, the same yellow as the bed, so the furniture reads as one family against the violet walls. The rush seat is a few thick strokes. A plain chair stood for a simple, honest life; he also painted his own chair on its own. [I: his chair painting is a separate 1888 canvas] |
+| `Chair_Back` | The second rush chair | Between the washstand and the bed | chair, rush chair | yes | It makes a pair with the first chair. He painted this room in twos: two chairs, two pillows, two portraits. It is the room of a man hoping a friend, Gauguin, would come and share the house. [I: the "pairs" reading is interpretation] |
+| `Pillow_Back` | Pillow at the head of the bed | On the bed | pillow | yes | The pillows and sheet are a very light lemon green, so the scarlet blanket glows against them: red and green, opposite colours, side by side. He wanted the bed to look like sleep itself. |
+| `Pillow_Front` | Second pillow | On the bed | pillow | yes | A pair with the first pillow. Light colours on the bed and strong ones around it, so the eye comes to rest there. |
+| `Hat` | Straw hat | Hanging on the peg rail | hat, straw hat | yes | His straw hat, a small spot of yellow among the darker clothes on the pegs. He kept the hanging things to a few strokes so they don't break the calm of the wall. |
+| `Pitcher` | Blue jug | Standing in the basin | jug, pitcher, water jug | yes | He put the cool blue jug and basin on the orange table on purpose: blue against orange, so that small corner sings. Simple shapes with dark outlines, like in a Japanese print. |
+| `Carafe` | Pale green-blue carafe | Left end of the washstand | carafe, vase, decanter | yes | The carafe is a pale green-blue against the orange table and the violet wall: a few cool notes that keep the warm corner from getting heavy. |
+| `Tumbler` | Glass tumbler | On the washstand | tumbler, glass, cup | yes | A small glass by the carafe, a touch of pale light. Even the little things on the washstand are there to balance the colour of that corner. |
+| `Bottle_Tall` | Tall glass bottle with a cork | Right of the washstand | bottle | yes | Two small bottles on the washstand, painted in a few quick strokes. He put in the ordinary things of his room because the painting is about a simple life, with nothing hidden. |
+| `Bottle_Short` | Short glass bottle with a cork | Right of the washstand | bottle | yes | The second, shorter bottle: small pale spots that carry the light across the table. |
+| `SoapDish` | Soap dish | Front of the washstand | soap, soap dish, dish | yes [I: the pale dish at the front of the table] | A little dish for the soap, a few strokes of colour. Nothing in the room is fancy, and that is the point: a plain room made restful by colour alone. |
+| `ClothesBrush` | Clothes brush | Right end of the washstand | brush, clothes brush | yes | He painted the small, plain things with the same care as the bed: the room is a portrait of how he lived. |
 ## Objects you can only select (14)
 
 These can't be picked up (they are fixed in the physics table). Point at one
@@ -50,22 +50,22 @@ and press grip, as if to pick it up: the hover rim shows, nothing moves, and
 Vincent talks about it (`PaintedBedroomSelectable`). For the window, press a
 casement.
 
-| ID | What it is | Where | In the painting | Vincent knows |
-|---|---|---|---|---|
-| `Bed` | Big wooden bed, scarlet blanket | Right side, along the wall | yes | The heart of the painting: a big bed of solid wood in butter yellow, with lemon-green sheets and a scarlet blanket. He wanted it to say sleep and rest, and made it heavy and sturdy so it feels safe. |
-| `Washstand` | Small orange table | Back left corner | yes | He painted the dressing table orange and set a blue basin and jug on it: orange against blue, opposite colours that make each other brighter. |
-| `Basin` | Blue washbasin | On the washstand | yes | The blue basin on the orange table, one of the room's pairs of opposite colours, with the blue jug standing in it. |
-| `Towel` | Striped towel | On a nail by the left door | yes | A pale towel on a nail by the door, with a few stripes of colour: a quiet vertical shape beside the busy washstand. |
-| `PegRail` | Peg rail with his clothes | Back wall, above the bed's head | yes | The pegs with his clothes and straw hat. He showed that he owned little: a few things hung up, painted with a few strokes. |
-| `Window` | Green casement window | Back wall, left | yes | He painted the window green and half open, and the light without shadows, flat like a Japanese print, so nothing in the room feels dramatic. |
-| `Door_Left` | Door | Left wall | yes | He painted the doors lilac. One led to the stairs, the other to the guest room he made ready for Gauguin. [I: which door is which not checked] |
-| `Door_Right` | Door | Right wall, behind the bed | yes | The other lilac door, closing the room in so it feels sheltered. |
-| `Mirror` | Small mirror | Back wall, left, by the window | yes | His small shaving mirror. (Has its own part in the visit: the mirror and portrait sequence in `MirrorScene` already tells Vincent what is happening. Not selectable on its own; see below.) |
-| `Picture_Landscape` | Small landscape, a tree in a field | Above the pegs | yes | A small landscape over the bed, a tree in a field: a bit of the outdoors he loved, brought into the room. |
-| `Picture_PortraitMan` | Portrait of a man with a reddish beard | Right wall, high up | yes | In this version he hung his own self-portrait over the bed. In the first version the portraits were of friends. [I] |
-| `Picture_PortraitWoman` | Portrait of a woman | Right wall, high up | yes | A portrait of a woman beside his own. Who she is isn't certain. [I] |
-| `Picture_DrawingLeft` | Pale yellow work on paper | Right wall, lower | yes | One of two pale works on paper pinned to the wall, drawings or prints: a quiet pale yellow against the violet. [I] |
-| `Picture_DrawingRight` | Second pale work on paper | Right wall, lower | yes | The second one, beside it: they make a pair, like everything else in this room. |
+| ID | What it is | Where | Called | In the painting | Vincent knows |
+|---|---|---|---|---|---|
+| `Bed` | Big wooden bed, scarlet blanket | Right side, along the wall | bed, blanket, sheet | yes | The heart of the painting: a big bed of solid wood in butter yellow, with lemon-green sheets and a scarlet blanket. He wanted it to say sleep and rest, and made it heavy and sturdy so it feels safe. |
+| `Washstand` | Small orange table | Back left corner | washstand, table, dressing table | yes | He painted the dressing table orange and set a blue basin and jug on it: orange against blue, opposite colours that make each other brighter. |
+| `Basin` | Blue washbasin | On the washstand | basin, bowl, washbasin | yes | The blue basin on the orange table, one of the room's pairs of opposite colours, with the blue jug standing in it. |
+| `Towel` | Striped towel | On a nail by the left door | towel | yes | A pale towel on a nail by the door, with a few stripes of colour: a quiet vertical shape beside the busy washstand. |
+| `PegRail` | Peg rail with his clothes | Back wall, above the bed's head | peg, pegs, peg rail, clothes, coat | yes | The pegs with his clothes and straw hat. He showed that he owned little: a few things hung up, painted with a few strokes. |
+| `Window` | Green casement window | Back wall, left | window, shutters | yes | He painted the window green and half open, and the light without shadows, flat like a Japanese print, so nothing in the room feels dramatic. |
+| `Door_Left` | Door | Left wall | door | yes | He painted the doors lilac. One led to the stairs, the other to the guest room he made ready for Gauguin. [I: which door is which not checked] |
+| `Door_Right` | Door | Right wall, behind the bed | door | yes | The other lilac door, closing the room in so it feels sheltered. |
+| `Mirror` | Small mirror | Back wall, left, by the window | (MirrorScene) | yes | His small shaving mirror. (Has its own part in the visit: the mirror and portrait sequence in `MirrorScene` already tells Vincent what is happening. Not selectable on its own; see below.) |
+| `Picture_Landscape` | Small landscape, a tree in a field | Above the pegs | landscape | yes | A small landscape over the bed, a tree in a field: a bit of the outdoors he loved, brought into the room. |
+| `Picture_PortraitMan` | Portrait of a man with a reddish beard | Right wall, high up | portrait, self-portrait, man | yes | In this version he hung his own self-portrait over the bed. In the first version the portraits were of friends. [I] |
+| `Picture_PortraitWoman` | Portrait of a woman | Right wall, high up | portrait, woman, lady | yes | A portrait of a woman beside his own. Who she is isn't certain. [I] |
+| `Picture_DrawingLeft` | Pale yellow work on paper | Right wall, lower | drawing, print, prints | yes | One of two pale works on paper pinned to the wall, drawings or prints: a quiet pale yellow against the violet. [I] |
+| `Picture_DrawingRight` | Second pale work on paper | Right wall, lower | drawing, print, prints | yes | The second one, beside it: they make a pair, like everything else in this room. |
 ## Not objects (room shell, no ID to select)
 
 `Room_Walls`, `Room_Floor`, `Room_Ceiling`, `Room_Skirting`, `Door_Frames`,
@@ -112,6 +112,10 @@ pictures never reach Convai. The text above stands in for them.
   He answers as he does to a question: streamed, in his headset voice, heard
   by everyone in the room. There's no thinking line, and the other players
   don't see the prompt.
+- **Naming it works too:** a question that names an object by one of its
+  **Called** words ("why did you paint the bed?") carries that object's notes,
+  whatever you hold (up to two objects; the one you hold wins when it's among
+  them). The room paragraph goes with your first question if no pickup sent it.
 - **Your own questions about an object:** ask while holding it, or within 20 s
   of pressing it, and your question goes with that object and its notes:
   `"why did you paint this? (As they ask, they are holding <what>. What you know about it: <knows> If they say this or that, they mean it. <as the painter>)"`.

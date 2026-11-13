@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -78,6 +79,15 @@ public class SpeechToProxy : MonoBehaviour
     /// Convai; what it returns is sent after the question, in the same userText (null or "": nothing). Not shown to
     /// the room. Not called for a Prompt, or when the question goes as audio. Set by VincentObjectTalk.</summary>
     public Func<string, string> QuestionContext { get; set; }
+
+    /// <summary>Who is asking ("Player 2"), or null when you're alone: it goes with your question, so with several
+    /// visitors he can tell who said what. Set by VincentLink.</summary>
+    public Func<string> AskerName { get; set; }
+
+    /// <summary>The userText for a question: the question, who asks it, then QuestionContext's notes.</summary>
+    public static string UserText(string question, string context, string asker) =>
+        question + (string.IsNullOrEmpty(asker) ? "" : $" ({asker} asks this.)") +
+        (string.IsNullOrEmpty(context) ? "" : " " + context);
 
     /// <summary>Part of an answer, ready to share: (transcript, text, audio_url, part, last). Part 0 starts the answer.
     /// From the proxy, one part is the whole answer. From Convai's stream (#157), each part is one or more sentences, as
@@ -422,7 +432,69 @@ public class SpeechToProxy : MonoBehaviour
 
     // ---- Convai's web API (ConvaiDirectSettings): https://docs.convai.com, Interaction API, character/getResponse ----
 
-    static string convaiSession = "-1";   // "-1" starts a conversation; Convai's reply gives the ID to keep it going
+    // One Convai conversation per scene: "-1" starts one, Convai's reply gives the ID to keep it going. Per scene, so what
+    // he heard in the Bedroom ("Where we are: your bedroom...") doesn't follow him into Starry Night; coming back to a
+    // scene picks its conversation up again. Shared by everyone in the room (VincentLink passes the ID around), so
+    // Convai has every visitor's questions in one history. `roomKnown`: a request carrying the scene's notes
+    // (RoomTag) was answered in this conversation, so they needn't go again (VincentObjectTalk).
+    class Conversation { public string id = "-1"; public bool roomKnown; }
+    static readonly Dictionary<string, Conversation> conversations = new Dictionary<string, Conversation>();
+
+    /// <summary>How VincentObjectTalk's scene notes begin; a request containing it carries the scene.</summary>
+    public const string RoomTag = "(Where we are:";
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetConversations() => conversations.Clear();   // fresh every run, even without a domain reload
+
+    static Conversation For(string scene)
+    {
+        if (!conversations.TryGetValue(scene, out var c)) conversations[scene] = c = new Conversation();
+        return c;
+    }
+
+    string convaiSession
+    {
+        get => For(gameObject.scene.name).id;
+        set => For(gameObject.scene.name).id = value;
+    }
+
+    /// <summary>Whether this scene's conversation has already been told where he is and what is there.</summary>
+    public bool RoomKnown => For(gameObject.scene.name).roomKnown;
+
+    /// <summary>Every scene's conversation that has begun: (scene, Convai session ID, roomKnown).</summary>
+    public static List<(string scene, string id, bool roomKnown)> Conversations =>
+        conversations.Where(kv => kv.Value.id != "-1").Select(kv => (kv.Key, kv.Value.id, kv.Value.roomKnown)).ToList();
+
+    public static bool TryGetConversation(string scene, out string id, out bool roomKnown)
+    {
+        id = "-1"; roomKnown = false;
+        if (!conversations.TryGetValue(scene, out var c) || c.id == "-1") return false;
+        id = c.id; roomKnown = c.roomKnown;
+        return true;
+    }
+
+    /// <summary>A request in `scene` was answered. The scene is known if it carried the notes, or was known already
+    /// and Convai kept the same conversation (a new ID means a new, empty one). `startId`: the ID it was sent with
+    /// (null: unchanged).</summary>
+    public static void RecordAnswer(string scene, bool carriedRoom, string startId = null)
+    {
+        var c = For(scene);
+        c.roomKnown = carriedRoom || (c.roomKnown && (startId == null || c.id == startId));
+    }
+
+    /// <summary>Another player's headset shares its conversation for `scene` (VincentLink). `onlyIfNone`: keep ours
+    /// if we have one (a resend for someone who just joined). True when it changed anything.</summary>
+    public static bool Adopt(string scene, string id, bool roomKnown, bool onlyIfNone)
+    {
+        if (string.IsNullOrEmpty(scene) || string.IsNullOrEmpty(id) || id == "-1") return false;
+        var c = For(scene);
+        if (onlyIfNone && c.id != "-1") return false;
+        if (c.id == id && c.roomKnown == roomKnown) return false;
+        c.id = id;
+        c.roomKnown = roomKnown;
+        Debug.Log($"[VanGogh] Convai: joined the room's conversation in {scene}{(roomKnown ? "" : " (it hasn't been told the scene yet)")}");
+        return true;
+    }
 
     [Serializable] class ConvaiReply { public string text, audio, sessionID; }
 
@@ -436,6 +508,7 @@ public class SpeechToProxy : MonoBehaviour
         var form = new WWWForm();
         form.AddField("charID", settings.characterId.Trim());
         form.AddField("sessionID", convaiSession);
+        string startId = convaiSession;
         form.AddField("voiceResponse", "True");   // headset voice off: Convai's own voice (only the asker hears it)
         form.AddField("sample_rate", SampleRate.ToString());
         form.AddBinaryData("file", wav, "speech.wav", "audio/wav");
@@ -466,6 +539,7 @@ public class SpeechToProxy : MonoBehaviour
             yield break;
         }
         if (!string.IsNullOrEmpty(answer.sessionID)) convaiSession = answer.sessionID;
+        RecordAnswer(gameObject.scene.name, false, startId);
 
         string reply = answer.text.Trim();
         var match = System.Text.RegularExpressions.Regex.Match(json, "\"sample_rate\"\\s*:\\s*\"?(\\d+)");
@@ -512,14 +586,17 @@ public class SpeechToProxy : MonoBehaviour
 
         var form = new WWWForm();
         form.AddField("charID", ConvaiDirectSettings.Current.characterId.Trim());
-        form.AddField("sessionID", convaiSession);
+        string startId = convaiSession;
+        form.AddField("sessionID", startId);
         form.AddField("voiceResponse", "False");
         form.AddField("stream", "True");
         // what the visitor is holding or pointing at goes with their question (VincentObjectTalk), so "why did you
         // paint this?" can be answered; only as text: with the recording, Convai takes nothing else
         string context = !isPrompt && question.Length > 0 && QuestionContext != null ? QuestionContext(question) : null;
         if (!string.IsNullOrEmpty(context)) Debug.Log($"[VanGogh] Convai: with your question: \"{Shorten(context)}\"");
-        if (question.Length > 0) form.AddField("userText", string.IsNullOrEmpty(context) ? question : question + " " + context);
+        string userText = question.Length == 0 ? null : UserText(question, context, isPrompt ? null : AskerName?.Invoke());
+        bool carriesRoom = userText != null && userText.Contains(RoomTag);
+        if (userText != null) form.AddField("userText", userText);
         else
         {
             form.AddField("sample_rate", SampleRate.ToString());
@@ -572,6 +649,7 @@ public class SpeechToProxy : MonoBehaviour
                 yield break;
             }
         }
+        RecordAnswer(gameObject.scene.name, carriesRoom, startId);   // only now: a failed request told Convai nothing
         answerOpen = false;
         LastAnswerText = answerText;
         LastQuestionText = question;

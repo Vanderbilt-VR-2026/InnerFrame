@@ -34,6 +34,13 @@ public static class ControlsTutorialChecks
 
     public static void RunBatch()
     {
+        EditorApplication.Exit(RunChecks() == 0 ? 0 : 1);
+    }
+
+    /// <summary>Non-exiting editor entry point. The caller must guard dirty scenes and restore its saved scene setup.</summary>
+    public static int RunChecks()
+    {
+        report.Clear(); passed = failed = 0;
         try
         {
             ScenesAndGuide();
@@ -51,7 +58,7 @@ public static class ControlsTutorialChecks
         Directory.CreateDirectory("Logs/Controls");
         File.WriteAllText("Logs/Controls/checks.txt", report.ToString());
         Debug.Log(report.ToString());
-        EditorApplication.Exit(failed == 0 ? 0 : 1);
+        return failed;
     }
 
     static void ScenesAndGuide()
@@ -81,6 +88,9 @@ public static class ControlsTutorialChecks
             Check(guide.View.box == template.box && guide.View.nameTab == template.nameTab && guide.View.font == template.font &&
                 guide.View.key == template.key && guide.View.settings == template.settings, scene.name + ": exact shared Vincent assets/settings");
             Check(guide.View.GetComponentInChildren<VG_DialogueBox>(true).gameObject.activeSelf, scene.name + ": full dialogue box visible while menu is modal");
+            var guideFollow = guide.View.GetComponentInChildren<VG_FollowGroup>(true);
+            Check(guide.View.LockToView && guide.View.FollowHead && guideFollow.LockToView && guideFollow.enabled,
+                scene.name + ": full Controls guide inherits the immediate lower-view follow mode");
             if (scene.name == "Gallery") CheckPages(guide);
             menu.Toggle();
             Check(!EntranceControllerGuide.IsOpen && !PlayerMenu.MenuOpen && SceneManager.GetActiveScene().handle == scene.handle,
@@ -262,16 +272,21 @@ public static class ControlsTutorialChecks
         manager.Offer(TutorialStep.BedroomGrip, b, at);
         manager.Present(1f);
         Check(manager.VisibleStep == TutorialStep.GalleryMove && manager.GetComponentsInChildren<VG_DialogueUI>().Length == 1, "two available lessons produce one dialogue");
-        var position = manager.View.LayoutRoot.position;
-        eye.transform.rotation = Quaternion.Euler(0, 90, 0);
-        manager.Present(0.1f);
-        Check(Vector3.Distance(position, manager.View.LayoutRoot.position) < .001f && !manager.View.GetComponentInChildren<VG_FollowGroup>().enabled,
-            "contextual hint stays in the world when head turns");
-        eye.transform.rotation = Quaternion.identity;
+        var eyePosition = eye.transform.position;
+        var viewport = eye.WorldToViewportPoint(manager.View.LayoutRoot.position);
+        var initialBounds = ViewportBounds(manager.View.LayoutRoot, eye);
+        eye.transform.SetPositionAndRotation(eye.transform.position + new Vector3(.3f, .2f, -.1f), Quaternion.Euler(-48f, 90f, 27f));
+        manager.Present(0f);
+        var movedBounds = ViewportBounds(manager.View.LayoutRoot, eye);
+        Check(Vector3.Distance(viewport, eye.WorldToViewportPoint(manager.View.LayoutRoot.position)) < .001f &&
+            Vector2.Distance(initialBounds.center, movedBounds.center) < .001f && Vector2.Distance(initialBounds.size, movedBounds.size) < .001f &&
+            manager.View.LockToView && manager.View.GetComponentInChildren<VG_FollowGroup>().enabled,
+            "first-use hint stays fixed in view after zero-dt yaw, pitch, roll and translation");
+        eye.transform.SetPositionAndRotation(eyePosition, Quaternion.identity);
         manager.Offer(TutorialStep.GalleryMove, a, eye.transform.position, TutorialPlacement.BelowAnchor);
         manager.Present(.1f); var closePosition = manager.View.LayoutRoot.position; manager.Present(.1f);
         Check(Vector3.Distance(closePosition, manager.View.LayoutRoot.position) < .001f,
-            "an eye coincident with the hint anchor cannot make the placement offset accumulate");
+            "coincident context anchor and BelowAnchor placement cannot offset the fixed-view hint");
         manager.Offer(TutorialStep.GalleryMove, a, at); manager.Present(.1f);
         manager.Session.AddGalleryTravel(1.9f);
         Check(!manager.Session.IsComplete(TutorialStep.GalleryMove), "1.9 m does not complete Move");
@@ -412,10 +427,10 @@ public static class ControlsTutorialChecks
         {
             var scene = portrait ? EditorSceneManager.OpenScene("Assets/Scenes/Gallery.unity") :
                 EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-            if (!portrait) scene.name = "PaintedBedroom"; // Runtime opt-in is scene-based; an Untitled fixture would bypass it.
+            if (!portrait) scene.name = "PaintedBedroom";
             Check(SceneManager.GetActiveScene().name == (portrait ? "Gallery" : "PaintedBedroom") &&
                 PaintingNames.IsPainting(SceneManager.GetActiveScene().name) == !portrait,
-                (portrait ? "Gallery" : "Bedroom") + ": fixture uses the real scene-name placement policy");
+                (portrait ? "Gallery" : "Bedroom") + ": fixture uses the real scene context");
             var eye = Camera.main;
             if (eye == null) { eye = new GameObject("Eyes").AddComponent<Camera>(); eye.tag = "MainCamera"; }
             var vincent = portrait ? VanGoghSpawner.SpawnPortrait(scene) : Object.Instantiate(Resources.Load<GameObject>("VG_Vincent"));
@@ -433,32 +448,16 @@ public static class ControlsTutorialChecks
             Check(box != null && box.GetComponent<CanvasGroup>().alpha > 0f && manager.View.HintVisible,
                 (portrait ? "Gallery" : "Bedroom") + ": complete dialogue and button hint are visibly active");
             var follow = manager.View.GetComponentInChildren<VG_FollowGroup>(true);
-            Check(manager.View.LockToView == !portrait && manager.View.FollowHead == !portrait &&
-                follow != null && follow.LockToView == !portrait && follow.enabled == !portrait,
-                (portrait ? "Gallery" : "Bedroom") + ": first-use view chooses contextual / immediate lower-view presentation");
-            if (portrait)
-            {
-                var corners = new Vector3[4];
-                bool correctSide = true;
-                int measured = 0;
-                foreach (var rect in root.GetComponentsInChildren<RectTransform>())
-                {
-                    if (rect == root) continue;
-                    measured++;
-                    rect.GetWorldCorners(corners);
-                    foreach (var point in corners)
-                        correctSide &= Vector3.Dot(point - adapter.HintAnchor, root.up) <= .002f;
-                }
-                Check(measured > 0 && correctSide, "Gallery: full dialogue and key hint stay below the portrait anchor");
-            }
-            else
+            Check(manager.View.LockToView && manager.View.FollowHead &&
+                follow != null && follow.LockToView && follow.enabled,
+                (portrait ? "Gallery" : "Bedroom") + ": first-use view uses immediate lower-view presentation");
             {
                 Vector3 position = eye.transform.position;
                 Quaternion rotation = eye.transform.rotation;
                 Vector3 viewport = eye.WorldToViewportPoint(root.position);
                 Rect bounds = ViewportBounds(root, eye);
                 Check(viewport.z > 0f && viewport.y < .5f && bounds.width > 0f && bounds.height > 0f,
-                    "Bedroom: nonempty first-use dialogue is in the lower view");
+                    (portrait ? "Gallery" : "Bedroom") + ": nonempty first-use dialogue is in the lower view");
                 // Hold the existing request eligible: this checks presentation, not the adapter's gaze test.
                 eye.transform.SetPositionAndRotation(position + new Vector3(.3f, .2f, -.1f), rotation * Quaternion.Euler(18f, 43f, 17f));
                 manager.Present(0f); // No elapsed easing time: the new pose must apply immediately.
@@ -466,7 +465,7 @@ public static class ControlsTutorialChecks
                 Check(Vector3.Distance(eye.WorldToViewportPoint(root.position), viewport) < .001f &&
                     Vector2.Distance(bounds.center, movedBounds.center) < .001f &&
                     Vector2.Distance(bounds.size, movedBounds.size) < .001f,
-                    "Bedroom: first-use viewport position and angular size survive yaw, pitch, roll and translation without easing");
+                    (portrait ? "Gallery" : "Bedroom") + ": first-use viewport position and angular size survive yaw, pitch, roll and translation without easing");
                 eye.transform.SetPositionAndRotation(position, rotation);
                 manager.Present(0f);
             }
@@ -476,8 +475,8 @@ public static class ControlsTutorialChecks
             caption.Hint("Hold B to ask Vincent", "B"); Call(caption, "Step", 1f);
             var ui = (VG_DialogueUI)typeof(VanGoghCaption).GetField("ui", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(caption);
             Call(ui, "OnEnable");
-            Check(ui.LockToView == !portrait && ui.GetComponentInChildren<VG_FollowGroup>(true).LockToView == !portrait,
-                (portrait ? "Gallery" : "Bedroom") + ": Vincent caption opts into view locking only inside a painting");
+            Check(ui.LockToView && ui.GetComponentInChildren<VG_FollowGroup>(true).LockToView,
+                (portrait ? "Gallery" : "Bedroom") + ": Vincent caption stays fixed in the lower view");
             Check(ui.HintVisible, "idle B reminder remains available with no pending first-use request");
             manager.Offer(TutorialStep.Vincent, talker, eye.transform.position + eye.transform.forward * 1.3f);
             Call(caption, "Step", 1f); manager.Present(1f);
@@ -486,15 +485,12 @@ public static class ControlsTutorialChecks
             Rect priorBounds = ViewportBounds(manager.View.LayoutRoot, eye);
             Vector3 priorViewport = eye.WorldToViewportPoint(manager.View.LayoutRoot.position);
             manager.Offer(TutorialStep.Vincent, talker, eye.transform.position + eye.transform.forward * 2.6f); manager.Present(1f);
-            if (portrait)
-                Check(Mathf.Abs(manager.View.LayoutRoot.lossyScale.x / scale - 2f) < .001f, "Gallery contextual dialogue keeps its angular text size at twice the distance");
-            else
             {
                 Rect fartherBounds = ViewportBounds(manager.View.LayoutRoot, eye);
                 Check(Mathf.Abs(manager.View.LayoutRoot.lossyScale.x / scale - 1f) < .001f &&
                     Vector3.Distance(eye.WorldToViewportPoint(manager.View.LayoutRoot.position), priorViewport) < .001f &&
                     Vector2.Distance(priorBounds.size, fartherBounds.size) < .001f,
-                    "Bedroom: changing the context-anchor distance does not move or resize the view-locked dialogue");
+                    (portrait ? "Gallery" : "Bedroom") + ": changing the context-anchor distance does not move or resize the view-locked dialogue");
             }
             manager.Complete(TutorialStep.Vincent); Call(caption, "Step", 1f); manager.Present(1f);
             Check(ui.HintVisible && manager.VisibleStep == null, "idle B reminder returns after successful lesson completion");

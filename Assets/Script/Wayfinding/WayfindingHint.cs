@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using InnerFrame.Tutorial;
 
 /// <summary>
 /// A hint plate for finding your way (#163), in the same look as the dialogue's hint: VG_Hint (star, title, one line
@@ -21,6 +22,7 @@ public class WayfindingHint : MonoBehaviour
     string iconKey;
     Transform key;
     Text letter;
+    VG_FollowGroup follow;
 
     /// <summary>Shown (fading in) or hidden (fading out).</summary>
     public bool Visible { get; set; }
@@ -30,6 +32,33 @@ public class WayfindingHint : MonoBehaviour
     public VG_DialogueSettings Settings { get; private set; }
     /// <summary>The title and line last shown, for the checks.</summary>
     public string Shown { get; private set; }
+
+    /// <summary>Keep the shared hint immediately below the current view; null head follows Camera.main as it changes.</summary>
+    public void FollowView(Transform head = null)
+    {
+        if (follow == null) follow = gameObject.AddComponent<VG_FollowGroup>();
+        follow.settings = Settings;
+        follow.head = head;
+        follow.LockToView = true;
+        Settings.belowGaze = 4f; // The dialogue box sits at 15 degrees; its instruction row sits above it.
+        follow.Snap();
+    }
+
+    /// <summary>Wayfinding yields to an existing conversation, instruction, or open interface.</summary>
+    public static bool InstructionBusy()
+    {
+        if (PlayerMenu.MenuOpen || EntranceControllerGuide.IsOpen || SceneFader.IsFading) return true;
+        foreach (var ui in VG_DialogueUI.ActiveViews)
+            if (ui != null && ui.isActiveAndEnabled &&
+                (ui.IsSpeaking || ui.HintVisible || (ui.Voice != null && ui.Voice.isPlaying))) return true;
+        foreach (var talker in FindObjectsByType<SpeechToProxy>(FindObjectsSortMode.None))
+            if (talker.isActiveAndEnabled && (talker.ConversationActive || (talker.voice != null && talker.voice.isPlaying))) return true;
+        var menu = InnerFrame.Gallery.GalleryPaintingMenu.Instance;
+        if (menu != null && menu.isActiveAndEnabled && menu.IsOpen && menu.Panel.gameObject.activeInHierarchy) return true;
+        foreach (var card in FindObjectsByType<InnerFrame.ArtworkCici.ArtworkCiciActions>(FindObjectsSortMode.None))
+            if (card.isActiveAndEnabled && card.IsOpen) return true;
+        return false;
+    }
 
     /// <summary>A hint under `parent` (null: the scene root), sized to be read from `viewDistance` metres. `onTop`: drawn
     /// over the room (nothing cuts through it), for hints that follow the head. Null without the dialogue assets.</summary>

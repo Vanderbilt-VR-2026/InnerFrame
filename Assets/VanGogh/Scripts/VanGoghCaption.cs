@@ -112,7 +112,6 @@ public class VanGoghCaption : MonoBehaviour
         if (style == VG_CaptionStyle.Box)
         {
             ui = Instantiate(dialogue, transform);
-            ui.LockToView = PaintingNames.IsPainting(gameObject.scene.name);
             ui.RespectSubtitlePreference = true;
             ui.Voice = voice;
             ui.autoStep = false;   // this caption keeps its clock (Step)

@@ -1,10 +1,9 @@
 using UnityEngine;
 
 /// <summary>
-/// Keeps its object low in the player's view (Cici's concepts V1-V3): the settings' distance ahead of the eye and
-/// belowGaze under the gaze, upright and facing the eye. It follows the gaze's yaw and pitch lazily: it stays put until
-/// the gaze is deadZone away, then eases there. When it's switched on, it starts in place. Sizes are world units; the
-/// angle is what matters. LockToView instead keeps the same camera-relative pose without a dead zone or easing.
+/// Keeps hints and dialogue at a constant position low in the player's view, without a dead zone or easing.
+/// Distance and belowGaze come from the shared settings; pitch and roll follow the camera too. The previous eased
+/// mode is available only when a caller explicitly turns LockToView off.
 /// </summary>
 public class VG_FollowGroup : MonoBehaviour
 {
@@ -13,8 +12,8 @@ public class VG_FollowGroup : MonoBehaviour
     public VG_DialogueSettings settings;
     /// <summary>The head to follow; null: the main camera.</summary>
     public Transform head;
-    /// <summary>Keep a constant lower-view position, including pitch and roll. Runtime opt-in; shared art/settings stay intact.</summary>
-    public bool LockToView { get; set; }
+    /// <summary>Keep a constant lower-view position, including pitch and roll. Default for hints in every scene.</summary>
+    public bool LockToView { get; set; } = true;
 
     float yaw, pitch;
     bool placed, moving;

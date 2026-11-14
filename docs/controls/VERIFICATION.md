@@ -1,5 +1,41 @@
 # Controls verification — updated 2026-11-13
 
+## Shared lower-view placement in every scene
+
+This supersedes the painting-only policy below. Shared dialogue and hint presenters now default to immediate
+camera-relative placement in Entrance, Gallery and every painting. Gallery first-use hints retain their real
+eligibility/completion rules but no longer use world anchors or distance scaling. Full Controls inherits the same
+placement; player menus, painting detail/Enter panels and physical labels retain their separate interaction rules.
+
+- [V] Unity 6000.3.23f1 recompiled the runtime and Editor changes with Android selected in the existing checkout.
+- [V] Final `DialoguePlacementPreview` `all-checks` run: **272 assertions passed, 0 failed** at
+  2026-11-13 19:05:09 America/Chicago (2026-11-14 01:05:09 UTC): 64 placement/caller assertions,
+  158 Controls assertions, 19 Starry Night assertions and 31 Wayfinding assertions. All four suites and the
+  original saved-scene restoration passed. The runner never saves scenes or prefabs.
+- [V] Placement fixtures exercise actual caption and reused tutorial presenters in all five named build-scene
+  contexts, nonempty visible text/art geometry, zero-time yaw/pitch/roll/translation, before-render refresh,
+  camera scale, unchanged shared artwork, and speech priority. Controls opens the five actual build scenes;
+  Starry Night uses its actual bootstrap and layout. These are Editor fixtures, not five full Play Mode runs.
+- [V] Wayfinding checks the real Gallery has zero legacy pedestal prompts, then exercises synthetic legacy
+  entrances: hover/distance arbitration, one visible prompt, disabled/other-scene exclusion, and immediate
+  yielding. Arrival checks advance its real initialization coroutine, including waiting for and yielding to
+  another instruction; elapsed waiting durations are not measured.
+- [V] Native before/after renders were inspected: the scene markers change after camera movement while the
+  shared black/gold text and shapes retain their viewport positions. Reports and images are in
+  `Logs/DialoguePlacement/`; Controls details are in `Logs/Controls/checks.txt`.
+- [V] The real Gallery was opened in Play Mode and its actual Move prompt was visually inspected in the lower
+  view, including a desktop view adjustment. No live preview sample was spawned. Unity is left in that scene.
+- [V] The first expanded Wayfinding reruns exposed an Editor restriction on adding scenes from an unsaved
+  Untitled fixture. The final test uses an isolated in-memory copy of the saved Gallery and restores the
+  original scene setup; the final complete run above includes that correction.
+- [I] No fresh-Library import, APK build, Quest 3 or multiplayer acceptance was performed for this update.
+  Native headset comfort, Controls ray targeting and late head-pose timing still need physical-device testing.
+  The live Gallery still reports the pre-existing Fusion InvalidAuthentication warning.
+
+Repeat with `InnerFrame > UI > Check all shared dialogue callers`, or write `all-checks` to
+`Temp/DialoguePlacementPreview.request`. `render` separately regenerates the placement images. Both run only
+after leaving Play Mode and reject dirty scenes; `all-checks` also requires saved scene paths for restoration.
+
 ## Immediate lower-view dialogue in paintings
 
 The painting caption, story-hint, arrival-hint and first-use presenters opt into the shared UI's runtime

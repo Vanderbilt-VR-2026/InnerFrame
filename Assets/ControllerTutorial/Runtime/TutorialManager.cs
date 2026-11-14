@@ -15,9 +15,7 @@ namespace InnerFrame.Tutorial
         {
             public Object Owner;
             public TutorialStep Step;
-            public Vector3 Position;
             public int Order;
-            public TutorialPlacement Placement;
         }
 
         public static TutorialManager Instance { get; private set; }
@@ -45,9 +43,8 @@ namespace InnerFrame.Tutorial
         int order;
         float nextScan;
         Camera movementCamera;
-        Vector3 lastPosition, moveAnchor;
+        Vector3 lastPosition;
         bool hasPosition;
-        Bounds layoutBounds;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void ResetStatic() => Instance = null;
@@ -78,14 +75,13 @@ namespace InnerFrame.Tutorial
             Hide();
         }
 
+        /// <summary>Adapters retain their context/anchor contract; presentation is fixed in the view in every scene.</summary>
         public void Offer(TutorialStep step, Object owner, Vector3 worldPosition, TutorialPlacement placement = TutorialPlacement.AtAnchor)
         {
             if (owner == null || Session.IsComplete(step)) return;
             int id = owner.GetInstanceID();
             if (!requests.TryGetValue(id, out var request))
                 requests.Add(id, request = new Request { Owner = owner, Step = step, Order = order++ });
-            request.Position = worldPosition;
-            request.Placement = placement;
         }
 
         public void Withdraw(Object owner)
@@ -152,13 +148,12 @@ namespace InnerFrame.Tutorial
             {
                 movementCamera = eye;
                 lastPosition = position;
-                moveAnchor = eye.transform.position + eye.transform.forward * 1.3f + Vector3.down * 0.15f;
                 hasPosition = true;
             }
             float distance = Vector3.Distance(lastPosition, position);
             // Accumulate horizontal travel in 5 cm steps; headset jitter and looking up/down do not finish the lesson.
             if (distance >= 0.05f) { Session.AddGalleryTravel(distance); lastPosition = position; }
-            Offer(TutorialStep.GalleryMove, this, moveAnchor);
+            Offer(TutorialStep.GalleryMove, this, eye.transform.position);
         }
 
         bool Blocked()
@@ -204,9 +199,8 @@ namespace InnerFrame.Tutorial
                 view.name = "First-use dialogue (shared Vincent UI)";
                 view.autoStep = false;
             }
-            bool lockToView = PaintingNames.IsPainting(SceneManager.GetActiveScene().name);
-            view.FollowHead = lockToView;
-            view.LockToView = lockToView;
+            view.FollowHead = true;
+            view.LockToView = true;
             view.gameObject.SetActive(true);
             bool changed = current != chosen;
             if (changed)
@@ -216,29 +210,10 @@ namespace InnerFrame.Tutorial
                 view.SetHint("", page.Hint);
                 current = chosen;
             }
-            if (lockToView)
-            {
-                // Context still controls eligibility/completion; only the presentation moves into the lower view.
-                view.LayoutRoot.localScale = Vector3.one * view.settings.Scale;
-                view.Step(deltaTime);
-                view.Snap();
-            }
-            else
-            {
-                var away = chosen.Position - Camera.main.transform.position;
-                // Gallery prompts retain their contextual anchors and readable angular size.
-                view.LayoutRoot.localScale = Vector3.one * view.settings.Scale * Mathf.Max(.25f, away.magnitude) / view.settings.distance;
-                if (away.sqrMagnitude > 0.001f)
-                    view.LayoutRoot.SetPositionAndRotation(chosen.Position, Quaternion.LookRotation(away, Vector3.up));
-                else view.LayoutRoot.position = chosen.Position;
-                view.Step(deltaTime);
-                if (changed) layoutBounds = RectTransformUtility.CalculateRelativeRectTransformBounds(view.LayoutRoot, view.LayoutRoot);
-                if (chosen.Placement != TutorialPlacement.AtAnchor)
-                {
-                    float edge = chosen.Placement == TutorialPlacement.BelowAnchor ? layoutBounds.max.y : layoutBounds.min.y;
-                    view.LayoutRoot.position -= view.LayoutRoot.TransformVector(Vector3.up * edge);
-                }
-            }
+            // Adapters still decide context and completion; every scene presents the instruction in the lower view.
+            view.LayoutRoot.localScale = Vector3.one * view.settings.Scale;
+            view.Step(deltaTime);
+            view.Snap();
             VisibleStep = chosen.Step;
         }
 

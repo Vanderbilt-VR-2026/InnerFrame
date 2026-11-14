@@ -44,6 +44,8 @@ public static class DialoguePlacementPreview
     static void CheckMenu() => Queue("check");
     [MenuItem("InnerFrame/UI/Render locked dialogue")]
     static void RenderMenu() => Queue("render");
+    [MenuItem("InnerFrame/UI/Check all shared dialogue callers")]
+    static void AllChecksMenu() => Queue("all-checks");
     [MenuItem("InnerFrame/UI/Live locked dialogue in PaintedBedroom")]
     static void LiveMenu() => Queue("live");
     [MenuItem("InnerFrame/UI/Clear dialogue preview sample")]
@@ -53,7 +55,7 @@ public static class DialoguePlacementPreview
     {
         if (command == "status") { Write("Status requested"); return; }
         if (command == "stop") { SessionState.EraseString(Pending); ClearLiveSample(); Write("Visual sample removed; scene unchanged"); return; }
-        if (command != "check" && command != "render" && command != "live") { Write("Rejected unknown request"); return; }
+        if (command != "check" && command != "render" && command != "live" && command != "all-checks") { Write("Rejected unknown request"); return; }
         SessionState.SetString(Pending, command);
         SessionState.SetString(Stage, "prepare");
         SessionState.SetFloat(Deadline, (float)EditorApplication.timeSinceStartup + 120f);
@@ -76,7 +78,8 @@ public static class DialoguePlacementPreview
         if (EditorApplication.isPlayingOrWillChangePlaymode) { EditorApplication.isPlaying = false; return; }
         SessionState.EraseString(Pending);
         if (Dirty()) { Write("Refused: unsaved scene changes; nothing was saved or changed"); return; }
-        Validate(pending == "render");
+        if (pending == "all-checks") ValidateAll();
+        else Validate(pending == "render");
     }
 
     static void RunLive()
@@ -131,6 +134,55 @@ public static class DialoguePlacementPreview
         hiddenUi.Clear();
     }
 
+    /// <summary>Explicit editor-only suite. Scene-switching legacy checks run only after the saved setup is captured.</summary>
+    public static bool ValidateAll()
+    {
+        if (EditorApplication.isPlayingOrWillChangePlaymode || EditorApplication.isCompiling || Dirty())
+        { Write("All checks refused: require settled Edit Mode and saved scenes"); return false; }
+        var setup = EditorSceneManager.GetSceneManagerSetup();
+        if (setup.Length == 0 || setup.Any(s => string.IsNullOrEmpty(s.path)))
+        { Write("All checks refused: every open scene must have a saved path so the exact setup can be restored"); return false; }
+        string originalPath = SceneManager.GetActiveScene().path;
+        float volume = AudioListener.volume;
+        var notes = new List<string>();
+        busy = true;
+        void Run(string name, Func<bool> test)
+        {
+            try { notes.Add((test() ? "PASS " : "FAIL ") + name); }
+            catch (Exception error) { notes.Add("FAIL " + name + ": " + error); }
+            busy = true; // Validate has its own finally; this outer suite remains synchronous and owns the editor.
+        }
+        try
+        {
+            Run("shared placement/caller fixtures (Logs/DialoguePlacement/checks.txt)", () => Validate(false));
+            // Preserve this detailed report before the combined summary takes its normal checks.txt/json paths.
+            if (File.Exists(Path.Combine(Output, "checks.txt"))) File.Copy(Path.Combine(Output, "checks.txt"), Path.Combine(Output, "placement-checks.txt"), true);
+            if (File.Exists(Path.Combine(Output, "checks.json"))) File.Copy(Path.Combine(Output, "checks.json"), Path.Combine(Output, "placement-checks.json"), true);
+            Run("Controls tutorial integration (Logs/Controls/checks.txt)", () => ControlsTutorialChecks.RunChecks() == 0);
+            Run("Starry Night actual UI (Logs/DialoguePlacement/starry-night-checks.txt)",
+                () => InnerFrame.StarryNight.EditorTools.SN_UICheck.Run(Path.Combine(Output, "starry-night-checks.txt")) == 0);
+            Run("Wayfinding actual callers (Logs/DialoguePlacement/wayfinding-checks.txt)",
+                () => WayfindingCheck.Run(Path.Combine(Output, "wayfinding-checks.txt")));
+        }
+        finally
+        {
+            try
+            {
+                EditorSceneManager.RestoreSceneManagerSetup(setup);
+                var restored = EditorSceneManager.GetSceneManagerSetup();
+                bool same = setup.Length == restored.Length && setup.Select((s, i) => s.path == restored[i].path &&
+                    s.isLoaded == restored[i].isLoaded && s.isActive == restored[i].isActive).All(v => v);
+                notes.Add((same && SceneManager.GetActiveScene().path == originalPath && !Dirty() ? "PASS " : "FAIL ") +
+                    "original saved scene setup restored without saving any scene or prefab");
+            }
+            catch (Exception error) { notes.Add("FAIL scene setup restoration: " + error); }
+            AudioListener.volume = volume;
+            busy = false;
+            Write(notes.Any(n => n.StartsWith("FAIL ")) ? "FAILED" : "ALL PASSED", notes);
+        }
+        return notes.All(n => !n.StartsWith("FAIL "));
+    }
+
     public static bool Validate(bool render)
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode || EditorApplication.isCompiling || Dirty())
@@ -159,8 +211,8 @@ public static class DialoguePlacementPreview
             settings.distance = 1.3f; settings.belowGaze = 15; settings.deadZone = 20; settings.easeSeconds = .5f;
             settings.lowestGaze = -30; settings.highestGaze = 45;
             ui.settings = settings; ui.autoStep = false; ui.ShowWhileMenuOpen = true;
-            Check(!ui.LockToView, "shared dialogue remains unlocked by default");
-            ui.LockToView = true; ui.Head = camera.transform;
+            Check(ui.LockToView, "shared dialogue locks to the lower view by default");
+            ui.Head = camera.transform;
             ui.RespectSubtitlePreference = false;
             ui.Say("UI preview", "This shared dialogue stays below your gaze while you look around.", null);
             ui.SetHint("UI preview", "Look around: the hint stays below your gaze");
@@ -190,7 +242,7 @@ public static class DialoguePlacementPreview
                 camera.transform.SetPositionAndRotation(pose.Item2, pose.Item3);
                 follow.Step(0); // No accumulated delta or easing frames can make this pass.
                 float angle = settings.belowGaze * Mathf.Deg2Rad;
-                var expectedPosition = camera.transform.TransformPoint(new Vector3(0, -Mathf.Sin(angle) * settings.distance, Mathf.Cos(angle) * settings.distance));
+                var expectedPosition = camera.transform.position + camera.transform.rotation * new Vector3(0, -Mathf.Sin(angle) * settings.distance, Mathf.Cos(angle) * settings.distance);
                 var expectedRotation = camera.transform.rotation * Quaternion.Euler(settings.belowGaze, 0, 0);
                 Check(Vector3.Distance(follow.transform.position, expectedPosition) < .0001f && Quaternion.Angle(follow.transform.rotation, expectedRotation) < .02f, "one zero-dt step matches exact camera offset/rotation: " + pose.Item1);
                 var points = ViewPoints(ui, camera);
@@ -198,8 +250,18 @@ public static class DialoguePlacementPreview
                 Check(points.Length > 20 && points.All(InView), "actual text/shape bounds remain visible: " + pose.Item1);
                 if (render && pose.Item1 == "yaw pitch roll") Capture(camera, "locked-after-yaw-pitch-roll.png");
             }
+            camera.transform.localScale = Vector3.one * 1.7f;
+            follow.Step(0);
+            Check(Mathf.Abs(Vector3.Distance(follow.transform.position, camera.transform.position) - settings.distance) < .0001f,
+                "camera scale does not change the fixed viewing distance");
+            camera.transform.localScale = Vector3.one;
+            camera.transform.rotation = Quaternion.Euler(-17f, 43f, 26f);
+            typeof(VG_FollowGroup).GetMethod("BeforeRender", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(follow, null);
+            Check(Quaternion.Angle(follow.transform.rotation, camera.transform.rotation * Quaternion.Euler(settings.belowGaze, 0, 0)) < .02f &&
+                ViewPoints(ui, camera).Select((p, i) => Vector2.Distance(p, baseline[i])).All(d => d < .0005f),
+                "before-render update follows a newer head pose immediately");
             ui.LockToView = false;
-            Check(!follow.LockToView, "turning LockToView off restores the legacy mode");
+            Check(!follow.LockToView, "explicit LockToView=false opt-out restores the legacy mode");
             camera.transform.SetPositionAndRotation(new Vector3(0, 1.6f, 0), Quaternion.identity);
             follow.Snap(); var first = follow.transform.position;
             camera.transform.rotation = Quaternion.Euler(0, 10, 0); follow.Step(0);
@@ -232,64 +294,81 @@ public static class DialoguePlacementPreview
 
     static void CheckSceneIntegration(Scene fixture, Camera fallback, Action<bool, string> check)
     {
-        // Use the existing main camera read-only. Only the disposable fixture camera may acquire a tag.
-        var eye = Camera.main;
-        if (eye == null) { fallback.tag = "MainCamera"; eye = fallback; }
+        // Present requires a main camera; only the disposable camera may acquire a tag. Inject its head into views.
+        if (Camera.main == null) fallback.tag = "MainCamera";
+        var eye = fallback;
+        eye.transform.SetPositionAndRotation(new Vector3(0, 1.6f, 0), Quaternion.identity);
         var owner = new GameObject("Dialogue integration fixture owner");
         TutorialManager manager = null;
+        VG_DialogueUI reusedView = null;
         VG_DialogueUI captionUi = null;
         VanGoghCaption caption = null;
         try
         {
-            foreach (string name in new[] { "PaintedBedroom", "Gallery" })
+            var scenes = EditorBuildSettings.scenes.Where(s => s.enabled).Select(s => Path.GetFileNameWithoutExtension(s.path)).Distinct().ToArray();
+            check(new[] { "Entrance", "Gallery", "PaintedBedroom", "StarryNight", "CafeTerrace" }.All(scenes.Contains),
+                "fixture covers Entrance, Gallery and all three enabled painting scenes");
+            manager = new GameObject("Tutorial integration fixture").AddComponent<TutorialManager>();
+            foreach (string name in scenes)
             {
                 fixture.name = name;
+                eye.transform.SetPositionAndRotation(new Vector3(0, 1.6f, 0), Quaternion.identity);
                 caption = VanGoghCaption.Make(owner.transform, Vector3.zero);
                 captionUi = caption.GetComponentInChildren<VG_DialogueUI>(true);
                 captionUi.Head = eye.transform;
+                captionUi.RespectSubtitlePreference = false; // Geometry remains visible without changing saved preferences.
                 caption.Words("Editor fixture dialogue; no request was sent.");
-                captionUi.Step(1f);
-                check(captionUi.LockToView == (name == "PaintedBedroom") &&
-                    captionUi.GetComponentInChildren<VG_FollowGroup>(true).LockToView == (name == "PaintedBedroom"),
-                    name + ": actual VanGoghCaption.Make chooses the correct follow mode");
+                captionUi.SetHint("UI preview", "Look around: this stays below your gaze");
+                captionUi.Step(1f); captionUi.Snap();
+                var captionFollow = captionUi.GetComponentInChildren<VG_FollowGroup>(true);
+                check(captionUi.LockToView && captionUi.FollowHead && captionFollow.LockToView && captionFollow.enabled,
+                    name + ": actual VanGoghCaption.Make uses immediate lower-view placement");
+                CheckMovedView(captionUi, eye, () => captionFollow.Step(0), check, name + " caption");
                 DestroyUi(captionUi); captionUi = null;
                 Object.DestroyImmediate(caption.gameObject); caption = null;
+
+                manager.Withdraw(owner);
+                var anchor = eye.transform.position + eye.transform.forward * 2.6f;
+                manager.Offer(TutorialStep.GalleryMove, owner, anchor, TutorialPlacement.BelowAnchor);
+                manager.Present(1f);
+                var view = manager.View;
+                check(view != null && manager.VisibleStep == TutorialStep.GalleryMove && (reusedView == null || reusedView == view),
+                    name + ": first-use request reuses the same shared view across scene contexts");
+                if (view == null) return;
+                reusedView = view;
+                view.Head = eye.transform; manager.Present(1f);
+                var follow = view.GetComponentInChildren<VG_FollowGroup>(true);
+                check(view.LockToView && view.FollowHead && follow.LockToView && follow.enabled &&
+                    Vector3.Distance(view.LayoutRoot.localScale, Vector3.one * view.settings.Scale) < .0001f,
+                    name + ": tutorial uses fixed lower-view placement and shared scale");
+                var baseline = ViewPoints(view, eye);
+                manager.Offer(TutorialStep.GalleryMove, owner, eye.transform.position, TutorialPlacement.AboveAnchor);
+                manager.Present(0);
+                var coincident = ViewPoints(view, eye);
+                manager.Offer(TutorialStep.GalleryMove, owner, eye.transform.position + eye.transform.right * 20f, TutorialPlacement.AtAnchor);
+                manager.Present(0);
+                var distant = ViewPoints(view, eye);
+                check(SameViewport(baseline, coincident) && SameViewport(baseline, distant) &&
+                    Vector3.Distance(view.LayoutRoot.localScale, Vector3.one * view.settings.Scale) < .0001f,
+                    name + ": near/far context anchors and placement hints never move or resize the UI");
+                CheckMovedView(view, eye, () => manager.Present(0), check, name + " tutorial");
+                manager.Withdraw(owner); manager.Present(0);
             }
-            fixture.name = "PaintedBedroom";
-            manager = new GameObject("Tutorial integration fixture").AddComponent<TutorialManager>();
-            // Present is the real arbitration entry point; no bootstrap/adapters/network are needed.
-            var anchor = eye.transform.position + eye.transform.forward * 2.6f;
-            manager.Offer(TutorialStep.BedroomGrip, owner, anchor);
-            manager.Present(1f);
-            var view = manager.View;
-            check(view != null && manager.VisibleStep == TutorialStep.BedroomGrip, "painting first-use request presents its real shared view");
-            if (view == null) return;
-            var follow = view.GetComponentInChildren<VG_FollowGroup>(true);
-            check(view.LockToView && view.FollowHead && follow.LockToView && follow.enabled &&
-                Vector3.Distance(view.LayoutRoot.localScale, Vector3.one * view.settings.Scale) < .0001f,
-                "painting tutorial locks to view at the shared default scale");
-
             fixture.name = "Gallery";
-            manager.Withdraw(owner);
-            manager.Offer(TutorialStep.GalleryMove, owner, anchor);
+            manager.Offer(TutorialStep.GalleryMove, owner, eye.transform.position);
             manager.Present(1f);
-            var galleryScale = Vector3.one * view.settings.Scale * 2.6f / view.settings.distance;
-            check(manager.View == view && manager.VisibleStep == TutorialStep.GalleryMove && !view.LockToView &&
-                !view.FollowHead && !follow.LockToView && !follow.enabled &&
-                Vector3.Distance(view.LayoutRoot.position, anchor) < .0001f &&
-                Vector3.Distance(view.LayoutRoot.localScale, galleryScale) < .001f,
-                "same tutorial view restores Gallery anchor, follow mode and distance-based scale after painting");
-
+            check(manager.View == reusedView && reusedView.LockToView && reusedView.FollowHead,
+                "returning to Gallery keeps the reused tutorial fixed in view");
             caption = VanGoghCaption.Make(owner.transform, Vector3.zero);
             captionUi = caption.GetComponentInChildren<VG_DialogueUI>(true);
             captionUi.Head = eye.transform;
             typeof(VG_DialogueUI).GetMethod("OnEnable", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(captionUi, null);
             caption.Words("Editor fixture speech priority sample.");
             captionUi.Step(1f); manager.Present(0f);
-            check(captionUi.IsSpeaking && manager.VisibleStep == null && !view.gameObject.activeSelf,
+            check(captionUi.IsSpeaking && manager.VisibleStep == null && !reusedView.gameObject.activeSelf,
                 "actual Vincent caption speech suppresses the reused tutorial immediately");
             caption.Words(null); captionUi.Step(2f); manager.Present(1f);
-            check(manager.VisibleStep == TutorialStep.GalleryMove && manager.View == view && view.gameObject.activeSelf,
+            check(manager.VisibleStep == TutorialStep.GalleryMove && manager.View == reusedView && reusedView.gameObject.activeSelf,
                 "unfinished reused tutorial resumes after Vincent speech clears");
         }
         finally
@@ -303,6 +382,20 @@ public static class DialoguePlacementPreview
             }
             Object.DestroyImmediate(owner);
         }
+    }
+
+    static bool SameViewport(Vector3[] before, Vector3[] after) => before.Length > 0 && before.Length == after.Length &&
+        after.Select((p, i) => Vector3.Distance(p, before[i])).All(d => d < .001f);
+
+    static void CheckMovedView(VG_DialogueUI ui, Camera eye, Action update, Action<bool, string> check, string label)
+    {
+        var before = ViewPoints(ui, eye);
+        eye.transform.SetPositionAndRotation(eye.transform.position + new Vector3(.35f, .2f, -.15f),
+            eye.transform.rotation * Quaternion.Euler(-48f, 67f, 32f));
+        update();
+        var after = ViewPoints(ui, eye);
+        check(SameViewport(before, after) && after.All(InView),
+            label + ": real UI/text viewport stays fixed after one zero-dt yaw/pitch/roll/translation update");
     }
 
     static bool InView(Vector3 point) => point.z > 0 && point.x >= .01f && point.x <= .99f && point.y >= .01f && point.y <= .99f;
@@ -367,7 +460,7 @@ public static class DialoguePlacementPreview
         var report = new Report
         {
             timestampUtc = DateTime.UtcNow.ToString("O"), result = result, activeScene = SceneManager.GetActiveScene().path,
-            scope = "Editor UI geometry and render fixture only. No headset, AI, microphone, or fake success event.",
+            scope = "Editor UI fixtures/rendering; all-checks includes simulated XRI/answer events. No live AI, microphone or headset test.",
             isPlaying = EditorApplication.isPlaying, isCompiling = EditorApplication.isCompiling,
             passed = notes != null ? notes.Count(n => n.StartsWith("PASS ")) : 0,
             failed = notes != null ? notes.Count(n => n.StartsWith("FAIL ")) : 0,

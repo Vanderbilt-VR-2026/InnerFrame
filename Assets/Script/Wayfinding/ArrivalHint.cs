@@ -2,6 +2,7 @@ using System.Collections;
 using Unity.XR.CoreUtils;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using InnerFrame.Tutorial;
 
 /// <summary>
 /// Tells you how to get back, once, when you arrive in a painting (#163): "You're inside The Bedroom / To go back to the
@@ -15,10 +16,7 @@ public class ArrivalHint : MonoBehaviour
     public const string HeadsetLine = "To go back to the Gallery, press", HeadsetRest = "on your left controller";
     public const string DesktopLine = "To go back to the Gallery, press", DesktopKey = "M", DesktopRest = "to open the menu";
     const float ShowSeconds = 10f, MaxWait = 20f, SettleSeconds = 0.5f;
-    const float BelowGaze = 4f;              // degrees: the dialogue box sits at 15, its hint above it
-
     WayfindingHint hint;
-    VG_FollowGroup follow;
 
     /// <summary>True from the moment it shows (for the checks).</summary>
     public bool Shown { get; private set; }
@@ -46,29 +44,26 @@ public class ArrivalHint : MonoBehaviour
     {
         hint = WayfindingHint.Create("Hint", transform, 1.2f, true);
         if (hint == null) yield break;
-        follow = hint.gameObject.AddComponent<VG_FollowGroup>();
-        follow.settings = hint.Settings;
-        follow.LockToView = true;       // painting arrival messages share the immediate lower-view placement
-        hint.Settings.belowGaze = BelowGaze;
+        hint.FollowView();
 
         yield return new WaitForSecondsRealtime(SettleSeconds);
         float waited = 0f;
-        while ((Fading() || DialogueBusy()) && waited < MaxWait) { waited += Time.unscaledDeltaTime; yield return null; }
-        if (PlayerMenu.MenuOpen || DialogueBusy()) { Finish(true); yield break; }   // never compete with existing dialogue/instructions after the wait limit
+        while (WayfindingHint.InstructionBusy() && !PlayerMenu.MenuOpen && !EntranceControllerGuide.IsOpen && waited < MaxWait)
+        { waited += Time.unscaledDeltaTime; yield return null; }
+        if (WayfindingHint.InstructionBusy()) { Finish(true); yield break; }   // never compete with existing dialogue/instructions after the wait limit
 
         bool desktop = FindAnyObjectByType<XROrigin>() == null;
         string place = PaintingNames.Title(gameObject.scene.name);
         if (desktop) hint.Show($"You're inside {place}", DesktopLine, DesktopKey, DesktopRest);
         else hint.Show($"You're inside {place}", HeadsetLine, WayfindingHint.MenuKey, HeadsetRest);
-        follow.head = Camera.main != null ? Camera.main.transform : null;
-        follow.Snap();
+        hint.FollowView();
         hint.Visible = true;
         Shown = true;
         Debug.Log($"[Wayfinding] Arrival hint in {gameObject.scene.name}: {hint.Shown}");
 
         float shown = 0f;
-        while (shown < ShowSeconds && !PlayerMenu.MenuOpen && !DialogueBusy()) { shown += Time.unscaledDeltaTime; yield return null; }
-        Finish(PlayerMenu.MenuOpen || DialogueBusy());
+        while (shown < ShowSeconds && !WayfindingHint.InstructionBusy()) { shown += Time.unscaledDeltaTime; yield return null; }
+        Finish(WayfindingHint.InstructionBusy());
     }
 
     void Finish(bool immediate = false)
@@ -78,11 +73,4 @@ public class ArrivalHint : MonoBehaviour
         if (immediate) hint.Snap();   // no fading overlap with newly started dialogue or instructions
     }
 
-    static bool Fading() => SceneFader.IsFading;
-
-    static bool DialogueBusy()
-    {
-        foreach (var ui in FindObjectsByType<VG_DialogueUI>(FindObjectsSortMode.None)) if (ui.IsSpeaking || ui.HintVisible) return true;
-        return false;
-    }
 }

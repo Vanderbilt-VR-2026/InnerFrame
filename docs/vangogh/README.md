@@ -49,10 +49,10 @@ October 1888, text-to-speech), and his answer plays from the portrait.
     mirror stays here*, *Hang the mirror back on the wall*, from `MirrorScene.Now`); else *Hold (B) to ask Vincent*
     with the B in its circle (B in the Editor; T also accepted).
   - The hint shows within 4 m of Vincent or the portrait; the box whenever he speaks. Both fade over 0.2 s.
-  - Both hang 1.3 m ahead of your eyes, 15° below your gaze (`VG_FollowGroup`). In painting scenes, `LockToView`
+  - Both hang 1.3 m ahead of your eyes, 15° below your gaze (`VG_FollowGroup`). In every scene, `LockToView`
     keeps them in the same lower-view position immediately, including yaw, pitch, roll and movement. There is no
-    dead zone, pitch clamp or easing in that mode; the pose also refreshes before rendering. Gallery retains the
-    original 20° dead zone and 0.5 s easing, with pitch between −30° and +45°. Sizes remain world metres:
+    dead zone, pitch clamp or easing in that mode; the pose also refreshes before rendering. Gallery uses the same
+    immediate placement as the painting scenes. Sizes remain world metres:
     0.95 m wide is about 40° at 1.3 m whatever the rig's scale.
   - They are drawn over the room (a UI material with `unity_GUIZTestMode` = Always), so the easel or the chair never cut
     through them. Something nearer than 1.3 m (the easel, his palette, the mirror you hold) is still drawn behind them:
@@ -103,8 +103,9 @@ Vincent, the mirror or the Bedroom.
    - In each asset: distance, `belowGaze`, dead zone, gaze pitch clamp, ease time; sizes as angles (box width,
      capitals); colours and tints; the hint's title and its fade-in on each change.
    - The tool makes these two once and then leaves them alone, so tuning in the Inspector stays.
-   - Set `ui.LockToView = true` for immediate lower-view placement. It is a runtime option; it does not rewrite the
-     shared settings asset. `FollowHead = false` still allows context-anchored placement instead.
+   - `ui.LockToView` defaults to `true` for immediate lower-view placement in every scene. It does not rewrite the
+     shared settings asset. The previous eased mode remains an explicit opt-out for compatibility; game hints and
+     dialogue use the default. `FollowHead = false` is available for separate world-space tools, not first-use hints.
 3. Call it:
    - `Say(speaker, text, clip)`: one sentence a page, timed to the clip (0.06 s a character without one). Play the
      clip yourself, and set `Voice` to that AudioSource so the pages keep its time.

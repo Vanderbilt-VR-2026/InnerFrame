@@ -4,7 +4,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// The dialogue UI for any scene (Cici's concepts V1-V3, 2026-11-04): a speaker's words in a dark box with their name
-/// on a tab, and a hint above it with a title and one line, both low in the player's view, with optional immediate view locking
+/// on a tab, and a hint above it with a title and one line, both fixed low in the player's view without delayed movement
 /// and drawn over the room. Put Assets/Shared/UI/Prefabs/VG_DialogueUI.prefab in a scene with a main camera, give it a
 /// VG_DialogueSettings asset, and call Say, Clear and SetHint. It plays no sound: the caller plays the voice, and sets
 /// Voice so the pages keep its time.
@@ -62,7 +62,7 @@ public class VG_DialogueUI : MonoBehaviour
     Material onTop;
     AudioClip clip;
     bool hintShown;
-    bool lockToView;
+    bool lockToView = true;
 
     /// <summary>`text` from `speaker`, a sentence a page in time with `clip` (without one, 0.06 s a character), until Clear.</summary>
     public void Say(string speaker, string text, AudioClip clip)

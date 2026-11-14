@@ -3,6 +3,8 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using AOT;
+using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.XR.CompositionLayers.Services;
 using UnityEngine;
 using UnityEngine.XR.OpenXR.CompositionLayers;
@@ -18,6 +20,7 @@ namespace InnerFrame.XR.UI
         {
             public ViewHudLayer hud;
             public XrCompositionLayerQuad quad;
+            public int copiedFrame = -1;
             public int swapchainId, width, height, order, activeFrame = -1;
             public ulong handle;
             public uint textureId;
@@ -33,7 +36,12 @@ namespace InnerFrame.XR.UI
         static readonly OpenXRLayerUtility.SwapchainCallbackDelegate onSwapchain = SwapchainCreated;
         static readonly OpenXRLayerUtility.RenderTextureIdCallbackDelegate onTexture = TextureAcquired;
 
-        public ViewHudHandler() => Application.onBeforeRender += Submit;
+        // UnityOpenXR keeps the layer pointers for xrEndFrame on the graphics thread.
+        // Match the provider's frame lifecycle and keep these arrays alive until the handler stops.
+        NativeArray<XrCompositionLayerQuad> quads;
+        NativeArray<int> orders;
+
+        public ViewHudHandler() => Application.onBeforeRender += CopyTextures;
 
         public void CreateLayer(CompositionLayerManager.LayerInfo info)
         {
@@ -116,26 +124,44 @@ namespace InnerFrame.XR.UI
             OpenXRLayerUtility.RequestRenderTextureId(surface.swapchainId, onTexture);
         }
 
-        public void OnUpdate() { }
+        public unsafe void OnUpdate()
+        {
+            if (!ViewHudLayer.Available || surfaces.Count == 0) return;
+            if (!quads.IsCreated || quads.Length < surfaces.Count)
+            {
+                if (quads.IsCreated) quads.Dispose();
+                if (orders.IsCreated) orders.Dispose();
+                quads = new NativeArray<XrCompositionLayerQuad>(surfaces.Count, Allocator.Persistent);
+                orders = new NativeArray<int>(surfaces.Count, Allocator.Persistent);
+            }
+            int count = 0;
+            foreach (var surface in surfaces.Values)
+            {
+                var hud = surface.hud;
+                if (surface.activeFrame != Time.frameCount || (surface.copiedFrame < 0 || surface.copiedFrame < Time.frameCount - 1) ||
+                    hud == null || !hud.isActiveAndEnabled || hud.Size.x <= 0f || hud.Size.y <= 0f) continue;
+                quads[count] = surface.quad;
+                orders[count++] = surface.order;
+                hud.Submitted();
+            }
+            if (count == 0) return;
+            OpenXRLayerUtility.AddActiveLayersToEndFrame(quads.GetUnsafePtr(), orders.GetUnsafePtr(),
+                count, sizeof(XrCompositionLayerQuad));
+        }
 
-        // Match the OpenXR provider's swapchain copy phase. Submit only a quad for which an acquired
-        // image exists and the caller has finished a capture. Never hide the Unity fallback on allocation alone.
         [BeforeRenderOrder(2000)]
-        unsafe void Submit()
+        void CopyTextures()
         {
             if (!ViewHudLayer.Available) return;
             foreach (var surface in surfaces.Values)
             {
                 var hud = surface.hud;
                 if (surface.activeFrame != Time.frameCount || hud == null || !hud.isActiveAndEnabled ||
-                    hud.Texture == null || !hud.Texture.IsCreated() || hud.Size.x <= 0f || hud.Size.y <= 0f) continue;
+                    hud.Texture == null || !hud.Texture.IsCreated()) continue;
                 var target = OpenXRLayerUtility.FindRenderTexture(Volatile.Read(ref surface.textureId));
                 if (target == null || target.width != surface.width || target.height != surface.height) continue;
                 OpenXRLayerUtility.WriteToRenderTexture(hud.Texture, target);
-                var quad = surface.quad;
-                int order = surface.order;
-                OpenXRLayerUtility.AddActiveLayersToEndFrame(&quad, &order, 1, sizeof(XrCompositionLayerQuad));
-                hud.Submitted();
+                surface.copiedFrame = Time.frameCount;
             }
         }
 
@@ -155,7 +181,9 @@ namespace InnerFrame.XR.UI
 
         public void Dispose()
         {
-            Application.onBeforeRender -= Submit;
+            Application.onBeforeRender -= CopyTextures;
+            if (quads.IsCreated) quads.Dispose();
+            if (orders.IsCreated) orders.Dispose();
             foreach (var surface in surfaces.Values) Release(surface);
             surfaces.Clear();
         }

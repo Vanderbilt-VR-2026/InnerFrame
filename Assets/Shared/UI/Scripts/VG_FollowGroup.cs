@@ -1,11 +1,11 @@
 using UnityEngine;
 
 /// <summary>
-/// Keeps its object low in the player's view (Cici's concepts V1-V3): the settings' distance ahead of the eye and
-/// belowGaze under the gaze, upright and facing the eye. It follows the gaze's yaw and pitch lazily: it stays put until
-/// the gaze is deadZone away, then eases there. When it's switched on, it starts in place. Sizes are world units; the
-/// angle is what matters.
+/// Keeps hints and dialogue at a constant position low in the player's view, without a dead zone or easing.
+/// Anchors a world-space HUD in the camera viewport, keeping its artwork and buttons in the same plane.
+/// A caller can explicitly select the older eased placement for world-facing content.
 /// </summary>
+[DefaultExecutionOrder(10000)]
 public class VG_FollowGroup : MonoBehaviour
 {
     const float Settled = 1f;   // degrees: once following, it stops within this
@@ -13,11 +13,26 @@ public class VG_FollowGroup : MonoBehaviour
     public VG_DialogueSettings settings;
     /// <summary>The head to follow; null: the main camera.</summary>
     public Transform head;
+    /// <summary>Keep a constant lower-view position, including pitch and roll. Default for hints in every scene.</summary>
+    public bool LockToView { get; set; } = true;
+    /// <summary>Height of the anchor measured from the bottom of the game view.</summary>
+    public float ViewportY { get; set; } = .32f;
+    public bool FitDialogueLayout { get; set; }
 
     float yaw, pitch;
     bool placed, moving;
+    Transform cachedHead;
+    Camera headCamera;
 
-    void OnEnable() => placed = false;
+    void OnEnable()
+    {
+        placed = moving = false;
+        Application.onBeforeRender += BeforeRender;
+    }
+    void OnDisable() => Application.onBeforeRender -= BeforeRender;
+    // XR may update the head pose after LateUpdate. Refresh only the locked mode before rendering.
+    [BeforeRenderOrder(1000)]
+    void BeforeRender() { if (LockToView) Step(0f); }
 
     void LateUpdate() => Step(Time.deltaTime);
 
@@ -27,8 +42,26 @@ public class VG_FollowGroup : MonoBehaviour
     /// <summary>One frame, so tests can drive it.</summary>
     public void Step(float dt)
     {
-        var eye = head != null ? head : Camera.main != null ? Camera.main.transform : null;
+        var camera = head == null ? Camera.main : null;
+        var eye = head != null ? head : camera != null ? camera.transform : null;
         if (eye == null || settings == null) return;
+        if (LockToView)
+        {
+            if (head != null)
+            {
+                if (cachedHead != head) { cachedHead = head; headCamera = head.GetComponent<Camera>(); }
+                camera = headCamera;
+            }
+            if (camera != null) PlaceInViewport(camera);
+            else
+            {
+                // A transform-only head (e.g. a simulated rig) has no camera projection.
+                var facing = eye.rotation * Quaternion.Euler(settings.belowGaze, 0f, 0f);
+                transform.SetPositionAndRotation(eye.position + facing * Vector3.forward * settings.distance, facing);
+            }
+            placed = moving = false;
+            return;
+        }
         var gaze = eye.forward;
         float wantYaw = Mathf.Atan2(gaze.x, gaze.z) * Mathf.Rad2Deg;
         float wantPitch = Mathf.Clamp(Mathf.Asin(Mathf.Clamp(gaze.y, -1f, 1f)) * Mathf.Rad2Deg, settings.lowestGaze, settings.highestGaze) - settings.belowGaze;
@@ -44,6 +77,25 @@ public class VG_FollowGroup : MonoBehaviour
         }
         var at = eye.position + Direction(yaw, pitch) * settings.distance;
         transform.SetPositionAndRotation(at, Quaternion.LookRotation(at - eye.position, Vector3.up));
+    }
+
+    void PlaceInViewport(Camera camera)
+    {
+        float depth = settings.distance;
+        var anchor = camera.ViewportToWorldPoint(new Vector3(.5f, ViewportY, depth));
+        transform.SetPositionAndRotation(anchor, camera.transform.rotation);
+        if (!FitDialogueLayout) return;
+
+        // Preserve the authored angular size unless the game view would clip the box or its navigation.
+        var extent = camera.ViewportToWorldPoint(new Vector3(1f, 1f, depth)) -
+            camera.ViewportToWorldPoint(new Vector3(0f, 0f, depth));
+        float width = Vector3.Dot(extent, camera.transform.right);
+        float height = Vector3.Dot(extent, camera.transform.up);
+        const float bottomOfNavigation = .34f; // layout metres from the dialogue top to the lowest button edge
+        float widthFit = .84f * width / VG_DialogueBox.Width;
+        float heightFit = (ViewportY - .08f) * height / bottomOfNavigation;
+        float scale = Mathf.Min(settings.Scale, Mathf.Min(widthFit, heightFit));
+        transform.localScale = Vector3.one * scale;
     }
 
     static Vector3 Direction(float yaw, float pitch) => Quaternion.Euler(-pitch, yaw, 0f) * Vector3.forward;

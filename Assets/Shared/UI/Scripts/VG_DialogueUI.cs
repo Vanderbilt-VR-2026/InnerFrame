@@ -4,13 +4,19 @@ using UnityEngine.UI;
 
 /// <summary>
 /// The dialogue UI for any scene (Cici's concepts V1-V3, 2026-11-04): a speaker's words in a dark box with their name
-/// on a tab, and a hint above it with a title and one line, both low in the player's view, following the head lazily
+/// on a tab, and a hint above it with a title and one line, both fixed low in the player's view without delayed movement
 /// and drawn over the room. Put Assets/Shared/UI/Prefabs/VG_DialogueUI.prefab in a scene with a main camera, give it a
 /// VG_DialogueSettings asset, and call Say, Clear and SetHint. It plays no sound: the caller plays the voice, and sets
 /// Voice so the pages keep its time.
 /// </summary>
 public class VG_DialogueUI : MonoBehaviour
 {
+    static readonly HashSet<VG_DialogueUI> activeViews = new HashSet<VG_DialogueUI>();
+    public static IEnumerable<VG_DialogueUI> ActiveViews => activeViews;
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetViews() => activeViews.Clear();
+    void OnEnable() => activeViews.Add(this);
+    void OnDisable() => activeViews.Remove(this);
     const float FadeSeconds = 0.2f;   // the box and the hint fade in and out
 
     [Tooltip("This scene's placement and look. Set it before the first Say or SetHint.")] public VG_DialogueSettings settings;
@@ -24,6 +30,23 @@ public class VG_DialogueUI : MonoBehaviour
     public Transform Head { get { Build(); return follow.head; } set { Build(); follow.head = value; } }
     /// <summary>Words are on screen: from Say until a second after Clear.</summary>
     public bool IsSpeaking => paging != null && paging.Showing;
+    /// <summary>A visible instruction, including its fade out. Other instruction presenters can yield to it.</summary>
+    public bool HintVisible => hintGroup != null && hintGroup.gameObject.activeInHierarchy && hintGroup.alpha > 0f;
+    /// <summary>False for contextual instructions placed beside an object in the world.</summary>
+    public bool FollowHead { get; set; } = true;
+    /// <summary>Fixed lower-view placement without delayed sliding. Does not change the shared visual style.</summary>
+    public bool LockToView
+    {
+        get => lockToView;
+        set { lockToView = value; if (follow != null) follow.LockToView = value; }
+    }
+    /// <summary>True for a guide opened from the player menu itself.</summary>
+    public bool ShowWhileMenuOpen { get; set; }
+    /// <summary>Opt-in for spoken dialogue captions. Tutorials using the same visual style stay readable.</summary>
+    public bool RespectSubtitlePreference { get; set; }
+    /// <summary>The existing dialogue layout, for placement and accessory buttons using the same assets.</summary>
+    public Transform LayoutRoot { get { Build(); return follow.transform; } }
+    public Material OverlayMaterial { get { Build(); return onTop; } }
     /// <summary>The hint's line as last set, tokens included.</summary>
     public string HintLine { get; private set; }
     /// <summary>The resolved hint title, including a scene's more specific activity title.</summary>
@@ -39,6 +62,7 @@ public class VG_DialogueUI : MonoBehaviour
     Material onTop;
     AudioClip clip;
     bool hintShown;
+    bool lockToView = true;
 
     /// <summary>`text` from `speaker`, a sentence a page in time with `clip` (without one, 0.06 s a character), until Clear.</summary>
     public void Say(string speaker, string text, AudioClip clip)
@@ -89,9 +113,11 @@ public class VG_DialogueUI : MonoBehaviour
     {
         Build();
         paging.Step(dt, Voice != null && clip != null && Voice.isPlaying && Voice.clip == clip ? Voice.time : (float?)null);
-        Fade(words, paging.Showing && !PlayerMenu.MenuOpen, dt, FadeSeconds);
-        Fade(hintGroup, hintShown && !PlayerMenu.MenuOpen, dt, settings.hintFadeIn > 0f ? settings.hintFadeIn : FadeSeconds);
-        follow.enabled = words.gameObject.activeSelf || hintGroup.gameObject.activeSelf;   // so it appears in place
+        bool allowed = ShowWhileMenuOpen || !PlayerMenu.ModalOpen;
+        // Hiding subtitles does not end paging or speech priority; hints remain independent.
+        Fade(words, paging.Showing && allowed && (!RespectSubtitlePreference || PlayerMenuPreferences.Subtitles), dt, FadeSeconds);
+        Fade(hintGroup, hintShown && allowed, dt, settings.hintFadeIn > 0f ? settings.hintFadeIn : FadeSeconds);
+        follow.enabled = FollowHead && (words.gameObject.activeSelf || hintGroup.gameObject.activeSelf);
     }
 
     void OnDestroy() { if (onTop != null) Destroy(onTop); }
@@ -106,6 +132,8 @@ public class VG_DialogueUI : MonoBehaviour
         follow.transform.SetParent(transform, false);
         follow.transform.localScale = Vector3.one * settings.Scale;
         follow.settings = settings;
+        follow.FitDialogueLayout = true;
+        follow.LockToView = lockToView;
         onTop = new Material(Canvas.GetDefaultCanvasMaterial());
         onTop.SetInt("unity_GUIZTestMode", (int)UnityEngine.Rendering.CompareFunction.Always);   // nothing in the room cuts through it
         dialogue = VG_DialogueBox.Make(follow.transform, settings, font, box, nameTab, starRing, star, onTop);
@@ -119,6 +147,8 @@ public class VG_DialogueUI : MonoBehaviour
     static CanvasGroup Hidden(GameObject panel)
     {
         var group = panel.AddComponent<CanvasGroup>();
+        group.interactable = false;
+        group.blocksRaycasts = false;
         group.alpha = 0f;
         panel.SetActive(false);
         return group;

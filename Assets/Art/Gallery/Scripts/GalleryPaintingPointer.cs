@@ -13,7 +13,7 @@ namespace InnerFrame.Gallery
     ///
     /// Input: each hand's NearFarInteractor (the XR Origin's rays) gives the ray's origin and direction, and its own
     /// Activate input (XRI's Activate action: the trigger) gives the press. Nothing is rebound: XRI Select stays on the
-    /// grip, UI Press on the trigger, Jump on A. The rig's ray stops at 2 m (XRRigSettings), shorter than the room, so this
+    /// grip and UI Press on the trigger; A is unassigned. The rig's ray stops at 2 m (XRRigSettings), shorter than the room, so this
     /// casts its own ray along the same line, up to MaxDistance, and draws it (rayMaterial) only while it rests on a
     /// painting, the menu or a label's button. With no XR controller at all (the Editor's DesktopTestRig) the ray comes
     /// from the screen's centre dot, or the mouse when it is free, and E or a left click is the trigger.

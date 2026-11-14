@@ -23,7 +23,6 @@ namespace InnerFrame.Entrance
         Canvas canvas;
         RawImage backdrop;
         RawImage transition;
-        RawImage galleryGold;
         Texture2D goldGradient;
         VideoPlayer interludePlayer;
         RenderTexture interludeBuffer;
@@ -168,15 +167,6 @@ namespace InnerFrame.Entrance
             transition = veil.GetComponent<RawImage>();
             transition.raycastTarget = false;
             transition.color = Color.clear;
-            var gold = new GameObject("Full screen Gallery gold", typeof(RectTransform), typeof(RawImage));
-            gold.transform.SetParent(root, false);
-            var goldRect = (RectTransform)gold.transform;
-            goldRect.sizeDelta = new Vector2(W * 3f, H * 3f);
-            galleryGold = gold.GetComponent<RawImage>();
-            galleryGold.raycastTarget = false;
-            galleryGold.texture = GoldGradient();
-            galleryGold.color = Color.clear;
-            gold.SetActive(false);
         }
 
         void AddFrameBar(string label, Vector2 position, Vector2 size)
@@ -366,34 +356,15 @@ namespace InnerFrame.Entrance
         {
             if (busy || (CurrentPage != 3 && CurrentPage != 4) || !EntranceChoice.SetRoomCode(code)) return;
             EntranceChoice.SetRole(role);
-            var template = Resources.Load<GameObject>("EntranceControllerGuide");
-            if (template == null) { Debug.LogError("Missing ControllerTutorial prefab"); return; }
             Clear();
             CurrentPage = 5;
-            var panel = new GameObject("Controller Tutorial", typeof(RectTransform));
-            var rect = (RectTransform)panel.transform;
-            rect.SetParent(root, false);
-            rect.sizeDelta = ((RectTransform)template.transform).sizeDelta;
-            rect.anchoredPosition3D = new Vector3(0, 0, -.1f);
-            var layout = Instantiate(template);
-            layout.SetActive(false);
-            // The standalone preview supplies its own painting. Entrance already displays it.
-            for (int i = 0; i < layout.transform.childCount;)
-            {
-                var element = layout.transform.GetChild(i);
-                if (element.name == "Opening background") { i++; continue; }
-                element.SetParent(rect, false);
-            }
-            Destroy(layout);
-            controls.Add(panel);
-            foreach (var button in panel.GetComponentsInChildren<Button>())
-            {
-                button.onClick = new Button.ButtonClickedEvent();
-                EntranceButtonSound.Bind(button);
-                button.gameObject.AddComponent<EntranceHoverFeedback>().Configure(
-                    button, (RectTransform)button.transform, button.targetGraphic);
-                button.onClick.AddListener(FinishControllerTutorial);
-            }
+            var assets = Resources.Load<Tutorial.EntranceControllerGuide>("EntranceControllerGuide");
+            if (assets != null && assets.entranceDiagram != null)
+                AddImage("Original controller diagram", assets.entranceDiagram, 0, 24, 660, 550);
+            else
+                Debug.LogError("[Entrance] The controller diagram is missing from EntranceControllerGuide.", this);
+            var proceed = Sign("Continue", 0, -342, 405, 135, FinishControllerTutorial, 58);
+            proceed.name = "Continue";
         }
 
         void FinishControllerTutorial()
@@ -450,65 +421,36 @@ namespace InnerFrame.Entrance
             root.anchoredPosition3D=originalPosition;
             backdrop.rectTransform.anchoredPosition=Vector2.zero;
             backdrop.rectTransform.localScale=originalScale;
-            // C4 finishes before the painted Van Gogh title. The following
-            // gold transition dissolves directly over its final video frame.
+            // Hold the last painted frame until the surrounding gold is ready.
             IntroBeat=3;
             if (!skipIntro) yield return PlayVanGoghInterlude();
             Clear();
-            if (skipIntro)
-            {
-                EndVanGoghInterlude();
-                transition.texture=GoldGradient();
-                transition.color=Color.white;
-                yield return EnterGallery();
-            }
-            else yield return GoldTransition();
+            yield return EnterGallery();
         }
 
         IEnumerator EnterGallery()
         {
-            const string target = "Assets/Scenes/Gallery.unity";
-            if (!Application.CanStreamedLevelBeLoaded(target))
-            {
-                Debug.LogError("[Entrance] Cannot load " + target + ": scene is not enabled in Build Profiles.",this);
-                if(galleryGold!=null) galleryGold.gameObject.SetActive(false);
-                yield break;
-            }
             var fader = SceneFader.Instance;
-            if (fader.IsTransitioning) yield break;
-            if(galleryGold!=null)
+            if (fader.EnterGalleryWithGold(GoldGradient(), skipIntro))
             {
-                galleryGold.gameObject.SetActive(true);
-                galleryGold.color=Color.white;
+                // The sphere is already opaque. Retire the paper and its frame together.
+                canvas.enabled = false;
+                IntroBeat = 4;
+                audioDirector.PlayGold();
+                EndVanGoghInterlude();
+                while (fader.IsTransitioning) yield return null;
             }
-            busy = true;
-            Ready = false;
-            audioDirector.PlayGold();
-            fader.FadeToScene(target,.6f,GoldGradient(),.6f,13.9f);
-            // On success this Entrance object is unloaded. If loading fails while
-            // Entrance still exists, restore the buttons so the user can retry.
-            while (fader.IsTransitioning) yield return null;
-            if (this != null && gameObject.scene.isLoaded)
-            {
-                busy=false;
-                Ready=true;
-                if(galleryGold!=null) galleryGold.gameObject.SetActive(false);
-                Debug.LogError("[Entrance] Gallery transition ended without loading Gallery: " + fader.LastFailure,this);
-            }
-        }
 
-        IEnumerator GoldTransition()
-        {
-            busy=true;
-            Ready=false;
-            transition.texture=GoldGradient(); IntroBeat=4;
-            audioDirector.PlayGold();
-            if(galleryGold!=null) galleryGold.gameObject.SetActive(true);
-            for(float t=0;t<1.1f;t+=Time.unscaledDeltaTime)
-            { float v=Mathf.FloorToInt(t*8)%4<2?1f:.9f; galleryGold.color=new Color(v,v,v,Mathf.Clamp01(t/.3f)); yield return null; }
-            SetPainting(GoldGradient());
+            // Success unloads this component. If the scene could not load, offer the entry control again.
             EndVanGoghInterlude();
-            yield return EnterGallery();
+            canvas.enabled = true;
+            transition.color = Color.clear;
+            transition.texture = null;
+            busy = false;
+            Ready = true;
+            audioDirector.PlayOpening();
+            Show(2);
+            Debug.LogError("[Entrance] Could not enter Gallery: " + fader.LastFailure, this);
         }
 
         IEnumerator PlayVanGoghInterlude()

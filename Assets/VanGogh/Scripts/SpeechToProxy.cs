@@ -261,7 +261,7 @@ public class SpeechToProxy : MonoBehaviour
     void Awake()
     {
         talk = new InputAction("Ask Vincent", InputActionType.Button);
-        talk.AddBinding("<XRController>{RightHand}/secondaryButton");   // B: A is XRI's Jump
+        talk.AddBinding("<XRController>{RightHand}/secondaryButton");   // B; A remains unassigned
         talk.AddBinding("<Keyboard>/b");
         talk.AddBinding("<Keyboard>/t"); // Compatibility for earlier desktop walkthroughs.
         talk.performed += _ => OnPress();
@@ -843,7 +843,7 @@ public class SpeechToProxy : MonoBehaviour
         if (wasActive != ConversationActive) ConversationChanged?.Invoke(ConversationActive);
         if (dialogueUI != null && next != State.Idle)
         {
-            string hint = next == State.Recording ? "Listening… Release B to send" :
+            string hint = next == State.Recording ? "Listening… Release {B} to send" :
                 next == State.Waiting ? "Vincent is thinking…" :
                 next == State.Error ? "Vincent can't hear you right now" : null;
             dialogueUI.SetHint("Talk to Vincent", hint);

@@ -143,10 +143,10 @@ Vincent's words and the hint use the shared dialogue box, the same as in every s
 settings, `VG_Dialogue_StarryNight.asset`: 1.6 m ahead, its top edge 22° below the gaze (at a level gaze the box spans
 −29° to −22° and the hint's plate −19° to −14°, under the village's lowest windows; looking 25° up the hint's top is at
 10°, under the swirl), 33° wide, 4.0 cm capitals for his line, the hint (the step's title and its line, see "The story";
-at Done the scene's name, "A Night with Vincent", the settings' `hintTitle`) on its plate, as in the Bedroom. It moves
-only once you look more than 20° away and is drawn over the world.
-It follows the gaze down to 60° below level (`lowestGaze` −60 since 2026-11-10; at −30 a chair-seated player looking
-down at the lantern had the box and the hint over it). `SN_Voice` keeps
+at Done the scene's name, "A Night with Vincent", the settings' `hintTitle`) on its plate, as in the Bedroom.
+Since 2026-11-13, `SN_Bootstrap` opts into `LockToView`: words and hints retain the same lower-view position
+immediately through yaw, pitch, roll and movement, without delayed sliding. They are drawn over the world.
+The settings' legacy dead zone, easing and pitch clamp are bypassed only for this runtime mode. `SN_Voice` keeps
 the line queue (a newer story line drops older ones not yet started) and calls `Say("Vincent", text, clip)` and `Clear`;
 `SN_Game` sets the hint (`SetHint(SN_Game.TitleFor(state), SN_Game.HintFor(state))`, the shared API as it was) and
 steps the UI each frame. The controller beam draws just before the UI (render

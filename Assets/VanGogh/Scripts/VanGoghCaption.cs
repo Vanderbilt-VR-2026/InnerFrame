@@ -112,6 +112,7 @@ public class VanGoghCaption : MonoBehaviour
         if (style == VG_CaptionStyle.Box)
         {
             ui = Instantiate(dialogue, transform);
+            ui.RespectSubtitlePreference = true;
             ui.Voice = voice;
             ui.autoStep = false;   // this caption keeps its clock (Step)
             mirror = GetComponentInParent<MirrorScene>();
@@ -186,7 +187,8 @@ public class VanGoghCaption : MonoBehaviour
         var eye = Camera.main;
         bool near = eye != null && Vector3.Distance(eye.transform.position, transform.parent.position) <= HintWithin;
         string line = stateHint ?? MirrorHint(mirror != null ? mirror.Now : VG_MirrorStep.None)
-                      ?? idleHint?.Replace($" {idleKey} ", $" {{{idleKey}}} ");
+                      ?? (InnerFrame.Tutorial.TutorialManager.Instance != null && InnerFrame.Tutorial.TutorialManager.Instance.HasAvailablePrompt
+                          ? null : idleHint?.Replace($" {idleKey} ", $" {{{idleKey}}} "));
         ui.SetHint(gameObject.scene.name == HintScene ? null : "", near ? line : null);
     }
 

@@ -5,15 +5,15 @@ using UnityEngine.XR.Interaction.Toolkit.Interactables;
 /// <summary>
 /// Shows how to step into a painting (#163). In the Gallery, every way in (a SceneChangeButton: the invisible box on a
 /// pedestal) gets this at load, without editing the scene: a soft chrome-yellow glow over the box, so you can see what
-/// to grip, and a hint above it with the painting's title and "Hold (grip) on the pedestal to step inside", the grip
+/// to grip, and a hint below the view with the painting's title and "Hold (grip) on the pedestal to step inside", the grip
 /// button drawn as its icon. The hint shows
 /// while a ray points at the box, and, until you have stepped into a painting once, whenever you're within NearMetres.
 /// </summary>
+[DefaultExecutionOrder(900)] // After ordinary dialogue updates, before TutorialManager's arbitration.
 public class PaintingEntrancePrompt : MonoBehaviour
 {
     public const string Line = "Hold", Rest = "on the pedestal to step inside";   // Hold (grip icon) on the pedestal…
     const float NearMetres = 1.6f;          // horizontal, from the eyes to the box
-    const float HintAbove = 0.22f;          // the hint's centre over the box's top, metres
     const float ReadDistance = 1.4f;        // the distance it is sized to be read from
     static readonly Color GlowLow = new Color(0.95f, 0.76f, 0.19f, 0.10f), GlowHigh = new Color(0.95f, 0.76f, 0.19f, 0.26f);
 
@@ -78,12 +78,12 @@ public class PaintingEntrancePrompt : MonoBehaviour
             simple.selectEntered.AddListener(_ => HasEntered = true);
         }
         BuildGlow();
-        hint = WayfindingHint.Create("Entrance Hint", null, ReadDistance, false);
+        hint = WayfindingHint.Create("Entrance Hint", null, ReadDistance, true);
         if (hint != null)
         {
             SceneManager.MoveGameObjectToScene(hint.gameObject, gameObject.scene);
             hint.Show(PaintingNames.Title(button.targetScene), Line, WayfindingHint.GripKey, Rest);
-            hint.transform.position = new Vector3(box.center.x, box.max.y + HintAbove, box.center.z);
+            hint.FollowView();
         }
     }
 
@@ -109,26 +109,59 @@ public class PaintingEntrancePrompt : MonoBehaviour
 
     void Update()
     {
-        bool reading = false;
-        foreach (var card in cards)
-            if (card && card.gameObject.scene == gameObject.scene && card.IsOpen) { reading = true; break; }
+        bool reading = Reading();
         if (glowBox) glowBox.gameObject.SetActive(!reading && !PlayerMenu.MenuOpen);
         float pulse = 0.5f + 0.5f * Mathf.Sin(Time.time * Mathf.PI * 2f / 2.4f);
         if (glow != null) glow.color = Color.Lerp(GlowLow, GlowHigh, pulse);
-        if (hint == null) return;
+    }
 
-        var eyes = Camera.main;
-        bool near = false;
-        if (eyes != null)
+    bool Reading()
+    {
+        if (cards != null)
+            foreach (var card in cards)
+                if (card && card.gameObject.scene == gameObject.scene && card.IsOpen) return true;
+        return false;
+    }
+
+    void LateUpdate()
+    {
+        if (hint == null) return;
+        bool shown = !WayfindingHint.InstructionBusy() && Winner(Camera.main) == this;
+        hint.Visible = shown;
+        if (!shown) hint.Snap(); // A former winner must not fade over the next prompt or dialogue.
+    }
+
+    static PaintingEntrancePrompt Winner(Camera eyes)
+    {
+        if (eyes == null) return null;
+        PaintingEntrancePrompt winner = null;
+        float nearest = float.PositiveInfinity;
+        foreach (var candidate in FindObjectsByType<PaintingEntrancePrompt>(FindObjectsSortMode.None))
         {
-            var off = box.center - eyes.transform.position;
-            off.y = 0f;
-            near = off.magnitude < NearMetres;
-            var face = hint.transform.position - eyes.transform.position;
-            face.y = 0f;
-            if (face.sqrMagnitude > 1e-4f) hint.transform.rotation = Quaternion.LookRotation(face, Vector3.up);
+            if (!candidate.isActiveAndEnabled || candidate.gameObject.scene != SceneManager.GetActiveScene() ||
+                candidate.hint == null || candidate.Reading()) continue;
+            var offset = candidate.box.center - eyes.transform.position;
+            offset.y = 0f;
+            float distance = offset.sqrMagnitude;
+            if (candidate.hovers == 0 && (HasEntered || distance >= NearMetres * NearMetres)) continue;
+            bool preferred = winner == null || (candidate.hovers > 0 && winner.hovers == 0);
+            bool samePriority = winner != null && (candidate.hovers > 0) == (winner.hovers > 0);
+            if (preferred || (samePriority && (distance < nearest ||
+                (distance == nearest && candidate.GetInstanceID() < winner.GetInstanceID()))))
+            {
+                winner = candidate;
+                nearest = distance;
+            }
         }
-        hint.Visible = !reading && !PlayerMenu.MenuOpen && (hovers > 0 || (near && !HasEntered));
+        return winner;
+    }
+
+    void OnDisable()
+    {
+        hovers = 0;
+        if (hint == null) return;
+        hint.Visible = false;
+        hint.Snap();
     }
 
     void OnDestroy()

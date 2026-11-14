@@ -203,8 +203,10 @@ namespace InnerFrame.Tutorial
                 view = Instantiate(guide.dialoguePrefab, transform);
                 view.name = "First-use dialogue (shared Vincent UI)";
                 view.autoStep = false;
-                view.FollowHead = false;
             }
+            bool lockToView = PaintingNames.IsPainting(SceneManager.GetActiveScene().name);
+            view.FollowHead = lockToView;
+            view.LockToView = lockToView;
             view.gameObject.SetActive(true);
             bool changed = current != chosen;
             if (changed)
@@ -214,18 +216,28 @@ namespace InnerFrame.Tutorial
                 view.SetHint("", page.Hint);
                 current = chosen;
             }
-            var away = chosen.Position - Camera.main.transform.position;
-            // Keep the shared text's angular size when its context is farther away than the reference distance.
-            view.LayoutRoot.localScale = Vector3.one * view.settings.Scale * Mathf.Max(.25f, away.magnitude) / view.settings.distance;
-            if (away.sqrMagnitude > 0.001f)
-                view.LayoutRoot.SetPositionAndRotation(chosen.Position, Quaternion.LookRotation(away, Vector3.up));
-            else view.LayoutRoot.position = chosen.Position;
-            view.Step(deltaTime);
-            if (changed) layoutBounds = RectTransformUtility.CalculateRelativeRectTransformBounds(view.LayoutRoot, view.LayoutRoot);
-            if (chosen.Placement != TutorialPlacement.AtAnchor)
+            if (lockToView)
             {
-                float edge = chosen.Placement == TutorialPlacement.BelowAnchor ? layoutBounds.max.y : layoutBounds.min.y;
-                view.LayoutRoot.position -= view.LayoutRoot.TransformVector(Vector3.up * edge);
+                // Context still controls eligibility/completion; only the presentation moves into the lower view.
+                view.LayoutRoot.localScale = Vector3.one * view.settings.Scale;
+                view.Step(deltaTime);
+                view.Snap();
+            }
+            else
+            {
+                var away = chosen.Position - Camera.main.transform.position;
+                // Gallery prompts retain their contextual anchors and readable angular size.
+                view.LayoutRoot.localScale = Vector3.one * view.settings.Scale * Mathf.Max(.25f, away.magnitude) / view.settings.distance;
+                if (away.sqrMagnitude > 0.001f)
+                    view.LayoutRoot.SetPositionAndRotation(chosen.Position, Quaternion.LookRotation(away, Vector3.up));
+                else view.LayoutRoot.position = chosen.Position;
+                view.Step(deltaTime);
+                if (changed) layoutBounds = RectTransformUtility.CalculateRelativeRectTransformBounds(view.LayoutRoot, view.LayoutRoot);
+                if (chosen.Placement != TutorialPlacement.AtAnchor)
+                {
+                    float edge = chosen.Placement == TutorialPlacement.BelowAnchor ? layoutBounds.max.y : layoutBounds.min.y;
+                    view.LayoutRoot.position -= view.LayoutRoot.TransformVector(Vector3.up * edge);
+                }
             }
             VisibleStep = chosen.Step;
         }

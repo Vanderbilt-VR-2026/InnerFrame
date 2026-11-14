@@ -49,9 +49,11 @@ October 1888, text-to-speech), and his answer plays from the portrait.
     mirror stays here*, *Hang the mirror back on the wall*, from `MirrorScene.Now`); else *Hold (B) to ask Vincent*
     with the B in its circle (B in the Editor; T also accepted).
   - The hint shows within 4 m of Vincent or the portrait; the box whenever he speaks. Both fade over 0.2 s.
-  - Both hang 1.3 m ahead of your eyes, 15° below your gaze (`VG_FollowGroup`). They stay put until your gaze is 20°
-    away, then ease after it (98 % in 0.5 s); they follow pitch between −30° and +45° of gaze and stay upright. When they
-    appear they're already in place. Sizes are world metres: 0.95 m wide is about 40° at 1.3 m whatever the rig's scale.
+  - Both hang 1.3 m ahead of your eyes, 15° below your gaze (`VG_FollowGroup`). In painting scenes, `LockToView`
+    keeps them in the same lower-view position immediately, including yaw, pitch, roll and movement. There is no
+    dead zone, pitch clamp or easing in that mode; the pose also refreshes before rendering. Gallery retains the
+    original 20° dead zone and 0.5 s easing, with pitch between −30° and +45°. Sizes remain world metres:
+    0.95 m wide is about 40° at 1.3 m whatever the rig's scale.
   - They are drawn over the room (a UI material with `unity_GUIZTestMode` = Always), so the easel or the chair never cut
     through them. Something nearer than 1.3 m (the easel, his palette, the mirror you hold) is still drawn behind them:
     judge on the Quest whether that feels wrong.
@@ -101,6 +103,8 @@ Vincent, the mirror or the Bedroom.
    - In each asset: distance, `belowGaze`, dead zone, gaze pitch clamp, ease time; sizes as angles (box width,
      capitals); colours and tints; the hint's title and its fade-in on each change.
    - The tool makes these two once and then leaves them alone, so tuning in the Inspector stays.
+   - Set `ui.LockToView = true` for immediate lower-view placement. It is a runtime option; it does not rewrite the
+     shared settings asset. `FollowHead = false` still allows context-anchored placement instead.
 3. Call it:
    - `Say(speaker, text, clip)`: one sentence a page, timed to the clip (0.06 s a character without one). Play the
      clip yourself, and set `Voice` to that AudioSource so the pages keep its time.
@@ -312,7 +316,7 @@ On the desktop the mirror counts as held once it has left the wall, not at the c
    - that letting go near him parks it beside the canvas (it shouldn't drift or jitter), and far away hangs it back;
    - that B works while he paints;
    - that his words show in full, and whether the dialogue box's size and sharpness feel right (text, border, plate);
-   - that the box and hint follow your head calmly (no swimming while you look around a little), and how it feels when
+   - that the painting's box and hint stay at the same lower-view position without delayed sliding, and how it feels when
      the easel or the mirror is nearer than the box but drawn behind it.
 
 ## Vincent feels alive (Painted Bedroom)

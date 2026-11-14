@@ -4,7 +4,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// The dialogue UI for any scene (Cici's concepts V1-V3, 2026-11-04): a speaker's words in a dark box with their name
-/// on a tab, and a hint above it with a title and one line, both low in the player's view, following the head lazily
+/// on a tab, and a hint above it with a title and one line, both low in the player's view, with optional immediate view locking
 /// and drawn over the room. Put Assets/Shared/UI/Prefabs/VG_DialogueUI.prefab in a scene with a main camera, give it a
 /// VG_DialogueSettings asset, and call Say, Clear and SetHint. It plays no sound: the caller plays the voice, and sets
 /// Voice so the pages keep its time.
@@ -34,6 +34,12 @@ public class VG_DialogueUI : MonoBehaviour
     public bool HintVisible => hintGroup != null && hintGroup.gameObject.activeInHierarchy && hintGroup.alpha > 0f;
     /// <summary>False for contextual instructions placed beside an object in the world.</summary>
     public bool FollowHead { get; set; } = true;
+    /// <summary>Fixed lower-view placement without delayed sliding. Does not change the shared visual style.</summary>
+    public bool LockToView
+    {
+        get => lockToView;
+        set { lockToView = value; if (follow != null) follow.LockToView = value; }
+    }
     /// <summary>True for a guide opened from the player menu itself.</summary>
     public bool ShowWhileMenuOpen { get; set; }
     /// <summary>Opt-in for spoken dialogue captions. Tutorials using the same visual style stay readable.</summary>
@@ -56,6 +62,7 @@ public class VG_DialogueUI : MonoBehaviour
     Material onTop;
     AudioClip clip;
     bool hintShown;
+    bool lockToView;
 
     /// <summary>`text` from `speaker`, a sentence a page in time with `clip` (without one, 0.06 s a character), until Clear.</summary>
     public void Say(string speaker, string text, AudioClip clip)
@@ -125,6 +132,7 @@ public class VG_DialogueUI : MonoBehaviour
         follow.transform.SetParent(transform, false);
         follow.transform.localScale = Vector3.one * settings.Scale;
         follow.settings = settings;
+        follow.LockToView = lockToView;
         onTop = new Material(Canvas.GetDefaultCanvasMaterial());
         onTop.SetInt("unity_GUIZTestMode", (int)UnityEngine.Rendering.CompareFunction.Always);   // nothing in the room cuts through it
         dialogue = VG_DialogueBox.Make(follow.transform, settings, font, box, nameTab, starRing, star, onTop);

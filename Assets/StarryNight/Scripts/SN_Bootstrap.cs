@@ -200,6 +200,7 @@ namespace InnerFrame.StarryNight
             var ui = Instantiate(uiPrefab, World).GetComponent<VG_DialogueUI>();
             ui.name = "SN_UI";
             ui.settings = uiSettings;   // before its first call: it builds itself then
+            ui.LockToView = true;       // words and scene instructions stay in the lower view without sliding
             ui.autoStep = false;        // SN_Game steps it, so the tests' clock drives it too
             var beam = Instantiate(beamPrefab, World).GetComponent<SN_Beam>();
             beam.name = "SN_Beam";

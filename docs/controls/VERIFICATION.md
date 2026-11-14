@@ -1,6 +1,42 @@
 # Controls verification — updated 2026-11-13
 
-## Latest Gallery integration
+## Immediate lower-view dialogue in paintings
+
+The painting caption, story-hint, arrival-hint and first-use presenters opt into the shared UI's runtime
+`LockToView` mode. It keeps the existing black/gold artwork, fonts, sizes and paging, with an immediate
+camera-relative pose including yaw, pitch, roll and translation. Gallery context anchors and the full interactive
+Controls panel retain their existing placement behavior. This supersedes the older Bedroom world-anchor
+placement evidence below.
+
+- [V] Unity 6000.3.23f1 compiled the changed runtime and Editor scripts with Android selected in the existing
+  checkout (runtime assembly timestamp 2026-11-14 00:15:13 UTC / November 13 in Chicago).
+- [V] `DialoguePlacementPreview` render check: **35 passed, 0 failed**, 00:15:23 UTC. Actual visible UI/text mesh
+  coordinates remain fixed after a single zero-delta-time step through yaw, extreme pitch, roll and translation.
+  Shared sprites/font and the default legacy behavior are also checked.
+- [V] Integration fixtures call actual `VanGoghCaption.Make` in named painting/Gallery contexts, reuse the same
+  TutorialManager view across placement modes, and verify speech hides the pending tutorial immediately and
+  allows it to resume. These are Editor fixtures, not physical controller or AI tests.
+- [V] Native Unity images `Logs/DialoguePlacement/Images/locked-before.png` and
+  `locked-after-yaw-pitch-roll.png` were visually inspected. The background changes while the UI retains its position.
+- [V] Split-menu render regression: **100 passed, 0 failed**, 00:15:37 UTC.
+- [V] PaintedBedroom was opened in Play Mode and visually inspected with an explicitly labelled `UI preview`
+  sample from the actual shared prefab. The sample sends no microphone/AI request or completion event.
+  The general desktop view was restored after trying its painter-view camera.
+- [V] Runtime/lifetime review checked cross-scene mode reset, before-render callback cleanup and unchanged
+  subtitle/session rules. Arrival now yields immediately to existing speech or instructions; it does not leave
+  a fading overlay over newly started dialogue.
+- [V] `ControlsTutorialChecks` now uses an actual PaintedBedroom-named fixture for the new policy, retaining
+  Gallery anchor assertions. It compiled, but that entire batch suite was not rerun in this update.
+- [I] No fresh-Library import, APK build, Quest 3, live AI/microphone or multiplayer acceptance was performed.
+  The live scene reports the existing Fusion TickRate and InvalidAuthentication warnings; it is not a successful
+  room-join test.
+
+Repeat via `InnerFrame > UI > Check locked dialogue` / `Render locked dialogue`, or write `check` / `render`
+to `Temp/DialoguePlacementPreview.request`. `live` opens saved PaintedBedroom in Play Mode with a clearly labelled
+sample; `stop` removes that sample and restores the temporarily hidden shared UI. Nothing saves scene or prefab YAML.
+The sample also clears on Play Mode exit. Generated reports/images are local under `Logs/DialoguePlacement/`.
+
+## Earlier Gallery integration
 
 Merged `origin/main` at `ce62132dd466f1aeb7bb68d8e313f17e9147bf85` (#199) into `rowling/controls-first-use-tutorial`, merge commit `ece05f0`. No history rewrite. Unity 6000.3.23f1, macOS, Android selected; the original separate checkout was reused.
 

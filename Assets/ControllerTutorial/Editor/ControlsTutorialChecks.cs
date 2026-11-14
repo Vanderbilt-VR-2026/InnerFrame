@@ -412,6 +412,10 @@ public static class ControlsTutorialChecks
         {
             var scene = portrait ? EditorSceneManager.OpenScene("Assets/Scenes/Gallery.unity") :
                 EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            if (!portrait) scene.name = "PaintedBedroom"; // Runtime opt-in is scene-based; an Untitled fixture would bypass it.
+            Check(SceneManager.GetActiveScene().name == (portrait ? "Gallery" : "PaintedBedroom") &&
+                PaintingNames.IsPainting(SceneManager.GetActiveScene().name) == !portrait,
+                (portrait ? "Gallery" : "Bedroom") + ": fixture uses the real scene-name placement policy");
             var eye = Camera.main;
             if (eye == null) { eye = new GameObject("Eyes").AddComponent<Camera>(); eye.tag = "MainCamera"; }
             var vincent = portrait ? VanGoghSpawner.SpawnPortrait(scene) : Object.Instantiate(Resources.Load<GameObject>("VG_Vincent"));
@@ -425,42 +429,99 @@ public static class ControlsTutorialChecks
             Call(adapter, "Update"); manager.Present(1f);
             Check(manager.VisibleStep == TutorialStep.Vincent, (portrait ? "Gallery" : "Bedroom") + ": looking at the real Vincent asset within 3 m offers B");
             var root = manager.View.LayoutRoot;
-            var corners = new Vector3[4];
-            bool correctSide = true;
-            int measured = 0;
             var box = manager.View.GetComponentInChildren<VG_DialogueBox>();
             Check(box != null && box.GetComponent<CanvasGroup>().alpha > 0f && manager.View.HintVisible,
                 (portrait ? "Gallery" : "Bedroom") + ": complete dialogue and button hint are visibly active");
-            foreach (var rect in root.GetComponentsInChildren<RectTransform>())
+            var follow = manager.View.GetComponentInChildren<VG_FollowGroup>(true);
+            Check(manager.View.LockToView == !portrait && manager.View.FollowHead == !portrait &&
+                follow != null && follow.LockToView == !portrait && follow.enabled == !portrait,
+                (portrait ? "Gallery" : "Bedroom") + ": first-use view chooses contextual / immediate lower-view presentation");
+            if (portrait)
             {
-                if (rect == root) continue;
-                measured++;
-                rect.GetWorldCorners(corners);
-                foreach (var point in corners)
+                var corners = new Vector3[4];
+                bool correctSide = true;
+                int measured = 0;
+                foreach (var rect in root.GetComponentsInChildren<RectTransform>())
                 {
-                    float side = Vector3.Dot(point - adapter.HintAnchor, root.up);
-                    correctSide &= portrait ? side <= .002f : side >= -.002f;
+                    if (rect == root) continue;
+                    measured++;
+                    rect.GetWorldCorners(corners);
+                    foreach (var point in corners)
+                        correctSide &= Vector3.Dot(point - adapter.HintAnchor, root.up) <= .002f;
                 }
+                Check(measured > 0 && correctSide, "Gallery: full dialogue and key hint stay below the portrait anchor");
             }
-            Check(measured > 0 && correctSide, (portrait ? "Gallery" : "Bedroom") + ": full dialogue and key hint stay below the portrait / above the head anchor");
+            else
+            {
+                Vector3 position = eye.transform.position;
+                Quaternion rotation = eye.transform.rotation;
+                Vector3 viewport = eye.WorldToViewportPoint(root.position);
+                Rect bounds = ViewportBounds(root, eye);
+                Check(viewport.z > 0f && viewport.y < .5f && bounds.width > 0f && bounds.height > 0f,
+                    "Bedroom: nonempty first-use dialogue is in the lower view");
+                // Hold the existing request eligible: this checks presentation, not the adapter's gaze test.
+                eye.transform.SetPositionAndRotation(position + new Vector3(.3f, .2f, -.1f), rotation * Quaternion.Euler(18f, 43f, 17f));
+                manager.Present(0f); // No elapsed easing time: the new pose must apply immediately.
+                Rect movedBounds = ViewportBounds(root, eye);
+                Check(Vector3.Distance(eye.WorldToViewportPoint(root.position), viewport) < .001f &&
+                    Vector2.Distance(bounds.center, movedBounds.center) < .001f &&
+                    Vector2.Distance(bounds.size, movedBounds.size) < .001f,
+                    "Bedroom: first-use viewport position and angular size survive yaw, pitch, roll and translation without easing");
+                eye.transform.SetPositionAndRotation(position, rotation);
+                manager.Present(0f);
+            }
             Call(adapter, "OnDisable"); Object.DestroyImmediate(adapter);
             manager.Present(1f);
             var caption = VanGoghCaption.Make(vincent.transform, talker.labelOffset);
             caption.Hint("Hold B to ask Vincent", "B"); Call(caption, "Step", 1f);
             var ui = (VG_DialogueUI)typeof(VanGoghCaption).GetField("ui", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(caption);
             Call(ui, "OnEnable");
+            Check(ui.LockToView == !portrait && ui.GetComponentInChildren<VG_FollowGroup>(true).LockToView == !portrait,
+                (portrait ? "Gallery" : "Bedroom") + ": Vincent caption opts into view locking only inside a painting");
             Check(ui.HintVisible, "idle B reminder remains available with no pending first-use request");
             manager.Offer(TutorialStep.Vincent, talker, eye.transform.position + eye.transform.forward * 1.3f);
             Call(caption, "Step", 1f); manager.Present(1f);
             Check(!ui.HintVisible && manager.VisibleStep == TutorialStep.Vincent, "idle B yields to a pending lesson without a visibility deadlock");
             float scale = manager.View.LayoutRoot.lossyScale.x;
+            Rect priorBounds = ViewportBounds(manager.View.LayoutRoot, eye);
+            Vector3 priorViewport = eye.WorldToViewportPoint(manager.View.LayoutRoot.position);
             manager.Offer(TutorialStep.Vincent, talker, eye.transform.position + eye.transform.forward * 2.6f); manager.Present(1f);
-            Check(Mathf.Abs(manager.View.LayoutRoot.lossyScale.x / scale - 2f) < .001f, "contextual dialogue keeps its angular text size at twice the distance");
+            if (portrait)
+                Check(Mathf.Abs(manager.View.LayoutRoot.lossyScale.x / scale - 2f) < .001f, "Gallery contextual dialogue keeps its angular text size at twice the distance");
+            else
+            {
+                Rect fartherBounds = ViewportBounds(manager.View.LayoutRoot, eye);
+                Check(Mathf.Abs(manager.View.LayoutRoot.lossyScale.x / scale - 1f) < .001f &&
+                    Vector3.Distance(eye.WorldToViewportPoint(manager.View.LayoutRoot.position), priorViewport) < .001f &&
+                    Vector2.Distance(priorBounds.size, fartherBounds.size) < .001f,
+                    "Bedroom: changing the context-anchor distance does not move or resize the view-locked dialogue");
+            }
             manager.Complete(TutorialStep.Vincent); Call(caption, "Step", 1f); manager.Present(1f);
             Check(ui.HintVisible && manager.VisibleStep == null, "idle B reminder returns after successful lesson completion");
             manager.Offer(TutorialStep.Vincent, talker, vincent.transform.position);
             Check(!manager.HasAvailablePrompt, "completed Vincent first-use lesson cannot reappear during this session");
             Call(ui, "OnDisable"); Call(manager, "OnDestroy"); Object.DestroyImmediate(manager.gameObject);
         }
+    }
+
+    static Rect ViewportBounds(Transform root, Camera eye)
+    {
+        var corners = new Vector3[4];
+        Vector2 min = new Vector2(float.PositiveInfinity, float.PositiveInfinity);
+        Vector2 max = new Vector2(float.NegativeInfinity, float.NegativeInfinity);
+        int measured = 0;
+        foreach (var rect in root.GetComponentsInChildren<RectTransform>())
+        {
+            if (rect == root) continue;
+            rect.GetWorldCorners(corners);
+            foreach (var corner in corners)
+            {
+                Vector3 point = eye.WorldToViewportPoint(corner);
+                min = Vector2.Min(min, new Vector2(point.x, point.y));
+                max = Vector2.Max(max, new Vector2(point.x, point.y));
+                measured++;
+            }
+        }
+        return measured > 0 ? Rect.MinMaxRect(min.x, min.y, max.x, max.y) : Rect.zero;
     }
 }

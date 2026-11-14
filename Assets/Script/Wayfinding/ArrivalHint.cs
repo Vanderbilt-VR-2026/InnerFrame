@@ -48,12 +48,13 @@ public class ArrivalHint : MonoBehaviour
         if (hint == null) yield break;
         follow = hint.gameObject.AddComponent<VG_FollowGroup>();
         follow.settings = hint.Settings;
+        follow.LockToView = true;       // painting arrival messages share the immediate lower-view placement
         hint.Settings.belowGaze = BelowGaze;
 
         yield return new WaitForSecondsRealtime(SettleSeconds);
         float waited = 0f;
-        while ((Fading() || Speaking()) && waited < MaxWait) { waited += Time.unscaledDeltaTime; yield return null; }
-        if (PlayerMenu.MenuOpen) { Finish(); yield break; }   // they already know the way
+        while ((Fading() || DialogueBusy()) && waited < MaxWait) { waited += Time.unscaledDeltaTime; yield return null; }
+        if (PlayerMenu.MenuOpen || DialogueBusy()) { Finish(true); yield break; }   // never compete with existing dialogue/instructions after the wait limit
 
         bool desktop = FindAnyObjectByType<XROrigin>() == null;
         string place = PaintingNames.Title(gameObject.scene.name);
@@ -66,20 +67,22 @@ public class ArrivalHint : MonoBehaviour
         Debug.Log($"[Wayfinding] Arrival hint in {gameObject.scene.name}: {hint.Shown}");
 
         float shown = 0f;
-        while (shown < ShowSeconds && !PlayerMenu.MenuOpen) { shown += Time.unscaledDeltaTime; yield return null; }
-        Finish();
+        while (shown < ShowSeconds && !PlayerMenu.MenuOpen && !DialogueBusy()) { shown += Time.unscaledDeltaTime; yield return null; }
+        Finish(PlayerMenu.MenuOpen || DialogueBusy());
     }
 
-    void Finish()
+    void Finish(bool immediate = false)
     {
-        if (hint != null) hint.Visible = false;
+        if (hint == null) return;
+        hint.Visible = false;
+        if (immediate) hint.Snap();   // no fading overlap with newly started dialogue or instructions
     }
 
     static bool Fading() => SceneFader.IsFading;
 
-    static bool Speaking()
+    static bool DialogueBusy()
     {
-        foreach (var ui in FindObjectsByType<VG_DialogueUI>(FindObjectsSortMode.None)) if (ui.IsSpeaking) return true;
+        foreach (var ui in FindObjectsByType<VG_DialogueUI>(FindObjectsSortMode.None)) if (ui.IsSpeaking || ui.HintVisible) return true;
         return false;
     }
 }

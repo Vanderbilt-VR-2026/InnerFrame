@@ -25,7 +25,9 @@ Gallery uses Cici's new arch, corridor and hanging order: Self-portrait, The Bed
 
 `Resources/EntranceControllerGuide` retains its asset GUID. Its component instantiates `Assets/Shared/UI/Prefabs/VG_DialogueUI.prefab`, with the actual Vincent font, box, name tab, star, key circle, materials and settings. Previous / Next / Close use those same assets. The Entrance supplies the existing intro continuation; Player Menu supplies no scene transition. The Menu button can also close Controls.
 
-The first-use view instantiates the same complete dialogue UI. It sets `FollowHead = false` and places the layout in world space, scaling with distance to preserve the shared text's angular size. The Gallery movement prompt stays where it first appears; object prompts use their target's location. Vincent uses the existing caption anchor, with the whole panel below a portrait or above his head; gaze targets his head/portrait, not the easel. Full Controls uses the normal dialogue follow behavior and has eleven pages, including entering a painting. Physical placement and readability require a Quest review.
+The first-use view instantiates the same complete dialogue UI. Inside paintings, it sets `FollowHead = true` and `LockToView = true`: the complete black/gold box and hint remain at a constant lower-view position, immediately following yaw, pitch, roll and movement without a dead zone or easing. Eligibility, gaze targets and completion still come from the real scene adapters. Gallery prompts retain `FollowHead = false`, their context anchors and distance scaling; its movement prompt stays where it first appears, and Vincent's prompt sits below the portrait. The reused view restores the correct placement mode and scale after scene changes.
+
+Vincent's painting captions, Starry Night's story hints/dialogue and painting arrival hints use the same immediate placement mode. Arrival hints yield immediately to existing dialogue or instructions, including the idle B reminder; they do not appear over those after the wait limit. The shared sprites, fonts, colours, sizes, paging and speech timing are unchanged. Full Controls is an interactive eleven-page panel and keeps its existing placement behavior. Physical placement and readability still require a Quest review.
 
 ## First-use rules (PDF page 5)
 
@@ -73,7 +75,7 @@ Reports go to `Logs/Controls/`; renders to `Logs/Controls/Images/`. These are lo
 4. In a new session, move 2 m in Gallery. The hint ends and stays completed after leaving and returning. Head rotation alone must not complete it.
 5. Point at and pick up a Bedroom object. Confirm the grip hint ends. Dragging the menu title bar must not complete object pickup.
 6. Look at Vincent within 3 m, ask once successfully, then leave and return. Confirm the B lesson stays complete. Repeat with a failed/empty request: it must remain unfinished.
-7. Start Vincent's speech and mirror instructions while a first-use hint is pending. Confirm there is no overlap. Review world-space placement, text size and occlusion on the headset.
+7. Start Vincent's speech and mirror instructions while a first-use hint is pending. Confirm there is no overlap. In a painting, turn, look up/down and tilt the headset: captions and hints must retain the same lower-view position without sliding after the movement. Review readability/occlusion; return to Gallery and verify its context-anchored prompts.
 8. Point at each rearranged Gallery painting, pull the trigger, then try Back / Enter. The first-use hint completes when the menu actually opens and does not repeat. Almond Blossom must keep Enter disabled. Walk through the new arch and corridor.
 
 See `VERIFICATION.md` for the results actually obtained on this branch. Synthetic input and Editor checks do not establish physical Quest behavior, live microphone/AI success, multiplayer voice, or frame rate.

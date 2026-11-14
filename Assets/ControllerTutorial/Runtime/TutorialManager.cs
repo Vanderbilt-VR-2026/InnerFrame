@@ -67,6 +67,14 @@ namespace InnerFrame.Tutorial
         void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
             if (mode != LoadSceneMode.Single) return;
+            // Scene unload may already have destroyed the previous camera and its visual child. Recreate
+            // only a lost surface. The session and an intact hidden view can continue across scenes.
+            if (view != null && view.DisplayCanvas == null)
+            {
+                if (Application.isPlaying) Destroy(view.gameObject);
+                else DestroyImmediate(view.gameObject);
+                view = null;
+            }
             requests.Clear();
             current = null;
             hasPosition = false;
@@ -221,7 +229,6 @@ namespace InnerFrame.Tutorial
                 current = chosen;
             }
             // Adapters still decide context and completion; every scene presents the instruction in the lower view.
-            view.LayoutRoot.localScale = Vector3.one * view.settings.Scale;
             view.Step(deltaTime);
             view.Snap();
             VisibleStep = chosen.Step;

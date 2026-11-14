@@ -356,21 +356,7 @@ namespace InnerFrame.Entrance
         {
             if (busy || (CurrentPage != 3 && CurrentPage != 4) || !EntranceChoice.SetRoomCode(code)) return;
             EntranceChoice.SetRole(role);
-            Clear();
             CurrentPage = 5;
-            var assets = Resources.Load<Tutorial.EntranceControllerGuide>("EntranceControllerGuide");
-            if (assets != null && assets.entranceDiagram != null)
-                AddImage("Original controller diagram", assets.entranceDiagram, 0, 24, 660, 550);
-            else
-                Debug.LogError("[Entrance] The controller diagram is missing from EntranceControllerGuide.", this);
-            var proceed = Sign("Continue", 0, -342, 405, 135, FinishControllerTutorial, 58);
-            proceed.name = "Continue";
-        }
-
-        void FinishControllerTutorial()
-        {
-            if (busy || CurrentPage != 5) return;
-            CurrentPage = 6;
             StartCoroutine(Intro());
         }
 

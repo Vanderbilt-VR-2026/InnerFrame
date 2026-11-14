@@ -24,7 +24,8 @@ public class WayfindingHint : MonoBehaviour
     Transform key;
     Text letter;
     VG_FollowGroup follow;
-    Camera explicitCamera;
+    public Transform LayoutRoot => follow.Layout;
+    public Canvas DisplayCanvas => follow.DisplayCanvas;
 
     /// <summary>Shown (fading in) or hidden (fading out).</summary>
     public bool Visible { get; set; }
@@ -38,10 +39,8 @@ public class WayfindingHint : MonoBehaviour
     /// <summary>Keep the shared hint immediately below the current view; null head follows Camera.main as it changes.</summary>
     public void FollowView(Transform head = null)
     {
-        if (follow == null) follow = gameObject.AddComponent<VG_FollowGroup>();
-        follow.settings = Settings;
+        follow.PlaceAutomatically = true;
         follow.head = head;
-        explicitCamera = head != null ? head.GetComponent<Camera>() : null;
         follow.LockToView = true;
         follow.ViewportY = .43f; // The standalone instruction sits above the dialogue box.
         follow.Snap();
@@ -83,18 +82,16 @@ public class WayfindingHint : MonoBehaviour
         Settings.name = source.name + " (wayfinding)";
         Settings.distance = viewDistance;
 
-        var canvas = gameObject.AddComponent<Canvas>();
-        canvas.renderMode = RenderMode.WorldSpace;
-        float parentScale = transform.parent != null ? transform.parent.lossyScale.x : 1f;
-        transform.localScale = Vector3.one / (VG_UI.UnitsPerMetre * parentScale);
-        group = gameObject.AddComponent<CanvasGroup>();
+        follow = gameObject.AddComponent<VG_FollowGroup>();
+        follow.PlaceAutomatically = false;
+        follow.CreateLayout(Settings);
+        group = DisplayCanvas.gameObject.AddComponent<CanvasGroup>();
         group.alpha = 0f;
         group.interactable = false;
         group.blocksRaycasts = false;
 
         layout = new GameObject("Layout", typeof(RectTransform)).transform;
-        layout.SetParent(transform, false);
-        layout.localScale = Vector3.one * Settings.Scale;
+        layout.SetParent(LayoutRoot, false);
 
         if (drawOnTop)
         {
@@ -138,21 +135,25 @@ public class WayfindingHint : MonoBehaviour
     // canvas/follower transform intact. In stereo both eye projections must be able to see the same plate.
     void FitView()
     {
-        if (follow == null || !follow.enabled || !follow.LockToView || plate == null) return;
-        var camera = follow.head == null ? Camera.main : explicitCamera;
-        float scale = Settings.Scale;
-        if (camera != null && plate.rect.width > 0f)
+        if (follow == null || !follow.PlaceAutomatically || !follow.LockToView || plate == null) return;
+        var camera = DisplayCanvas.worldCamera;
+        if (camera == null || plate.rect.width <= 0f) return;
+        float fit;
+        if (DisplayCanvas.renderMode == RenderMode.ScreenSpaceCamera)
         {
-            var center = camera.ViewportToWorldPoint(new Vector3(.5f, follow.ViewportY, Settings.distance));
-            var right = camera.transform.right * (plate.rect.width * Mathf.Abs(transform.lossyScale.x) * scale * .5f);
-            var up = camera.transform.up * (plate.rect.height * Mathf.Abs(transform.lossyScale.y) * scale * .5f);
-            float fit = camera.stereoEnabled
-                ? Mathf.Min(EyeFit(camera, Camera.MonoOrStereoscopicEye.Left, center, right, up),
-                    EyeFit(camera, Camera.MonoOrStereoscopicEye.Right, center, right, up))
-                : EyeFit(camera, Camera.MonoOrStereoscopicEye.Mono, center, right, up);
-            scale *= fit;
+            var pixels = follow.ViewSize;
+            var size = plate.rect.size * LayoutRoot.localScale.x;
+            fit = Mathf.Clamp01(Mathf.Min(.84f * pixels.x / size.x, 2f * (follow.ViewportY - .08f) * pixels.y / size.y));
         }
-        layout.localScale = Vector3.one * scale;
+        else
+        {
+            var center = LayoutRoot.position;
+            var right = LayoutRoot.TransformVector(Vector3.right * (.5f * plate.rect.width));
+            var up = LayoutRoot.TransformVector(Vector3.up * (.5f * plate.rect.height));
+            fit = Mathf.Min(EyeFit(camera, Camera.MonoOrStereoscopicEye.Left, center, right, up),
+                EyeFit(camera, Camera.MonoOrStereoscopicEye.Right, center, right, up));
+        }
+        layout.localScale = Vector3.one * fit;
     }
 
     static float EyeFit(Camera camera, Camera.MonoOrStereoscopicEye eye, Vector3 center, Vector3 right, Vector3 up)

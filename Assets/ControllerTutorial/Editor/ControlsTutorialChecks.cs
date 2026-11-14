@@ -66,10 +66,9 @@ public static class ControlsTutorialChecks
         typeof(EntranceControllerGuide).GetMethod("ResetStatic", BindingFlags.Static | BindingFlags.NonPublic).Invoke(null, null);
         Check(AssetDatabase.LoadAssetAtPath<GameObject>(ControlsTutorialAssets.LegacyPath) == null, "unused legacy prefab removed");
         var guidePrefab = Resources.Load<EntranceControllerGuide>("EntranceControllerGuide");
-        var originalArt = AssetDatabase.LoadAssetAtPath<Texture2D>(ControlsTutorialAssets.DiagramPath);
-        Check(originalArt != null && guidePrefab != null && guidePrefab.entranceDiagram == originalArt,
-            "Entrance resource references the original 600 × 500 controller illustration");
         var template = AssetDatabase.LoadAssetAtPath<VG_DialogueUI>(ControlsTutorialAssets.DialoguePath);
+        Check(guidePrefab != null && template != null && guidePrefab.dialoguePrefab == template,
+            "Gallery's controller guide opens the shared Vincent dialogue prefab");
         foreach (var entry in EditorBuildSettings.scenes.Where(s => s.enabled))
         {
             var scene = EditorSceneManager.OpenScene(entry.path);
@@ -97,23 +96,27 @@ public static class ControlsTutorialChecks
                 if (startup != null)
                 {
                     var camera = startup.View.Head.GetComponent<Camera>();
-                    float fieldOfView = camera.fieldOfView, aspect = camera.aspect;
-                    try
+                    float fieldOfView = camera.fieldOfView;
+                    using (var target = new HudTestCameraTarget(camera, 432, 600))
                     {
-                        camera.fieldOfView = 38f; camera.aspect = .72f;
+                        camera.fieldOfView = 38f;
+                        target.Render();
                         startup.View.Snap();
+                        target.Render();
                         var corners = new Vector3[4];
-                        var actions = startup.GetComponentsInChildren<Button>();
+                        var actions = startup.View.DisplayCanvas.GetComponentsInChildren<Button>();
                         bool visible = actions.Length == 3;
                         foreach (var action in actions)
                         {
                             ((RectTransform)action.transform).GetWorldCorners(corners);
-                            visible &= corners.Select(camera.WorldToViewportPoint).All(p => p.z > 0f &&
+                            visible &= action.image.depth >= 0 && !action.image.canvasRenderer.cull &&
+                                corners.Select(camera.WorldToViewportPoint).All(p => p.z > 0f &&
                                 p.x >= .02f && p.x <= .98f && p.y >= .02f && p.y <= .98f);
                         }
-                        Check(visible, "arrival guide Previous, Next and Continue fit a narrow 38-degree portrait view");
+                        Check(visible, "arrival guide Previous, Next and Continue are drawn and fit the 432×600 portrait target at 38 degrees");
                     }
-                    finally { camera.fieldOfView = fieldOfView; camera.aspect = aspect; startup.View.Snap(); }
+                    camera.fieldOfView = fieldOfView;
+                    startup.View.Snap();
                     startup.ShowPage(1);
                     menu.OpenAudioQuick();
                     var shortcutPanel = Object.FindAnyObjectByType<PlayerMenuPanel>();
@@ -129,7 +132,7 @@ public static class ControlsTutorialChecks
                     menu.OpenControls();
                     Check(EntranceControllerGuide.IsOpen && EntranceControllerGuide.Current == startup && startup.PageIndex == 1,
                         "reopening Controls from the panel resumes the suspended page");
-                    var finish = startup.GetComponentsInChildren<Button>().Single(b => b.name == "Continue");
+                    var finish = startup.View.DisplayCanvas.GetComponentsInChildren<Button>().Single(b => b.name == "Continue");
                     finish.onClick.Invoke();
                 }
                 Call(manager, "TryOpenFirstGalleryGuide");
@@ -152,7 +155,7 @@ public static class ControlsTutorialChecks
             Check(guide != null && PlayerMenu.MenuOpen && !panel.gameObject.activeSelf, scene.name + ": Controls replaces menu and remains modal");
             Check(guide.View.box == template.box && guide.View.nameTab == template.nameTab && guide.View.font == template.font &&
                 guide.View.key == template.key && guide.View.settings == template.settings, scene.name + ": exact shared Vincent assets/settings");
-            Check(guide.View.GetComponentInChildren<VG_DialogueBox>(true).gameObject.activeSelf, scene.name + ": full dialogue box visible while menu is modal");
+            Check(guide.View.DisplayCanvas.GetComponentInChildren<VG_DialogueBox>(true).gameObject.activeSelf, scene.name + ": full dialogue box visible while menu is modal");
             var guideFollow = guide.View.GetComponentInChildren<VG_FollowGroup>(true);
             Check(guide.View.LockToView && guide.View.FollowHead && guideFollow.LockToView && guideFollow.enabled,
                 scene.name + ": full Controls guide inherits the immediate lower-view follow mode");
@@ -162,7 +165,7 @@ public static class ControlsTutorialChecks
                 scene.name + ": Menu closes Controls without changing scene");
             menu.OpenControls();
             guide = EntranceControllerGuide.Current;
-            guide.GetComponentsInChildren<Button>().Single(b => b.name == "Close").onClick.Invoke();
+            guide.View.DisplayCanvas.GetComponentsInChildren<Button>().Single(b => b.name == "Close").onClick.Invoke();
             Check(!EntranceControllerGuide.IsOpen && SceneManager.GetActiveScene().handle == scene.handle,
                 scene.name + ": Close button stays in scene");
             if (scene.name == "PaintedBedroom")
@@ -206,7 +209,7 @@ public static class ControlsTutorialChecks
             Check(paging.Pages.Count == 1 && paging.Pages[0].lines <= VG_DialogueBox.MostLines, "guide " + page.Title + ": readable as one complete manual page");
             var corners = new Vector3[4];
             bool buttonsVisible = true;
-            var navigation = guide.GetComponentsInChildren<Button>(true);
+            var navigation = guide.View.DisplayCanvas.GetComponentsInChildren<Button>(true);
             Check(navigation.Length == 3 && navigation.All(b => b.gameObject.activeInHierarchy) &&
                 navigation.Select(b => b.name).OrderBy(n => n).SequenceEqual(new[] { "Close", "Next", "Previous" }),
                 "guide " + page.Title + ": all three navigation controls are present and active");
@@ -222,7 +225,7 @@ public static class ControlsTutorialChecks
             Check(buttonsVisible, "guide " + page.Title + ": navigation buttons fit a 60-degree camera view");
             if (page.Hint != null)
             {
-                var hint = guide.View.GetComponentInChildren<VG_Hint>(true);
+                var hint = guide.View.DisplayCanvas.GetComponentInChildren<VG_Hint>(true);
                 Check(hint.transform.Find("Key").gameObject.activeSelf, "guide " + page.Title + ": button drawn in shared circle");
             }
         }
@@ -414,6 +417,15 @@ public static class ControlsTutorialChecks
         manager.Offer(TutorialStep.GalleryMove, a, at); manager.Offer(TutorialStep.Vincent, b, at); manager.Present(.3f);
         Check(manager.VisibleStep == null && manager.Session.IsComplete(TutorialStep.Companion), "scene-load handling keeps completed lessons suppressed in this session");
         Check(!new TutorialSession().IsComplete(TutorialStep.GalleryMove), "new play session starts fresh");
+        var previousView = manager.View;
+        previousView.gameObject.SetActive(true);
+        previousView.Head = eye.transform;
+        previousView.Snap();
+        Check(previousView.DisplayCanvas.transform.IsChildOf(eye.transform), "test removes a real camera-owned surface");
+        Object.DestroyImmediate(eye.gameObject);
+        Call(manager, "OnSceneLoaded", SceneManager.GetActiveScene(), LoadSceneMode.Single);
+        Check(manager.View == null && manager.Session.IsComplete(TutorialStep.Companion),
+            "removing the old camera first releases the lost visual surface while preserving completed lessons");
         Call(manager, "OnDestroy");
     }
 
@@ -510,7 +522,7 @@ public static class ControlsTutorialChecks
             Call(adapter, "Update"); manager.Present(1f);
             Check(manager.VisibleStep == TutorialStep.Vincent, (portrait ? "Gallery" : "Bedroom") + ": looking at the real Vincent asset within 3 m offers B");
             var root = manager.View.LayoutRoot;
-            var box = manager.View.GetComponentInChildren<VG_DialogueBox>();
+            var box = manager.View.DisplayCanvas.GetComponentInChildren<VG_DialogueBox>();
             Check(box != null && box.GetComponent<CanvasGroup>().alpha > 0f && manager.View.HintVisible,
                 (portrait ? "Gallery" : "Bedroom") + ": complete dialogue and button hint are visibly active");
             var follow = manager.View.GetComponentInChildren<VG_FollowGroup>(true);

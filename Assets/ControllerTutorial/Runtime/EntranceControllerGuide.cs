@@ -10,7 +10,6 @@ namespace InnerFrame.Tutorial
     public sealed class EntranceControllerGuide : MonoBehaviour
     {
         public VG_DialogueUI dialoguePrefab;
-        public Texture2D entranceDiagram;
         public static EntranceControllerGuide Current { get; private set; }
         public static bool IsOpen => Current != null && Current.gameObject.activeInHierarchy;
         public static bool ShownInGalleryThisSession { get; private set; }
@@ -51,11 +50,11 @@ namespace InnerFrame.Tutorial
             View = Instantiate(dialoguePrefab, transform);
             View.ShowWhileMenuOpen = true;
             View.Head = camera.transform;
-            var canvas = View.GetComponent<Canvas>();
+            var canvas = View.DisplayCanvas;
             canvas.worldCamera = camera;
             canvas.sortingOrder = 200;
-            View.gameObject.AddComponent<GraphicRaycaster>();
-            View.gameObject.AddComponent<TrackedDeviceGraphicRaycaster>();
+            canvas.gameObject.AddComponent<GraphicRaycaster>();
+            canvas.gameObject.AddComponent<VG_CompositorRaycaster>();
             previous = Button("Previous", -0.31f, () => ShowPage(PageIndex - 1));
             next = Button("Next", 0f, () => ShowPage(PageIndex + 1));
             close = Button(firstGalleryVisit ? "Continue" : "Close", 0.31f, Close);

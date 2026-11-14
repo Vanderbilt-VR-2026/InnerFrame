@@ -158,6 +158,8 @@ public static class DialoguePlacementPreview
             // Preserve this detailed report before the combined summary takes its normal checks.txt/json paths.
             if (File.Exists(Path.Combine(Output, "checks.txt"))) File.Copy(Path.Combine(Output, "checks.txt"), Path.Combine(Output, "placement-checks.txt"), true);
             if (File.Exists(Path.Combine(Output, "checks.json"))) File.Copy(Path.Combine(Output, "checks.json"), Path.Combine(Output, "placement-checks.json"), true);
+            Run("GPU capture and controller ray (Logs/DialoguePlacement/compositor-checks.txt)",
+                () => VG_CompositorCaptureCheck.Run(Output));
             Run("Controls tutorial integration (Logs/Controls/checks.txt)", () => ControlsTutorialChecks.RunChecks() == 0);
             Run("Starry Night actual UI (Logs/DialoguePlacement/starry-night-checks.txt)",
                 () => InnerFrame.StarryNight.EditorTools.SN_UICheck.Run(Path.Combine(Output, "starry-night-checks.txt")) == 0);
@@ -221,12 +223,18 @@ public static class DialoguePlacementPreview
             var follow = ui.GetComponentInChildren<VG_FollowGroup>(true);
             Check(follow != null && follow.LockToView, "UI LockToView propagates to the real follow group");
             follow.Step(0);
-            foreach (var transform in ui.GetComponentsInChildren<Transform>(true)) transform.gameObject.layer = Layer;
+            foreach (var transform in ui.DisplayCanvas.GetComponentsInChildren<Transform>(true)) transform.gameObject.layer = Layer;
             Check(ui.box == source.dialogue.box && ui.nameTab == source.dialogue.nameTab && ui.hintPlate == source.dialogue.hintPlate && ui.star == source.dialogue.star && ui.starRing == source.dialogue.starRing && ui.font == source.dialogue.font, "locked UI reuses all shared sprites and font");
             var baseline = ViewPoints(ui, camera);
             Check(baseline.Length > 20 && baseline.All(InView), "actual visible UI/text mesh bounds fit the camera view");
             Check(baseline.Max(v => v.y) < .55f, "hint and dialogue stay in the lower view");
-            Check(ui.HintVisible && ui.IsSpeaking && ui.GetComponentsInChildren<Text>().Any(t => !string.IsNullOrEmpty(t.text) && t.color.a > 0), "real hint and dialogue are visible during geometry checks");
+            Check(ui.HintVisible && ui.IsSpeaking && ui.DisplayCanvas.GetComponentsInChildren<Text>().Any(t => !string.IsNullOrEmpty(t.text) && t.color.a > 0), "real hint and dialogue are visible during geometry checks");
+            CheckRenderedHud(ui, camera, Check, render, false);
+            CheckRenderedHud(ui, camera, Check, render, true);
+            camera.Render();
+            ui.Snap();
+            camera.Render();
+            baseline = ViewPoints(ui, camera);
             AddWorldMarkers(materials);
             if (render) Capture(camera, "locked-before.png");
             var poses = new[]
@@ -240,53 +248,40 @@ public static class DialoguePlacementPreview
             foreach (var pose in poses)
             {
                 camera.transform.SetPositionAndRotation(pose.Item2, pose.Item3);
-                follow.Step(0); // No accumulated delta or easing frames can make this pass.
-                var anchor = camera.WorldToViewportPoint(follow.transform.position);
+                // A tracking sample may move the camera after the final UI callback.
+                // The HUD has no opportunity to reposition itself between this pose and this measurement.
+                var anchor = camera.WorldToViewportPoint(ui.LayoutRoot.position);
                 Check(Vector3.Distance(anchor, new Vector3(.5f, .32f, settings.distance)) < .0001f &&
-                    Vector3.Dot(follow.transform.forward, camera.transform.forward) > .99999f,
-                    "one zero-dt step places the level panel at the lower-centre viewport anchor: " + pose.Item1);
+                    Vector3.Dot(ui.LayoutRoot.forward, camera.transform.forward) > .99999f,
+                    "lower-centre screen anchor holds without a follow update: " + pose.Item1);
                 var points = ViewPoints(ui, camera);
                 Check(points.Length == baseline.Length && points.Select((p, i) => Vector2.Distance(p, baseline[i])).All(d => d < .0005f), "rendered UI viewport positions remain stable: " + pose.Item1);
                 Check(points.Length > 20 && points.All(InView), "actual text/shape bounds remain visible: " + pose.Item1);
                 if (render && pose.Item1 == "yaw pitch roll") Capture(camera, "locked-after-yaw-pitch-roll.png");
             }
-            camera.transform.localScale = Vector3.one * 1.7f;
-            follow.Step(0);
-            Check(Mathf.Abs(camera.WorldToViewportPoint(follow.transform.position).z - settings.distance) < .0001f,
-                "camera scale does not change the fixed viewing distance");
             camera.transform.localScale = Vector3.one;
             camera.transform.rotation = Quaternion.Euler(-17f, 43f, 26f);
-            typeof(VG_FollowGroup).GetMethod("BeforeRender", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(follow, null);
-            Check(Vector3.Dot(follow.transform.forward, camera.transform.forward) > .99999f &&
+            Check(Vector3.Dot(ui.LayoutRoot.forward, camera.transform.forward) > .99999f &&
                 ViewPoints(ui, camera).Select((p, i) => Vector2.Distance(p, baseline[i])).All(d => d < .0005f),
-                "before-render update follows a newer head pose immediately");
-            camera.fieldOfView = 43f;
-            camera.aspect = .85f;
-            var shifted = camera.projectionMatrix;
-            shifted.m02 += .14f; shifted.m12 -= .09f;
-            camera.projectionMatrix = shifted;
-            follow.Step(0f);
-            var resized = camera.WorldToViewportPoint(follow.transform.position);
-            Check(Vector2.Distance(resized, new Vector2(.5f, .32f)) < .0001f && ViewPoints(ui, camera).All(InView),
-                "narrow off-centre projection keeps the full black/gold dialogue visible at the same anchor");
-            Check(ui.GetComponentsInChildren<Graphic>(true).All(g => !g.raycastTarget) &&
-                ui.GetComponentsInChildren<CanvasGroup>(true).All(g => !g.blocksRaycasts),
+                "a newer camera pose leaves the text pinned before the next UI update");
+            Check(ui.DisplayCanvas.GetComponentsInChildren<Graphic>(true).All(g => !g.raycastTarget) &&
+                ui.DisplayCanvas.GetComponentsInChildren<CanvasGroup>(true).All(g => !g.blocksRaycasts),
                 "passive dialogue and hint groups let pointer input through");
             camera.ResetProjectionMatrix(); camera.fieldOfView = 60f; camera.aspect = 1.6f;
             ui.LockToView = false;
             Check(!follow.LockToView, "explicit LockToView=false opt-out restores the legacy mode");
             camera.transform.SetPositionAndRotation(new Vector3(0, 1.6f, 0), Quaternion.identity);
-            follow.Snap(); var first = follow.transform.position;
+            follow.Snap(); var first = ui.LayoutRoot.position;
             camera.transform.rotation = Quaternion.Euler(0, 10, 0); follow.Step(0);
-            Check(Vector3.Distance(first, follow.transform.position) < .0001f, "legacy small head turn keeps its dead zone");
+            Check(Vector3.Distance(first, ui.LayoutRoot.position) < .0001f, "legacy small head turn keeps its dead zone");
             camera.transform.rotation = Quaternion.Euler(0, 80, 0); follow.Step(0);
-            Check(Vector3.Distance(first, follow.transform.position) < .0001f, "legacy zero-dt large turn does not jump");
+            Check(Vector3.Distance(first, ui.LayoutRoot.position) < .0001f, "legacy zero-dt large turn does not jump");
             follow.Step(.1f);
             var exact = camera.transform.position + Quaternion.Euler(settings.belowGaze, 80, 0) * Vector3.forward * settings.distance;
-            Check(Vector3.Distance(first, follow.transform.position) > .01f && Vector3.Distance(exact, follow.transform.position) > .01f, "legacy large turn eases rather than locking");
+            Check(Vector3.Distance(first, ui.LayoutRoot.position) > .01f && Vector3.Distance(exact, ui.LayoutRoot.position) > .01f, "legacy large turn eases rather than locking");
             camera.transform.rotation = Quaternion.Euler(-80, 0, 0); follow.Snap();
             var clamped = camera.transform.position + Quaternion.Euler(-(settings.highestGaze - settings.belowGaze), 0, 0) * Vector3.forward * settings.distance;
-            Check(Vector3.Distance(follow.transform.position, clamped) < .0001f, "legacy pitch clamp remains intact");
+            Check(Vector3.Distance(ui.LayoutRoot.position, clamped) < .0001f, "legacy pitch clamp remains intact");
             DestroyUi(ui); ui = null;
             CheckSceneIntegration(fixture, camera, Check);
         }
@@ -352,7 +347,7 @@ public static class DialoguePlacementPreview
                 view.Head = eye.transform; manager.Present(1f);
                 var follow = view.GetComponentInChildren<VG_FollowGroup>(true);
                 check(view.LockToView && view.FollowHead && follow.LockToView && follow.enabled &&
-                    Vector3.Distance(view.LayoutRoot.localScale, Vector3.one * view.settings.Scale) < .0001f,
+                    Mathf.Abs(view.LayoutRoot.lossyScale.x * VG_UI.UnitsPerMetre - view.settings.Scale) < .002f,
                     name + ": tutorial uses fixed lower-view placement and shared scale");
                 var baseline = ViewPoints(view, eye);
                 manager.Offer(TutorialStep.GalleryMove, owner, eye.transform.position, TutorialPlacement.AboveAnchor);
@@ -362,7 +357,7 @@ public static class DialoguePlacementPreview
                 manager.Present(0);
                 var distant = ViewPoints(view, eye);
                 check(SameViewport(baseline, coincident) && SameViewport(baseline, distant) &&
-                    Vector3.Distance(view.LayoutRoot.localScale, Vector3.one * view.settings.Scale) < .0001f,
+                    Mathf.Abs(view.LayoutRoot.lossyScale.x * VG_UI.UnitsPerMetre - view.settings.Scale) < .002f,
                     name + ": near/far context anchors and placement hints never move or resize the UI");
                 CheckMovedView(view, eye, () => manager.Present(0), check, name + " tutorial");
                 manager.Withdraw(owner); manager.Present(0);
@@ -405,18 +400,98 @@ public static class DialoguePlacementPreview
         var before = ViewPoints(ui, eye);
         eye.transform.SetPositionAndRotation(eye.transform.position + new Vector3(.35f, .2f, -.15f),
             eye.transform.rotation * Quaternion.Euler(-48f, 67f, 32f));
-        update();
         var after = ViewPoints(ui, eye);
         check(SameViewport(before, after) && after.All(InView),
-            label + ": real UI/text viewport stays fixed after one zero-dt yaw/pitch/roll/translation update");
+            label + ": real UI/text stays pinned when the tracking pose changes after the last UI update");
+        update();
     }
 
     static bool InView(Vector3 point) => point.z > 0 && point.x >= .01f && point.x <= .99f && point.y >= .01f && point.y <= .99f;
+
+    // Run the actual camera/Canvas render path. Matching empty frames would otherwise hide a missing HUD.
+    static void CheckRenderedHud(VG_DialogueUI ui, Camera camera, Action<bool, string> check, bool saveImages, bool portrait)
+    {
+        int width = portrait ? 432 : 768, height = portrait ? 600 : 480;
+        string mode = portrait ? "portrait" : "landscape";
+        var oldAspect = camera.aspect;
+        var oldFov = camera.fieldOfView;
+        var oldScale = camera.transform.localScale;
+        var target = RenderTexture.GetTemporary(width, height, 24, RenderTextureFormat.ARGB32);
+        var previousActive = RenderTexture.active;
+        var previousTarget = camera.targetTexture;
+        var position = camera.transform.position;
+        var rotation = camera.transform.rotation;
+        var image = new Texture2D(width, height, TextureFormat.RGB24, false);
+        Color32[] ReadFrame(string name)
+        {
+            Canvas.ForceUpdateCanvases();
+            camera.Render();
+            RenderTexture.active = target;
+            image.ReadPixels(new Rect(0, 0, width, height), 0, 0);
+            image.Apply();
+            if (saveImages)
+            {
+                var directory = Path.Combine(Output, "Images");
+                Directory.CreateDirectory(directory);
+                File.WriteAllBytes(Path.Combine(directory, mode + "-" + name), image.EncodeToPNG());
+            }
+            return image.GetPixels32();
+        }
+        bool Gold(Color32 c) => c.r > 100 && c.r > c.g + 10 && c.g > c.b + 24;
+        try
+        {
+            camera.targetTexture = target;
+            camera.ResetAspect();
+            if (portrait)
+            {
+                camera.fieldOfView = 38f;
+                var shifted = camera.projectionMatrix;
+                shifted.m02 += .14f; shifted.m12 -= .09f;
+                camera.projectionMatrix = shifted;
+                camera.transform.localScale = Vector3.one * 1.7f;
+            }
+            // The native screen canvas acquires the render target's dimensions at its first draw.
+            camera.Render();
+            ui.Snap();
+            var before = ReadFrame("hud-screen-before.png");
+            camera.transform.SetPositionAndRotation(position + new Vector3(2f, .7f, -1f), Quaternion.Euler(37f, 128f, -24f));
+            var after = ReadFrame("hud-screen-after.png");
+            int gold = 0, difference = 0;
+            int minX = width, maxX = -1, minY = height, maxY = -1;
+            for (int i = 0; i < before.Length; ++i)
+            {
+                bool visible = Gold(before[i]);
+                if (visible != Gold(after[i])) difference++;
+                if (!visible) continue;
+                gold++;
+                int x = i % width, y = i / width;
+                minX = Mathf.Min(minX, x); maxX = Mathf.Max(maxX, x);
+                minY = Mathf.Min(minY, y); maxY = Mathf.Max(maxY, y);
+            }
+            check(gold > 200 && minX > 0 && maxX < width - 1 && minY > 0 && maxY < height * .6f &&
+                Mathf.Abs((minX + maxX) * .5f - width * .5f) < width * .07f, mode + ": rendered frame contains the complete gold panel in the lower centre, gold=" + gold + " bounds=" + minX + "," + minY + ".." + maxX + "," + maxY);
+            check(gold > 200 && difference <= Mathf.Max(6, gold * .025f),
+                mode + ": camera render keeps the gold artwork in the same pixels after a late turn (" + difference + " changed mask pixels of " + gold + ")");
+        }
+        finally
+        {
+            camera.transform.SetPositionAndRotation(position, rotation);
+            camera.transform.localScale = oldScale;
+            camera.targetTexture = previousTarget;
+            camera.ResetProjectionMatrix();
+            camera.aspect = oldAspect;
+            camera.fieldOfView = oldFov;
+            RenderTexture.active = previousActive;
+            RenderTexture.ReleaseTemporary(target);
+            Object.DestroyImmediate(image);
+            ui.Snap();
+        }
+    }
     static Vector3[] ViewPoints(VG_DialogueUI ui, Camera camera)
     {
         Canvas.ForceUpdateCanvases();
         var points = new List<Vector3>();
-        foreach (var graphic in ui.GetComponentsInChildren<Graphic>())
+        foreach (var graphic in ui.DisplayCanvas.GetComponentsInChildren<Graphic>())
         {
             if (!graphic.isActiveAndEnabled || graphic.color.a <= 0) continue;
             var mesh = graphic.canvasRenderer.GetMesh();

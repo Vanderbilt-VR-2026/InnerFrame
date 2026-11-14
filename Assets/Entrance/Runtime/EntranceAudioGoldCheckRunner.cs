@@ -73,8 +73,16 @@ namespace InnerFrame.Entrance
                     yield return SceneManager.LoadSceneAsync("Assets/Entrance/Scenes/Entrance.unity");
                 menu = null;
                 yield return Ready();
-                foreach (string button in new[] { "Begin sign", "Boy portrait", "Enter the Story sign", "New Room sign", "Start sign", "Continue" })
+                bool firstGalleryVisit = !Tutorial.EntranceControllerGuide.ShownInGalleryThisSession;
+                foreach (string button in new[] { "Begin sign", "Boy portrait", "Enter the Story sign" })
                     yield return Click(button);
+                // Cover both normal room entry points, with and without skipping the opening film.
+                var roomButtons = skip
+                    ? new[] { "Join Room sign", "Key 1", "Key 2", "Key 3", "Key 4", "Join sign" }
+                    : new[] { "New Room sign", "Start sign" };
+                foreach (string button in roomButtons)
+                    yield return Click(button);
+                CheckDirectIntro(skip ? "Join" : "Start");
                 if (skip) yield return Click("Skip intro sign");
                 float limit = Time.realtimeSinceStartup + 32f;
                 while (menu != null && menu.IntroBeat != 4 && Time.realtimeSinceStartup < limit) yield return null;
@@ -105,8 +113,34 @@ namespace InnerFrame.Entrance
                 }
                 Check(!fader.IsTransitioning && fader.LastFailure == null && fader.Coverage <= .001f &&
                     SceneManager.GetActiveScene().name == "Gallery", route + ": reveal finishes in the actual Gallery");
+                if (firstGalleryVisit)
+                {
+                    limit = Time.realtimeSinceStartup + 12f;
+                    while (!Tutorial.EntranceControllerGuide.IsOpen && Time.realtimeSinceStartup < limit) yield return null;
+                    Check(Tutorial.EntranceControllerGuide.IsOpen && Tutorial.EntranceControllerGuide.Current.PageIndex == 0,
+                        "first Gallery arrival shows the full controller tutorial at page one");
+                    var finish = Tutorial.EntranceControllerGuide.Current.View.DisplayCanvas.GetComponentsInChildren<Button>()
+                        .Single(b => b.name == "Continue");
+                    finish.onClick.Invoke();
+                    Check(!Tutorial.EntranceControllerGuide.IsOpen && SceneManager.GetActiveScene().name == "Gallery",
+                        "closing the first Gallery tutorial leaves the player in Gallery");
+                }
+                else
+                {
+                    yield return null;
+                    Check(!Tutorial.EntranceControllerGuide.IsOpen,
+                        "returning to Gallery this session leaves the completed arrival guide closed");
+                }
             }
             Finish(true, "Both Entrance routes rendered opaque gold in front and reverse views, then revealed Gallery.");
+        }
+
+        void CheckDirectIntro(string action)
+        {
+            Check(menu.IntroBeat == 0 && menu.ReviewButton("Skip intro sign") != null &&
+                menu.ReviewButton("Continue") == null && !Tutorial.EntranceControllerGuide.IsOpen &&
+                audioDirector.CurrentCue == "Landing 1" && EntranceChoice.RoomCode == menu.EnteredCode,
+                action + " starts the story intro immediately with the selected room and no controller screen");
         }
 
         void CheckGoldPixels(Camera eye, string view)
@@ -171,13 +205,7 @@ namespace InnerFrame.Entrance
             yield return new WaitForSecondsRealtime(12.3f);
             Check(audioDirector.ClickCount==before && audioDirector.CurrentCue=="Opening / selection","Selection can wait through a full music loop without extra clicks");
             yield return Click("Join sign");
-            var diagram = menu.GetComponentsInChildren<Image>().SingleOrDefault(i => i.name == "Original controller diagram");
-            var resource = Resources.Load<Tutorial.EntranceControllerGuide>("EntranceControllerGuide");
-            Check(menu.CurrentPage == 5 && resource != null && resource.entranceDiagram != null &&
-                diagram != null && diagram.sprite.texture == resource.entranceDiagram && !Tutorial.EntranceControllerGuide.IsOpen,
-                "Join shows the original controller diagram with Continue before the intro");
-            yield return Click("Continue");
-            Check(audioDirector.CurrentCue=="Landing 1","Landing 1 switches on actual Start/Join");
+            CheckDirectIntro("Join");
             bool heardWriting=false;
             float end=Time.realtimeSinceStartup+24;
             while(menu!=null && menu.IntroBeat<4)
@@ -253,7 +281,8 @@ namespace InnerFrame.Entrance
             yield return PaintingMusic("StarryNight", "Starry Night loop", "StarryNightAdriftLoop", 72f);
             yield return SceneManager.LoadSceneAsync("Assets/Entrance/Scenes/Entrance.unity");
             menu=null; yield return Ready();
-            yield return Click("Begin sign"); yield return Click("Boy portrait"); yield return Click("Enter the Story sign"); yield return Click("New Room sign"); yield return Click("Start sign"); yield return Click("Continue");
+            yield return Click("Begin sign"); yield return Click("Boy portrait"); yield return Click("Enter the Story sign"); yield return Click("New Room sign"); yield return Click("Start sign");
+            CheckDirectIntro("Start");
             while(menu!=null && !audioDirector.HandwritingPlaying) yield return null;
             yield return Click("Skip intro sign");
             yield return null; yield return null;

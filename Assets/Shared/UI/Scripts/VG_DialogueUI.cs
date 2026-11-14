@@ -45,7 +45,8 @@ public class VG_DialogueUI : MonoBehaviour
     /// <summary>Opt-in for spoken dialogue captions. Tutorials using the same visual style stay readable.</summary>
     public bool RespectSubtitlePreference { get; set; }
     /// <summary>The existing dialogue layout, for placement and accessory buttons using the same assets.</summary>
-    public Transform LayoutRoot { get { Build(); return follow.transform; } }
+    public Transform LayoutRoot { get { Build(); return follow.Layout; } }
+    public Canvas DisplayCanvas { get { Build(); return follow.DisplayCanvas; } }
     public Material OverlayMaterial { get { Build(); return onTop; } }
     /// <summary>The hint's line as last set, tokens included.</summary>
     public string HintLine { get; private set; }
@@ -100,7 +101,7 @@ public class VG_DialogueUI : MonoBehaviour
     {
         Build();
         string all = string.Concat(texts);
-        foreach (var label in GetComponentsInChildren<Text>(true)) font.RequestCharactersInTexture(all, label.fontSize, FontStyle.Normal);
+        foreach (var label in follow.Layout.GetComponentsInChildren<Text>(true)) font.RequestCharactersInTexture(all, label.fontSize, FontStyle.Normal);
     }
 
     /// <summary>Straight into place in front of the head (tests, renders, a teleport).</summary>
@@ -117,7 +118,9 @@ public class VG_DialogueUI : MonoBehaviour
         // Hiding subtitles does not end paging or speech priority; hints remain independent.
         Fade(words, paging.Showing && allowed && (!RespectSubtitlePreference || PlayerMenuPreferences.Subtitles), dt, FadeSeconds);
         Fade(hintGroup, hintShown && allowed, dt, settings.hintFadeIn > 0f ? settings.hintFadeIn : FadeSeconds);
-        follow.enabled = FollowHead && (words.gameObject.activeSelf || hintGroup.gameObject.activeSelf);
+        follow.PlaceAutomatically = FollowHead;
+        if (!FollowHead) follow.ReleaseView();
+        follow.DisplayCanvas.gameObject.SetActive(words.gameObject.activeSelf || hintGroup.gameObject.activeSelf);
     }
 
     void OnDestroy() { if (onTop != null) Destroy(onTop); }
@@ -126,18 +129,14 @@ public class VG_DialogueUI : MonoBehaviour
     void Build()
     {
         if (paging != null) return;
-        gameObject.AddComponent<Canvas>().renderMode = RenderMode.WorldSpace;
-        transform.localScale = Vector3.one / (VG_UI.UnitsPerMetre * (transform.parent != null ? transform.parent.lossyScale.x : 1f));
-        follow = new GameObject("Follow", typeof(RectTransform)).AddComponent<VG_FollowGroup>();
-        follow.transform.SetParent(transform, false);
-        follow.transform.localScale = Vector3.one * settings.Scale;
-        follow.settings = settings;
+        follow = gameObject.AddComponent<VG_FollowGroup>();
+        follow.CreateLayout(settings);
         follow.FitDialogueLayout = true;
         follow.LockToView = lockToView;
         onTop = new Material(Canvas.GetDefaultCanvasMaterial());
         onTop.SetInt("unity_GUIZTestMode", (int)UnityEngine.Rendering.CompareFunction.Always);   // nothing in the room cuts through it
-        dialogue = VG_DialogueBox.Make(follow.transform, settings, font, box, nameTab, starRing, star, onTop);
-        hint = VG_Hint.Make(follow.transform, VG_DialogueBox.Above, settings, font, hintPlate, star, key, onTop);
+        dialogue = VG_DialogueBox.Make(follow.Layout, settings, font, box, nameTab, starRing, star, onTop);
+        hint = VG_Hint.Make(follow.Layout, VG_DialogueBox.Above, settings, font, hintPlate, star, key, onTop);
         paging = new VG_Paging(dialogue.Labels, dialogue.TextWidth, settings.wordsColour);
         paging.Resize = lines => { dialogue.More = paging.Current < paging.Pages.Count - 1; dialogue.Lines(lines); };
         words = Hidden(dialogue.gameObject);

@@ -1,101 +1,224 @@
 using UnityEngine;
 
-/// <summary>
-/// Keeps hints and dialogue at a constant position low in the player's view, without a dead zone or easing.
-/// Anchors a world-space HUD in the camera viewport, keeping its artwork and buttons in the same plane.
-/// A caller can explicitly select the older eased placement for world-facing content.
-/// </summary>
+/// <summary>Owns a camera canvas in desktop mode and a view-space HUD surface in stereo.</summary>
 [DefaultExecutionOrder(10000)]
 public class VG_FollowGroup : MonoBehaviour
 {
-    const float Settled = 1f;   // degrees: once following, it stops within this
-
     public VG_DialogueSettings settings;
-    /// <summary>The head to follow; null: the main camera.</summary>
     public Transform head;
-    /// <summary>Keep a constant lower-view position, including pitch and roll. Default for hints in every scene.</summary>
     public bool LockToView { get; set; } = true;
-    /// <summary>Height of the anchor measured from the bottom of the game view.</summary>
     public float ViewportY { get; set; } = .32f;
     public bool FitDialogueLayout { get; set; }
+    public bool PlaceAutomatically { get; set; } = true;
+    public RectTransform Layout { get; private set; }
+    public Vector2 ViewSize { get; private set; }
+    public Canvas DisplayCanvas { get; private set; }
 
     float yaw, pitch;
     bool placed, moving;
     Transform cachedHead;
     Camera headCamera;
 
+    public void CreateLayout(VG_DialogueSettings style)
+    {
+        settings = style;
+        var surface = new GameObject("HUD Canvas", typeof(RectTransform), typeof(Canvas));
+        surface.transform.SetParent(transform, false);
+        surface.layer = gameObject.layer;
+        DisplayCanvas = surface.GetComponent<Canvas>();
+        DisplayCanvas.renderMode = RenderMode.WorldSpace;
+        Layout = new GameObject("Layout", typeof(RectTransform)).GetComponent<RectTransform>();
+        Layout.SetParent(surface.transform, false);
+        Layout.sizeDelta = Vector2.zero;
+        SetWorldScale(surface.transform, 1f / VG_UI.UnitsPerMetre);
+        Layout.localScale = Vector3.one * style.Scale;
+    }
+
     void OnEnable()
     {
         placed = moving = false;
-        Application.onBeforeRender += BeforeRender;
+        if (DisplayCanvas != null) DisplayCanvas.gameObject.SetActive(true);
     }
-    void OnDisable() => Application.onBeforeRender -= BeforeRender;
-    // XR may update the head pose after LateUpdate. Refresh only the locked mode before rendering.
-    [BeforeRenderOrder(1000)]
-    void BeforeRender() { if (LockToView) Step(0f); }
 
-    void LateUpdate() => Step(Time.deltaTime);
+    // The visuals always remain owned by their scene/dialogue, even while attached to a persistent XR rig.
+    void OnDisable()
+    {
+        if (DisplayCanvas == null) return;
+        VG_CompositorCanvas.Unregister(DisplayCanvas);
+        DisplayCanvas.gameObject.SetActive(false);
+        if (DisplayCanvas.transform.parent != transform) DisplayCanvas.transform.SetParent(transform, false);
+    }
 
-    /// <summary>Straight into place (tests, renders, a teleport).</summary>
+    void OnDestroy()
+    {
+        if (DisplayCanvas == null) return;
+        VG_CompositorCanvas.Unregister(DisplayCanvas);
+        if (DisplayCanvas.transform.parent != transform)
+        {
+            if (Application.isPlaying) Destroy(DisplayCanvas.gameObject);
+            else DestroyImmediate(DisplayCanvas.gameObject);
+        }
+    }
+
+    void LateUpdate()
+    {
+        if (PlaceAutomatically && DisplayCanvas != null && DisplayCanvas.gameObject.activeSelf) Step(Time.deltaTime);
+    }
     public void Snap() { placed = false; Step(0f); }
 
-    /// <summary>One frame, so tests can drive it.</summary>
     public void Step(float dt)
     {
-        var camera = head == null ? Camera.main : null;
-        var eye = head != null ? head : camera != null ? camera.transform : null;
-        if (eye == null || settings == null) return;
-        if (LockToView)
+        if (settings == null || DisplayCanvas == null) return;
+        Camera camera = Camera.main;
+        if (head != null)
         {
-            if (head != null)
-            {
-                if (cachedHead != head) { cachedHead = head; headCamera = head.GetComponent<Camera>(); }
-                camera = headCamera;
-            }
-            if (camera != null) PlaceInViewport(camera);
-            else
-            {
-                // A transform-only head (e.g. a simulated rig) has no camera projection.
-                var facing = eye.rotation * Quaternion.Euler(settings.belowGaze, 0f, 0f);
-                transform.SetPositionAndRotation(eye.position + facing * Vector3.forward * settings.distance, facing);
-            }
+            if (cachedHead != head) { cachedHead = head; headCamera = head.GetComponent<Camera>(); }
+            camera = headCamera;
+        }
+        var eye = head != null ? head : camera != null ? camera.transform : null;
+        if (eye == null)
+        {
+            ReleaseView();
+            DisplayCanvas.enabled = false;
+            return;
+        }
+        DisplayCanvas.enabled = true;
+        if (LockToView && camera != null)
+        {
+            PlaceInView(camera);
             placed = moving = false;
             return;
         }
+        ReleaseView();
+        if (LockToView)
+        {
+            // An explicitly supplied transform-only head has no camera projection.
+            var facing = eye.rotation * Quaternion.Euler(settings.belowGaze, 0f, 0f);
+            DisplayCanvas.transform.SetParent(eye, false);
+            SetWorldScale(DisplayCanvas.transform, 1f / VG_UI.UnitsPerMetre);
+            DisplayCanvas.transform.SetPositionAndRotation(eye.position + facing * Vector3.forward * settings.distance, facing);
+            return;
+        }
+
         var gaze = eye.forward;
         float wantYaw = Mathf.Atan2(gaze.x, gaze.z) * Mathf.Rad2Deg;
         float wantPitch = Mathf.Clamp(Mathf.Asin(Mathf.Clamp(gaze.y, -1f, 1f)) * Mathf.Rad2Deg, settings.lowestGaze, settings.highestGaze) - settings.belowGaze;
         if (!placed) { yaw = wantYaw; pitch = wantPitch; placed = true; }
-        float off = Vector3.Angle(Direction(yaw, pitch), Direction(wantYaw, wantPitch));
-        if (off > settings.deadZone) moving = true;
+        if (Vector3.Angle(Direction(yaw, pitch), Direction(wantYaw, wantPitch)) > settings.deadZone) moving = true;
         if (moving)
         {
             float ease = 1f - Mathf.Exp(-4f * dt / settings.easeSeconds);
             yaw = Mathf.LerpAngle(yaw, wantYaw, ease);
             pitch = Mathf.LerpAngle(pitch, wantPitch, ease);
-            moving = off > Settled;
+            moving = Vector3.Angle(Direction(yaw, pitch), Direction(wantYaw, wantPitch)) > 1f;
         }
         var at = eye.position + Direction(yaw, pitch) * settings.distance;
-        transform.SetPositionAndRotation(at, Quaternion.LookRotation(at - eye.position, Vector3.up));
+        DisplayCanvas.transform.SetPositionAndRotation(at, Quaternion.LookRotation(at - eye.position, Vector3.up));
     }
 
-    void PlaceInViewport(Camera camera)
+    void PlaceInView(Camera camera)
     {
         float depth = settings.distance;
-        var anchor = camera.ViewportToWorldPoint(new Vector3(.5f, ViewportY, depth));
-        transform.SetPositionAndRotation(anchor, camera.transform.rotation);
-        if (!FitDialogueLayout) return;
+        var surface = (RectTransform)DisplayCanvas.transform;
+        var mode = camera.stereoEnabled ? RenderMode.WorldSpace : RenderMode.ScreenSpaceCamera;
+        if (surface.parent != camera.transform || DisplayCanvas.renderMode != mode || DisplayCanvas.worldCamera != camera)
+        {
+            VG_CompositorCanvas.Unregister(DisplayCanvas);
+            surface.SetParent(camera.transform, false);
+            surface.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
+            surface.localScale = Vector3.one;
+            DisplayCanvas.renderMode = mode;
+            DisplayCanvas.worldCamera = camera;
+            DisplayCanvas.planeDistance = depth;
+            if (mode == RenderMode.WorldSpace)
+            {
+                surface.sizeDelta = Vector2.zero;
+                Layout.anchorMin = Layout.anchorMax = Vector2.one * .5f;
+                Layout.anchoredPosition3D = Vector3.zero;
+            }
+        }
+        if (mode == RenderMode.WorldSpace)
+        {
+            // Keep the real XRI button plane on the tracked camera. The compositor presents the same graphics.
+            // Use the eye-independent projection for the centre of the binocular view. The XR camera's
+            // local frame is the reference; no callback copies its pose into the canvas.
+            var lower = camera.ViewportToWorldPoint(new Vector3(0f, 0f, depth));
+            var upper = camera.ViewportToWorldPoint(new Vector3(1f, 1f, depth));
+            var point = camera.ViewportToWorldPoint(new Vector3(.5f, ViewportY, depth));
+            var pos = Quaternion.Inverse(camera.transform.rotation) * (point - camera.transform.position);
+            float scale = settings.Scale;
+            if (FitDialogueLayout)
+            {
+                float widthFit = .84f * Vector3.Dot(upper - lower, camera.transform.right) / VG_DialogueBox.Width;
+                float heightFit = (ViewportY - .08f) * Vector3.Dot(upper - lower, camera.transform.up) / .34f;
+                scale = Mathf.Min(scale, Mathf.Min(widthFit, heightFit));
+            }
+            var rigScale = camera.transform.lossyScale;
+            surface.localPosition = new Vector3(pos.x / rigScale.x, pos.y / rigScale.y, pos.z / rigScale.z);
+            SetWorldScale(surface, 1f / VG_UI.UnitsPerMetre);
+            Layout.localScale = Vector3.one * scale;
+            VG_CompositorCanvas.Register(DisplayCanvas, camera, depth);
+        }
+        else
+        {
+            if (!Mathf.Approximately(DisplayCanvas.planeDistance, depth)) DisplayCanvas.planeDistance = depth;
+            // Canvas Rects may still describe the unshifted camera frustum on a physical/asymmetric lens.
+            // Solve the desired pixel anchor on this native canvas's own plane. No tracked pose is copied.
+            var viewportAnchor = new Vector2(.5f, ViewportY);
+            Layout.anchorMin = Layout.anchorMax = viewportAnchor;
+            Layout.localRotation = Quaternion.identity;
+            var canvasRect = surface.rect;
+            var frame = camera.pixelRect;
+            if (canvasRect.width <= 0f || frame.width <= 0f || frame.height <= 0f) return;
+            Vector2 CanvasPoint(float x, float y)
+            {
+                var px = frame.min + Vector2.Scale(frame.size, new Vector2(x, y));
+                RectTransformUtility.ScreenPointToLocalPointInRectangle(surface, px, camera, out var local);
+                return local;
+            }
+            var lower = CanvasPoint(0f, 0f);
+            var upper = CanvasPoint(1f, 1f);
+            var size = upper - lower;
+            if (size.x <= 0f || size.y <= 0f) return;
+            var nativeAnchor = canvasRect.min + Vector2.Scale(canvasRect.size, viewportAnchor);
+            Layout.anchoredPosition3D = CanvasPoint(viewportAnchor.x, viewportAnchor.y) - nativeAnchor;
+            // The shared art was tuned at 60 degrees. Keep its fraction of the output height when zooming.
+            float referenceHeight = 2f * depth * Mathf.Tan(30f * Mathf.Deg2Rad);
+            float pixelsPerUnit = settings.Scale * size.y / (referenceHeight * VG_UI.UnitsPerMetre);
+            if (FitDialogueLayout)
+            {
+                float widthFit = .84f * size.x / VG_UI.U(VG_DialogueBox.Width);
+                float heightFit = (ViewportY - .08f) * size.y / VG_UI.U(.34f);
+                pixelsPerUnit = Mathf.Min(pixelsPerUnit, Mathf.Min(widthFit, heightFit));
+            }
+            ViewSize = size;
+            Layout.localScale = Vector3.one * pixelsPerUnit;
+        }
+    }
 
-        // Preserve the authored angular size unless the game view would clip the box or its navigation.
-        var extent = camera.ViewportToWorldPoint(new Vector3(1f, 1f, depth)) -
-            camera.ViewportToWorldPoint(new Vector3(0f, 0f, depth));
-        float width = Vector3.Dot(extent, camera.transform.right);
-        float height = Vector3.Dot(extent, camera.transform.up);
-        const float bottomOfNavigation = .34f; // layout metres from the dialogue top to the lowest button edge
-        float widthFit = .84f * width / VG_DialogueBox.Width;
-        float heightFit = (ViewportY - .08f) * height / bottomOfNavigation;
-        float scale = Mathf.Min(settings.Scale, Mathf.Min(widthFit, heightFit));
-        transform.localScale = Vector3.one * scale;
+    public void ReleaseView()
+    {
+        if (DisplayCanvas == null) return;
+        var surface = (RectTransform)DisplayCanvas.transform;
+        VG_CompositorCanvas.Unregister(DisplayCanvas);
+        if (DisplayCanvas.renderMode != RenderMode.WorldSpace || surface.parent != transform)
+        {
+            DisplayCanvas.renderMode = RenderMode.WorldSpace;
+            surface.SetParent(transform, false);
+            surface.localPosition = Vector3.zero;
+            surface.localRotation = Quaternion.identity;
+            surface.sizeDelta = Vector2.zero;
+            Layout.anchorMin = Layout.anchorMax = Vector2.one * .5f;
+            Layout.anchoredPosition3D = Vector3.zero;
+            SetWorldScale(surface, 1f / VG_UI.UnitsPerMetre);
+            Layout.localScale = Vector3.one * settings.Scale;
+        }
+    }
+
+    static void SetWorldScale(Transform target, float size)
+    {
+        var parentScale = target.parent != null ? target.parent.lossyScale : Vector3.one;
+        target.localScale = new Vector3(size / parentScale.x, size / parentScale.y, size / parentScale.z);
     }
 
     static Vector3 Direction(float yaw, float pitch) => Quaternion.Euler(-pitch, yaw, 0f) * Vector3.forward;

@@ -32,7 +32,7 @@ of the Gallery and paintings, including while Vincent speaks or the full
 guide is open. Opening a shortcut from the guide preserves the current page.
 Closing its panel restores that page. Gallery is dimmed at home. Hovering a
 shortcut shows its label and keeps the pointer from selecting artwork behind it.
-The Entrance and scene fades hide the shortcuts.
+Desktop anchors all three buttons to the lower-right edge of the screen. Quest displays them in a headset VIEW layer and uses the corresponding tracked-ray targets for selection. The Entrance and scene fades hide the shortcuts.
 
 In Editor Play Mode, click a shortcut with a free mouse. While using mouse
 look, hold Tab to point and click. Releasing Tab returns control to the

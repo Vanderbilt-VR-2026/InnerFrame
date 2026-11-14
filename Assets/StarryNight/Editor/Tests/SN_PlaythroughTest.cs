@@ -373,7 +373,7 @@ namespace InnerFrame.StarryNight.EditorTools
         /// <summary>The hint's title as drawn (VG_Hint's Title label; empty when its row is hidden).</summary>
         static string ShownTitle(VG_DialogueUI ui)
         {
-            var t = ui.GetComponentsInChildren<UnityEngine.UI.Text>(true).FirstOrDefault(x => x.name == "Title");
+            var t = ui.DisplayCanvas.GetComponentsInChildren<UnityEngine.UI.Text>(true).FirstOrDefault(x => x.name == "Title");
             return t != null && t.gameObject.activeSelf ? t.text : "";
         }
 

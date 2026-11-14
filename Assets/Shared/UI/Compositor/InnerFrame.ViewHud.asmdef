@@ -1,0 +1,8 @@
+{
+    "name": "InnerFrame.ViewHud",
+    "references": [
+        "Unity.XR.CompositionLayers",
+        "Unity.XR.OpenXR"
+    ],
+    "allowUnsafeCode": true
+}

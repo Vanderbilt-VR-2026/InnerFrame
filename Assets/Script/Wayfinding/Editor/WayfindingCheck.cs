@@ -86,6 +86,7 @@ public static class WayfindingCheck
         eyes.clearFlags = CameraClearFlags.SolidColor;
         eyes.backgroundColor = new Color(0.30f, 0.42f, 0.62f);
         eyes.fieldOfView = 70f;
+        using var landscape = new HudTestCameraTarget(eyes, 1280, 800);
         var owner = new GameObject("Arrival Hint (check)").AddComponent<ArrivalHint>();
         var start = (System.Collections.IEnumerator)Call(owner, "Start");
         Check(start.MoveNext(), "the actual arrival coroutine initializes before its settling wait");
@@ -100,13 +101,15 @@ public static class WayfindingCheck
             start.MoveNext(); // Advance past the settling wait in edit mode; no real-time delay is claimed.
             Check(owner.Shown && arrival.Visible, "actual arrival shows after the unobstructed settling wait");
             arrival.Snap();
-            float metres = Vector3.Distance(arrival.transform.position, eyes.transform.position);
-            Check(Mathf.Abs(metres - 1.2f) < 0.01f, $"it hangs {metres:F2} m ahead of the eyes");
-            float degrees = 2f * Mathf.Atan(arrival.WorldSize.x / 2f / metres) * Mathf.Rad2Deg;
-            Check(degrees > 15f && degrees < 50f, $"it is {arrival.WorldSize.x:F2} x {arrival.WorldSize.y:F2} m, {degrees:F0} degrees wide (the dialogue box: 40)");
-            ViewLock(arrival, eyes, "arrival");
+            RenderHint(arrival, landscape);
+            var anchor = eyes.WorldToViewportPoint(arrival.LayoutRoot.position);
+            Check(anchor.z > 0f && Vector2.Distance(anchor, new Vector2(.5f, .43f)) < .002f,
+                $"arrival is centred at the lower screen anchor ({anchor.x:F3}, {anchor.y:F3})");
+            float width = PlateWidth(arrival, eyes);
+            Check(width > .15f && width <= .845f, $"arrival's plate takes {width:P0} of the landscape viewport width");
+            ViewLock(arrival, eyes, landscape, "arrival");
             arrival.Show("You're inside The Bedroom", ArrivalHint.HeadsetLine, WayfindingHint.MenuKey, ArrivalHint.HeadsetRest);
-            Check(arrival.transform.Find("Layout/Hint/Key/Menu Glyph") != null, "the arrival hint draws the Menu button's icon");
+            Check(arrival.LayoutRoot.Find("Layout/Hint/Key/Menu Glyph") != null, "the arrival hint draws the Menu button's icon");
             ViewportFit(arrival, eyes, "arrival");
             if (shots != null) Shot(eyes, Path.Combine(shots, "arrival-hint.png"));
             var ui = Dialogue();
@@ -137,6 +140,7 @@ public static class WayfindingCheck
         var eyes = new GameObject("Legacy check eyes").AddComponent<Camera>();
         eyes.tag = "MainCamera";
         eyes.transform.position = new Vector3(0f, 1.6f, 0f);
+        using var landscape = new HudTestCameraTarget(eyes, 1280, 800);
         var entered = typeof(PaintingEntrancePrompt).GetField("<HasEntered>k__BackingField", BindingFlags.Static | BindingFlags.NonPublic);
         bool wasEntered = PaintingEntrancePrompt.HasEntered;
         entered.SetValue(null, false);
@@ -150,7 +154,7 @@ public static class WayfindingCheck
                 Check(prompt.transform.Find("Entrance Glow") != null && prompt.GetComponent<SceneChangeButton>().targetScene == prompt.Target,
                     "legacy presentation retains its original glow and destination");
                 Check(prompt.Hint.Shown.StartsWith(PaintingNames.Title(prompt.Target)) &&
-                    prompt.Hint.transform.Find("Layout/Hint/Key/Grip Icon") != null, "legacy hint retains painting title and grip icon");
+                    prompt.Hint.LayoutRoot.Find("Layout/Hint/Key/Grip Icon") != null, "legacy hint retains painting title and grip icon");
             }
             Tick(list);
             Check(near.Hint.Visible && farther.Hint.Gone, "only the nearest eligible legacy entrance is shown");
@@ -158,7 +162,7 @@ public static class WayfindingCheck
             Hover(farther, 1); Tick(list);
             Check(farther.Hint.Visible && near.Hint.Gone, "hover beats proximity and the previous winner disappears immediately");
             farther.Hint.Snap();
-            ViewLock(farther.Hint, eyes, "legacy entrance");
+            ViewLock(farther.Hint, eyes, landscape, "legacy entrance");
             ViewportFit(farther.Hint, eyes, "legacy entrance");
             entered.SetValue(null, true);
             Hover(farther, 0); Tick(list);
@@ -237,20 +241,37 @@ public static class WayfindingCheck
 
     static object Call(object target, string method) => target.GetType().GetMethod(method, BindingFlags.Instance | BindingFlags.NonPublic).Invoke(target, null);
 
-    static void ViewLock(WayfindingHint hint, Camera eye, string name)
+    static float PlateWidth(WayfindingHint hint, Camera eye)
+    {
+        var plate = (RectTransform)hint.DisplayCanvas.GetComponentInChildren<VG_Hint>(true).transform.Find("Plate");
+        var corners = new Vector3[4];
+        plate.GetWorldCorners(corners);
+        return eye.WorldToViewportPoint(corners[2]).x - eye.WorldToViewportPoint(corners[1]).x;
+    }
+
+    static void RenderHint(WayfindingHint hint, HudTestCameraTarget target)
+    {
+        target.Render(); // Unity sizes the native screen canvas for the new render target.
+        hint.GetComponent<VG_FollowGroup>().Step(0f);
+        Call(hint, "LateUpdate");
+        target.Render();
+    }
+
+    static void ViewLock(WayfindingHint hint, Camera eye, HudTestCameraTarget target, string name)
     {
         var follow = hint.GetComponent<VG_FollowGroup>();
         Vector3 position = eye.transform.position;
         Quaternion rotation = eye.transform.rotation;
-        follow.Step(0f);
-        Vector3 before = eye.WorldToViewportPoint(hint.transform.position);
-        float angle = hint.WorldSize.x / Vector3.Distance(eye.transform.position, hint.transform.position);
+        RenderHint(hint, target);
+        Vector3 before = eye.WorldToViewportPoint(hint.LayoutRoot.position);
+        float width = PlateWidth(hint, eye);
         eye.transform.SetPositionAndRotation(position + new Vector3(.2f, .3f, -.4f), rotation * Quaternion.Euler(20f, 35f, 12f));
-        follow.Step(0f);
-        Vector3 after = eye.WorldToViewportPoint(hint.transform.position);
+        // Simulate a final head-pose sample without another HUD tick.
+        target.Render();
+        Vector3 after = eye.WorldToViewportPoint(hint.LayoutRoot.position);
         Check(follow.LockToView && before.y < .5f && before.z > 0f && Vector3.Distance(before, after) < .001f &&
-            Mathf.Abs(angle - hint.WorldSize.x / Vector3.Distance(eye.transform.position, hint.transform.position)) < .001f,
-            name + ": lower viewport position and angular size stay fixed through yaw, pitch, roll and translation with no easing time");
+            width > 0f && Mathf.Abs(width - PlateWidth(hint, eye)) < .001f,
+            name + ": lower viewport position and apparent width stay fixed through yaw, pitch, roll and translation without a HUD update");
         eye.transform.SetPositionAndRotation(position, rotation);
         follow.Step(0f);
     }
@@ -258,7 +279,8 @@ public static class WayfindingCheck
     static void ViewportFit(WayfindingHint hint, Camera eye, string name)
     {
         var follow = hint.GetComponent<VG_FollowGroup>();
-        float oldFov = eye.fieldOfView, oldAspect = eye.aspect;
+        float oldFov = eye.fieldOfView;
+        using var landscape = new HudTestCameraTarget(eye, 1280, 800);
         var detached = WayfindingHint.Create("Detached placement control", null, hint.Settings.distance, false);
         try
         {
@@ -266,42 +288,55 @@ public static class WayfindingCheck
             detached.Visible = true; detached.Snap();
             float detachedWidth = detached.WorldSize.x;
             var detachedPosition = detached.transform.position;
-            eye.fieldOfView = 70f; eye.aspect = 1.6f;
-            follow.Step(0f); Call(hint, "LateUpdate");
-            float originalWidth = hint.WorldSize.x;
-            eye.fieldOfView = 38f; eye.aspect = .72f;
-            var shifted = eye.projectionMatrix;
-            shifted.m02 = .14f; shifted.m12 = -.08f;
-            eye.projectionMatrix = shifted;
-            follow.Step(0f); Call(hint, "LateUpdate"); Call(detached, "LateUpdate");
-            Canvas.ForceUpdateCanvases();
-            int graphics = 0, labels = 0;
-            bool inside = true;
-            foreach (var graphic in hint.GetComponentsInChildren<Graphic>())
+            eye.fieldOfView = 70f;
+            RenderHint(hint, landscape);
+            float originalWidth = PlateWidth(hint, eye);
+            float originalWidthInHeights = originalWidth * eye.aspect;
+            using (var portrait = new HudTestCameraTarget(eye, 576, 800))
             {
-                if (!graphic.isActiveAndEnabled || graphic.color.a <= 0f) continue;
-                var mesh = graphic.canvasRenderer.GetMesh();
-                if (mesh == null || mesh.vertexCount == 0) continue;
-                graphics++;
-                if (graphic is Text text && !string.IsNullOrWhiteSpace(text.text)) labels++;
-                var bounds = mesh.bounds;
-                foreach (float x in new[] { bounds.min.x, bounds.max.x }) foreach (float y in new[] { bounds.min.y, bounds.max.y })
+                eye.fieldOfView = 38f;
+                var shifted = eye.projectionMatrix;
+                shifted.m02 = .14f; shifted.m12 = -.08f;
+                eye.projectionMatrix = shifted;
+                RenderHint(hint, portrait);
+                Call(detached, "LateUpdate");
+                int graphics = 0, labels = 0;
+                var min = Vector2.one;
+                var max = Vector2.zero;
+                bool inFront = true;
+                foreach (var graphic in hint.DisplayCanvas.GetComponentsInChildren<Graphic>())
                 {
-                    var point = eye.WorldToViewportPoint(graphic.transform.TransformPoint(new Vector3(x, y, bounds.center.z)));
-                    inside &= point.z > 0f && point.x >= .075f && point.x <= .925f && point.y >= .075f && point.y <= .925f;
+                    if (!graphic.isActiveAndEnabled || graphic.color.a <= 0f) continue;
+                    var mesh = graphic.canvasRenderer.GetMesh();
+                    if (mesh == null || mesh.vertexCount == 0) continue;
+                    graphics++;
+                    if (graphic is Text text && !string.IsNullOrWhiteSpace(text.text)) labels++;
+                    var bounds = mesh.bounds;
+                    foreach (float x in new[] { bounds.min.x, bounds.max.x }) foreach (float y in new[] { bounds.min.y, bounds.max.y })
+                    {
+                        var point = eye.WorldToViewportPoint(graphic.transform.TransformPoint(new Vector3(x, y, bounds.center.z)));
+                        min = Vector2.Min(min, point);
+                        max = Vector2.Max(max, point);
+                        inFront &= point.z > 0f;
+                    }
                 }
+                float portraitWidth = PlateWidth(hint, eye);
+                float expected = Mathf.Min(originalWidthInHeights / eye.aspect, .84f);
+                var anchor = eye.WorldToViewportPoint(hint.LayoutRoot.position);
+                Check(graphics >= 4 && labels >= 2 && inFront && min.x >= .075f && min.y >= .075f && max.x <= .925f && max.y <= .925f &&
+                    Vector2.Distance(anchor, new Vector2(.5f, .43f)) < .002f && portraitWidth > 0f && Mathf.Abs(portraitWidth - expected) < .003f,
+                    $"{name}: actual text, key and plate fit a narrow 38-degree off-centre portrait view " +
+                    $"({graphics} graphics, {labels} labels, anchor {anchor.x:F3},{anchor.y:F3}, bounds {min:F3}..{max:F3}, width {portraitWidth:F3}, expected {expected:F3})");
+                Check(Mathf.Abs(detached.WorldSize.x - detachedWidth) < .0001f && detached.transform.position == detachedPosition,
+                    name + ": an independently placed world hint keeps its original size and position");
             }
-            Check(graphics >= 4 && labels >= 2 && inside && hint.WorldSize.x < originalWidth * .98f,
-                name + ": actual text, key and plate fit a narrow 38-degree off-centre portrait view");
-            Check(Mathf.Abs(detached.WorldSize.x - detachedWidth) < .0001f && detached.transform.position == detachedPosition,
-                name + ": an independently placed world hint keeps its original size and position");
-            eye.fieldOfView = 70f; eye.aspect = 1.6f; eye.ResetProjectionMatrix();
-            follow.Step(0f); Call(hint, "LateUpdate");
-            Check(Mathf.Abs(hint.WorldSize.x - originalWidth) < .0001f, name + ": wider view restores the original plate size");
+            eye.fieldOfView = 70f; eye.ResetProjectionMatrix();
+            RenderHint(hint, landscape);
+            Check(Mathf.Abs(PlateWidth(hint, eye) - originalWidth) < .001f, name + ": wider view restores the original plate size");
         }
         finally
         {
-            eye.fieldOfView = oldFov; eye.aspect = oldAspect; eye.ResetProjectionMatrix();
+            eye.fieldOfView = oldFov; eye.ResetProjectionMatrix();
             follow.Step(0f); Call(hint, "LateUpdate");
             Object.DestroyImmediate(detached.gameObject);
         }
@@ -311,18 +346,26 @@ public static class WayfindingCheck
     {
         Directory.CreateDirectory(Path.GetDirectoryName(path));
         Canvas.ForceUpdateCanvases();
+        var previousTarget = camera.targetTexture;
+        var previousActive = RenderTexture.active;
         var rt = new RenderTexture(1200, 800, 24, RenderTextureFormat.ARGB32) { antiAliasing = 4 };
-        camera.targetTexture = rt;
-        camera.Render();
-        RenderTexture.active = rt;
         var image = new Texture2D(rt.width, rt.height, TextureFormat.RGB24, false);
-        image.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0);
-        image.Apply();
-        File.WriteAllBytes(path, image.EncodeToPNG());
-        RenderTexture.active = null;
-        camera.targetTexture = null;
-        Object.DestroyImmediate(rt);
-        Object.DestroyImmediate(image);
+        try
+        {
+            camera.targetTexture = rt;
+            camera.Render();
+            RenderTexture.active = rt;
+            image.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0);
+            image.Apply();
+            File.WriteAllBytes(path, image.EncodeToPNG());
+        }
+        finally
+        {
+            RenderTexture.active = previousActive;
+            camera.targetTexture = previousTarget;
+            Object.DestroyImmediate(rt);
+            Object.DestroyImmediate(image);
+        }
         Debug.Log($"[WayfindingCheck] rendered {path}");
     }
 }

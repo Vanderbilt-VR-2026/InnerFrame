@@ -66,7 +66,8 @@ namespace InnerFrame.StarryNight.EditorTools
             var ui = game.ui;
             var s = ui.settings;
             var eye = new GameObject("TestHead").AddComponent<Camera>();
-            eye.fieldOfView = 70f; eye.aspect = 1.6f; eye.nearClipPlane = .03f;
+            eye.fieldOfView = 70f; eye.nearClipPlane = .03f;
+            using var landscape = new HudTestCameraTarget(eye, 1280, 800);
             var head = eye.transform;
             head.SetPositionAndRotation(L.SeatEye, Quaternion.identity);
             ui.Head = head;
@@ -77,7 +78,7 @@ namespace InnerFrame.StarryNight.EditorTools
 
             // ------------------------------------------------------------------ every line's pages fit in three lines
             ui.Say(SN_Voice.Speaker, "x", null);   // builds it
-            var box = ui.GetComponentInChildren<VG_DialogueBox>(true);
+            var box = ui.DisplayCanvas.GetComponentInChildren<VG_DialogueBox>(true);
             float threeLines = BoxHeightFor(box, s, VG_DialogueBox.MostLines);
             int worst = 0, pagesTotal = 0;
             bool allFit = true, noShrink = true;
@@ -112,7 +113,7 @@ namespace InnerFrame.StarryNight.EditorTools
             // ------------------------------------------------------------------ every hint fits (2026-11-10)
             // VG_Hint sizes its plate to its title and its one line (no wrap), from the box's left edge (VG_DialogueBox.Above):
             // it fits when the plate is no wider than the box.
-            var hintUi = ui.GetComponentInChildren<VG_Hint>(true);
+            var hintUi = ui.DisplayCanvas.GetComponentInChildren<VG_Hint>(true);
             var plate = (RectTransform)hintUi.transform.Find("Plate");
             float boxWide = ((RectTransform)box.transform.Find("Panel")).sizeDelta.x;
             float PlateShare(string title, string line) { ui.SetHint(title, line); return plate.sizeDelta.x / boxWide; }
@@ -138,14 +139,16 @@ namespace InnerFrame.StarryNight.EditorTools
             ui.Say(SN_Voice.Speaker, game.voice.lines.Get("L04").text, game.voice.lines.Get("L04").clip);
             for (int k = 0; k < Hz; k++) ui.Step(1f / Hz);
             var follow = ui.GetComponentInChildren<VG_FollowGroup>(true);
-            var hint = ui.GetComponentInChildren<VG_Hint>(true);
+            var hint = ui.DisplayCanvas.GetComponentInChildren<VG_Hint>(true);
             Check(ui.LockToView && ui.FollowHead && follow.LockToView, "the actual Starry Night UI uses immediate lower-view placement");
+            var panel = (RectTransform)box.transform.Find("Panel");
+            landscape.Render();
             foreach (var (name, yaw, pitch) in new[] { ("a level gaze", 6f, 0f), ("25 deg up", 25f, 25f) })
             {
                 head.rotation = Quaternion.Euler(-pitch, yaw, 0f);
                 ui.Snap();
-                Canvas.ForceUpdateCanvases();
-                var (bTop, bBottom, bWidth, bDist) = Extent((RectTransform)box.transform.Find("Panel"), head);
+                landscape.Render();
+                var (bTop, bBottom, bWidth, bDist) = Extent(panel, head);
                 var hintRect = (RectTransform)hint.transform.Find("Plate");
                 var hc = new Vector3[4];
                 hintRect.GetWorldCorners(hc);
@@ -153,11 +156,12 @@ namespace InnerFrame.StarryNight.EditorTools
                 float hBottom = Mathf.Min(SN_Layout.YawPitch(hc[0] - head.position).y, SN_Layout.YawPitch(hc[3] - head.position).y);
                 W($"{name} (yaw {F(yaw)}, pitch {F(pitch)}): the box from {F(bBottom)} to {F(bTop)} deg pitch, its top edge {F(bWidth)} deg wide and {F(bDist)} m from the eye; " +
                   $"the hint's plate from {F(hBottom)} to {F(hTop)} deg");
-                var panel = (RectTransform)box.transform.Find("Panel");
                 panel.GetWorldCorners(hc);
                 var top = eye.WorldToViewportPoint((hc[1] + hc[2]) * .5f);
-                Check(Vector3.Distance(top, new Vector3(.5f, .32f, s.distance)) < .001f &&
-                    Mathf.Abs(Vector3.Distance(hc[1], hc[2]) - s.Metres(s.boxWidth)) < .001f,
+                float width = eye.WorldToViewportPoint(hc[2]).x - eye.WorldToViewportPoint(hc[1]).x;
+                // The desktop design uses the authored angular width at a reference vertical field of view of 60 degrees.
+                float expectedWidth = s.Metres(s.boxWidth) / (2f * s.distance * Mathf.Tan(30f * Mathf.Deg2Rad) * eye.aspect);
+                Check(AtLowerAnchor(top) && Mathf.Abs(width - expectedWidth) < .002f,
                     name + ": the box stays centred in the lower view at its authored width");
             }
 
@@ -165,7 +169,8 @@ namespace InnerFrame.StarryNight.EditorTools
             head.rotation = Quaternion.identity;
             ui.Snap();
             follow.Step(0f);
-            W($"first frame, gaze (0, 0): group at {Group(follow, head)}");
+            landscape.Render();
+            W($"first frame, gaze (0, 0): group at {Group(ui.LayoutRoot, head)}");
             var baseline = ViewportPoints(ui, eye);
             Check(baseline.Length > 20 && baseline.All(InView), "actual Starry Night dialogue/hint text and art fit inside the viewport");
             foreach (var pose in new[]
@@ -178,21 +183,35 @@ namespace InnerFrame.StarryNight.EditorTools
             })
             {
                 head.SetPositionAndRotation(pose.Item2, pose.Item3);
-                follow.Step(0f);
-                Check(Vector3.Distance(eye.WorldToViewportPoint(follow.transform.position), new Vector3(.5f, .32f, s.distance)) < .001f &&
-                    Vector3.Dot(follow.transform.up, head.up) > .99999f, pose.Item1 + ": fixed screen anchor and orientation after one zero-dt update");
+                landscape.Render();
+                Check(AtLowerAnchor(eye.WorldToViewportPoint(ui.LayoutRoot.position)) &&
+                    Vector3.Dot(ui.LayoutRoot.up, head.up) > .99999f, pose.Item1 + ": fixed screen anchor and orientation without a HUD update");
                 var points = ViewportPoints(ui, eye);
                 Check(points.Length == baseline.Length && points.Select((p, index) => Vector3.Distance(p, baseline[index])).All(d => d < .001f) && points.All(InView),
                     pose.Item1 + ": rendered UI/text keeps the same viewport bounds without easing");
             }
 
+            using (var portrait = new HudTestCameraTarget(eye, 576, 800))
+            {
+                portrait.Render();
+                ui.Snap();
+                portrait.Render();
+                var points = ViewportPoints(ui, eye);
+                var corners = new Vector3[4];
+                panel.GetWorldCorners(corners);
+                float width = eye.WorldToViewportPoint(corners[2]).x - eye.WorldToViewportPoint(corners[1]).x;
+                Check(AtLowerAnchor(eye.WorldToViewportPoint((corners[1] + corners[2]) * .5f)) &&
+                    width > 0f && width <= .842f && points.Length == baseline.Length && points.All(InView),
+                    "the portrait target keeps Starry Night's real words and plate inside the viewport at the same lower anchor");
+            }
+
             // ------------------------------------------------------------------ the beam draws before the UI
-            int uiQueue = ui.GetComponentsInChildren<Graphic>(true).Select(g => g.materialForRendering.renderQueue).Max();
-            int uiQueueMin = ui.GetComponentsInChildren<Graphic>(true).Select(g => g.materialForRendering.renderQueue).Min();
+            int uiQueue = ui.DisplayCanvas.GetComponentsInChildren<Graphic>(true).Select(g => g.materialForRendering.renderQueue).Max();
+            int uiQueueMin = ui.DisplayCanvas.GetComponentsInChildren<Graphic>(true).Select(g => g.materialForRendering.renderQueue).Min();
             var beam = game.beam.GetComponent<LineRenderer>();
             int beamQueue = beam.sharedMaterial.renderQueue;
-            Check(beamQueue < uiQueueMin && beam.sortingLayerID == ui.GetComponent<Canvas>().sortingLayerID && beam.sortingOrder <= ui.GetComponent<Canvas>().sortingOrder,
-                $"the beam's queue {beamQueue} is below the UI's ({uiQueueMin}..{uiQueue}), same sorting layer, order {beam.sortingOrder} <= {ui.GetComponent<Canvas>().sortingOrder}");
+            Check(beamQueue < uiQueueMin && beam.sortingLayerID == ui.DisplayCanvas.sortingLayerID && beam.sortingOrder <= ui.DisplayCanvas.sortingOrder,
+                $"the beam's queue {beamQueue} is below the UI's ({uiQueueMin}..{uiQueue}), same sorting layer, order {beam.sortingOrder} <= {ui.DisplayCanvas.sortingOrder}");
         }
 
         /// <summary>The box's panel height for n lines, in metres (VG_DialogueBox.Lines, scaled by the settings).</summary>
@@ -222,11 +241,13 @@ namespace InnerFrame.StarryNight.EditorTools
 
         static bool InView(Vector3 p) => p.z > 0f && p.x >= 0f && p.x <= 1f && p.y >= 0f && p.y <= 1f;
 
+        static bool AtLowerAnchor(Vector3 p) => p.z > 0f && Vector2.Distance(p, new Vector2(.5f, .32f)) < .002f;
+
         static Vector3[] ViewportPoints(VG_DialogueUI ui, Camera eye)
         {
             Canvas.ForceUpdateCanvases();
             var points = new List<Vector3>();
-            foreach (var graphic in ui.GetComponentsInChildren<Graphic>())
+            foreach (var graphic in ui.DisplayCanvas.GetComponentsInChildren<Graphic>())
             {
                 if (!graphic.isActiveAndEnabled || graphic.color.a <= 0f) continue;
                 var mesh = graphic.canvasRenderer.GetMesh();
@@ -238,11 +259,11 @@ namespace InnerFrame.StarryNight.EditorTools
             return points.ToArray();
         }
 
-        static string Group(VG_FollowGroup g, Transform eye)
+        static string Group(Transform layout, Transform eye)
         {
-            var yp = SN_Layout.YawPitch(g.transform.position - eye.position);
-            float roll = Vector3.SignedAngle(Vector3.ProjectOnPlane(g.transform.up, g.transform.forward), Vector3.ProjectOnPlane(Vector3.up, g.transform.forward), g.transform.forward);
-            return $"yaw {F(yp.x)}, pitch {F(yp.y)}, {F(Vector3.Distance(g.transform.position, eye.position))} m, roll {F(roll)}";
+            var yp = SN_Layout.YawPitch(layout.position - eye.position);
+            float roll = Vector3.SignedAngle(Vector3.ProjectOnPlane(layout.up, layout.forward), Vector3.ProjectOnPlane(Vector3.up, layout.forward), layout.forward);
+            return $"yaw {F(yp.x)}, pitch {F(yp.y)}, {F(Vector3.Distance(layout.position, eye.position))} m, roll {F(roll)}";
         }
 
         static string F(float f) => f.ToString("0.###", C);

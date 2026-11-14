@@ -260,22 +260,7 @@ public static class PlayerMenuSplitPreview
                 shortcuts.SetContext(camera, true, true);
                 Shot(camera, Path.Combine(shots, "quick-actions.png"));
                 Shot(camera, Path.Combine(shots, "shortcuts.png"));
-                // A closer camera view, not an image crop, makes each rendered symbol inspectable.
-                Vector3 originalAt = shortcuts.transform.position;
-                Quaternion originalRotation = shortcuts.transform.rotation;
-                float originalFov = camera.fieldOfView;
-                camera.fieldOfView = 32f;
-                shortcuts.transform.SetPositionAndRotation(camera.transform.position + camera.transform.forward * .36f, camera.transform.rotation);
-                try
-                {
-                    Shot(camera, Path.Combine(shots, "quick-actions-closeup.png"));
-                    CheckRenderedIcons(shortcuts, camera, Check);
-                }
-                finally
-                {
-                    camera.fieldOfView = originalFov;
-                    shortcuts.transform.SetPositionAndRotation(originalAt, originalRotation);
-                }
+                CheckRenderedIcons(shortcuts, camera, Check);
             }
             shortcuts.gameObject.SetActive(false);
             Check(MenuLook.PlateSprite != null && MenuLook.KeySprite != null, "wrist tag shares dialogue plate and circle sprites");
@@ -322,61 +307,80 @@ public static class PlayerMenuSplitPreview
         var buttons = shortcuts.GetComponentsInChildren<Button>();
         var corners = new Vector3[4];
         var hits = new List<RaycastResult>();
+        var canvas = shortcuts.GetComponentInChildren<Canvas>();
         float aspect = camera.aspect;
         float fov = camera.fieldOfView;
-        Quaternion rotation = camera.transform.rotation;
+        var position = camera.transform.position;
+        var rotation = camera.transform.rotation;
         Rect viewport = camera.rect;
         var originalTarget = camera.targetTexture;
-        var target = RenderTexture.GetTemporary(960, 640, 24);
         try
         {
-            camera.targetTexture = target;
-            foreach (var view in new[] { new Vector2(16f / 9f, 60f), new Vector2(.72f, 38f) })
+            foreach (var size in new[] { new Vector2Int(960, 540), new Vector2Int(432, 600) })
             {
-                camera.rect = new Rect(.07f, .05f, .86f, .89f);
-                camera.aspect = view.x; camera.fieldOfView = view.y;
-                camera.transform.rotation = Quaternion.Euler(15f, 65f, 9f);
-                shortcuts.SetContext(camera, true, true);
-                Canvas.ForceUpdateCanvases();
-                // Edit Mode has no game frame here. Both real UI raycasters discard graphics at depth -1.
-                // Drawing the fixture camera first assigns the canvas depths used by the pointer pass.
-                camera.Render();
-                foreach (var button in buttons)
+                var target = RenderTexture.GetTemporary(size.x, size.y, 24);
+                try
                 {
-                    var image = button.GetComponent<Image>();
-                    check(image.depth >= 0 && !image.canvasRenderer.cull,
-                        button.name + " drawn and raycastable at aspect " + view.x + " (depth " + image.depth + ")");
-                    ((RectTransform)button.transform).GetWorldCorners(corners);
-                    bool inside = corners.Select(camera.WorldToViewportPoint).All(v =>
-                        v.z > 0f && v.x >= .50f && v.x <= .97f && v.y >= .05f && v.y <= .27f);
-                    check(inside, button.name + " inside lower-right viewport at aspect " + view.x);
-
-                    Vector3 center = button.transform.position;
-                    hits.Clear();
-                    mouseRaycaster.Raycast(new PointerEventData(system) { position = camera.WorldToScreenPoint(center) }, hits);
-                    check(hits.Count == 1 && hits[0].gameObject == button.gameObject,
-                        button.name + " independently reached by desktop screen pointer at aspect " + view.x +
-                        " (hits " + string.Join(", ", hits.Select(h => h.gameObject.name)) + ")");
-
-                    Vector3 hand = camera.transform.position + camera.transform.rotation * new Vector3(.15f, -.12f, .12f);
-                    hits.Clear();
-                    handRaycaster.Raycast(new TrackedDeviceEventData(system)
+                    camera.targetTexture = target;
+                    camera.rect = new Rect(.07f, .05f, .86f, .89f);
+                    camera.ResetAspect();
+                    camera.fieldOfView = size.x > size.y ? 60f : 38f;
+                    foreach (bool desktop in new[] { true, false })
                     {
-                        rayPoints = new List<Vector3> { hand, hand + (center - hand).normalized * 2f },
-                        layerMask = 1 << FixtureLayer
-                    }, hits);
-                    check(hits.Count == 1 && hits[0].gameObject == button.gameObject,
-                        button.name + " independently reached by offset tracked-device ray at aspect " + view.x +
-                        " (hits " + string.Join(", ", hits.Select(h => h.gameObject.name)) + ")");
+                        camera.transform.SetPositionAndRotation(position, Quaternion.Euler(15f, 65f, 9f));
+                        shortcuts.SetContext(camera, desktop, true);
+                        string mode = desktop ? "desktop" : "tracked";
+                        string label = mode + " at " + size;
+                        check(canvas.renderMode == (desktop ? RenderMode.ScreenSpaceCamera : RenderMode.WorldSpace) &&
+                            canvas.transform.IsChildOf(camera.transform), label + ": active HUD is attached to the drawing camera");
+
+                        Canvas.ForceUpdateCanvases();
+                        camera.Render(); // Raycasters ignore graphics until their canvas has drawn.
+                        var before = buttons.Select(b => camera.WorldToViewportPoint(b.transform.position)).ToArray();
+                        // A late tracking sample can arrive after every UI callback. Do not step the HUD.
+                        camera.transform.SetPositionAndRotation(position + new Vector3(.28f, .16f, -.12f), Quaternion.Euler(-42f, -57f, 21f));
+                        for (int i = 0; i < buttons.Length; i++)
+                        {
+                            var button = buttons[i];
+                            var center = button.transform.position;
+                            var image = button.GetComponent<Image>();
+                            string name = button.name + " (" + label + ")";
+                            check(image.depth >= 0 && !image.canvasRenderer.cull, name + ": was drawn and is raycastable");
+                            check(Vector3.Distance(camera.WorldToViewportPoint(center), before[i]) < .001f,
+                                name + ": stays at the same viewport coordinate immediately after late camera motion");
+                            ((RectTransform)button.transform).GetWorldCorners(corners);
+                            check(corners.Select(camera.WorldToViewportPoint).All(v =>
+                                v.z > 0f && v.x >= .50f && v.x <= .97f && v.y >= .05f && v.y <= .27f),
+                                name + ": all corners visible in the lower right");
+
+                            hits.Clear();
+                            if (desktop)
+                                mouseRaycaster.Raycast(new PointerEventData(system) { position = camera.WorldToScreenPoint(center) }, hits);
+                            else
+                            {
+                                Vector3 hand = camera.transform.position + camera.transform.rotation * new Vector3(.15f, -.12f, .12f);
+                                handRaycaster.Raycast(new TrackedDeviceEventData(system)
+                                {
+                                    rayPoints = new List<Vector3> { hand, hand + (center - hand).normalized * 2f },
+                                    layerMask = 1 << FixtureLayer
+                                }, hits);
+                            }
+                            check(hits.Count == 1 && hits[0].gameObject == button.gameObject,
+                                name + ": pointer hits only the intended button after the late pose change");
+                        }
+                    }
+                }
+                finally
+                {
+                    camera.targetTexture = originalTarget;
+                    RenderTexture.ReleaseTemporary(target);
                 }
             }
         }
         finally
         {
-            camera.targetTexture = originalTarget;
-            RenderTexture.ReleaseTemporary(target);
             camera.rect = viewport; camera.aspect = aspect; camera.fieldOfView = fov;
-            camera.transform.rotation = rotation;
+            camera.transform.SetPositionAndRotation(position, rotation);
             shortcuts.SetContext(camera, true, true);
         }
     }
@@ -467,7 +471,7 @@ public static class PlayerMenuSplitPreview
             ui.Say("Fixture speaker", words, null);
             ui.SetHint("Instruction", "Move with the left stick");
             ui.Step(1f);
-            var box = ui.GetComponentInChildren<VG_DialogueBox>(true);
+            var box = ui.DisplayCanvas.GetComponentInChildren<VG_DialogueBox>(true);
             var group = box != null ? box.GetComponent<CanvasGroup>() : null;
             check(group != null && group.gameObject.activeInHierarchy && group.alpha > 0 &&
                 box.Labels.Any(t => t.gameObject.activeInHierarchy && t.color.a > 0 && t.text == words) && ui.IsSpeaking,
@@ -477,7 +481,7 @@ public static class PlayerMenuSplitPreview
             check(group != null && (!group.gameObject.activeInHierarchy || Mathf.Approximately(group.alpha, 0)) &&
                 !box.Labels.Any(t => t.gameObject.activeInHierarchy && t.color.a > 0) && ui.IsSpeaking,
                 "Vincent subtitle gate hides actual words but preserves speaking state");
-            check(ui.HintVisible && ui.GetComponentsInChildren<Text>().Any(t => t.gameObject.activeInHierarchy && t.color.a > 0 && t.text.Contains("Move with the left stick")),
+            check(ui.HintVisible && ui.DisplayCanvas.GetComponentsInChildren<Text>().Any(t => t.gameObject.activeInHierarchy && t.color.a > 0 && t.text.Contains("Move with the left stick")),
                 "subtitle-off preserves the visible instruction hint");
             PlayerMenuPreferences.Subtitles = true;
             ui.Step(1f);

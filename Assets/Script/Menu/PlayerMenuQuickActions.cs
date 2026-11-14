@@ -17,6 +17,7 @@ public sealed class PlayerMenuQuickActions : MonoBehaviour
     bool desktop;
     Canvas canvas;
     RectTransform canvasRect;
+    RectTransform row;
     Material overlay;
     readonly Button[] buttons = new Button[3];
     readonly GameObject[] labels = new GameObject[3];
@@ -26,7 +27,6 @@ public sealed class PlayerMenuQuickActions : MonoBehaviour
     XRRayInteractor[] rays = System.Array.Empty<XRRayInteractor>();
     float nextFind;
     int protectedFrame = -1;
-    Vector3 viewOffset;
 
     /// <summary>
     /// Hover/press protection, not a permanently-open menu. The geometric look-ahead is important:
@@ -59,16 +59,38 @@ public sealed class PlayerMenuQuickActions : MonoBehaviour
 
     public void SetContext(Camera camera, bool onDesktop, bool galleryAvailable)
     {
+        if (canvas != null && eyes != null && eyes != camera) VG_CompositorCanvas.Unregister(canvas);
         eyes = camera;
         desktop = onDesktop;
-        if (canvas != null) canvas.worldCamera = camera;
+        if (camera != null)
+        {
+            transform.SetParent(camera.transform, false);
+            transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
+            bool screenHud = desktop && !camera.stereoEnabled;
+            canvas.renderMode = screenHud ? RenderMode.ScreenSpaceCamera : RenderMode.WorldSpace;
+            canvas.worldCamera = camera;
+            canvas.planeDistance = Distance;
+            if (!screenHud)
+            {
+                canvasRect.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
+                // Keep authored distances in metres even when an XR Origin is scaled.
+                var scale = camera.transform.lossyScale;
+                canvasRect.localScale = new Vector3(1f / scale.x, 1f / scale.y, 1f / scale.z);
+                canvasRect.sizeDelta = Vector2.zero;
+            }
+            row.anchorMin = row.anchorMax = screenHud ? new Vector2(.95f, .075f) : new Vector2(.5f, .5f);
+            // An XR camera can be selected before its display starts. The registered presenter
+            // watches for an active headset/session and restores the fallback when it pauses.
+            if (!screenHud) VG_CompositorCanvas.Register(canvas, camera, Distance);
+            else VG_CompositorCanvas.Unregister(canvas);
+        }
         if (buttons[2] != null)
         {
             buttons[2].interactable = galleryAvailable;
             buttons[2].GetComponent<CanvasGroup>().alpha = galleryAvailable ? 1f : 0.45f;
             labels[2].GetComponentInChildren<Text>(true).text = galleryAvailable ? "Gallery" : "Already in Gallery";
         }
-        Position();
+        Layout();
     }
 
     void Build(Camera camera)
@@ -76,13 +98,12 @@ public sealed class PlayerMenuQuickActions : MonoBehaviour
         var go = new GameObject("Canvas", typeof(RectTransform));
         go.transform.SetParent(transform, false);
         canvasRect = (RectTransform)go.transform;
-        canvasRect.sizeDelta = new Vector2(200f, 64f);
-        canvasRect.localScale = Vector3.one * UnitsToMetres;
         canvas = go.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.WorldSpace;
         canvas.worldCamera = camera;
         canvas.sortingOrder = 210;
-        var tracked = go.AddComponent<TrackedDeviceGraphicRaycaster>();
+        row = MakeRect("Shortcuts", canvasRect, Vector2.zero, new Vector2(2f * Spacing + Diameter, Diameter));
+        var tracked = go.AddComponent<VG_CompositorRaycaster>();
         tracked.checkFor2DOcclusion = false;
         tracked.checkFor3DOcclusion = false;
         go.AddComponent<GraphicRaycaster>();
@@ -93,7 +114,7 @@ public sealed class PlayerMenuQuickActions : MonoBehaviour
         for (int i = 0; i < names.Length; i++)
         {
             int index = i;
-            var circle = MakeRect("Quick " + names[i], canvasRect, new Vector2((i - 1) * Spacing, 0f), Vector2.one * Diameter);
+            var circle = MakeRect("Quick " + names[i], row, new Vector2((i - 1) * Spacing, 0f), Vector2.one * Diameter);
             var image = circle.gameObject.AddComponent<Image>();
             image.sprite = MenuLook.KeySprite;
             image.color = Color.white;
@@ -160,16 +181,28 @@ public sealed class PlayerMenuQuickActions : MonoBehaviour
             if (!show) for (int i = 0; i < labels.Length; i++) labels[i].SetActive(false);
         }
         if (!show) return;
-        Position();
+        Layout();
         if (Time.unscaledTime >= nextFind) FindHands();
         if (audioIcon != null) audioIcon.Muted = PlayerMenuPreferences.Muted;
         // Protect the press even when a click closes the panel during this same frame.
         if (PointerCandidate()) protectedFrame = Time.frameCount;
     }
 
-    void Position()
+    void Layout()
     {
         if (eyes == null || canvasRect == null) return;
+        const float rowWidth = 2f * Spacing + Diameter;
+        if (canvas.renderMode == RenderMode.ScreenSpaceCamera)
+        {
+            // Screen Space - Camera owns the projected canvas and moves it with the render camera.
+            // Express the bottom-right inset and target size in canvas units.
+            var size = canvasRect.rect.size;
+            if (size.x <= 0f || size.y <= 0f) return;
+            float scale = Mathf.Min(size.x * .39f / rowWidth, size.y * .07f / Diameter);
+            row.localScale = Vector3.one * scale;
+            row.anchoredPosition3D = new Vector3(-rowWidth * .5f * scale, Diameter * .5f * scale, 0f);
+            return;
+        }
         // Measure the actual projections, including shifted lenses, portrait windows and both views of a headset.
         Rect bounds = ViewBounds(eyes.stereoEnabled ? Camera.MonoOrStereoscopicEye.Left : Camera.MonoOrStereoscopicEye.Mono);
         if (eyes.stereoEnabled)
@@ -179,11 +212,11 @@ public sealed class PlayerMenuQuickActions : MonoBehaviour
                 Mathf.Min(bounds.xMax, other.xMax), Mathf.Min(bounds.yMax, other.yMax));
         }
         if (bounds.width <= 0f || bounds.height <= 0f) return;
-        const float rowWidth = 2f * Spacing + Diameter;
-        float scale = Mathf.Min(UnitsToMetres, Mathf.Min(bounds.width * .44f / rowWidth, bounds.height * .09f / Diameter));
-        canvasRect.localScale = Vector3.one * scale;
-        viewOffset = new Vector3(bounds.xMax - rowWidth * scale * .5f, bounds.yMin + Diameter * scale * .5f, Distance);
-        ApplyPose();
+        float metres = Mathf.Min(UnitsToMetres, Mathf.Min(bounds.width * .44f / rowWidth, bounds.height * .09f / Diameter));
+        row.localScale = Vector3.one * metres;
+        // A local plane is raycastable by XRI. Parenting it to the tracked camera applies every
+        // subsequent pose change natively, including changes after Update / LateUpdate.
+        row.localPosition = new Vector3(bounds.xMax - rowWidth * metres * .5f, bounds.yMin + Diameter * metres * .5f, Distance);
     }
 
     Rect ViewBounds(Camera.MonoOrStereoscopicEye eye)
@@ -204,15 +237,6 @@ public sealed class PlayerMenuQuickActions : MonoBehaviour
             var direction = local * ray.direction;
             return start + direction * ((Distance - start.z) / direction.z);
         }
-    }
-
-    void OnEnable() => Application.onBeforeRender += ApplyPose;
-    void OnDisable() => Application.onBeforeRender -= ApplyPose;
-    void LateUpdate() => ApplyPose();
-    void ApplyPose()
-    {
-        if (eyes == null || canvas == null || !canvas.gameObject.activeSelf) return;
-        transform.SetPositionAndRotation(eyes.transform.position + eyes.transform.rotation * viewOffset, eyes.transform.rotation);
     }
 
     void FindHands()
@@ -309,6 +333,7 @@ public sealed class PlayerMenuQuickActions : MonoBehaviour
 
     void OnDestroy()
     {
+        if (canvas != null) VG_CompositorCanvas.Unregister(canvas);
         if (overlay == null) return;
         if (Application.isPlaying) Destroy(overlay); else DestroyImmediate(overlay);
     }

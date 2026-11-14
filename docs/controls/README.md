@@ -23,11 +23,11 @@ Gallery uses Cici's new arch, corridor and hanging order: Self-portrait, The Bed
 
 ## Full guide and shared UI
 
-`Resources/EntranceControllerGuide` retains its asset GUID. Its component instantiates `Assets/Shared/UI/Prefabs/VG_DialogueUI.prefab`, with the actual Vincent font, box, name tab, star, key circle, materials and settings. Previous / Next / Close use those same assets. The Entrance shows the original controller illustration after room selection. Continue starts the story intro. When Gallery first becomes visible, the full guide opens once per play session. Continue closes it in place. Menu → Controls reopens it in the current scene.
+`Resources/EntranceControllerGuide` retains its asset GUID. Its component instantiates `Assets/Shared/UI/Prefabs/VG_DialogueUI.prefab`, with the actual Vincent font, box, name tab, star, key circle, materials and settings. Previous / Next / Close use those same assets. Start and Join in Entrance take the player straight into the story intro. When Gallery first becomes visible, the full guide opens once per play session. Continue closes it in place. Menu → Controls reopens it in the current scene.
 
-The first-use view instantiates the same complete dialogue UI. In every scene, including Gallery, it uses `FollowHead = true` and `LockToView = true`: the complete black/gold box and hint remain at a constant lower-view position, immediately following yaw, pitch, roll and movement without a dead zone or easing. Eligibility, gaze targets and completion still come from the real scene adapters; object anchors no longer move or resize the displayed instruction. The box is centred horizontally with its top 32% up from the bottom. It shrinks when needed to keep its artwork and navigation inside a narrow viewport.
+The guide, Vincent subtitles, first-use prompts and Starry Night story dialogue share the Vincent artwork. The top edge of the dialogue box is centred horizontally, 32% up from the bottom of the view. Navigation scales to fit a narrow viewport. Arrival and pedestal hints use a separate lower-view anchor and yield while dialogue or instructions are showing.
 
-Immediate lower-view placement is the default of `VG_DialogueUI` and `VG_FollowGroup`. It covers Vincent's captions in Gallery and paintings, Starry Night's story hints/dialogue, arrival and legacy pedestal instructions, and the eleven-page Controls guide. Arrival and pedestal hints yield immediately to existing dialogue or instructions; only one eligible pedestal hint can show. The shared sprites, fonts, colours, sizes, paging and speech timing are unchanged. Interactive player menus, painting Enter/Back and detail cards, wall labels and wrist tags keep their respective placement rules. Physical placement, Controls ray targeting and readability still require a Quest review.
+Desktop draws the HUD on a screen-space canvas. On Quest, the same UI is drawn to a transparent texture and submitted in the OpenXR headset's VIEW space. The controller ray targets the corresponding interactive surface. The camera-attached canvas remains visible while the headset layer initializes or if it becomes unavailable. World objects, including painting detail cards, retain their own placement. Scene triggers, gaze eligibility and completion still come from the scene adapters.
 
 ## First-use rules (PDF page 5)
 
@@ -69,7 +69,7 @@ Reports go to `Logs/Controls/`; renders to `Logs/Controls/Images/`. These are lo
 
 ## Quest acceptance still needed
 
-1. From Entrance, start or join a room. Check that the original controller illustration appears, then press Continue. Try both watching the intro and pressing Skip. Gold should fill both eyes from its first frame. On the first Gallery visit, close the guide and return later to confirm it stays closed.
+1. From Entrance, start a new room or join an existing one. Confirm the story intro starts immediately on both paths. Try both watching the intro and pressing Skip. Gold should fill both eyes from its first frame. On the first Gallery visit, close the guide and return later to confirm it stays closed.
 2. In Entrance, Gallery, PaintedBedroom, StarryNight and CafeTerrace, use ≡ Menu → Controls. Click Previous / Next / Close with each ray; closing must keep the same scene and position.
 3. Press and hold Ⓐ in each scene: no jump or other action. Verify left-stick movement, smooth turn and teleport still work.
 4. In a new session, move 2 m in Gallery. The hint ends and stays completed after leaving and returning. Head rotation alone must not complete it.

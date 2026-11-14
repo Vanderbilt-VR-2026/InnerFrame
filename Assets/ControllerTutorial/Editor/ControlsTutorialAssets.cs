@@ -12,10 +12,27 @@ using UnityEngine.XR.Interaction.Toolkit.Locomotion.Jump;
 public static class ControlsTutorialAssets
 {
     public const string GuidePath = "Assets/ControllerTutorial/Resources/EntranceControllerGuide.prefab";
+    public const string DiagramPath = "Assets/ControllerTutorial/Art/Controllers.png";
     public const string DialoguePath = "Assets/Shared/UI/Prefabs/VG_DialogueUI.prefab";
     public const string RigPath = "Assets/Samples/XR Interaction Toolkit/3.3.2/Starter Assets/Prefabs/XR Origin (XR Rig).prefab";
     public const string ActionsPath = "Assets/Samples/XR Interaction Toolkit/3.3.2/Starter Assets/XRI Default Input Actions.inputactions";
     public const string LegacyPath = "Assets/ControllerTutorial/Resources/ControllerTutorial.prefab";
+
+    [MenuItem("InnerFrame/Controls/Bind original Entrance diagram")]
+    public static void BindEntranceDiagram()
+    {
+        var diagram = AssetDatabase.LoadAssetAtPath<Texture2D>(DiagramPath);
+        var resource = AssetDatabase.LoadAssetAtPath<EntranceControllerGuide>(GuidePath);
+        if (diagram == null || resource == null) throw new InvalidOperationException("Missing original controller art or guide prefab.");
+        if (resource.entranceDiagram == diagram) return;
+        var root = PrefabUtility.LoadPrefabContents(GuidePath);
+        try
+        {
+            root.GetComponent<EntranceControllerGuide>().entranceDiagram = diagram;
+            PrefabUtility.SaveAsPrefabAsset(root, GuidePath);
+        }
+        finally { PrefabUtility.UnloadPrefabContents(root); }
+    }
 
     [MenuItem("InnerFrame/Controls/Prepare assets")]
     public static void Prepare()
@@ -28,7 +45,9 @@ public static class ControlsTutorialAssets
         var guide = new GameObject("EntranceControllerGuide", typeof(RectTransform));
         try
         {
-            guide.AddComponent<EntranceControllerGuide>().dialoguePrefab = shared;
+            var component = guide.AddComponent<EntranceControllerGuide>();
+            component.dialoguePrefab = shared;
+            component.entranceDiagram = AssetDatabase.LoadAssetAtPath<Texture2D>(DiagramPath);
             PrefabUtility.SaveAsPrefabAsset(guide, GuidePath);
         }
         finally { UnityEngine.Object.DestroyImmediate(guide); }

@@ -21,13 +21,14 @@ namespace InnerFrame.Entrance
         readonly List<string> passed = new List<string>();
         string folder;
         float deadline;
+        public bool GoldOnly { get; set; }
         void Start()
         {
             DontDestroyOnLoad(gameObject);
-            folder = Path.GetFullPath(Path.Combine(Application.dataPath,"../../verification"));
+            folder = GoldOnly ? Path.GetFullPath("Logs/GalleryGold") : Path.GetFullPath(Path.Combine(Application.dataPath,"../../verification"));
             Directory.CreateDirectory(folder);
             deadline = Time.realtimeSinceStartup + 240f;
-            StartCoroutine(Guard(Run()));
+            StartCoroutine(Guard(GoldOnly ? CheckGalleryGold() : Run()));
         }
         void Update()
         {
@@ -61,6 +62,72 @@ namespace InnerFrame.Entrance
             menu.ReviewClick(name);
             Check(audioDirector.ClickCount==before+1, name+" emits exactly one click");
             yield return null;
+        }
+
+        IEnumerator CheckGalleryGold()
+        {
+            foreach (bool skip in new[] { false, true })
+            {
+                if (NetworkSession.Instance != null) Destroy(NetworkSession.Instance.gameObject);
+                if (skip || SceneManager.GetActiveScene().path != "Assets/Entrance/Scenes/Entrance.unity")
+                    yield return SceneManager.LoadSceneAsync("Assets/Entrance/Scenes/Entrance.unity");
+                menu = null;
+                yield return Ready();
+                foreach (string button in new[] { "Begin sign", "Boy portrait", "Enter the Story sign", "New Room sign", "Start sign", "Continue" })
+                    yield return Click(button);
+                if (skip) yield return Click("Skip intro sign");
+                float limit = Time.realtimeSinceStartup + 32f;
+                while (menu != null && menu.IntroBeat != 4 && Time.realtimeSinceStartup < limit) yield return null;
+
+                string route = skip ? "skip" : "full";
+                var fader = SceneFader.Instance;
+                Check(menu != null && menu.IntroBeat == 4 && fader.IsTransitioning && fader.Coverage >= .999f,
+                    route + ": gold starts at full opacity on the persistent scene fader");
+                Check(menu.GetComponentsInChildren<RawImage>(true).All(image => image.canvas == null || !image.canvas.enabled) &&
+                    menu.GetComponentsInChildren<RawImage>(true).All(image => image.texture == null || image.texture.name != "Entrance radial gold light"),
+                    route + ": the entrance canvas and paper never render the gold stage");
+                var eye = menu.ViewingCamera;
+                var rotation = eye.transform.rotation;
+                try
+                {
+                    CheckGoldPixels(eye, route + "-front");
+                    eye.transform.rotation = rotation * Quaternion.Euler(-25f, 175f, 10f);
+                    CheckGoldPixels(eye, route + "-reverse");
+                }
+                finally { eye.transform.rotation = rotation; }
+
+                limit = Time.realtimeSinceStartup + 28f;
+                while (fader.IsTransitioning && Time.realtimeSinceStartup < limit)
+                {
+                    if (SceneManager.GetActiveScene().name == "Entrance" && fader.Coverage < .999f)
+                        throw new Exception(route + ": gold became transparent again before the Gallery reveal");
+                    yield return null;
+                }
+                Check(!fader.IsTransitioning && fader.LastFailure == null && fader.Coverage <= .001f &&
+                    SceneManager.GetActiveScene().name == "Gallery", route + ": reveal finishes in the actual Gallery");
+            }
+            Finish(true, "Both Entrance routes rendered opaque gold in front and reverse views, then revealed Gallery.");
+        }
+
+        void CheckGoldPixels(Camera eye, string view)
+        {
+            // Probe the actual camera output; the old rectangular card leaves the reverse view uncovered.
+            const int width = 256, height = 160;
+            var target = RenderTexture.GetTemporary(width, height, 24, RenderTextureFormat.ARGB32);
+            var previous = RenderTexture.active;
+            var image = new Texture2D(width, height, TextureFormat.RGB24, false);
+            try
+            {
+                RenderPipeline.SubmitRenderRequest(eye, new RenderPipeline.StandardRequest { destination = target });
+                RenderTexture.active = target;
+                image.ReadPixels(new Rect(0, 0, width, height), 0, 0);
+                image.Apply();
+                File.WriteAllBytes(Path.Combine(folder, view + ".png"), image.EncodeToPNG());
+                var pixels = image.GetPixels32();
+                int gold = pixels.Count(c => c.r >= 55 && c.r > c.g + 6 && c.g > c.b + 8);
+                Check(gold >= pixels.Length * .985f, view + ": rendered gold covers the view (" + gold + "/" + pixels.Length + " pixels)");
+            }
+            finally { RenderTexture.active = previous; RenderTexture.ReleaseTemporary(target); Destroy(image); }
         }
         IEnumerator Run()
         {
@@ -104,7 +171,11 @@ namespace InnerFrame.Entrance
             yield return new WaitForSecondsRealtime(12.3f);
             Check(audioDirector.ClickCount==before && audioDirector.CurrentCue=="Opening / selection","Selection can wait through a full music loop without extra clicks");
             yield return Click("Join sign");
-            Check(menu.CurrentPage==5,"Controller tutorial opens before the intro");
+            var diagram = menu.GetComponentsInChildren<Image>().SingleOrDefault(i => i.name == "Original controller diagram");
+            var resource = Resources.Load<Tutorial.EntranceControllerGuide>("EntranceControllerGuide");
+            Check(menu.CurrentPage == 5 && resource != null && resource.entranceDiagram != null &&
+                diagram != null && diagram.sprite.texture == resource.entranceDiagram && !Tutorial.EntranceControllerGuide.IsOpen,
+                "Join shows the original controller diagram with Continue before the intro");
             yield return Click("Continue");
             Check(audioDirector.CurrentCue=="Landing 1","Landing 1 switches on actual Start/Join");
             bool heardWriting=false;
@@ -120,9 +191,8 @@ namespace InnerFrame.Entrance
                 "Title advances directly to gold and writing stops");
             Check(audioDirector.CurrentCue=="Gold transition","Gold cue starts on gold flash");
             float goldStarted=Time.realtimeSinceStartup;
-            while(menu!=null && !SceneFader.Instance.IsTransitioning) yield return null;
-            float goldHold=Time.realtimeSinceStartup-goldStarted;
-            Check(goldHold>=.9f && goldHold<1.5f,"Gold prelude lasts about 1.1 seconds (half duration)");
+            Check(SceneFader.Instance.IsTransitioning && SceneFader.Instance.Coverage >= .999f,
+                "The first gold frame already fills the environment");
             Shot("03-Direct-Gold.png");
             Check(audioDirector.GetComponents<AudioSource>().All(source=>Mathf.Approximately(source.pitch,1f)),
                 "Shorter music transitions keep original playback pitch and speed");
@@ -292,7 +362,8 @@ namespace InnerFrame.Entrance
             File.WriteAllText(Path.Combine(folder,"CHECKS.txt"),(success?"PASS\n":"FAIL\n")+string.Join("\n",passed)+"\n"+detail);
             Debug.Log("[AudioGold Check] "+(success?"PASS ":"FAIL ")+detail);
             enabled=false;
-            EditorApplication.Exit(success?0:1);
+            if (GoldOnly) EditorApplication.isPlaying = false;
+            else EditorApplication.Exit(success?0:1);
         }
     }
 }

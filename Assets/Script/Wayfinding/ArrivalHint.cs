@@ -48,7 +48,7 @@ public class ArrivalHint : MonoBehaviour
 
         yield return new WaitForSecondsRealtime(SettleSeconds);
         float waited = 0f;
-        while (WayfindingHint.InstructionBusy() && !PlayerMenu.MenuOpen && !EntranceControllerGuide.IsOpen && waited < MaxWait)
+        while (WayfindingHint.InstructionBusy() && !PlayerMenu.ModalOpen && !EntranceControllerGuide.IsOpen && waited < MaxWait)
         { waited += Time.unscaledDeltaTime; yield return null; }
         if (WayfindingHint.InstructionBusy()) { Finish(true); yield break; }   // never compete with existing dialogue/instructions after the wait limit
 

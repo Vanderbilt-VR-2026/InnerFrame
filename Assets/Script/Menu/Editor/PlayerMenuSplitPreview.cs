@@ -5,6 +5,7 @@ using System.Linq;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using UnityEngine.XR.Interaction.Toolkit.UI;
@@ -246,6 +247,7 @@ public static class PlayerMenuSplitPreview
             shortcuts.SetContext(camera, true, true);
             Check(quickGallery != null && quickGallery.interactable, "Gallery shortcut is enabled in a painting context");
             SetLayer(shortcuts.transform, FixtureLayer);
+            CheckShortcutTargets(shortcuts, camera, Check);
             Canvas.ForceUpdateCanvases();
             DiagnoseIcons(shortcuts, assertions);
             if (shots != null)
@@ -311,6 +313,73 @@ public static class PlayerMenuSplitPreview
     { var text = button.GetComponentInChildren<Text>(true); return text != null ? text.text : ""; }
     static void SetLayer(Transform root, int layer)
     { foreach (var child in root.GetComponentsInChildren<Transform>(true)) child.gameObject.layer = layer; }
+
+    static void CheckShortcutTargets(PlayerMenuQuickActions shortcuts, Camera camera, Action<bool, string> check)
+    {
+        var system = EventSystem.current != null ? EventSystem.current : new GameObject("Shortcut test events").AddComponent<EventSystem>();
+        var mouseRaycaster = shortcuts.GetComponentInChildren<GraphicRaycaster>();
+        var handRaycaster = shortcuts.GetComponentInChildren<TrackedDeviceGraphicRaycaster>();
+        var buttons = shortcuts.GetComponentsInChildren<Button>();
+        var corners = new Vector3[4];
+        var hits = new List<RaycastResult>();
+        float aspect = camera.aspect;
+        float fov = camera.fieldOfView;
+        Quaternion rotation = camera.transform.rotation;
+        Rect viewport = camera.rect;
+        var originalTarget = camera.targetTexture;
+        var target = RenderTexture.GetTemporary(960, 640, 24);
+        try
+        {
+            camera.targetTexture = target;
+            foreach (var view in new[] { new Vector2(16f / 9f, 60f), new Vector2(.72f, 38f) })
+            {
+                camera.rect = new Rect(.07f, .05f, .86f, .89f);
+                camera.aspect = view.x; camera.fieldOfView = view.y;
+                camera.transform.rotation = Quaternion.Euler(15f, 65f, 9f);
+                shortcuts.SetContext(camera, true, true);
+                Canvas.ForceUpdateCanvases();
+                // Edit Mode has no game frame here. Both real UI raycasters discard graphics at depth -1.
+                // Drawing the fixture camera first assigns the canvas depths used by the pointer pass.
+                camera.Render();
+                foreach (var button in buttons)
+                {
+                    var image = button.GetComponent<Image>();
+                    check(image.depth >= 0 && !image.canvasRenderer.cull,
+                        button.name + " drawn and raycastable at aspect " + view.x + " (depth " + image.depth + ")");
+                    ((RectTransform)button.transform).GetWorldCorners(corners);
+                    bool inside = corners.Select(camera.WorldToViewportPoint).All(v =>
+                        v.z > 0f && v.x >= .50f && v.x <= .97f && v.y >= .05f && v.y <= .27f);
+                    check(inside, button.name + " inside lower-right viewport at aspect " + view.x);
+
+                    Vector3 center = button.transform.position;
+                    hits.Clear();
+                    mouseRaycaster.Raycast(new PointerEventData(system) { position = camera.WorldToScreenPoint(center) }, hits);
+                    check(hits.Count == 1 && hits[0].gameObject == button.gameObject,
+                        button.name + " independently reached by desktop screen pointer at aspect " + view.x +
+                        " (hits " + string.Join(", ", hits.Select(h => h.gameObject.name)) + ")");
+
+                    Vector3 hand = camera.transform.position + camera.transform.rotation * new Vector3(.15f, -.12f, .12f);
+                    hits.Clear();
+                    handRaycaster.Raycast(new TrackedDeviceEventData(system)
+                    {
+                        rayPoints = new List<Vector3> { hand, hand + (center - hand).normalized * 2f },
+                        layerMask = 1 << FixtureLayer
+                    }, hits);
+                    check(hits.Count == 1 && hits[0].gameObject == button.gameObject,
+                        button.name + " independently reached by offset tracked-device ray at aspect " + view.x +
+                        " (hits " + string.Join(", ", hits.Select(h => h.gameObject.name)) + ")");
+                }
+            }
+        }
+        finally
+        {
+            camera.targetTexture = originalTarget;
+            RenderTexture.ReleaseTemporary(target);
+            camera.rect = viewport; camera.aspect = aspect; camera.fieldOfView = fov;
+            camera.transform.rotation = rotation;
+            shortcuts.SetContext(camera, true, true);
+        }
+    }
     static bool TextFits(Text text) => text.preferredHeight <= text.rectTransform.rect.height + 3f &&
         (text.horizontalOverflow == HorizontalWrapMode.Wrap || text.preferredWidth <= text.rectTransform.rect.width + 3f);
     static void DiagnoseIcons(PlayerMenuQuickActions shortcuts, List<string> assertions)

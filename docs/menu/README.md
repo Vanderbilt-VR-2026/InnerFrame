@@ -27,16 +27,17 @@ or shared XR setup needs another menu instance.
 | Grip on title bar | Moves the world-space panel; it stays upright and faces the camera while dragged |
 
 The panel opens 1.05 m ahead in VR (1.1 m on desktop), within the existing
-2 m controller UI ray. Shortcuts follow the lower-right camera view; hover
-shows the label. They hide while the full tutorial or a scene fade is active.
-The shared menu modal flag includes active UI pointer focus and a short
-closing-click guard so that a shortcut click is not passed to a painting
-behind it. The mere presence of the shortcuts is not modal.
+2 m controller UI ray. The three shortcuts sit in the lower-right corner
+of the Gallery and paintings, including while Vincent speaks or the full
+guide is open. Opening a shortcut from the guide preserves the current page.
+Closing its panel restores that page. Gallery is dimmed at home. Hovering a
+shortcut shows its label and keeps the pointer from selecting artwork behind it.
+The Entrance and scene fades hide the shortcuts.
 
-In Editor Play Mode, focus Game and press M to free the mouse and use the
-buttons. The menu still supports tracked controller UI rays and the title-bar
-XR grab handle. No A binding is added. Physical headset placement, ray use and
-comfort remain acceptance tests, not claims based on Editor renders.
+In Editor Play Mode, click a shortcut with a free mouse. While using mouse
+look, hold Tab to point and click. Releasing Tab returns control to the
+previous mouse mode after any opened panel closes. M opens the full menu.
+VR uses the tracked controller rays and the title-bar grip handle.
 
 ## Preferences and limits
 

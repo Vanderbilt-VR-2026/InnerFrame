@@ -23,9 +23,9 @@ Gallery uses Cici's new arch, corridor and hanging order: Self-portrait, The Bed
 
 ## Full guide and shared UI
 
-`Resources/EntranceControllerGuide` retains its asset GUID. Its component instantiates `Assets/Shared/UI/Prefabs/VG_DialogueUI.prefab`, with the actual Vincent font, box, name tab, star, key circle, materials and settings. Previous / Next / Close use those same assets. The Entrance supplies the existing intro continuation; Player Menu supplies no scene transition. The Menu button can also close Controls.
+`Resources/EntranceControllerGuide` retains its asset GUID. Its component instantiates `Assets/Shared/UI/Prefabs/VG_DialogueUI.prefab`, with the actual Vincent font, box, name tab, star, key circle, materials and settings. Previous / Next / Close use those same assets. The Entrance shows the original controller illustration after room selection. Continue starts the story intro. When Gallery first becomes visible, the full guide opens once per play session. Continue closes it in place. Menu → Controls reopens it in the current scene.
 
-The first-use view instantiates the same complete dialogue UI. In every scene, including Gallery, it uses `FollowHead = true` and `LockToView = true`: the complete black/gold box and hint remain at a constant lower-view position, immediately following yaw, pitch, roll and movement without a dead zone or easing. Eligibility, gaze targets and completion still come from the real scene adapters; object anchors no longer move or resize the displayed instruction. The reused view keeps the same angular size after scene changes.
+The first-use view instantiates the same complete dialogue UI. In every scene, including Gallery, it uses `FollowHead = true` and `LockToView = true`: the complete black/gold box and hint remain at a constant lower-view position, immediately following yaw, pitch, roll and movement without a dead zone or easing. Eligibility, gaze targets and completion still come from the real scene adapters; object anchors no longer move or resize the displayed instruction. The box is centred horizontally with its top 32% up from the bottom. It shrinks when needed to keep its artwork and navigation inside a narrow viewport.
 
 Immediate lower-view placement is the default of `VG_DialogueUI` and `VG_FollowGroup`. It covers Vincent's captions in Gallery and paintings, Starry Night's story hints/dialogue, arrival and legacy pedestal instructions, and the eleven-page Controls guide. Arrival and pedestal hints yield immediately to existing dialogue or instructions; only one eligible pedestal hint can show. The shared sprites, fonts, colours, sizes, paging and speech timing are unchanged. Interactive player menus, painting Enter/Back and detail cards, wall labels and wrist tags keep their respective placement rules. Physical placement, Controls ray targeting and readability still require a Quest review.
 
@@ -41,7 +41,7 @@ Immediate lower-view placement is the default of `VG_DialogueUI` and `VG_FollowG
 
 The local `TutorialManager` survives scene changes. It holds a `TutorialSession` in memory; completed lessons stay completed until the next play session. No completion state is saved to disk. Available requests are ordered by first availability; only one can be shown. Unavailable, disabled and destroyed sources are withdrawn. A successful action can complete a lesson before its hint appears.
 
-Vincent's speech, listening/thinking/error states, existing task instructions, arrival/entrance hints, open artwork cards, Gallery painting menus, scene fades and Player Menu take priority. First-use UI hides immediately when blocked, then resumes if still relevant. The idle B reminder in `VanGoghCaption` yields while a first-use request is available and returns afterwards; mirror instructions and conversation state remain owned by Vincent. Existing Starry Night story/B reminders remain owned by its conversation system. If Entrance opens a guide already opened from Menu, it promotes that same guide to Continue and retains the intro callback.
+Vincent's speech, listening/thinking/error states, existing task instructions, arrival/entrance hints, open artwork cards, Gallery painting menus, scene fades and Player Menu take priority. First-use UI hides immediately when blocked, then resumes if still relevant. The idle B reminder in `VanGoghCaption` yields while a first-use request is available and returns afterwards; mirror instructions and conversation state remain owned by Vincent. Existing Starry Night story/B reminders remain owned by its conversation system. Hovering over a shortcut keeps the current dialogue visible. Choosing Audio during the guide opens the volume control and closing it returns to the same guide page.
 
 ## Connecting unfinished interactions
 
@@ -69,7 +69,7 @@ Reports go to `Logs/Controls/`; renders to `Logs/Controls/Images/`. These are lo
 
 ## Quest acceptance still needed
 
-1. From Entrance, complete or skip Controls and confirm the normal intro continues.
+1. From Entrance, start or join a room. Check that the original controller illustration appears, then press Continue. Try both watching the intro and pressing Skip. Gold should fill both eyes from its first frame. On the first Gallery visit, close the guide and return later to confirm it stays closed.
 2. In Entrance, Gallery, PaintedBedroom, StarryNight and CafeTerrace, use ≡ Menu → Controls. Click Previous / Next / Close with each ray; closing must keep the same scene and position.
 3. Press and hold Ⓐ in each scene: no jump or other action. Verify left-stick movement, smooth turn and teleport still work.
 4. In a new session, move 2 m in Gallery. The hint ends and stays completed after leaving and returning. Head rotation alone must not complete it.

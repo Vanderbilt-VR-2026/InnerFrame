@@ -63,7 +63,12 @@ public static class ControlsTutorialChecks
 
     static void ScenesAndGuide()
     {
+        typeof(EntranceControllerGuide).GetMethod("ResetStatic", BindingFlags.Static | BindingFlags.NonPublic).Invoke(null, null);
         Check(AssetDatabase.LoadAssetAtPath<GameObject>(ControlsTutorialAssets.LegacyPath) == null, "unused legacy prefab removed");
+        var guidePrefab = Resources.Load<EntranceControllerGuide>("EntranceControllerGuide");
+        var originalArt = AssetDatabase.LoadAssetAtPath<Texture2D>(ControlsTutorialAssets.DiagramPath);
+        Check(originalArt != null && guidePrefab != null && guidePrefab.entranceDiagram == originalArt,
+            "Entrance resource references the original 600 × 500 controller illustration");
         var template = AssetDatabase.LoadAssetAtPath<VG_DialogueUI>(ControlsTutorialAssets.DialoguePath);
         foreach (var entry in EditorBuildSettings.scenes.Where(s => s.enabled))
         {
@@ -77,6 +82,66 @@ public static class ControlsTutorialChecks
             Check(missing == 0, scene.name + ": no missing scripts");
             var menu = new GameObject("Menu fixture").AddComponent<PlayerMenu>();
             Call(menu, "Awake");
+            var manager = new GameObject("First Gallery guide check").AddComponent<TutorialManager>();
+            if (scene.name == PaintingNames.Gallery)
+            {
+                menu.OpenPage(PlayerMenuPage.Audio);
+                Call(manager, "TryOpenFirstGalleryGuide");
+                Check(!EntranceControllerGuide.IsOpen && !EntranceControllerGuide.ShownInGalleryThisSession,
+                    "first Gallery guide waits for an open player menu to close");
+                menu.Toggle();
+                Call(manager, "TryOpenFirstGalleryGuide");
+                var startup = EntranceControllerGuide.Current;
+                Check(startup != null && startup.PageIndex == 0 && EntranceControllerGuide.ShownInGalleryThisSession,
+                    "first unobstructed Gallery visit opens the full guide on its first page");
+                if (startup != null)
+                {
+                    var camera = startup.View.Head.GetComponent<Camera>();
+                    float fieldOfView = camera.fieldOfView, aspect = camera.aspect;
+                    try
+                    {
+                        camera.fieldOfView = 38f; camera.aspect = .72f;
+                        startup.View.Snap();
+                        var corners = new Vector3[4];
+                        var actions = startup.GetComponentsInChildren<Button>();
+                        bool visible = actions.Length == 3;
+                        foreach (var action in actions)
+                        {
+                            ((RectTransform)action.transform).GetWorldCorners(corners);
+                            visible &= corners.Select(camera.WorldToViewportPoint).All(p => p.z > 0f &&
+                                p.x >= .02f && p.x <= .98f && p.y >= .02f && p.y <= .98f);
+                        }
+                        Check(visible, "arrival guide Previous, Next and Continue fit a narrow 38-degree portrait view");
+                    }
+                    finally { camera.fieldOfView = fieldOfView; camera.aspect = aspect; startup.View.Snap(); }
+                    startup.ShowPage(1);
+                    menu.OpenAudioQuick();
+                    var shortcutPanel = Object.FindAnyObjectByType<PlayerMenuPanel>();
+                    Check(!EntranceControllerGuide.IsOpen && shortcutPanel != null && shortcutPanel.IsQuickAudio && PlayerMenu.ModalOpen,
+                        "Audio suspends the first Gallery guide and opens the compact volume panel");
+                    menu.Toggle();
+                    Check(EntranceControllerGuide.IsOpen && EntranceControllerGuide.Current == startup && startup.PageIndex == 1,
+                        "closing compact Audio restores the same Gallery guide and page");
+                    menu.OpenPage(PlayerMenuPage.Controls);
+                    Check(!EntranceControllerGuide.IsOpen && shortcutPanel != null && !shortcutPanel.IsQuickAudio &&
+                        shortcutPanel.CurrentPage == PlayerMenuPage.Controls,
+                        "Menu from inside the Gallery guide opens the full two-column Controls page");
+                    menu.OpenControls();
+                    Check(EntranceControllerGuide.IsOpen && EntranceControllerGuide.Current == startup && startup.PageIndex == 1,
+                        "reopening Controls from the panel resumes the suspended page");
+                    var finish = startup.GetComponentsInChildren<Button>().Single(b => b.name == "Continue");
+                    finish.onClick.Invoke();
+                }
+                Call(manager, "TryOpenFirstGalleryGuide");
+                Check(!EntranceControllerGuide.IsOpen && SceneManager.GetActiveScene() == scene,
+                    "finishing the arrival guide stays in Gallery and subsequent updates do not reopen it");
+            }
+            else
+            {
+                Call(manager, "TryOpenFirstGalleryGuide");
+                Check(!EntranceControllerGuide.IsOpen, scene.name + ": no automatic Gallery guide before or outside Gallery");
+            }
+            Object.DestroyImmediate(manager.gameObject);
             menu.Toggle();
             var panel = Object.FindAnyObjectByType<PlayerMenuPanel>();
             var controls = panel.GetComponentsInChildren<Button>().Single(b => b.GetComponentInChildren<Text>().text == "Controls");
@@ -116,6 +181,14 @@ public static class ControlsTutorialChecks
             Call(menu, "OnDestroy");
             Object.DestroyImmediate(menu.gameObject);
         }
+        var returned = EditorSceneManager.OpenScene("Assets/Scenes/Gallery.unity");
+        var returningMenu = new GameObject("Returning player menu").AddComponent<PlayerMenu>(); Call(returningMenu, "Awake");
+        var returningManager = new GameObject("Returning Gallery visitor").AddComponent<TutorialManager>();
+        Call(returningManager, "TryOpenFirstGalleryGuide");
+        Check(EntranceControllerGuide.ShownInGalleryThisSession && !EntranceControllerGuide.IsOpen && SceneManager.GetActiveScene() == returned,
+            "loading the Gallery scene again in the same session does not open a second arrival guide");
+        Call(returningMenu, "OnDestroy"); Object.DestroyImmediate(returningMenu.gameObject);
+        Object.DestroyImmediate(returningManager.gameObject);
     }
 
     static void CheckPages(EntranceControllerGuide guide)
@@ -154,15 +227,8 @@ public static class ControlsTutorialChecks
             }
         }
         camera.fieldOfView = fieldOfView;
-        int continued = 0;
-        var promoted = EntranceControllerGuide.Open(Camera.main, () => continued++, true);
-        Check(promoted == guide && guide.GetComponentsInChildren<Button>().Any(b => b.name == "Continue") && continued == 0,
-            "entry promotes an already-open Menu guide to Continue without advancing the story");
-        EntranceControllerGuide.Open(Camera.main);
-        guide.GetComponentsInChildren<Button>().Single(b => b.name == "Continue").onClick.Invoke();
-        Check(continued == 1, "later Menu open preserves entry continuation and Continue calls it exactly once");
-        // Leave a guide open for the caller's Menu-close check.
-        EntranceControllerGuide.Open(Camera.main);
+        Check(EntranceControllerGuide.Open(camera) == guide && guide.PageIndex == ControlsCatalog.Guide.Length - 1,
+            "opening Controls while already visible preserves the same guide and current page");
     }
 
     public static bool RunInputInPlayMode()

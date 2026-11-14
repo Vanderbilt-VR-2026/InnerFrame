@@ -18,6 +18,7 @@ public class PlayerMenu : MonoBehaviour
     InputAction toggle;
     PlayerMenuPanel panel;
     PlayerMenuQuickActions quick;
+    EntranceControllerGuide suspendedGuide;
     Camera eyes;
     bool desktop, wasOpenOnDesktop, leaving;
     CursorLockMode lockBeforeMenu;
@@ -53,7 +54,7 @@ public class PlayerMenu : MonoBehaviour
         // These views belong to the loaded scene. Never retain its old camera or canvas.
         if (panel != null) Destroy(panel.gameObject);
         if (quick != null) Destroy(quick.gameObject);
-        panel = null; quick = null; eyes = null; leaving = false; nextCameraCheck = 0;
+        panel = null; quick = null; eyes = null; suspendedGuide = null; leaving = false; nextCameraCheck = 0;
         ProtectInteraction();
         if (wristTag && BackFrom(scene.name, homeScene) != null && PaintingNames.IsPainting(scene.name)) MenuWristTag.Attach();
     }
@@ -61,10 +62,13 @@ public class PlayerMenu : MonoBehaviour
     public static string BackFrom(string current, string home) => string.IsNullOrEmpty(home) || current == home ? null : home;
     bool IsOpen => EntranceControllerGuide.IsOpen || (panel != null && panel.gameObject.activeSelf);
     bool PointerBusy => quick != null && quick.HasPointerFocus;
+    bool DesktopPointerHeld => desktop && quick != null && Keyboard.current != null && Keyboard.current.tabKey.isPressed;
+    /// <summary>Only an open guide, panel or active exit covers ordinary dialogue and instructions.</summary>
+    public static bool ModalOpen => Instance != null && (Instance.IsOpen || Instance.leaving);
     // A visible shortcut alone is not modal. A pointer over a shortcut, or the closing click's frame,
     // must nevertheless be consumed so the same trigger cannot select a painting behind the UI.
-    public static bool MenuOpen => Instance != null && (Instance.IsOpen || Instance.leaving || Instance.PointerBusy ||
-        (Application.isPlaying && Time.frameCount <= Instance.interactionUntilFrame));
+    public static bool MenuOpen => SceneFader.IsFading || ModalOpen || (Instance != null && (Instance.DesktopPointerHeld || Instance.PointerBusy ||
+        (Application.isPlaying && Time.frameCount <= Instance.interactionUntilFrame)));
     public static bool OpenOnDesktop => Instance != null && Instance.desktop && MenuOpen;
 
     public void Toggle()
@@ -77,8 +81,7 @@ public class PlayerMenu : MonoBehaviour
     }
     public void OpenPage(PlayerMenuPage page)
     {
-        // Entrance may own the guide's Continue callback. Do not close it just to open another page.
-        if (EntranceControllerGuide.IsOpen || SceneFader.IsFading || leaving) return;
+        if (SceneFader.IsFading || leaving) return;
         if (page == PlayerMenuPage.Gallery && BackScene == null) return;
         if (!ResolveCamera()) return;
         ProtectInteraction(); EnsureXRUIEventSystem();
@@ -87,20 +90,43 @@ public class PlayerMenu : MonoBehaviour
             panel = PlayerMenuPanel.Create(eyes);
             panel.ControlsRequested += OpenControls;
             panel.ConfirmRequested += Confirm;
-            panel.Closed += ProtectInteraction;
+            panel.Closed += OnPanelClosed;
+        }
+        // Keep the visitor's place in the guide while operating any shortcut.
+        if (EntranceControllerGuide.IsOpen)
+        {
+            suspendedGuide = EntranceControllerGuide.Current;
+            suspendedGuide.gameObject.SetActive(false);
         }
         panel.ShowInFrontOf(eyes.transform, BackScene, desktop);
         panel.SelectPage(page);
     }
     public void OpenControls()
     {
-        if (SceneFader.IsFading || leaving || !ResolveCamera()) return;
+        if (suspendedGuide != null && panel != null && panel.gameObject.activeSelf) { panel.Hide(); return; }
+        OpenGuide(false);
+    }
+    public bool OpenFirstGalleryGuide() => !IsOpen && OpenGuide(true);
+    bool OpenGuide(bool firstGalleryVisit)
+    {
+        if (SceneFader.IsFading || leaving || !ResolveCamera()) return false;
         ProtectInteraction(); EnsureXRUIEventSystem();
-        if (EntranceControllerGuide.Open(eyes) != null && panel != null) panel.Hide();
+        if (EntranceControllerGuide.Open(eyes, ProtectInteraction, firstGalleryVisit) == null) return false;
+        if (panel != null && panel.gameObject.activeSelf) panel.Hide();
+        return true;
+    }
+    void OnPanelClosed()
+    {
+        ProtectInteraction();
+        var guide = suspendedGuide;
+        suspendedGuide = null;
+        if (guide == null || leaving || SceneFader.IsFading) return;
+        guide.gameObject.SetActive(true);
+        guide.View.Snap();
     }
     public void OpenAudioQuick()
     {
-        if (EntranceControllerGuide.IsOpen || SceneFader.IsFading || leaving) return;
+        if (SceneFader.IsFading || leaving) return;
         ProtectInteraction();
         if (panel != null && panel.gameObject.activeSelf && panel.IsQuickAudio) { panel.Hide(); return; }
         OpenPage(PlayerMenuPage.Audio);
@@ -146,7 +172,8 @@ public class PlayerMenu : MonoBehaviour
     void ProtectInteraction() { interactionUntilFrame = Time.frameCount + 1; }
     void Update()
     {
-        if ((quick == null || eyes == null || !eyes.isActiveAndEnabled) && Time.unscaledTime >= nextCameraCheck)
+        if (SceneManager.GetActiveScene().name != "Entrance" &&
+            (quick == null || eyes == null || !eyes.isActiveAndEnabled) && Time.unscaledTime >= nextCameraCheck)
         {
             nextCameraCheck = Time.unscaledTime + .25f;
             if (ResolveCamera())
@@ -156,7 +183,9 @@ public class PlayerMenu : MonoBehaviour
                 quick.SetContext(eyes, desktop, BackScene != null);
             }
         }
-        bool open = OpenOnDesktop;
+        // Tab temporarily borrows the mouse from either desktop walker's captured look mode.
+        // A shortcut opened while holding Tab keeps the cursor until the panel closes.
+        bool open = (desktop && ModalOpen) || DesktopPointerHeld;
         if (open && !wasOpenOnDesktop) { lockBeforeMenu = Cursor.lockState; visibleBeforeMenu = Cursor.visible; }
         if (open) { Cursor.lockState = CursorLockMode.None; Cursor.visible = true; }
         else if (wasOpenOnDesktop) RestoreCursor();

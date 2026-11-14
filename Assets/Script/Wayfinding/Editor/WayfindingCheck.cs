@@ -6,6 +6,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 /// <summary>
 /// Edit-mode checks for finding your way (#163), on the real Gallery: every way into a painting gets a prompt (a glow
@@ -106,6 +107,7 @@ public static class WayfindingCheck
             ViewLock(arrival, eyes, "arrival");
             arrival.Show("You're inside The Bedroom", ArrivalHint.HeadsetLine, WayfindingHint.MenuKey, ArrivalHint.HeadsetRest);
             Check(arrival.transform.Find("Layout/Hint/Key/Menu Glyph") != null, "the arrival hint draws the Menu button's icon");
+            ViewportFit(arrival, eyes, "arrival");
             if (shots != null) Shot(eyes, Path.Combine(shots, "arrival-hint.png"));
             var ui = Dialogue();
             ui.SetHint("", "Another instruction"); ui.Step(1f);
@@ -157,6 +159,7 @@ public static class WayfindingCheck
             Check(farther.Hint.Visible && near.Hint.Gone, "hover beats proximity and the previous winner disappears immediately");
             farther.Hint.Snap();
             ViewLock(farther.Hint, eyes, "legacy entrance");
+            ViewportFit(farther.Hint, eyes, "legacy entrance");
             entered.SetValue(null, true);
             Hover(farther, 0); Tick(list);
             Check(list.All(p => p.Hint.Gone), "after entering once, proximity alone no longer offers the legacy hint");
@@ -250,6 +253,58 @@ public static class WayfindingCheck
             name + ": lower viewport position and angular size stay fixed through yaw, pitch, roll and translation with no easing time");
         eye.transform.SetPositionAndRotation(position, rotation);
         follow.Step(0f);
+    }
+
+    static void ViewportFit(WayfindingHint hint, Camera eye, string name)
+    {
+        var follow = hint.GetComponent<VG_FollowGroup>();
+        float oldFov = eye.fieldOfView, oldAspect = eye.aspect;
+        var detached = WayfindingHint.Create("Detached placement control", null, hint.Settings.distance, false);
+        try
+        {
+            detached.Show("Fixed on the wall", ArrivalHint.HeadsetLine, WayfindingHint.MenuKey, ArrivalHint.HeadsetRest);
+            detached.Visible = true; detached.Snap();
+            float detachedWidth = detached.WorldSize.x;
+            var detachedPosition = detached.transform.position;
+            eye.fieldOfView = 70f; eye.aspect = 1.6f;
+            follow.Step(0f); Call(hint, "LateUpdate");
+            float originalWidth = hint.WorldSize.x;
+            eye.fieldOfView = 38f; eye.aspect = .72f;
+            var shifted = eye.projectionMatrix;
+            shifted.m02 = .14f; shifted.m12 = -.08f;
+            eye.projectionMatrix = shifted;
+            follow.Step(0f); Call(hint, "LateUpdate"); Call(detached, "LateUpdate");
+            Canvas.ForceUpdateCanvases();
+            int graphics = 0, labels = 0;
+            bool inside = true;
+            foreach (var graphic in hint.GetComponentsInChildren<Graphic>())
+            {
+                if (!graphic.isActiveAndEnabled || graphic.color.a <= 0f) continue;
+                var mesh = graphic.canvasRenderer.GetMesh();
+                if (mesh == null || mesh.vertexCount == 0) continue;
+                graphics++;
+                if (graphic is Text text && !string.IsNullOrWhiteSpace(text.text)) labels++;
+                var bounds = mesh.bounds;
+                foreach (float x in new[] { bounds.min.x, bounds.max.x }) foreach (float y in new[] { bounds.min.y, bounds.max.y })
+                {
+                    var point = eye.WorldToViewportPoint(graphic.transform.TransformPoint(new Vector3(x, y, bounds.center.z)));
+                    inside &= point.z > 0f && point.x >= .075f && point.x <= .925f && point.y >= .075f && point.y <= .925f;
+                }
+            }
+            Check(graphics >= 4 && labels >= 2 && inside && hint.WorldSize.x < originalWidth * .98f,
+                name + ": actual text, key and plate fit a narrow 38-degree off-centre portrait view");
+            Check(Mathf.Abs(detached.WorldSize.x - detachedWidth) < .0001f && detached.transform.position == detachedPosition,
+                name + ": an independently placed world hint keeps its original size and position");
+            eye.fieldOfView = 70f; eye.aspect = 1.6f; eye.ResetProjectionMatrix();
+            follow.Step(0f); Call(hint, "LateUpdate");
+            Check(Mathf.Abs(hint.WorldSize.x - originalWidth) < .0001f, name + ": wider view restores the original plate size");
+        }
+        finally
+        {
+            eye.fieldOfView = oldFov; eye.aspect = oldAspect; eye.ResetProjectionMatrix();
+            follow.Step(0f); Call(hint, "LateUpdate");
+            Object.DestroyImmediate(detached.gameObject);
+        }
     }
 
     static void Shot(Camera camera, string path)

@@ -1,6 +1,4 @@
-using InnerFrame.Tutorial;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 using UnityEngine.XR.Interaction.Toolkit.Interactors;
@@ -28,6 +26,7 @@ public sealed class PlayerMenuQuickActions : MonoBehaviour
     XRRayInteractor[] rays = System.Array.Empty<XRRayInteractor>();
     float nextFind;
     int protectedFrame = -1;
+    Vector3 viewOffset;
 
     /// <summary>
     /// Hover/press protection, not a permanently-open menu. The geometric look-ahead is important:
@@ -46,7 +45,7 @@ public sealed class PlayerMenuQuickActions : MonoBehaviour
     }
 
     bool IsVisible => isActiveAndEnabled && canvas != null && canvas.gameObject.activeInHierarchy &&
-        eyes != null && eyes.isActiveAndEnabled && !EntranceControllerGuide.IsOpen && !SceneFader.IsFading;
+        eyes != null && eyes.isActiveAndEnabled && !SceneFader.IsFading;
 
     public static PlayerMenuQuickActions Create(Camera camera, PlayerMenu menu, bool onDesktop)
     {
@@ -94,7 +93,7 @@ public sealed class PlayerMenuQuickActions : MonoBehaviour
         for (int i = 0; i < names.Length; i++)
         {
             int index = i;
-            var circle = Rect("Quick " + names[i], canvasRect, new Vector2((i - 1) * Spacing, 0f), Vector2.one * Diameter);
+            var circle = MakeRect("Quick " + names[i], canvasRect, new Vector2((i - 1) * Spacing, 0f), Vector2.one * Diameter);
             var image = circle.gameObject.AddComponent<Image>();
             image.sprite = MenuLook.KeySprite;
             image.color = Color.white;
@@ -112,7 +111,7 @@ public sealed class PlayerMenuQuickActions : MonoBehaviour
             button.onClick.AddListener(() => Press(index));
             InnerFrame.Entrance.EntranceButtonSound.Bind(button);
 
-            var iconRect = Rect(names[i] + " Icon", circle, Vector2.zero, Vector2.one * 29f);
+            var iconRect = MakeRect(names[i] + " Icon", circle, Vector2.zero, Vector2.one * 29f);
             var icon = iconRect.gameObject.AddComponent<PlayerMenuShortcutIcon>();
             icon.Kind = (PlayerMenuShortcutIcon.Symbol)i;
             icon.color = MenuLook.KeyLetter;
@@ -120,7 +119,10 @@ public sealed class PlayerMenuQuickActions : MonoBehaviour
             icon.raycastTarget = false;
             if (i == 1) audioIcon = icon;
 
-            var labelRect = Rect(names[i] + " Hover Label", circle, new Vector2(0, 52f), new Vector2(i == 2 ? 178f : 108f, 34f));
+            // The long Gallery label ends flush with its button at the right edge.
+            float labelWidth = i == 2 ? 178f : 108f;
+            float labelX = i == 2 ? (Diameter - labelWidth) * .5f : 0f;
+            var labelRect = MakeRect(names[i] + " Hover Label", circle, new Vector2(labelX, 52f), new Vector2(labelWidth, 34f));
             var plate = labelRect.gameObject.AddComponent<Image>();
             plate.sprite = MenuLook.NameTabSprite;
             plate.type = Image.Type.Sliced;
@@ -129,7 +131,7 @@ public sealed class PlayerMenuQuickActions : MonoBehaviour
             plate.color = Color.white;
             plate.material = overlay;
             plate.raycastTarget = false;
-            var textRect = Rect("Label", labelRect, Vector2.zero, labelRect.sizeDelta - new Vector2(10f, 0f));
+            var textRect = MakeRect("Label", labelRect, Vector2.zero, labelRect.sizeDelta - new Vector2(10f, 0f));
             var text = textRect.gameObject.AddComponent<Text>();
             text.text = names[i];
             text.font = MenuLook.Font;
@@ -151,7 +153,7 @@ public sealed class PlayerMenuQuickActions : MonoBehaviour
 
     void Update()
     {
-        bool show = eyes != null && eyes.isActiveAndEnabled && !EntranceControllerGuide.IsOpen && !SceneFader.IsFading;
+        bool show = eyes != null && eyes.isActiveAndEnabled && !SceneFader.IsFading;
         if (canvas != null && canvas.gameObject.activeSelf != show)
         {
             canvas.gameObject.SetActive(show);
@@ -167,13 +169,50 @@ public sealed class PlayerMenuQuickActions : MonoBehaviour
 
     void Position()
     {
-        if (eyes == null) return;
-        float halfHeight = Mathf.Tan(eyes.fieldOfView * Mathf.Deg2Rad * 0.5f) * Distance;
-        float halfWidth = halfHeight * eyes.aspect;
-        float totalWidth = (Spacing * 2f + Diameter) * UnitsToMetres;
-        float x = Mathf.Min(0.85f, 1f - (totalWidth * 0.5f + 0.035f) / Mathf.Max(0.01f, halfWidth * 2f));
-        float y = Mathf.Max(0.16f, (Diameter * UnitsToMetres * 0.5f + 0.035f) / Mathf.Max(0.01f, halfHeight * 2f));
-        transform.SetPositionAndRotation(eyes.ViewportToWorldPoint(new Vector3(x, y, Distance)), eyes.transform.rotation);
+        if (eyes == null || canvasRect == null) return;
+        // Measure the actual projections, including shifted lenses, portrait windows and both views of a headset.
+        Rect bounds = ViewBounds(eyes.stereoEnabled ? Camera.MonoOrStereoscopicEye.Left : Camera.MonoOrStereoscopicEye.Mono);
+        if (eyes.stereoEnabled)
+        {
+            var other = ViewBounds(Camera.MonoOrStereoscopicEye.Right);
+            bounds = Rect.MinMaxRect(Mathf.Max(bounds.xMin, other.xMin), Mathf.Max(bounds.yMin, other.yMin),
+                Mathf.Min(bounds.xMax, other.xMax), Mathf.Min(bounds.yMax, other.yMax));
+        }
+        if (bounds.width <= 0f || bounds.height <= 0f) return;
+        const float rowWidth = 2f * Spacing + Diameter;
+        float scale = Mathf.Min(UnitsToMetres, Mathf.Min(bounds.width * .44f / rowWidth, bounds.height * .09f / Diameter));
+        canvasRect.localScale = Vector3.one * scale;
+        viewOffset = new Vector3(bounds.xMax - rowWidth * scale * .5f, bounds.yMin + Diameter * scale * .5f, Distance);
+        ApplyPose();
+    }
+
+    Rect ViewBounds(Camera.MonoOrStereoscopicEye eye)
+    {
+        // Keep a margin on the outside and intersect the eye rays with the HUD plane, in head-local metres.
+        var local = Quaternion.Inverse(eyes.transform.rotation);
+        var lowerLeft = OnPlane(.05f, .075f);
+        var lowerRight = OnPlane(.95f, .075f);
+        var upperLeft = OnPlane(.05f, .94f);
+        var upperRight = OnPlane(.95f, .94f);
+        return Rect.MinMaxRect(Mathf.Max(lowerLeft.x, upperLeft.x), Mathf.Max(lowerLeft.y, lowerRight.y),
+            Mathf.Min(lowerRight.x, upperRight.x), Mathf.Min(upperLeft.y, upperRight.y));
+
+        Vector3 OnPlane(float x, float y)
+        {
+            var ray = eyes.ViewportPointToRay(new Vector3(x, y, 0f), eye);
+            var start = local * (ray.origin - eyes.transform.position);
+            var direction = local * ray.direction;
+            return start + direction * ((Distance - start.z) / direction.z);
+        }
+    }
+
+    void OnEnable() => Application.onBeforeRender += ApplyPose;
+    void OnDisable() => Application.onBeforeRender -= ApplyPose;
+    void LateUpdate() => ApplyPose();
+    void ApplyPose()
+    {
+        if (eyes == null || canvas == null || !canvas.gameObject.activeSelf) return;
+        transform.SetPositionAndRotation(eyes.transform.position + eyes.transform.rotation * viewOffset, eyes.transform.rotation);
     }
 
     void FindHands()
@@ -259,7 +298,7 @@ public sealed class PlayerMenuQuickActions : MonoBehaviour
         else owner.OpenPage(PlayerMenuPage.Gallery);
     }
 
-    static RectTransform Rect(string name, Transform parent, Vector2 position, Vector2 size)
+    static RectTransform MakeRect(string name, Transform parent, Vector2 position, Vector2 size)
     {
         var rect = new GameObject(name, typeof(RectTransform)).GetComponent<RectTransform>();
         rect.SetParent(parent, false);

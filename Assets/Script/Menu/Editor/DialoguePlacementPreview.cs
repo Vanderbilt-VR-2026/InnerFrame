@@ -241,10 +241,10 @@ public static class DialoguePlacementPreview
             {
                 camera.transform.SetPositionAndRotation(pose.Item2, pose.Item3);
                 follow.Step(0); // No accumulated delta or easing frames can make this pass.
-                float angle = settings.belowGaze * Mathf.Deg2Rad;
-                var expectedPosition = camera.transform.position + camera.transform.rotation * new Vector3(0, -Mathf.Sin(angle) * settings.distance, Mathf.Cos(angle) * settings.distance);
-                var expectedRotation = camera.transform.rotation * Quaternion.Euler(settings.belowGaze, 0, 0);
-                Check(Vector3.Distance(follow.transform.position, expectedPosition) < .0001f && Quaternion.Angle(follow.transform.rotation, expectedRotation) < .02f, "one zero-dt step matches exact camera offset/rotation: " + pose.Item1);
+                var anchor = camera.WorldToViewportPoint(follow.transform.position);
+                Check(Vector3.Distance(anchor, new Vector3(.5f, .32f, settings.distance)) < .0001f &&
+                    Vector3.Dot(follow.transform.forward, camera.transform.forward) > .99999f,
+                    "one zero-dt step places the level panel at the lower-centre viewport anchor: " + pose.Item1);
                 var points = ViewPoints(ui, camera);
                 Check(points.Length == baseline.Length && points.Select((p, i) => Vector2.Distance(p, baseline[i])).All(d => d < .0005f), "rendered UI viewport positions remain stable: " + pose.Item1);
                 Check(points.Length > 20 && points.All(InView), "actual text/shape bounds remain visible: " + pose.Item1);
@@ -252,14 +252,27 @@ public static class DialoguePlacementPreview
             }
             camera.transform.localScale = Vector3.one * 1.7f;
             follow.Step(0);
-            Check(Mathf.Abs(Vector3.Distance(follow.transform.position, camera.transform.position) - settings.distance) < .0001f,
+            Check(Mathf.Abs(camera.WorldToViewportPoint(follow.transform.position).z - settings.distance) < .0001f,
                 "camera scale does not change the fixed viewing distance");
             camera.transform.localScale = Vector3.one;
             camera.transform.rotation = Quaternion.Euler(-17f, 43f, 26f);
             typeof(VG_FollowGroup).GetMethod("BeforeRender", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(follow, null);
-            Check(Quaternion.Angle(follow.transform.rotation, camera.transform.rotation * Quaternion.Euler(settings.belowGaze, 0, 0)) < .02f &&
+            Check(Vector3.Dot(follow.transform.forward, camera.transform.forward) > .99999f &&
                 ViewPoints(ui, camera).Select((p, i) => Vector2.Distance(p, baseline[i])).All(d => d < .0005f),
                 "before-render update follows a newer head pose immediately");
+            camera.fieldOfView = 43f;
+            camera.aspect = .85f;
+            var shifted = camera.projectionMatrix;
+            shifted.m02 += .14f; shifted.m12 -= .09f;
+            camera.projectionMatrix = shifted;
+            follow.Step(0f);
+            var resized = camera.WorldToViewportPoint(follow.transform.position);
+            Check(Vector2.Distance(resized, new Vector2(.5f, .32f)) < .0001f && ViewPoints(ui, camera).All(InView),
+                "narrow off-centre projection keeps the full black/gold dialogue visible at the same anchor");
+            Check(ui.GetComponentsInChildren<Graphic>(true).All(g => !g.raycastTarget) &&
+                ui.GetComponentsInChildren<CanvasGroup>(true).All(g => !g.blocksRaycasts),
+                "passive dialogue and hint groups let pointer input through");
+            camera.ResetProjectionMatrix(); camera.fieldOfView = 60f; camera.aspect = 1.6f;
             ui.LockToView = false;
             Check(!follow.LockToView, "explicit LockToView=false opt-out restores the legacy mode");
             camera.transform.SetPositionAndRotation(new Vector3(0, 1.6f, 0), Quaternion.identity);

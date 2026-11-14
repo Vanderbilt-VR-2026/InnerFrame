@@ -49,3 +49,4 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InnerFrame.Tutorial.EntranceControllerGuide
   dialoguePrefab: {fileID: 5718142585657475665, guid: 7dec7f57815ac467388af4b7b0b212dc, type: 3}
+  entranceDiagram: {fileID: 2800000, guid: 016844931d1674c368720eb2e6825e51, type: 3}

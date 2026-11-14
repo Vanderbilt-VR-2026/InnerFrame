@@ -103,7 +103,17 @@ namespace InnerFrame.Tutorial
                 nextScan = Time.unscaledTime + 0.5f;
             }
             ObserveGalleryMovement();
+            TryOpenFirstGalleryGuide();
             Present(Time.unscaledDeltaTime);
+        }
+
+        // The first loaded scene may be Gallery (direct launch), or the scene fade may still cover the camera.
+        // Let scene setup and visible conversation/menu UI finish before presenting the full guide.
+        void TryOpenFirstGalleryGuide()
+        {
+            if (EntranceControllerGuide.ShownInGalleryThisSession || SceneManager.GetActiveScene().name != PaintingNames.Gallery ||
+                Camera.main == null || PlayerMenu.Instance == null || Blocked()) return;
+            PlayerMenu.Instance.OpenFirstGalleryGuide();
         }
 
         /// <summary>Also used by checks; never edits or saves a scene.</summary>
@@ -158,7 +168,7 @@ namespace InnerFrame.Tutorial
 
         bool Blocked()
         {
-            if (PlayerMenu.MenuOpen || EntranceControllerGuide.IsOpen || SceneFader.IsFading) return true;
+            if (PlayerMenu.ModalOpen || EntranceControllerGuide.IsOpen || SceneFader.IsFading) return true;
             var paintingMenu = GalleryPaintingMenu.Instance;
             if (paintingMenu != null && paintingMenu.isActiveAndEnabled && paintingMenu.IsOpen && paintingMenu.Panel.gameObject.activeInHierarchy) return true;
             foreach (var talker in talkers)

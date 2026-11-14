@@ -153,8 +153,12 @@ namespace InnerFrame.StarryNight.EditorTools
                 float hBottom = Mathf.Min(SN_Layout.YawPitch(hc[0] - head.position).y, SN_Layout.YawPitch(hc[3] - head.position).y);
                 W($"{name} (yaw {F(yaw)}, pitch {F(pitch)}): the box from {F(bBottom)} to {F(bTop)} deg pitch, its top edge {F(bWidth)} deg wide and {F(bDist)} m from the eye; " +
                   $"the hint's plate from {F(hBottom)} to {F(hTop)} deg");
-                if (pitch == 0f) Check(Mathf.Abs(bTop - (pitch - s.belowGaze)) < 0.6f && Mathf.Abs(bDist - s.distance) < 0.01f && Mathf.Abs(bWidth - s.boxWidth) < 0.1f,
-                    $"level gaze: the box's top edge {F(bTop)} deg = {F(-s.belowGaze)} under the gaze, {F(bDist)} m away, {F(bWidth)} deg wide (settings: {F(s.distance)} m, {F(s.boxWidth)} deg)");
+                var panel = (RectTransform)box.transform.Find("Panel");
+                panel.GetWorldCorners(hc);
+                var top = eye.WorldToViewportPoint((hc[1] + hc[2]) * .5f);
+                Check(Vector3.Distance(top, new Vector3(.5f, .32f, s.distance)) < .001f &&
+                    Mathf.Abs(Vector3.Distance(hc[1], hc[2]) - s.Metres(s.boxWidth)) < .001f,
+                    name + ": the box stays centred in the lower view at its authored width");
             }
 
             // ------------------------------------------------------------------ immediate follow (zero elapsed time)
@@ -175,10 +179,8 @@ namespace InnerFrame.StarryNight.EditorTools
             {
                 head.SetPositionAndRotation(pose.Item2, pose.Item3);
                 follow.Step(0f);
-                var rotation = head.rotation * Quaternion.Euler(s.belowGaze, 0f, 0f);
-                var position = head.position + rotation * Vector3.forward * s.distance;
-                Check(Vector3.Distance(follow.transform.position, position) < .0001f && Quaternion.Angle(follow.transform.rotation, rotation) < .02f,
-                    pose.Item1 + ": exact head-relative pose after one zero-dt update");
+                Check(Vector3.Distance(eye.WorldToViewportPoint(follow.transform.position), new Vector3(.5f, .32f, s.distance)) < .001f &&
+                    Vector3.Dot(follow.transform.up, head.up) > .99999f, pose.Item1 + ": fixed screen anchor and orientation after one zero-dt update");
                 var points = ViewportPoints(ui, eye);
                 Check(points.Length == baseline.Length && points.Select((p, index) => Vector3.Distance(p, baseline[index])).All(d => d < .001f) && points.All(InView),
                     pose.Item1 + ": rendered UI/text keeps the same viewport bounds without easing");

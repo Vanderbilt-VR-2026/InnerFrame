@@ -113,7 +113,7 @@ public class VG_DialogueUI : MonoBehaviour
     {
         Build();
         paging.Step(dt, Voice != null && clip != null && Voice.isPlaying && Voice.clip == clip ? Voice.time : (float?)null);
-        bool allowed = ShowWhileMenuOpen || !PlayerMenu.MenuOpen;
+        bool allowed = ShowWhileMenuOpen || !PlayerMenu.ModalOpen;
         // Hiding subtitles does not end paging or speech priority; hints remain independent.
         Fade(words, paging.Showing && allowed && (!RespectSubtitlePreference || PlayerMenuPreferences.Subtitles), dt, FadeSeconds);
         Fade(hintGroup, hintShown && allowed, dt, settings.hintFadeIn > 0f ? settings.hintFadeIn : FadeSeconds);
@@ -132,6 +132,7 @@ public class VG_DialogueUI : MonoBehaviour
         follow.transform.SetParent(transform, false);
         follow.transform.localScale = Vector3.one * settings.Scale;
         follow.settings = settings;
+        follow.FitDialogueLayout = true;
         follow.LockToView = lockToView;
         onTop = new Material(Canvas.GetDefaultCanvasMaterial());
         onTop.SetInt("unity_GUIZTestMode", (int)UnityEngine.Rendering.CompareFunction.Always);   // nothing in the room cuts through it
@@ -146,6 +147,8 @@ public class VG_DialogueUI : MonoBehaviour
     static CanvasGroup Hidden(GameObject panel)
     {
         var group = panel.AddComponent<CanvasGroup>();
+        group.interactable = false;
+        group.blocksRaycasts = false;
         group.alpha = 0f;
         panel.SetActive(false);
         return group;

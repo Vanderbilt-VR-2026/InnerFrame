@@ -11,6 +11,8 @@ namespace InnerFrame.XR.UI
     [UnityEditor.XR.OpenXR.Features.OpenXRFeature(
         UiName = "InnerFrame head-locked HUD", Desc = "Presents the game's HUD in the headset's OpenXR VIEW reference space.",
         Company = "InnerFrame", Version = "1.0.0", FeatureId = FeatureId,
+        // VIEW space and quads are core OpenXR. The Quest manifest builder expects a non-null extension list.
+        OpenxrExtensionStrings = "",
         BuildTargetGroups = new[] { UnityEditor.BuildTargetGroup.Android })]
 #endif
     public sealed class ViewHudFeature : OpenXRFeature

@@ -17,8 +17,12 @@ it. No fail state, no timer; one player is enough.
    run again; run it after pulling new models or pictures.
 4. Press **Play**. The whole studio is built at runtime by `AS_Bootstrap` from `AS_Layout.asset`.
 
-The scene is **not** in the Build Settings' list (a shared setting). For a headset build, add it there and name
-that change in the PR.
+**From the Gallery.** Point at *Almond Blossom* in the Gallery, trigger, then **Enter**: the fade takes you into the
+studio. The Gallery's **Tools > InnerFrame > Gallery > Build Layout** sets this up once the studio scene is in the
+project (`GalleryLayoutSetup.AlmondStudioEntrance`): Almond Blossom's row in `GalleryLayout.asset` gets the scene
+`AlmondStudio`, Gallery.unity gets `Entrance_AlmondBlossom`, and the scene is added, enabled, to the Build Settings'
+list (a shared setting, named in the PR). In the studio, the menu (≡ on the left controller, M on a desktop) has
+**Back to Gallery**, as in every painting.
 
 **Models.** The Tripo props are in `Art/Props` and the almond tree in `Models`. The tree (10,000 faces) and the
 casement (3,000) were reduced with Tripo's retopology; the chest, sill still life and paint box are still Tripo's raw
@@ -116,5 +120,5 @@ see-through (**[** and **]** change how much). Pictures in `Textures/Reference/`
 
 1. Reduce the chest, sill still life and paint box for Quest (Tripo retopology, as for the tree and casement).
 2. A clean-worktree check and a Quest build.
-3. The way back to the Gallery (Transition 5): *Almond Blossom* appears in the Gallery after the act (with Cici).
+3. The Gallery after the act (Transition 5, with Cici): an empty frame that *Almond Blossom* fills when you come back.
 4. The optional second player (with Sonya).

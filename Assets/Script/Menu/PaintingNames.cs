@@ -5,11 +5,13 @@
 public static class PaintingNames
 {
     public const string Gallery = "Gallery";
+    /// <summary>Almond Blossom's scene (Act 4: Vincent paints it in his studio at Saint-Rémy).</summary>
+    public const string AlmondStudio = "AlmondStudio";
 
     /// <summary>True for a scene that is a painting you step into (not the Gallery, an entrance or a test scene): the
     /// arrival hint and the wrist tag show only there.</summary>
     public static bool IsPainting(string scene) =>
-        scene == "PaintedBedroom" || scene == "Bedroom_StyleExperiment" || scene == "StarryNight" || scene == "CafeTerrace";
+        scene == "PaintedBedroom" || scene == "Bedroom_StyleExperiment" || scene == "StarryNight" || scene == "CafeTerrace" || scene == AlmondStudio;
 
     /// <summary>The painting's title, as on its plaque.</summary>
     public static string Title(string scene)
@@ -21,6 +23,7 @@ public static class PaintingNames
             case "Bedroom_StyleExperiment": return "The Bedroom";
             case "StarryNight": return "The Starry Night";
             case "CafeTerrace": return "Café Terrace at Night";
+            case AlmondStudio: return "Almond Blossom";
             default: return scene;
         }
     }
@@ -34,6 +37,7 @@ public static class PaintingNames
             case "Bedroom_StyleExperiment": return "The Bedroom, 1888";
             case "StarryNight": return "The Starry Night, 1889";
             case "CafeTerrace": return "Café Terrace at Night, 1888";
+            case AlmondStudio: return "Almond Blossom, 1890";
             default: return Title(scene);
         }
     }

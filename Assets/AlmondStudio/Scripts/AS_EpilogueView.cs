@@ -19,7 +19,7 @@ namespace InnerFrame.AlmondStudio
         float shown = -1f;
         public float distance = 0.75f, drop = 0.05f, fadeSeconds = 1.5f;
 
-        public static AS_EpilogueView Make(Transform parent, Texture painting, Font font)
+        public static AS_EpilogueView Make(Transform parent, Texture painting, Font font, float aspect)
         {
             var go = new GameObject("Epilogue (Almond Blossom)", typeof(RectTransform));
             go.transform.SetParent(parent, false);
@@ -38,8 +38,8 @@ namespace InnerFrame.AlmondStudio
             Fill(paper.rectTransform, 0f, 0f, 1f, 1f);
             paper.color = new Color(0.96f, 0.93f, 0.85f, 0.97f);
 
-            // the painting, at its own proportions (73.3 x 92.4 cm), across the top
-            float pw = CardW - 40f, ph = pw * (painting != null && painting.width > 0 ? painting.height / (float)painting.width : 73.3f / 92.4f);
+            // the painting, at the canvas's proportions, across the top
+            float pw = CardW - 40f, ph = pw / Mathf.Max(0.1f, aspect);   // the canvas's proportions (a texture may be imported squared)
             view.picture = new GameObject("Almond Blossom", typeof(RectTransform)).AddComponent<RawImage>();
             view.picture.transform.SetParent(go.transform, false);
             var pr = view.picture.rectTransform;

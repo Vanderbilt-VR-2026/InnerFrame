@@ -21,6 +21,8 @@ namespace InnerFrame.AlmondStudio
     {
         public AS_Layout layout;
         [Tooltip("Assets/AlmondStudio/Data/AS_Branches.json: the branch paths.")] public TextAsset branchesJson;
+        /// <summary>Almond Blossom's canvas, width over height (92.4 x 73.3 cm, Van Gogh Museum).</summary>
+        public const float AlmondBlossomAspect = 92.4f / 73.3f;
         public Material wall, floor, ceiling, wood, frame, windowFrame, sillTop, wallPictures, letterSheet, birthCard, almondBlossom, casementLeft, casementRight, fanlightPainted, revealLeft, revealRight, canvas, brushHead, vincent, bark, ink, skyMaterial, groundMaterial, glow, guideDot, blossom;
         [Tooltip("VG_DialogueUI.prefab: Vincent's words and the hint, as in every scene.")] public GameObject uiPrefab;
         public VG_DialogueSettings uiSettings;
@@ -330,7 +332,7 @@ namespace InnerFrame.AlmondStudio
             Game.letterInHand = handLetter;
             Game.letterView = AS_LetterView.Make(world, letterSheet != null ? letterSheet.GetTexture("_BaseMap") : null, ui != null ? ui.font : null);
             Game.endPainting = EndPainting(world);
-            Game.epilogue = AS_EpilogueView.Make(world, almondBlossom != null ? almondBlossom.GetTexture("_BaseMap") : null, ui != null ? ui.font : null);
+            Game.epilogue = AS_EpilogueView.Make(world, almondBlossom != null ? almondBlossom.GetTexture("_BaseMap") : null, ui != null ? ui.font : null, AlmondBlossomAspect);
         }
 
         /// <summary>A painted casement: one picture (panes cut out) on a leaf that swings on its hinge, with the same grab
@@ -822,8 +824,8 @@ namespace InnerFrame.AlmondStudio
         GameObject EndPainting(Transform world)
         {
             if (almondBlossom == null) { Debug.Log("[AS] No Textures/Reference/AS_AlmondBlossom (.jpg/.png): the end has no painting on the easel."); return null; }
-            var tex = almondBlossom.GetTexture("_BaseMap");
-            float h = layout.endPaintingHeight, w = tex != null && tex.height > 0 ? h * tex.width / tex.height : h * 1.26f;
+            // the canvas's own proportions, not the texture's (the Gallery imports its copy squared to 2048 x 2048)
+            float h = layout.endPaintingHeight, w = h * AlmondBlossomAspect;
             var root = new GameObject("Almond Blossom (the end)").transform;
             root.SetParent(world, false);
             // faces the room (+z): the picture quad faces -z, so turn it round, then lean its top back

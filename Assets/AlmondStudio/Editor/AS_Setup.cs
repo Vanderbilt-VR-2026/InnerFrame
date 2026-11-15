@@ -23,6 +23,9 @@ namespace InnerFrame.AlmondStudio.EditorTools
         const string Materials = Root + "/Materials";
         const string AtlasPath = Root + "/Textures/Blossom/AS_BlossomAtlas.png";
         const string ReferenceFolder = Root + "/Textures/Reference";
+        /// <summary>The Gallery's Almond Blossom (Van Gogh Museum image, in LFS with its docs/ASSETS.md row): used when
+        /// Textures/Reference/AS_AlmondBlossom isn't there, so the repo needn't hold the painting twice.</summary>
+        const string GalleryAlmondBlossom = "Assets/Art/Gallery/Paintings/Almond_Blossom_Van_Gogh.jpg";
         const string SurfaceFolder = Root + "/Textures/Surfaces";
         const string BedroomPrefab = "Assets/InnerFrameBedroomWeb/Generated/PaintedBedroom.prefab";
         const string ChairPrefab = Root + "/Prefabs/AS_Chair.prefab";
@@ -289,6 +292,21 @@ namespace InnerFrame.AlmondStudio.EditorTools
             for (int i = 0; i < layout.sideCanvases.Length; i++)
                 boot.sideCanvasMaterials[i] = Picture("AS_Canvas" + i, surface, Root + "/Textures/Canvases", layout.sideCanvases[i].file);
             boot.almondBlossom = Picture("AS_AlmondBlossomPainting", surface, ReferenceFolder, "AS_AlmondBlossom");
+            if (boot.almondBlossom == null)
+            {
+                // the Gallery's copy of the same museum image (main, #199): used as it is, its import settings are the Gallery's
+                var gallery = AssetDatabase.LoadAssetAtPath<Texture2D>(GalleryAlmondBlossom);
+                if (gallery != null)
+                {
+                    boot.almondBlossom = Mat("AS_AlmondBlossomPainting", surface);
+                    boot.almondBlossom.SetTexture("_BaseMap", gallery);
+                    boot.almondBlossom.SetTextureScale("_BaseMap", Vector2.one);
+                    boot.almondBlossom.SetTextureOffset("_BaseMap", Vector2.zero);
+                    boot.almondBlossom.SetColor("_BaseColor", Color.white);
+                    EditorUtility.SetDirty(boot.almondBlossom);
+                    Debug.Log("[AS Setup] Almond Blossom: the Gallery's " + GalleryAlmondBlossom);
+                }
+            }
             boot.letterSheet = Picture("AS_Letter", surface, Root + "/Textures/Table", "AS_Letter");
             boot.birthCard = Picture("AS_BirthCard", surface, Root + "/Textures/Table", "AS_BirthCard");
             boot.sillTop = Lit("AS_Sill", surface, "EEE8DA");

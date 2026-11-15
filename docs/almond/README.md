@@ -20,10 +20,9 @@ it. No fail state, no timer; one player is enough.
 The scene is **not** in the Build Settings' list (a shared setting). For a headset build, add it there and name
 that change in the PR.
 
-**Not in the repo yet:** the Tripo props (casements, sill still life, chest, paint box, table, door) and the
-Tripo almond tree, raw from Tripo at 53–65 MB each. They come after they are reduced for Quest. Until then Build
-stands built boxes in for the props, and the scene's almond tree is missing, so **there are no blossoms to paint**
-on a fresh checkout (the Console says so).
+**Models.** The Tripo props are in `Art/Props` and the almond tree in `Models`. The tree (10,000 faces) and the
+casement (3,000) were reduced with Tripo's retopology; the chest, sill still life and paint box are still Tripo's raw
+output (56–65 MB each), to be reduced for Quest. The tree in the scene carries its scattered buds (`AS_TripoTree`).
 
 ## The story
 
@@ -99,11 +98,12 @@ see-through (**[** and **]** change how much). Pictures in `Textures/Reference/`
   blossoms opening, the petal shower and the epilogue card, seen in her screenshots. From her working copy, not
   a clean worktree; with the Tripo models present locally.
 - [V] `bash scripts/ci-local.sh`: PASS on this branch (14 Nov 2026).
-- [I] A fresh checkout opens without the Tripo models (boxes stand in, no tree): not yet opened from a clean
-  worktree.
+- [V] Every GUID the Almond Studio scene, prefab, materials and controller use resolves to a committed `.meta` or
+  to Unity/URP (checked 14 Nov on `340447a`); the tree is no longer a missing prefab.
+- [I] Not yet opened from a clean worktree.
 - [I] Never built for or tested on a Quest.
 
-## Hardware tests (when the reduced models are in)
+## Hardware tests
 
 1. Arrive: Vincent holds the letter out at a reachable height; point and select takes it; it reads well at 45 cm.
 2. The invitation: he turns to the window and points at the tree, then turns back.
@@ -114,8 +114,7 @@ see-through (**[** and **]** change how much). Pictures in `Textures/Reference/`
 
 ## Next steps
 
-1. Reduce the Tripo props and tree for Quest (face budget, baked textures) and commit them with their
-   `docs/ASSETS.md` rows (Tripo paid plan, §5.2.2).
+1. Reduce the chest, sill still life and paint box for Quest (Tripo retopology, as for the tree and casement).
 2. A clean-worktree check and a Quest build.
 3. The way back to the Gallery (Transition 5): *Almond Blossom* appears in the Gallery after the act (with Cici).
 4. The optional second player (with Sonya).

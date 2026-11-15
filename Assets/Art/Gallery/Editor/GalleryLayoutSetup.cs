@@ -80,6 +80,7 @@ namespace InnerFrame.Gallery.EditorTools
             var changes = new List<string>();
             Images(changes);
             var layout = EnsureLayout(changes);
+            AlmondStudioEntrance(layout, changes);
             if (layout.WorkOutSizes())
             {
                 EditorUtility.SetDirty(layout);
@@ -146,6 +147,33 @@ namespace InnerFrame.Gallery.EditorTools
                 AssetDatabase.CreateAsset(ray, RayMaterial);
                 changes.Add($"{RayMaterial}: created (the pointer's ray, URP Unlit, #178's cream)");
             }
+        }
+
+        /// <summary>Almond Blossom's scene: Act 4, Vincent's studio at Saint-Rémy (Serena, PR #202).</summary>
+        public const string AlmondScenePath = "Assets/AlmondStudio/Scenes/AlmondStudio.unity";
+
+        /// <summary>Almond Blossom's Enter leads into Almond Studio once that scene is in the project (Serena, 2026-11-14):
+        /// its row in the asset gets the scene when it has none, and the scene goes into the build list (SceneFader loads
+        /// only scenes enabled there). Without the scene (a checkout before PR #202) nothing changes: Coming soon.
+        /// A row set to another scene is left alone.</summary>
+        static void AlmondStudioEntrance(GalleryLayout l, List<string> changes)
+        {
+            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(AlmondScenePath) == null) return;
+            var p = l.Find("AlmondBlossom");
+            if (p == null) return;
+            if (string.IsNullOrEmpty(p.scene))
+            {
+                p.scene = PaintingNames.AlmondStudio;
+                EditorUtility.SetDirty(l);
+                AssetDatabase.SaveAssets();
+                changes.Add($"{LayoutPath}: Almond Blossom enters {p.scene}");
+            }
+            if (p.scene != PaintingNames.AlmondStudio || EditorBuildSettings.scenes.Any(s => s.path == AlmondScenePath && s.enabled)) return;
+            var scenes = EditorBuildSettings.scenes.Where(s => s.path != AlmondScenePath).ToList();
+            scenes.Add(new EditorBuildSettingsScene(AlmondScenePath, true));
+            EditorBuildSettings.scenes = scenes.ToArray();
+            AssetDatabase.SaveAssets();
+            changes.Add($"ProjectSettings/EditorBuildSettings.asset: {AlmondScenePath} added, enabled");
         }
 
         /// <summary>The asset as first set up, if there is none (after that it is the one to edit).</summary>

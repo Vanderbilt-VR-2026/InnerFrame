@@ -25,7 +25,7 @@ namespace InnerFrame.Gallery.EditorTools.Tests
     /// DesktopTestRig, which switches the XR Origin off without a headset, is removed after each Gallery load.
     /// For each painting with a menu, from 2 m, from 5 m and from the other side of the room: point (the frame's rim lights,
     /// the long ray shows, no menu) -> picture "before" -> trigger -> the menu (picture "after"), still open a second later
-    /// and the same size to the eye -> point at Enter, trigger -> its scene loads (Almond Blossom: Coming soon, Enter does
+    /// and the same size to the eye -> point at Enter, trigger -> its scene loads (a painting with no scene: Coming soon, Enter does
     /// nothing, Back closes it). Then the menu closes when you walk 2 m away, when you turn your back on it, and moves when
     /// you open another painting; the music plays from one source in every scene.
     /// Batch: -executeMethod InnerFrame.Gallery.EditorTools.Tests.GalleryLayoutPlayCheck.RunBatch -gpOut &lt;dir&gt; (no -quit).

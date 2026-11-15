@@ -152,7 +152,7 @@ namespace InnerFrame.AlmondStudio
                 // the shower: petals let go all over the tree as the wave passes and drift in through the window
                 float extra = layout.blossomShower;
                 int count = (int)extra + (rnd.NextDouble() < extra - (int)extra ? 1 : 0);
-                for (int k = 0; k < count; k++)
+                for (int k = 0; k < count && drifts.Count < layout.blossomMaxDrifting; k++)   // the cap holds for the shower too
                     drifts.Add(new Drift
                     {
                         pos = b.pos, born = at + 0.2f + (float)rnd.NextDouble() * 0.8f,
@@ -223,7 +223,7 @@ namespace InnerFrame.AlmondStudio
             b.openAt = at;
             if (b.reachable) Opened++;
             int petals = rnd.NextDouble() < 0.6 ? 1 : 2;
-            for (int k = 0; k < petals; k++)
+            for (int k = 0; k < petals && drifts.Count < layout.blossomMaxDrifting; k++)
                 drifts.Add(new Drift
                 {
                     pos = b.pos, born = at + 0.3f + (float)rnd.NextDouble() * 0.3f,

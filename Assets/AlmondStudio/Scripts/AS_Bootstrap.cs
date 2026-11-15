@@ -163,9 +163,12 @@ namespace InnerFrame.AlmondStudio
             if (letterSheet != null) PaperOnTable(world, "Theo's letter", letterSheet, 0.21f, layout.letterSpot, layout.letterYaw);
             if (birthCard != null) PaperOnTable(world, "Birth card", birthCard, 0.13f, layout.cardSpot, layout.cardYaw);
 
+#if UNITY_EDITOR
+            // the comparison views are an Editor tool: not in the headset build
             var compare = world.gameObject.AddComponent<AS_Compare>();
             compare.layout = layout;
             compare.references = references;
+#endif
             // S03: the door a little east of the middle of the south wall, the easel west of it (both seen facing south)
             if (doorModel != null)
             {
@@ -310,7 +313,7 @@ namespace InnerFrame.AlmondStudio
             else if (tripo == null) Debug.Log("[AS] No AS_TripoTree in the scene: no blossoms. Select the Tripo tree and run Tools > InnerFrame > Almond Studio > Scatter Blossoms On Selected Tree.");
 
             VG_DialogueUI ui = null;
-            if (uiPrefab != null)
+            if (uiPrefab != null && uiSettings != null)
             {
                 ui = Instantiate(uiPrefab, world).GetComponent<VG_DialogueUI>();
                 ui.name = "AS_UI";
@@ -1283,6 +1286,10 @@ namespace InnerFrame.AlmondStudio
             foreach (var (t, yaw) in chairs)   // and chairYawOffset: the chairs turn as you change it
                 if (t != null) t.rotation = Quaternion.Euler(0f, yaw + layout.chairYawOffset, 0f);
 #endif
+#if !UNITY_EDITOR
+            return;   // the keys below are for testing in the Editor only
+#endif
+#pragma warning disable CS0162   // unreachable in the player build
             if (XRSettings.isDeviceActive) return;
             var kb = Keyboard.current;
             var cam = Camera.main;
@@ -1307,6 +1314,7 @@ namespace InnerFrame.AlmondStudio
                     brushT.localRotation = Quaternion.identity;
                 }
             }
+#pragma warning restore CS0162
         }
     }
 }

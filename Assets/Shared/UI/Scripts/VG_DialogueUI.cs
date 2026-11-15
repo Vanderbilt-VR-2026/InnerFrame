@@ -136,6 +136,7 @@ public class VG_DialogueUI : MonoBehaviour
         onTop = new Material(Canvas.GetDefaultCanvasMaterial());
         onTop.SetInt("unity_GUIZTestMode", (int)UnityEngine.Rendering.CompareFunction.Always);   // nothing in the room cuts through it
         dialogue = VG_DialogueBox.Make(follow.Layout, settings, font, box, nameTab, starRing, star, onTop);
+        follow.DialogueBox = dialogue;
         hint = VG_Hint.Make(follow.Layout, VG_DialogueBox.Above, settings, font, hintPlate, star, key, onTop);
         paging = new VG_Paging(dialogue.Labels, dialogue.TextWidth, settings.wordsColour);
         paging.Resize = lines => { dialogue.More = paging.Current < paging.Pages.Count - 1; dialogue.Lines(lines); };

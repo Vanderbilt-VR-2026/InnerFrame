@@ -16,7 +16,7 @@ public sealed class VG_CompositorCanvas : MonoBehaviour
     // Rectangles at one metre from the head, in OpenXR VIEW axes (Unity forward convention).
     // Both the capture and the submitted quad keep this frame as text, pages and hover labels change.
     public static readonly Rect DialogueFrame = Rect.MinMaxRect(-.58f, -.51f, .72f, .16f);
-    public static readonly Rect ShortcutFrame = Rect.MinMaxRect(.54f, .19f, .81f, .50f);
+    public static readonly Rect ShortcutFrame = Rect.MinMaxRect(.09f, .08f, .37f, .39f);
     readonly Vector3[] corners = new Vector3[4];
     Canvas source;
     Camera eye;

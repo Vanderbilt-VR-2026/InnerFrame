@@ -11,10 +11,10 @@ using UnityEngine.XR.Interaction.Toolkit.UI;
 [DefaultExecutionOrder(-205)] // After XRI locomotion (-210), before its UI module (-200) and scene pointers (0).
 public sealed class PlayerMenuQuickActions : MonoBehaviour
 {
-    const float Distance = 0.7f, UnitsToMetres = 0.001f, Diameter = 54f, Spacing = 66f;
+    const float Distance = 0.7f, HeadsetDepth = 1.3f, UnitsToMetres = 0.001f, Diameter = 54f, Spacing = 66f;
     const float StackHeight = 2f * Spacing + Diameter;
-    static readonly Color IdleInk = new Color32(213, 191, 155, 255);
-    static readonly Color DisabledInk = new Color32(169, 152, 128, 255);
+    static readonly Color IdleInk = new Color32(239, 219, 179, 255);
+    static readonly Color DisabledInk = new Color32(198, 181, 152, 255);
     Camera eyes;
     PlayerMenu owner;
     bool desktop;
@@ -85,7 +85,7 @@ public sealed class PlayerMenuQuickActions : MonoBehaviour
             stack.anchorMin = stack.anchorMax = screenHud ? new Vector2(.975f, .925f) : new Vector2(.5f, .5f);
             // An XR camera can be selected before its display starts. The registered presenter
             // keeps the shortcuts in the eye buffer while the native layer starts or resumes.
-            if (!screenHud) VG_CompositorCanvas.Register(canvas, camera, Distance, VG_CompositorCanvas.ShortcutFrame, flatHud: true);
+            if (!screenHud) VG_CompositorCanvas.Register(canvas, camera, HeadsetDepth, VG_CompositorCanvas.ShortcutFrame, flatHud: true);
             else VG_CompositorCanvas.Unregister(canvas);
         }
         if (buttons[2] != null)
@@ -145,9 +145,9 @@ public sealed class PlayerMenuQuickActions : MonoBehaviour
             icon.color = IdleInk;
             icon.material = overlay;
             icon.raycastTarget = false;
-            var shadow = iconRect.gameObject.AddComponent<Shadow>();
-            shadow.effectColor = new Color32(26, 23, 32, 215);
-            shadow.effectDistance = new Vector2(1.25f, -1.25f);
+            var outline = iconRect.gameObject.AddComponent<Outline>();
+            outline.effectColor = new Color32(22, 22, 38, 255);
+            outline.effectDistance = new Vector2(1.5f, 1.5f);
             icons[i] = icon;
 
             const float labelWidth = 100f;
@@ -217,10 +217,10 @@ public sealed class PlayerMenuQuickActions : MonoBehaviour
             // Layout and ray targets use the same head-local metres as the OpenXR layer.
             // Keep all three circles inside the binocular view, including the headset's lens mask.
             canvasRect.localScale = Vector3.one;
-            float diameter = 2f * Distance * Mathf.Tan(2.2f * Mathf.Deg2Rad);
+            float diameter = 2f * HeadsetDepth * Mathf.Tan(2.2f * Mathf.Deg2Rad);
             stack.localScale = Vector3.one * (diameter / Diameter);
-            stack.localPosition = Distance * new Vector3(Mathf.Tan(37f * Mathf.Deg2Rad),
-                Mathf.Tan(19f * Mathf.Deg2Rad), 1f);
+            stack.localPosition = HeadsetDepth * new Vector3(Mathf.Tan(17f * Mathf.Deg2Rad),
+                Mathf.Tan(13f * Mathf.Deg2Rad), 1f);
             return;
         }
         Rect bounds = ViewBounds(Camera.MonoOrStereoscopicEye.Mono);

@@ -196,14 +196,22 @@ public class PlayerMenu : MonoBehaviour
         if (!wasOpenOnDesktop) return;
         Cursor.lockState = lockBeforeMenu; Cursor.visible = visibleBeforeMenu; wasOpenOnDesktop = false;
     }
-    static void EnsureXRUIEventSystem()
+    void EnsureXRUIEventSystem()
     {
-        var system = FindAnyObjectByType<EventSystem>();
-        if (system == null)
+        var system = EventSystem.current;
+        if (system == null) system = FindAnyObjectByType<EventSystem>();
+        if (system == null) system = new GameObject("EventSystem (XR UI)").AddComponent<EventSystem>();
+        var xr = system.GetComponent<XRUIInputModule>();
+        if (xr == null)
         {
-            var go = new GameObject("EventSystem (XR UI)"); go.AddComponent<EventSystem>(); go.AddComponent<XRUIInputModule>();
+            if (desktop && system.GetComponent<BaseInputModule>() != null) return;
+            xr = system.gameObject.AddComponent<XRUIInputModule>();
         }
-        else if (system.GetComponent<XRUIInputModule>() == null)
-            Debug.LogWarning("[PlayerMenu] The scene's EventSystem needs XRUIInputModule for controller rays.");
+        if (desktop) return;
+        foreach (var module in system.GetComponents<BaseInputModule>())
+            if (module != xr && module.enabled) module.enabled = false;
+        xr.enabled = true;
+        xr.enableXRInput = true;
+        xr.uiCamera = eyes;
     }
 }

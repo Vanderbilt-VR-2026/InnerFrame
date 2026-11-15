@@ -14,6 +14,8 @@ public class VG_FollowGroup : MonoBehaviour
     public Vector2 ViewSize { get; private set; }
     public Canvas DisplayCanvas { get; private set; }
 
+    public VG_DialogueBox DialogueBox { private get; set; }
+    Quaternion levelRotation = Quaternion.identity;
     float yaw, pitch;
     bool placed, moving;
     Transform cachedHead;
@@ -37,6 +39,7 @@ public class VG_FollowGroup : MonoBehaviour
     void OnEnable()
     {
         placed = moving = false;
+        levelRotation = Quaternion.identity;
         if (DisplayCanvas != null) DisplayCanvas.gameObject.SetActive(true);
     }
 
@@ -143,7 +146,13 @@ public class VG_FollowGroup : MonoBehaviour
             // A projection from the previous tracking sample must never determine a screen anchor.
             float referenceHeight = 2f * depth * Mathf.Tan(30f * Mathf.Deg2Rad);
             float y = (ViewportY - .5f) * referenceHeight;
-            surface.localPosition = new Vector3(0f, y, depth);
+            // Keep the visible box centre at its normal lower-view position. Only its baseline
+            // counter-rotates when the headset rolls, around that centre (the artwork's pivot is at its top).
+            var up = camera.transform.InverseTransformDirection(Vector3.up);
+            if (up.x * up.x + up.y * up.y > .0001f)
+                levelRotation = Quaternion.AngleAxis(Mathf.Atan2(-up.x, up.y) * Mathf.Rad2Deg, Vector3.forward);
+            var centre = DialogueBox != null ? Vector3.down * (.5f * DialogueBox.Height * settings.Scale) : Vector3.zero;
+            surface.SetLocalPositionAndRotation(new Vector3(0f, y, depth) + centre - levelRotation * centre, levelRotation);
             surface.localScale = Vector3.one / VG_UI.UnitsPerMetre;
             Layout.localScale = Vector3.one * settings.Scale;
             VG_CompositorCanvas.Register(DisplayCanvas, camera, depth, VG_CompositorCanvas.DialogueFrame, flatHud: true);

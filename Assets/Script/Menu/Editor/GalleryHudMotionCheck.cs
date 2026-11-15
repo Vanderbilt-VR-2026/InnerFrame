@@ -96,6 +96,51 @@ public static class GalleryHudMotionCheck
         return indices;
     }
 
+    static void CheckHeadTilt(VG_DialogueUI view, Action<bool, string> check)
+    {
+        var follow = view.GetComponent<VG_FollowGroup>();
+        var panel = (RectTransform)view.LayoutRoot.Find("DialogueBox/Panel");
+        var pose = eye.transform.rotation;
+        var corners = new Vector3[4];
+        foreach (float angle in new[] { 0f, -35f, 35f })
+        {
+            eye.transform.rotation = Quaternion.Euler(-18f, 53f, angle);
+            follow.Step(0f);
+            Canvas.ForceUpdateCanvases();
+            panel.GetWorldCorners(corners);
+            var centre = eye.transform.InverseTransformPoint((corners[0] + corners[2]) * .5f);
+            var expectedY = (follow.ViewportY - .5f) * 2f * view.settings.distance * Mathf.Tan(30f * Mathf.Deg2Rad) - .5f * view.BoxHeight;
+            check(Mathf.Abs(centre.x) < .001f && Mathf.Abs(centre.y - expectedY) < .001f &&
+                Mathf.Abs(centre.z - view.settings.distance) < .001f &&
+                Mathf.Abs(Vector3.Dot((corners[2] - corners[1]).normalized, Vector3.up)) < .001f,
+                view.name + ": lower-view centre and level top edge at head roll " + angle);
+        }
+        eye.transform.rotation = pose;
+        follow.Step(0f);
+    }
+
+    // Feed tracked-button states through the same input module as the rig. Calling onClick or
+    // sending a pointer event directly would bypass registration, hit selection and press/release.
+    sealed class TestHand : IUIInteractor
+    {
+        public XRUIInputModule module;
+        public Vector3 start, aim;
+        public bool pressed;
+
+        public void UpdateUIModel(ref TrackedDeviceModel model)
+        {
+            model.position = start;
+            model.orientation = Quaternion.LookRotation(aim - start);
+            model.select = pressed;
+            model.raycastLayerMask = Physics.DefaultRaycastLayers;
+            model.raycastPoints.Clear();
+            model.raycastPoints.Add(start);
+            model.raycastPoints.Add(aim + (aim - start).normalized * .2f);
+        }
+
+        public bool TryGetUIModel(out TrackedDeviceModel model) => module.GetTrackedDeviceModel(this, out model);
+    }
+
     static IEnumerator Capture(string run)
     {
         eye = Camera.main;
@@ -130,7 +175,16 @@ public static class GalleryHudMotionCheck
             Check(hits.Count > 0 && hits[0].gameObject == button.gameObject, "desktop pointer at " + button.name);
             return data;
         }
-        foreach (var button in buttons) Probe(button);
+        foreach (var button in buttons)
+        {
+            Probe(button);
+            var local = eye.transform.InverseTransformPoint(button.transform.position);
+            var yawDegrees = Mathf.Atan2(local.x, local.z) * Mathf.Rad2Deg;
+            var pitchDegrees = Mathf.Atan2(local.y, local.z) * Mathf.Rad2Deg;
+            Check(yawDegrees > 10f && yawDegrees < 22f && pitchDegrees > 5f && pitchDegrees < 21f && local.z > 1f,
+                button.name + ": reachable upper-right target inside the central binocular view");
+        }
+        CheckHeadTilt(guide.View, Check);
         var icons = buttons.Select(b => b.GetComponentInChildren<PlayerMenuShortcutIcon>()).ToArray();
         var normalTint = icons.Select(icon => icon.canvasRenderer.GetColor()).ToArray();
         var audio = buttons.Single(b => b.name == "Quick Audio");
@@ -147,6 +201,7 @@ public static class GalleryHudMotionCheck
                     "Audio controller hover displays its ring and name");
                 caption = VanGoghCaption.Make(PlayerMenu.Instance.transform, Vector3.zero);
                 caption.Words("Look at the colours in the Gallery");
+                CheckHeadTilt(caption.GetComponentInChildren<VG_DialogueUI>(), Check);
             }
             if (stage == "audio")
             {
@@ -237,6 +292,39 @@ public static class GalleryHudMotionCheck
                 Check(aligned[i] && iconMarks[i].Count >= 20 && iconWorst[i] >= .90f,
                     $"{stage}: {icons[i].Kind} glyph keeps unique zero-pixel alignment across 13 frames ({iconMarks[i].Count} samples, {iconWorst[i]:P0} retained)");
             Check(backgroundChange > .10f, $"{stage}: the Gallery background actually moved ({backgroundChange:P0})");
+        }
+        var module = EventSystem.current.currentInputModule as XRUIInputModule;
+        Check(module != null && module.enableXRInput, "Gallery routes tracked input through the active XR UI module");
+        if (module != null)
+        {
+            var hand = new TestHand { module = module, start = eye.transform.TransformPoint(new Vector3(.18f, -.12f, .73f)) };
+            module.RegisterInteractor(hand);
+            try
+            {
+                foreach (var button in buttons)
+                {
+                    hand.aim = button.transform.position;
+                    yield return null;
+                    yield return null;
+                    Check(button.transform.Find("Focus Ring").gameObject.activeInHierarchy &&
+                        button.GetComponentInChildren<Text>(true).gameObject.activeInHierarchy,
+                        "registered controller from an extended arm hovers " + button.name);
+                    hand.pressed = true;
+                    yield return null;
+                    yield return null;
+                    hand.pressed = false;
+                    yield return null;
+                    yield return null;
+                    var panel = UnityEngine.Object.FindAnyObjectByType<PlayerMenuPanel>();
+                    if (button.name == "Quick Menu")
+                        Check(panel != null && panel.CurrentPage == PlayerMenuPage.Controls && !panel.IsQuickAudio,
+                            "registered controller opens Menu");
+                    if (button == audio) Check(panel != null && panel.IsQuickAudio, "registered controller opens compact Audio");
+                    if (button.name == "Quick Gallery") Check(!button.interactable && panel != null && panel.IsQuickAudio,
+                        "Gallery identifies on hover without returning to the current Gallery");
+                }
+            }
+            finally { module.UnregisterInteractor(hand); }
         }
         File.WriteAllLines(folder + "/input-checks.txt", checks);
         File.WriteAllText(folder + "/complete.txt", DateTime.UtcNow.ToString("O"));

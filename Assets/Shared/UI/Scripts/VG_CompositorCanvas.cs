@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using InnerFrame.XR.UI;
 using UnityEngine;
 using UnityEngine.Rendering;
-using UnityEngine.Rendering.Universal;
 using UnityEngine.UI;
 
 /// <summary>Renders the actual interactive canvas into a cropped transparent VIEW-space quad on Quest.
@@ -20,14 +19,20 @@ public sealed class VG_CompositorCanvas : MonoBehaviour
     public static readonly Rect ShortcutFrame = Rect.MinMaxRect(.30f, -.47f, .70f, -.28f);
     readonly Vector3[] corners = new Vector3[4];
     Canvas source;
-    Camera eye, capture;
+    Camera eye;
+    Material painter;
+    CommandBuffer draw;
+    readonly List<Graphic> graphics = new List<Graphic>();
+    MaterialPropertyBlock properties;
+    static readonly int HudClip = Shader.PropertyToID("_HudClip"), HudTint = Shader.PropertyToID("_HudTint"),
+        MainTexture = Shader.PropertyToID("_MainTex"), SampleAdd = Shader.PropertyToID("_TextureSampleAdd");
     RenderTexture texture;
     ViewHudLayer native;
     float depth;
     Rect frame;
     int captureLayer = -1;
     bool originalEyeBit;
-    Vector2 centre, surfaceSize;
+    Rect pixels;
     Vector3 viewCentre;
     Vector2 viewSize;
 
@@ -56,13 +61,9 @@ public sealed class VG_CompositorCanvas : MonoBehaviour
 #endif
     }
 
-    void OnEnable() => RenderPipelineManager.endCameraRendering += Rendered;
+    public bool Capturing => captureLayer >= 0;
 
-    void OnDisable()
-    {
-        RenderPipelineManager.endCameraRendering -= Rendered;
-        Release();
-    }
+    void OnDisable() => Release();
 
     void LateUpdate()
     {
@@ -76,100 +77,115 @@ public sealed class VG_CompositorCanvas : MonoBehaviour
 
     void PrepareFrame()
     {
-        if (source == null || !source.enabled || source.renderMode != RenderMode.WorldSpace || !Measure(out var bounds))
+        if (source == null || !source.enabled || source.renderMode != RenderMode.WorldSpace ||
+            !source.transform.IsChildOf(eye.transform))
         {
             Release();
             return;
         }
-        if (capture == null && !StartCapture()) return;
-        // New controls or glyphs can be created after registration, including on the second tutorial page.
+        if (draw == null && !StartCapture()) return;
         AssignLayer(source.transform);
-        var nextSize = bounds.size;
-        // Leave a texel gutter for filtering; quantise allocation dimensions to avoid reallocating for changing text.
-        float pixelsPerMetre = Mathf.Min(1100f / depth, 1536f / Mathf.Max(nextSize.x, nextSize.y));
-        nextSize += Vector2.one * (4f / pixelsPerMetre);
-        int width = 64 * Mathf.Clamp(Mathf.CeilToInt(nextSize.x * pixelsPerMetre / 64f), 1, 24);
-        int height = 64 * Mathf.Clamp(Mathf.CeilToInt(nextSize.y * pixelsPerMetre / 64f), 1, 24);
-        // Keep the allocations when a name tab or a hover label shrinks; only grow within this activation.
+        // GetComponentsInChildren traverses in canvas sibling order (back to front).
+        source.GetComponentsInChildren(false, graphics);
+        var bounds = Rect.MinMaxRect(frame.xMin * depth, frame.yMin * depth, frame.xMax * depth, frame.yMax * depth);
+        bool any = false;
+        foreach (var graphic in graphics)
+        {
+            if (!Visible(graphic)) continue;
+            any = true;
+            if (!graphic.TryGetComponent<VG_HudMesh>(out _)) graphic.gameObject.AddComponent<VG_HudMesh>();
+            var local = ToView(graphic.transform);
+            graphic.rectTransform.GetLocalCorners(corners);
+            for (int i = 0; i < 4; ++i)
+            {
+                Vector2 point = local.MultiplyPoint3x4(corners[i]);
+                bounds.min = Vector2.Min(bounds.min, point);
+                bounds.max = Vector2.Max(bounds.max, point);
+            }
+        }
+        if (!any) { Release(); return; }
+        float density = Mathf.Min(1100f / depth, 1536f / Mathf.Max(bounds.width, bounds.height));
+        bounds.min -= Vector2.one * (2f / density);
+        bounds.max += Vector2.one * (2f / density);
+        pixels = bounds;
+        int width = 64 * Mathf.Clamp(Mathf.CeilToInt(bounds.width * density / 64f), 1, 24);
+        int height = 64 * Mathf.Clamp(Mathf.CeilToInt(bounds.height * density / 64f), 1, 24);
         if (texture == null || texture.width < width || texture.height < height)
         {
-            if (texture != null)
-            {
-                width = Mathf.Max(width, texture.width);
-                height = Mathf.Max(height, texture.height);
-            }
+            if (texture != null) { width = Mathf.Max(width, texture.width); height = Mathf.Max(height, texture.height); }
             RetireSurface();
-            texture = new RenderTexture(width, height, 16, RenderTextureFormat.ARGB32)
+            texture = new RenderTexture(width, height, 0, RenderTextureFormat.ARGB32)
             {
-                name = "HUD colour and alpha", filterMode = FilterMode.Bilinear,
-                wrapMode = TextureWrapMode.Clamp, useMipMap = false
+                name = "HUD colour and alpha", filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp
             };
             if (!texture.Create()) { Release(); return; }
-            capture.targetTexture = texture;
         }
-        centre = bounds.center;
-        surfaceSize = nextSize;
-        // Bounds and the native pose are in tracking metres. Only the offscreen Unity camera
-        // needs the XR Origin's scale to frame the matching world-space controller targets.
-        var eyeScale = eye.transform.lossyScale;
-        capture.transform.localPosition = new Vector3(centre.x, centre.y, 0f);
-        viewCentre = new Vector3(centre.x, centre.y, depth);
-        viewSize = surfaceSize;
-        capture.orthographicSize = surfaceSize.y * eyeScale.y * .5f;
-        capture.aspect = (surfaceSize.x * eyeScale.x) / (surfaceSize.y * eyeScale.y);
-        capture.farClipPlane = Mathf.Max(eye.nearClipPlane + 1f, depth * eyeScale.z + .5f);
+
+        // The texture is drawn without a scene camera, XR projection, or world-space transform.
+        // Head tracking is used only by the scene and by the physical controller's interactive plane.
+        draw.Clear();
+        draw.SetRenderTarget(texture);
+        draw.ClearRenderTarget(false, true, Color.clear);
+        var projection = GL.GetGPUProjectionMatrix(Matrix4x4.Ortho(bounds.xMin, bounds.xMax,
+            bounds.yMin, bounds.yMax, -10f, 10f), true);
+        bool drewMesh = false;
+        foreach (var graphic in graphics)
+        {
+            if (!Visible(graphic) || !graphic.TryGetComponent<VG_HudMesh>(out var mesh) ||
+                mesh.Geometry == null || mesh.Geometry.vertexCount == 0) continue;
+            var tint = graphic.canvasRenderer.GetColor();
+            tint.a *= graphic.canvasRenderer.GetInheritedAlpha();
+            var image = graphic.mainTexture;
+            properties.SetMatrix(HudClip, projection * ToView(graphic.transform));
+            properties.SetColor(HudTint, tint);
+            properties.SetTexture(MainTexture, image != null ? image : Texture2D.whiteTexture);
+            properties.SetVector(SampleAdd, image is Texture2D atlas && atlas.format == TextureFormat.Alpha8
+                ? new Vector4(1f, 1f, 1f, 0f) : Vector4.zero);
+            draw.DrawMesh(mesh.Geometry, Matrix4x4.identity, painter, 0, 0, properties);
+            drewMesh = true;
+        }
+        Graphics.ExecuteCommandBuffer(draw);
+        if (!drewMesh || !ViewHudLayer.Available) return;
+        viewCentre = new Vector3(bounds.center.x, bounds.center.y, depth);
+        viewSize = bounds.size;
+        if (native == null)
+            native = ViewHudLayer.Create(texture, viewCentre, viewSize,
+                100 + Mathf.Max(0, source.sortingOrder) * 8 + captureLayer - FirstLayer);
+        else native.SetSurface(texture, viewCentre, viewSize);
         if (native != null) SetEyeBit(!native.Ready);
     }
 
+    static bool Visible(Graphic graphic) => graphic.isActiveAndEnabled && graphic.color.a > 0f &&
+        graphic.canvasRenderer.GetInheritedAlpha() > 0f;
+
+    Matrix4x4 ToView(Transform node)
+    {
+        var result = Matrix4x4.identity;
+        while (node != eye.transform)
+        {
+            result = Matrix4x4.TRS(node.localPosition, node.localRotation, node.localScale) * result;
+            node = node.parent;
+        }
+        return result;
+    }
+
 #if UNITY_EDITOR
-    // Exercise the actual Android capture path on an editor GPU without claiming native OpenXR submission.
-    public Camera PrepareEditorCapture(Canvas canvas, Camera camera, float viewDepth)
+    public RenderTexture PrepareEditorCapture(Canvas canvas, Camera camera, float viewDepth)
     {
         source = canvas; eye = camera; depth = viewDepth; frame = DialogueFrame;
         PrepareFrame();
-        return capture;
+        Canvas.ForceUpdateCanvases();
+        PrepareFrame();
+        return texture;
     }
-    public Rect EditorViewRect => new Rect((Vector2)viewCentre - viewSize * .5f, viewSize);
+    public Rect EditorViewRect => pixels;
     public void EndEditorCapture() => Release();
 #endif
 
-    bool Measure(out Rect bounds)
-    {
-        bounds = default;
-        Vector2 min = frame.min * depth, max = frame.max * depth;
-        var graphics = GraphicRegistry.GetGraphicsForCanvas(source);
-        bool visible = false;
-        for (int i = 0; i < graphics.Count; ++i)
-        {
-            var graphic = graphics[i];
-            if (graphic == null || !graphic.isActiveAndEnabled || graphic.canvasRenderer.GetInheritedAlpha() <= 0f ||
-                graphic.color.a <= 0f) continue;
-            visible = true;
-            // Expand only for content outside the reserved frame (e.g. a long instruction). Walk local
-            // transforms to the eye: head pose and world coordinates never enter the submitted bounds.
-            Matrix4x4 toView = Matrix4x4.identity;
-            Transform node = graphic.rectTransform;
-            while (node != null && node != eye.transform)
-            {
-                toView = Matrix4x4.TRS(node.localPosition, node.localRotation, node.localScale) * toView;
-                node = node.parent;
-            }
-            if (node == null) return false;
-            graphic.rectTransform.GetLocalCorners(corners);
-            for (int j = 0; j < 4; ++j)
-            {
-                Vector2 xy = toView.MultiplyPoint3x4(corners[j]);
-                min = Vector2.Min(min, xy);
-                max = Vector2.Max(max, xy);
-            }
-        }
-        if (!visible) return false;
-        bounds = Rect.MinMaxRect(min.x, min.y, max.x, max.y);
-        return true;
-    }
-
     bool StartCapture()
     {
+        var shader = Resources.Load<Shader>("VG_ViewPixels");
+        if (shader == null) return false;
         for (int layer = FirstLayer; layer <= LastLayer; ++layer)
             if ((occupied & (1 << layer)) == 0 && string.IsNullOrEmpty(LayerMask.LayerToName(layer)))
             {
@@ -178,41 +194,12 @@ public sealed class VG_CompositorCanvas : MonoBehaviour
                 break;
             }
         if (captureLayer < 0) return false;
-        int bit = 1 << captureLayer;
-        originalEyeBit = (eye.cullingMask & bit) != 0;
+        originalEyeBit = (eye.cullingMask & (1 << captureLayer)) != 0;
         SetEyeBit(true);
-        var go = new GameObject("HUD capture camera");
-        go.transform.SetParent(eye.transform, false);
-        capture = go.AddComponent<Camera>();
-        capture.cullingMask = bit;
-        capture.depth = eye.depth - 1f;
-        capture.stereoTargetEye = StereoTargetEyeMask.None;
-        capture.orthographic = true;
-        capture.clearFlags = CameraClearFlags.SolidColor;
-        capture.backgroundColor = Color.clear;
-        capture.nearClipPlane = .01f;
-        capture.useOcclusionCulling = false;
-        capture.allowHDR = false;
-        capture.allowMSAA = false;
-        var urp = capture.GetUniversalAdditionalCameraData();
-        urp.allowXRRendering = false;
-        urp.renderPostProcessing = false;
-        urp.renderShadows = false;
-        urp.requiresDepthOption = CameraOverrideOption.Off;
-        urp.requiresColorOption = CameraOverrideOption.Off;
+        properties ??= new MaterialPropertyBlock();
+        painter = new Material(shader) { hideFlags = HideFlags.HideAndDontSave };
+        draw = new CommandBuffer { name = "InnerFrame fixed HUD" };
         return true;
-    }
-
-    void Rendered(ScriptableRenderContext context, Camera camera)
-    {
-        if (camera != capture || texture == null || !texture.IsCreated() || !ViewHudLayer.Available) return;
-        if (native == null)
-            native = ViewHudLayer.Create(texture, viewCentre, viewSize,
-                100 + Mathf.Max(0, source.sortingOrder) * 8 + captureLayer - FirstLayer);
-        else
-            // The provider copies before the next render. Publish the crop with the pixels it describes.
-            native.SetSurface(texture, viewCentre, viewSize);
-        if (native != null) SetEyeBit(!native.Ready);
     }
 
     // Preserve original per-object layers for restoration and scoped controller ray-mask translation.
@@ -249,7 +236,6 @@ public sealed class VG_CompositorCanvas : MonoBehaviour
         SetEyeBit(true);
         if (texture != null)
         {
-            if (capture != null) capture.targetTexture = null;
             Dispose(texture);
             texture = null;
         }
@@ -259,12 +245,11 @@ public sealed class VG_CompositorCanvas : MonoBehaviour
     {
         if (captureLayer < 0) return;
         RetireSurface();
-        if (capture != null)
-        {
-            capture.enabled = false;
-            Dispose(capture.gameObject);
-            capture = null;
-        }
+        draw?.Release();
+        draw = null;
+        if (painter != null) Dispose(painter);
+        painter = null;
+        graphics.Clear();
         foreach (var pair in originalLayers)
             if (pair.Key != null && pair.Key.gameObject.layer == captureLayer) pair.Key.gameObject.layer = pair.Value;
         originalLayers.Clear();

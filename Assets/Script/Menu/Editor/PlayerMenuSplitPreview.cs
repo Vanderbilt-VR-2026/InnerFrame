@@ -162,7 +162,7 @@ public static class PlayerMenuSplitPreview
             panel.ShowInFrontOf(camera.transform, PaintingNames.Gallery);
             Check(panel.GalleryAvailable && panel.ShownBackLabel == PlayerMenuPanel.BackLabel, "painting context offers Back to Gallery");
             Check(Vector3.Distance(panel.transform.position, camera.transform.position) < 2f, "panel opens inside the 2 m controller ray");
-            Check(panel.GetComponentInChildren<BoxCollider>() != null, "title bar has a grab collider");
+            Check(panel.GetComponentInChildren<PlayerMenuTitleDrag>().GetComponent<Image>().raycastTarget, "title bar accepts UI trigger drags");
             Check(panel.GetComponentInChildren<TrackedDeviceGraphicRaycaster>() != null, "menu accepts tracked controller UI rays");
             var canvas = panel.GetComponentInChildren<Canvas>();
             Check(canvas != null && canvas.renderMode == RenderMode.WorldSpace && canvas.worldCamera == camera, "world-space canvas uses supplied camera");
@@ -217,6 +217,34 @@ public static class PlayerMenuSplitPreview
             Check(compactSlider != null && compactSlider.interactable && compactSlider.fillRect != null && compactSlider.handleRect != null, "compact Audio retains a real interactive slider");
             Check(NamedButton(panel, "Mute") != null && NamedButton(panel, "Mute").gameObject.activeInHierarchy && panel.GetComponentsInChildren<Button>().Any(b => Label(b) == "×"), "compact Audio retains Mute and close cross");
             Check(VisibleUiFits(panel, camera), "compact Audio visible UI remains in viewport");
+            var drag = panel.GetComponentInChildren<PlayerMenuTitleDrag>();
+            var eventObject = new GameObject("Title drag fixture", typeof(EventSystem));
+            var pointer = new TrackedDeviceEventData(eventObject.GetComponent<EventSystem>()) { pointerId = 17 };
+            Vector3 initialPosition = camera.transform.position;
+            var target = camera.transform.InverseTransformPoint(drag.transform.position);
+            void Aim(Vector3 delta) => pointer.rayPoints = new List<Vector3> { camera.transform.position,
+                camera.transform.TransformPoint(2f * (target + delta)) };
+            Check(((Vector2)panel.transform.localPosition).sqrMagnitude < .00001f, "Audio opens at view centre");
+            Aim(Vector3.zero);
+            drag.OnPointerDown(pointer);
+            drag.OnBeginDrag(pointer);
+            Aim(new Vector3(-.18f, .1f, 0f));
+            drag.OnDrag(pointer);
+            drag.OnPointerUp(pointer);
+            var released = panel.transform.localPosition;
+            Check(Vector2.Distance(released, new Vector2(-.18f, .1f)) < .001f, "real title drag updates the view-plane offset");
+            for (int i = 1; i <= 16; i++)
+                camera.transform.SetPositionAndRotation(initialPosition + Vector3.right * (.04f * i),
+                    Quaternion.Euler(i * 1.5f, i * 3f, i));
+            Aim(Vector3.right * .3f);
+            drag.OnDrag(pointer);
+            Check(Vector3.Distance(camera.transform.InverseTransformPoint(panel.transform.position), released) < .0001f,
+                "released panel ignores later pointer and head motion");
+            panel.Hide();
+            panel.ShowInFrontOf(camera.transform, PaintingNames.Gallery);
+            Check(((Vector2)panel.transform.localPosition).sqrMagnitude < .00001f, "reopening restores the menu to centre");
+            camera.transform.SetPositionAndRotation(initialPosition, Quaternion.identity);
+            Object.DestroyImmediate(eventObject);
             panel.ShowInFrontOf(camera.transform, PaintingNames.Gallery, true);
             panel.SelectPage(PlayerMenuPage.Audio);
             Check(!panel.IsQuickAudio && compactNavigation.All(b => b.gameObject.activeInHierarchy), "normal Menu restores all six navigation choices");

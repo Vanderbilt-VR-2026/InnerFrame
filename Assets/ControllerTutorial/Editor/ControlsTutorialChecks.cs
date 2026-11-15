@@ -174,8 +174,8 @@ public static class ControlsTutorialChecks
                 Call(tutorials, "Awake");
                 panel.gameObject.SetActive(true);
                 tutorials.RefreshSceneBindings();
-                var menuGrab = panel.GetComponent<XRGrabInteractable>();
-                menuGrab.selectEntered.Invoke(new SelectEnterEventArgs { interactableObject = menuGrab });
+                Check(panel.GetComponent<XRGrabInteractable>() == null && panel.GetComponentInChildren<PlayerMenuTitleDrag>() != null,
+                    "the menu title uses UI trigger drag independently of object grab");
                 Check(panel.GetComponent<FirstUseGrabAdapter>() == null && !tutorials.Session.IsComplete(TutorialStep.BedroomGrip),
                     "dragging a menu title bar does not complete the Bedroom object pickup lesson");
                 Call(tutorials, "OnDestroy");

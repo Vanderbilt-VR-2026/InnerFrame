@@ -10,12 +10,14 @@ Updated 2026-11-13 from Cici's five-page **InnerFrame controls: one button, one 
 | Right stick left / right | Smooth Turn |
 | Right stick forward | Where teleport is available, aim and release at a valid floor destination |
 | Either trigger | Pull the trigger to select UI; open a Gallery painting's menu, then choose Enter or Back; select interactions in The Starry Night |
-| Either grip | Hold grip to pick up an object or move a menu by its title bar |
+| Either grip | Hold grip to pick up an object |
 | Right Ⓐ | Unassigned; Jump is disabled |
 | Right Ⓑ | Hold to ask Vincent, release to send; pressing while he speaks interrupts him |
 | Left Ⓧ | Hold to talk to the other player, release to stop |
 | Left ≡ Menu | Open / close Player Menu; Controls opens the full guide in the current scene |
 | Left Ⓨ | Unassigned |
+
+From Gallery onward, the shortcuts stay in the lower right. A shortcut opens its panel in the centre. Hold the trigger on the title bar to drag it. Releasing pins the panel there until it closes.
 
 Gallery uses Cici's new arch, corridor and hanging order: Self-portrait, The Bedroom, Café Terrace, The Starry Night, Almond Blossom. The self-portrait is for Vincent's Ⓑ conversation; the other four paintings have Trigger menus. Almond Blossom shows Coming soon with Enter disabled. The serialized Gallery scene, layout and artwork assets are taken unchanged from #199.
 

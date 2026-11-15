@@ -3,15 +3,12 @@ using System.Collections.Generic;
 using InnerFrame.Tutorial;
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.XR.Interaction.Toolkit;
-using UnityEngine.XR.Interaction.Toolkit.Attachment;
-using UnityEngine.XR.Interaction.Toolkit.Interactables;
 using UnityEngine.XR.Interaction.Toolkit.UI;
 
 public enum PlayerMenuPage { Controls, Audio, Gallery, Settings, Restart, Leave }
 
 /// <summary>Shared two-column menu. Navigation stays in place; only the right-hand content changes.
-/// Built from the existing Vincent UI sprites/font, with a grabbable title bar in world space.</summary>
+/// Built from the existing Vincent UI sprites/font, with a draggable title bar in the view plane.</summary>
 public class PlayerMenuPanel : MonoBehaviour
 {
     public const string BackLabel = "Back to Gallery";
@@ -23,7 +20,7 @@ public class PlayerMenuPanel : MonoBehaviour
     readonly List<Button> confirmations = new List<Button>();
     Transform cam;
     RectTransform canvasRect;
-    XRGrabInteractable grab;
+    Canvas canvas;
     Text moveHint, volumeLabel, muteLabel, subtitleLabel, scaleLabel, credit;
     Slider volume;
     Button smaller, larger;
@@ -54,12 +51,11 @@ public class PlayerMenuPanel : MonoBehaviour
         SetQuickAudio(false);
         cam = eyes;
         var camera = eyes.GetComponent<Camera>();
-        if (camera != null) canvasRect.GetComponent<Canvas>().worldCamera = camera;
-        Vector3 forward = Vector3.ProjectOnPlane(eyes.forward, Vector3.up);
-        if (forward.sqrMagnitude < .0001f) forward = Vector3.ProjectOnPlane(eyes.up, Vector3.up);
-        forward.Normalize();
-        transform.SetPositionAndRotation(eyes.position + forward * (desktop ? DesktopDistance : SpawnDistance)
-            + (desktop ? Vector3.zero : Vector3.down * .08f), Quaternion.LookRotation(forward, Vector3.up));
+        canvas.worldCamera = camera;
+        transform.SetParent(eyes, false);
+        transform.SetLocalPositionAndRotation(Vector3.forward * (desktop ? DesktopDistance : SpawnDistance), Quaternion.identity);
+        transform.localScale = Vector3.one;
+        if (camera != null) VG_CompositorCanvas.Register(canvas, camera, transform.localPosition.z, PopupFrame());
         backScene = back;
         navigation[PlayerMenuPage.Gallery].interactable = GalleryAvailable;
         moveHint.text = desktop ? "M to close" : ControlsCatalog.MoveMenu;
@@ -75,12 +71,29 @@ public class PlayerMenuPanel : MonoBehaviour
         ShowInFrontOf(eyes, back, desktop);
         SetQuickAudio(true);
         SelectPage(PlayerMenuPage.Audio);
-        var camera = eyes.GetComponent<Camera>();
-        if (camera == null) return;
-        const float distance = .7f;
-        float width = 2f * distance * Mathf.Tan(camera.fieldOfView * Mathf.Deg2Rad * .5f) * camera.aspect;
-        float x = Mathf.Min(.80f, 1f - (.175f * PlayerMenuPreferences.MenuScale + .035f) / Mathf.Max(.01f, width));
-        transform.SetPositionAndRotation(camera.ViewportToWorldPoint(new Vector3(x, .38f, distance)), eyes.rotation);
+        Place(Vector2.zero);
+    }
+
+    Rect PopupFrame()
+    {
+        // Reserve the full panel, including the external title tab. Move this rectangle with the drag.
+        float depth = transform.localPosition.z;
+        var center = (Vector2)transform.localPosition / depth;
+        var halfSize = Vector2.Scale(canvasRect.rect.size * .5f + new Vector2(4f, 30f),
+            canvasRect.localScale) / depth;
+        return new Rect(center - halfSize, halfSize * 2f);
+    }
+
+    public void Place(Vector2 offset)
+    {
+        float depth = transform.localPosition.z;
+        var camera = canvas.worldCamera;
+        if (camera == null || depth <= 0f) return;
+        float halfHeight = camera.stereoEnabled ? .62f : Mathf.Tan(camera.fieldOfView * Mathf.Deg2Rad * .5f);
+        float halfWidth = camera.stereoEnabled ? .80f : halfHeight * camera.aspect;
+        Vector2 room = Vector2.Max(Vector2.zero, new Vector2(halfWidth, halfHeight) - PopupFrame().size * .5f) * depth;
+        transform.localPosition = new Vector3(Mathf.Clamp(offset.x, -room.x, room.x), Mathf.Clamp(offset.y, -room.y, room.y), depth);
+        VG_CompositorCanvas.Register(canvas, camera, depth, PopupFrame());
     }
 
     void SetQuickAudio(bool compact)
@@ -127,11 +140,6 @@ public class PlayerMenuPanel : MonoBehaviour
 
     void LateUpdate()
     {
-        if (grab != null && grab.isSelected && cam != null)
-        {
-            var away = Vector3.ProjectOnPlane(transform.position - cam.position, Vector3.up);
-            if (away.sqrMagnitude > .0001f) transform.rotation = Quaternion.LookRotation(away, Vector3.up);
-        }
         foreach (var button in confirmations) button.interactable = !SceneFader.IsFading;
     }
 
@@ -139,6 +147,7 @@ public class PlayerMenuPanel : MonoBehaviour
     {
         if (!built) return;
         canvasRect.localScale = Vector3.one * MetresPerPixel * PlayerMenuPreferences.MenuScale;
+        if (cam != null && transform.parent == cam) Place(transform.localPosition);
         volume.SetValueWithoutNotify(PlayerMenuPreferences.MasterVolume);
         volumeLabel.text = Mathf.RoundToInt(PlayerMenuPreferences.MasterVolume * 100) + "%";
         muteLabel.text = PlayerMenuPreferences.Muted ? "Unmute" : "Mute";
@@ -152,19 +161,20 @@ public class PlayerMenuPanel : MonoBehaviour
     {
         PlayerMenuPreferences.Initialize();
         canvasRect = Rect(transform, "Canvas", Vector2.zero, new Vector2(W, H));
-        var canvas = canvasRect.gameObject.AddComponent<Canvas>();
+        canvas = canvasRect.gameObject.AddComponent<Canvas>();
+        canvas.sortingOrder = 205;
         canvas.renderMode = RenderMode.WorldSpace;
         canvas.worldCamera = camera;
         canvasRect.localScale = Vector3.one * MetresPerPixel;
-        canvasRect.gameObject.AddComponent<TrackedDeviceGraphicRaycaster>();
+        var raycaster = canvasRect.gameObject.AddComponent<VG_CompositorRaycaster>();
+        raycaster.checkFor2DOcclusion = raycaster.checkFor3DOcclusion = false;
         canvasRect.gameObject.AddComponent<GraphicRaycaster>();
         Picture(canvasRect, "Gallery Frame", MenuLook.BoxSprite, Vector2.zero, new Vector2(W, H));
         var title = Picture(canvasRect, "Title Bar (grab to move)", MenuLook.NameTabSprite, new Vector2(-284, H / 2), new Vector2(190, 44));
         Picture(title, "Title Star Ring", MenuLook.StarRingSprite, new Vector2(-67, 0), new Vector2(34, 34));
         Label(title, "Menu", new Vector2(12, 0), new Vector2(125, 36), 24, TextAnchor.MiddleCenter);
-        var handle = title.gameObject.AddComponent<BoxCollider>();
-        handle.size = new Vector3(190, 44, 20);
-        handle.center = new Vector3(0, 0, -10);
+        title.GetComponent<Image>().raycastTarget = true;
+        title.gameObject.AddComponent<PlayerMenuTitleDrag>().Panel = this;
         ButtonAt(canvasRect, "Close", "×", new Vector2(375, 190), new Vector2(36, 36), Hide);
         var divider = Rect(canvasRect, "Column Divider", new Vector2(-116, -3), new Vector2(1, 320));
         var dividerImage = divider.gameObject.AddComponent<Image>(); dividerImage.color = new Color(1, .83f, .35f, .35f); dividerImage.raycastTarget = false;
@@ -192,11 +202,6 @@ public class PlayerMenuPanel : MonoBehaviour
         credit = Label(canvasRect, "", new Vector2(-20, -213), new Vector2(730, 24), 10, TextAnchor.MiddleCenter);
         credit.color = MenuLook.Muted;
         Picture(canvasRect, "Corner Star", MenuLook.StarSprite, new Vector2(375, -194), new Vector2(24, 24));
-        var body = gameObject.AddComponent<Rigidbody>(); body.isKinematic = true; body.useGravity = false;
-        grab = gameObject.AddComponent<XRGrabInteractable>();
-        grab.movementType = XRBaseInteractable.MovementType.Instantaneous;
-        grab.trackRotation = false; grab.useDynamicAttach = true;
-        grab.farAttachMode = InteractableFarAttachMode.Far; grab.throwOnDetach = false;
         built = true;
         SelectPage(PlayerMenuPage.Controls);
     }

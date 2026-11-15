@@ -53,7 +53,7 @@ public static class VG_CompositorCaptureCheck
             int originalMask = eye.cullingMask;
             route = surface.gameObject.AddComponent<VG_CompositorCanvas>();
             var capture = route.PrepareEditorCapture(canvas, eye, depth);
-            if (capture == null || capture.targetTexture == null) throw new InvalidOperationException("No cropped target");
+            if (capture == null) throw new InvalidOperationException("No cropped target");
             first = Read(capture);
             File.WriteAllBytes(Path.Combine(folder, "compositor-guide.png"), first.EncodeToPNG());
             var pixels = first.GetPixels32();
@@ -64,28 +64,37 @@ public static class VG_CompositorCaptureCheck
                 $"captured transparent background, gold border and blue-black panel ({empty}/{gold}/{dark} pixels)");
             var button = canvas.GetComponentsInChildren<Button>().Single(b => b.name == "Next");
             var previous = canvas.GetComponentsInChildren<Button>().Single(b => b.name == "Previous");
-            var left = capture.WorldToViewportPoint(previous.transform.position);
-            var right = capture.WorldToViewportPoint(button.transform.position);
+            Vector2 Pixel(Vector3 world) => Rect.PointToNormalized(route.EditorViewRect, eye.transform.InverseTransformPoint(world));
+            var left = Pixel(previous.transform.position);
+            var right = Pixel(button.transform.position);
             var panel = (RectTransform)layout.Find("DialogueBox/Panel");
             var c = new Vector3[4]; panel.GetWorldCorners(c);
-            var a = capture.WorldToViewportPoint(c[0]); var b = capture.WorldToViewportPoint(c[2]);
-            float renderedAspect = ((b.x - a.x) * capture.aspect) / (b.y - a.y);
+            var a = Pixel(c[0]); var b = Pixel(c[2]);
+            float renderedAspect = ((b.x - a.x) * (route.EditorViewRect.width / route.EditorViewRect.height)) / (b.y - a.y);
             float realAspect = Vector3.Distance(c[2], c[1]) / Vector3.Distance(c[1], c[0]);
             Check(left.x > 0 && left.x < right.x && right.x < 1 && right.y < a.y &&
                 Mathf.Abs(renderedAspect / realAspect - 1f) < .002f,
                 "guide order, bottom navigation and physical aspect are preserved by the cropped camera");
 
             var originalFrame = route.EditorViewRect;
-            var originalPanel = capture.WorldToViewportPoint(c[0]);
+            var originalPanel = Pixel(c[0]);
             var roomPoint = eye.transform.TransformPoint(new Vector3(.2f, .4f, 3f));
             var originalRoom = eye.WorldToViewportPoint(roomPoint);
-            eye.transform.SetPositionAndRotation(new Vector3(-1f, .7f, 2f), Quaternion.Euler(26f, -38f, -12f));
-            capture = route.PrepareEditorCapture(canvas, eye, depth);
+            bool stable = true;
+            for (int i = 1; i <= 12; ++i)
+            {
+                eye.transform.SetPositionAndRotation(new Vector3(-1f, .7f, 2f) * (i / 12f),
+                    Quaternion.Euler(2f * i, -4f * i, -i));
+                capture = route.PrepareEditorCapture(canvas, eye, depth);
+                var actual = Read(capture);
+                stable &= actual.GetRawTextureData<byte>().SequenceEqual(first.GetRawTextureData<byte>());
+                Object.DestroyImmediate(actual);
+            }
             panel.GetWorldCorners(c);
-            Check(Vector3.Distance(originalRoom, eye.WorldToViewportPoint(roomPoint)) > .25f &&
-                route.EditorViewRect == originalFrame &&
-                Vector3.Distance(originalPanel, capture.WorldToViewportPoint(c[0])) < .0001f,
-                "turning, rolling and moving changes the scene while preserving the submitted rectangle and panel pixels");
+            Check(stable && Vector3.Distance(originalRoom, eye.WorldToViewportPoint(roomPoint)) > .25f &&
+                route.EditorViewRect == originalFrame && Vector2.Distance(originalPanel, Pixel(c[0])) < .0001f,
+                "12 consecutive moving head poses change the scene while every HUD pixel and its VIEW rectangle remain identical");
+            Check(first.GetPixelBilinear(right.x, right.y).a > .5f, "a visible Next button occupies the same pixel as its controller target");
             var system = new GameObject("HUD test event system").AddComponent<EventSystem>();
             var tracked = new TrackedDeviceEventData(system)
             {
@@ -105,7 +114,7 @@ public static class VG_CompositorCaptureCheck
             Check(route.EditorViewRect == originalFrame, "changing tutorial pages retains the same headset rectangle");
             second = Read(capture);
             panel.GetWorldCorners(c);
-            var a2 = capture.WorldToViewportPoint(c[0]); var b2 = capture.WorldToViewportPoint(c[2]);
+            var a2 = Pixel(c[0]); var b2 = Pixel(c[2]);
             int changed = 0;
             for (int y = 1; y < 24; ++y)
                 for (int x = 1; x < 80; ++x)
@@ -138,13 +147,11 @@ public static class VG_CompositorCaptureCheck
         return report.Count > 0 && report.All(line => line.StartsWith("PASS "));
     }
 
-    static Texture2D Read(Camera camera)
+    static Texture2D Read(RenderTexture target)
     {
-        var target = camera.targetTexture;
         var previous = RenderTexture.active;
         try
         {
-            camera.Render();
             RenderTexture.active = target;
             var pixels = new Texture2D(target.width, target.height, TextureFormat.RGBA32, false);
             pixels.ReadPixels(new Rect(0, 0, target.width, target.height), 0, 0);

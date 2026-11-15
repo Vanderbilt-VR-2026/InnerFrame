@@ -72,21 +72,25 @@ public static class GalleryHudMotionCheck
 
     // Compare opaque artwork landmarks on the final Game view; translucent panel interiors
     // legitimately change colour when the painting behind the panel moves.
-    static List<int> Markers(Texture2D image, RectTransform region, bool button)
+    static List<int> Markers(Texture2D image, RectTransform region, Texture2D darkGlyphs = null)
     {
         var bounds = new Vector3[4];
         region.GetWorldCorners(bounds);
         var low = eye.WorldToViewportPoint(bounds[0]);
         var high = eye.WorldToViewportPoint(bounds[2]);
         var pixels = image.GetPixels32();
+        var control = darkGlyphs != null ? darkGlyphs.GetPixels32() : null;
         var indices = new List<int>();
         for (int y = Mathf.Max(0, Mathf.CeilToInt(low.y * image.height)); y < Mathf.Min(image.height, high.y * image.height); y++)
             for (int x = Mathf.Max(0, Mathf.CeilToInt(low.x * image.width)); x < Mathf.Min(image.width, high.x * image.width); x++)
             {
                 int i = y * image.width + x;
                 var c = pixels[i];
-                if (button ? (c.r > 190 && c.r - c.g > 10 && c.r - c.g < 45 && c.g - c.b > 15 && c.g - c.b < 55)
-                           : (c.r < 25 && c.g < 38 && c.b > 55 && c.b < 74))
+                // A second frame with only the glyph ink darkened isolates its strokes even on bright paintings.
+                bool match = control != null
+                    ? Mathf.GammaToLinearSpace(c.g / 255f) - Mathf.GammaToLinearSpace(control[i].g / 255f) > .22f
+                    : c.r < 25 && c.g < 38 && c.b > 55 && c.b < 74;
+                if (match)
                     indices.Add(i);
             }
         return indices;
@@ -127,19 +131,29 @@ public static class GalleryHudMotionCheck
             return data;
         }
         foreach (var button in buttons) Probe(button);
+        var icons = buttons.Select(b => b.GetComponentInChildren<PlayerMenuShortcutIcon>()).ToArray();
+        var normalTint = icons.Select(icon => icon.canvasRenderer.GetColor()).ToArray();
+        var audio = buttons.Single(b => b.name == "Quick Audio");
+        var audioRing = audio.transform.Find("Focus Ring");
+        var audioLabel = audio.GetComponentInChildren<Text>(true);
         VanGoghCaption caption = null;
         foreach (var stage in new[] { "guide", "vincent", "audio" })
         {
             if (stage == "vincent")
             {
                 guide.Close();
+                ExecuteEvents.Execute(audio.gameObject, Probe(audio), ExecuteEvents.pointerEnterHandler);
+                Check(audioRing.gameObject.activeInHierarchy && audioLabel.gameObject.activeInHierarchy,
+                    "Audio controller hover displays its ring and name");
                 caption = VanGoghCaption.Make(PlayerMenu.Instance.transform, Vector3.zero);
                 caption.Words("Look at the colours in the Gallery");
             }
             if (stage == "audio")
             {
                 caption.Words(null);
-                var audio = buttons.Single(b => b.name == "Quick Audio");
+                ExecuteEvents.Execute(audio.gameObject, Probe(audio), ExecuteEvents.pointerExitHandler);
+                Check(!audioRing.gameObject.activeInHierarchy && !audioLabel.gameObject.activeInHierarchy,
+                    "leaving Audio hides its ring and name");
                 ExecuteEvents.Execute(audio.gameObject, Probe(audio), ExecuteEvents.pointerClickHandler);
                 Check(UnityEngine.Object.FindAnyObjectByType<PlayerMenuPanel>()?.IsQuickAudio == true, "Audio shortcut opens its compact popup");
             }
@@ -150,9 +164,12 @@ public static class GalleryHudMotionCheck
                 ? UnityEngine.Object.FindAnyObjectByType<PlayerMenuTitleDrag>().GetComponent<RectTransform>()
                 : (stage == "guide" ? guide.View : caption.GetComponentInChildren<VG_DialogueUI>()).LayoutRoot
                     .Find("DialogueBox/NameTab") as RectTransform;
-            List<int> titleMarks = null, buttonMarks = null;
+            List<int> titleMarks = null;
+            List<int>[] iconMarks = null;
+            var iconWorst = icons.Select(_ => 1f).ToArray();
+            var aligned = icons.Select(_ => true).ToArray();
             Color32[] first = null;
-            float titleWorst = 1f, buttonWorst = 1f, backgroundChange = 0f;
+            float titleWorst = 1f, backgroundChange = 0f;
             for (int frame = 0; frame < 13; ++frame)
             {
                 float t = frame <= 8 ? Mathf.Sin(frame * Mathf.PI / 8) : 0;
@@ -162,11 +179,18 @@ public static class GalleryHudMotionCheck
                 var image = ScreenCapture.CaptureScreenshotAsTexture();
                 File.WriteAllBytes(Path.Combine(folder, $"{stage}-{frame:D2}.png"), image.EncodeToPNG());
                 var pixels = image.GetPixels32();
+                foreach (var icon in icons) icon.canvasRenderer.SetColor(Color.black);
+                yield return null;
+                yield return new WaitForEndOfFrame();
+                var control = ScreenCapture.CaptureScreenshotAsTexture();
+                var strokes = icons.Select(icon => Markers(image, icon.rectTransform, control)).ToArray();
+                UnityEngine.Object.Destroy(control);
+                for (int i = 0; i < icons.Length; ++i) icons[i].canvasRenderer.SetColor(normalTint[i]);
                 if (frame == 0)
                 {
                     first = pixels;
-                    titleMarks = box == null ? new List<int>() : Markers(image, box, false);
-                    buttonMarks = Markers(image, (RectTransform)buttons.First(b => b.name == "Quick Audio").transform, true);
+                    titleMarks = box == null ? new List<int>() : Markers(image, box);
+                    iconMarks = strokes;
                 }
                 else
                 {
@@ -179,7 +203,23 @@ public static class GalleryHudMotionCheck
                         return (float)n / marks.Count;
                     }
                     titleWorst = Mathf.Min(titleWorst, Retained(titleMarks));
-                    buttonWorst = Mathf.Min(buttonWorst, Retained(buttonMarks));
+                    for (int i = 0; i < icons.Length; ++i)
+                    {
+                        var current = new HashSet<int>(strokes[i]);
+                        var reference = iconMarks[i];
+                        int same = reference.Count(current.Contains);
+                        iconWorst[i] = Mathf.Min(iconWorst[i], same / (float)Mathf.Max(1, reference.Count));
+                        // Distinguish a fixed glyph from a shifted one, even if moving scenery adds
+                        // a few bright samples next to its edges between the two captures.
+                        for (int dy = -3; dy <= 3; ++dy)
+                            for (int dx = -3; dx <= 3; ++dx)
+                            {
+                                if (dx == 0 && dy == 0) continue;
+                                int offset = dy * image.width + dx;
+                                if (reference.Count(p => current.Contains(p + offset)) >= same)
+                                    aligned[i] = false;
+                            }
+                    }
                     if (frame == 4)
                     {
                         int changed = 0, count = 0;
@@ -193,7 +233,9 @@ public static class GalleryHudMotionCheck
                 File.AppendAllText(folder + "/poses.csv", $"{stage},{frame},{yaw},{pitch},{roll},{shift}\n");
             }
             Check(titleMarks.Count >= 20 && titleWorst >= .85f, $"{stage}: title pixels held in all 13 frames ({titleMarks.Count}, {titleWorst:P0})");
-            Check(buttonMarks.Count >= 20 && buttonWorst >= .85f, $"{stage}: shortcut pixels held in all 13 frames ({buttonMarks.Count}, {buttonWorst:P0})");
+            for (int i = 0; i < icons.Length; ++i)
+                Check(aligned[i] && iconMarks[i].Count >= 20 && iconWorst[i] >= .90f,
+                    $"{stage}: {icons[i].Kind} glyph keeps unique zero-pixel alignment across 13 frames ({iconMarks[i].Count} samples, {iconWorst[i]:P0} retained)");
             Check(backgroundChange > .10f, $"{stage}: the Gallery background actually moved ({backgroundChange:P0})");
         }
         File.WriteAllLines(folder + "/input-checks.txt", checks);

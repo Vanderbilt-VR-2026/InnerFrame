@@ -18,5 +18,11 @@ public sealed class PlayerMenuShortcutPointer : MonoBehaviour, IPointerEnterHand
     public void OnPointerDown(PointerEventData data) { pressed.Add(data.pointerId); Notify(); }
     public void OnPointerUp(PointerEventData data) { pressed.Remove(data.pointerId); Notify(); }
     void Notify() { if (owner != null) owner.MarkPointerEvent(index, hovering.Count > 0); }
-    void OnDisable() { hovering.Clear(); pressed.Clear(); }
+    void OnDisable()
+    {
+        bool hadFocus = hovering.Count > 0;
+        hovering.Clear();
+        pressed.Clear();
+        if (hadFocus) Notify();
+    }
 }

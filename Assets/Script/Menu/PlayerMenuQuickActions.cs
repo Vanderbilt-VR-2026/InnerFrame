@@ -12,17 +12,21 @@ using UnityEngine.XR.Interaction.Toolkit.UI;
 public sealed class PlayerMenuQuickActions : MonoBehaviour
 {
     const float Distance = 0.7f, UnitsToMetres = 0.001f, Diameter = 54f, Spacing = 66f;
+    const float StackHeight = 2f * Spacing + Diameter;
+    static readonly Color IdleInk = new Color32(213, 191, 155, 255);
+    static readonly Color DisabledInk = new Color32(169, 152, 128, 255);
     Camera eyes;
     PlayerMenu owner;
     bool desktop;
     Canvas canvas;
     RectTransform canvasRect;
-    RectTransform row;
+    RectTransform stack;
     Material overlay;
     readonly Button[] buttons = new Button[3];
+    readonly GameObject[] rings = new GameObject[3];
+    readonly PlayerMenuShortcutIcon[] icons = new PlayerMenuShortcutIcon[3];
     readonly GameObject[] labels = new GameObject[3];
     readonly PlayerMenuShortcutPointer[] pointers = new PlayerMenuShortcutPointer[3];
-    PlayerMenuShortcutIcon audioIcon;
     NearFarInteractor[] hands = System.Array.Empty<NearFarInteractor>();
     XRRayInteractor[] rays = System.Array.Empty<XRRayInteractor>();
     float nextFind;
@@ -78,7 +82,7 @@ public sealed class PlayerMenuQuickActions : MonoBehaviour
                 canvasRect.localScale = new Vector3(1f / scale.x, 1f / scale.y, 1f / scale.z);
                 canvasRect.sizeDelta = Vector2.zero;
             }
-            row.anchorMin = row.anchorMax = screenHud ? new Vector2(.95f, .075f) : new Vector2(.5f, .5f);
+            stack.anchorMin = stack.anchorMax = screenHud ? new Vector2(.975f, .925f) : new Vector2(.5f, .5f);
             // An XR camera can be selected before its display starts. The registered presenter
             // keeps the shortcuts in the eye buffer while the native layer starts or resumes.
             if (!screenHud) VG_CompositorCanvas.Register(canvas, camera, Distance, VG_CompositorCanvas.ShortcutFrame);
@@ -87,8 +91,7 @@ public sealed class PlayerMenuQuickActions : MonoBehaviour
         if (buttons[2] != null)
         {
             buttons[2].interactable = galleryAvailable;
-            buttons[2].GetComponent<CanvasGroup>().alpha = galleryAvailable ? 1f : 0.45f;
-            labels[2].GetComponentInChildren<Text>(true).text = galleryAvailable ? "Gallery" : "Already in Gallery";
+            icons[2].color = galleryAvailable ? IdleInk : DisabledInk;
         }
         Layout();
     }
@@ -102,7 +105,7 @@ public sealed class PlayerMenuQuickActions : MonoBehaviour
         canvas.renderMode = RenderMode.WorldSpace;
         canvas.worldCamera = camera;
         canvas.sortingOrder = 210;
-        row = MakeRect("Shortcuts", canvasRect, Vector2.zero, new Vector2(2f * Spacing + Diameter, Diameter));
+        stack = MakeRect("Shortcuts", canvasRect, Vector2.zero, new Vector2(Diameter, StackHeight));
         var tracked = go.AddComponent<VG_CompositorRaycaster>();
         tracked.checkFor2DOcclusion = false;
         tracked.checkFor3DOcclusion = false;
@@ -114,36 +117,42 @@ public sealed class PlayerMenuQuickActions : MonoBehaviour
         for (int i = 0; i < names.Length; i++)
         {
             int index = i;
-            var circle = MakeRect("Quick " + names[i], row, new Vector2((i - 1) * Spacing, 0f), Vector2.one * Diameter);
+            var circle = MakeRect("Quick " + names[i], stack, new Vector2(0f, (1 - i) * Spacing), Vector2.one * Diameter);
             var image = circle.gameObject.AddComponent<Image>();
-            image.sprite = MenuLook.KeySprite;
-            image.color = Color.white;
+            // The original full target stays active even where the idle glyph is transparent.
+            image.color = Color.clear;
+            image.canvasRenderer.cullTransparentMesh = false;
             image.material = overlay;
             image.raycastTarget = true;
             var button = circle.gameObject.AddComponent<Button>();
             button.targetGraphic = image;
-            var colors = button.colors;
-            colors.highlightedColor = new Color(1f, 0.94f, 0.76f);
-            colors.pressedColor = new Color(0.9f, 0.77f, 0.49f);
-            colors.disabledColor = Color.white; // One CanvasGroup fades the entire button, including its icon.
-            button.colors = colors;
-            circle.gameObject.AddComponent<CanvasGroup>();
+            button.transition = Selectable.Transition.None;
             buttons[i] = button;
             button.onClick.AddListener(() => Press(index));
             InnerFrame.Entrance.EntranceButtonSound.Bind(button);
 
-            var iconRect = MakeRect(names[i] + " Icon", circle, Vector2.zero, Vector2.one * 29f);
+            var ring = MakeRect("Focus Ring", circle, Vector2.zero, Vector2.one * 50f).gameObject.AddComponent<Image>();
+            ring.sprite = MenuLook.FocusRing;
+            ring.color = MenuLook.Star;
+            ring.material = overlay;
+            ring.raycastTarget = false;
+            rings[i] = ring.gameObject;
+            rings[i].SetActive(false);
+
+            var iconRect = MakeRect(names[i] + " Icon", circle, Vector2.zero, Vector2.one * 36f);
             var icon = iconRect.gameObject.AddComponent<PlayerMenuShortcutIcon>();
             icon.Kind = (PlayerMenuShortcutIcon.Symbol)i;
-            icon.color = MenuLook.KeyLetter;
+            icon.color = IdleInk;
             icon.material = overlay;
             icon.raycastTarget = false;
-            if (i == 1) audioIcon = icon;
+            var shadow = iconRect.gameObject.AddComponent<Shadow>();
+            shadow.effectColor = new Color32(26, 23, 32, 215);
+            shadow.effectDistance = new Vector2(1.25f, -1.25f);
+            icons[i] = icon;
 
-            // The long Gallery label ends flush with its button at the right edge.
-            float labelWidth = i == 2 ? 178f : 108f;
-            float labelX = i == 2 ? (Diameter - labelWidth) * .5f : 0f;
-            var labelRect = MakeRect(names[i] + " Hover Label", circle, new Vector2(labelX, 52f), new Vector2(labelWidth, 34f));
+            const float labelWidth = 100f;
+            float labelX = -(Diameter + labelWidth) * .5f - 6f;
+            var labelRect = MakeRect(names[i] + " Hover Label", circle, new Vector2(labelX, 0f), new Vector2(labelWidth, 34f));
             var plate = labelRect.gameObject.AddComponent<Image>();
             plate.sprite = MenuLook.NameTabSprite;
             plate.type = Image.Type.Sliced;
@@ -178,14 +187,13 @@ public sealed class PlayerMenuQuickActions : MonoBehaviour
         if (canvas != null && canvas.gameObject.activeSelf != show)
         {
             canvas.gameObject.SetActive(show);
-            if (!show) for (int i = 0; i < labels.Length; i++) labels[i].SetActive(false);
         }
         if (!show) return;
         if ((desktop && !VG_CompositorCanvas.UsesViewPlane(eyes)) != (canvas.renderMode == RenderMode.ScreenSpaceCamera))
             SetContext(eyes, desktop, owner != null && owner.BackScene != null);
         Layout();
         if (Time.unscaledTime >= nextFind) FindHands();
-        if (audioIcon != null) audioIcon.Muted = PlayerMenuPreferences.Muted;
+        if (icons[1] != null) icons[1].Muted = PlayerMenuPreferences.Muted;
         // Protect the press even when a click closes the panel during this same frame.
         if (PointerCandidate()) protectedFrame = Time.frameCount;
     }
@@ -193,16 +201,15 @@ public sealed class PlayerMenuQuickActions : MonoBehaviour
     void Layout()
     {
         if (eyes == null || canvasRect == null) return;
-        const float rowWidth = 2f * Spacing + Diameter;
         if (canvas.renderMode == RenderMode.ScreenSpaceCamera)
         {
             // Screen Space - Camera owns the projected canvas and moves it with the render camera.
-            // Express the bottom-right inset and target size in canvas units.
+            // Express the top-right inset and target size in canvas units.
             var size = canvasRect.rect.size;
             if (size.x <= 0f || size.y <= 0f) return;
-            float scale = Mathf.Min(size.x * .39f / rowWidth, size.y * .07f / Diameter);
-            row.localScale = Vector3.one * scale;
-            row.anchoredPosition3D = new Vector3(-rowWidth * .5f * scale, Diameter * .5f * scale, 0f);
+            float scale = Mathf.Min(size.x * .39f / StackHeight, size.y * .07f / Diameter);
+            stack.localScale = Vector3.one * scale;
+            stack.anchoredPosition3D = new Vector3(-Diameter * .5f * scale, -StackHeight * .5f * scale, 0f);
             return;
         }
         if (VG_CompositorCanvas.UsesViewPlane(eyes))
@@ -211,18 +218,18 @@ public sealed class PlayerMenuQuickActions : MonoBehaviour
             // Keep all three circles inside the binocular view, including the headset's lens mask.
             canvasRect.localScale = Vector3.one;
             float diameter = 2f * Distance * Mathf.Tan(2.2f * Mathf.Deg2Rad);
-            row.localScale = Vector3.one * (diameter / Diameter);
-            row.localPosition = Distance * new Vector3(Mathf.Tan(28f * Mathf.Deg2Rad),
-                -Mathf.Tan(22f * Mathf.Deg2Rad), 1f);
+            stack.localScale = Vector3.one * (diameter / Diameter);
+            stack.localPosition = Distance * new Vector3(Mathf.Tan(37f * Mathf.Deg2Rad),
+                Mathf.Tan(19f * Mathf.Deg2Rad), 1f);
             return;
         }
         Rect bounds = ViewBounds(Camera.MonoOrStereoscopicEye.Mono);
         if (bounds.width <= 0f || bounds.height <= 0f) return;
-        float metres = Mathf.Min(UnitsToMetres, Mathf.Min(bounds.width * .44f / rowWidth, bounds.height * .09f / Diameter));
-        row.localScale = Vector3.one * metres;
+        float metres = Mathf.Min(UnitsToMetres, Mathf.Min(bounds.width * .44f / StackHeight, bounds.height * .09f / Diameter));
+        stack.localScale = Vector3.one * metres;
         // A local plane is raycastable by XRI. Parenting it to the tracked camera applies every
         // subsequent pose change natively, including changes after Update / LateUpdate.
-        row.localPosition = new Vector3(bounds.xMax - rowWidth * metres * .5f, bounds.yMin + Diameter * metres * .5f, Distance);
+        stack.localPosition = new Vector3(bounds.xMax - Diameter * metres * .5f, bounds.yMax - StackHeight * metres * .5f, Distance);
     }
 
     Rect ViewBounds(Camera.MonoOrStereoscopicEye eye)
@@ -230,9 +237,9 @@ public sealed class PlayerMenuQuickActions : MonoBehaviour
         // Keep a margin on the outside and intersect the eye rays with the HUD plane, in head-local metres.
         var local = Quaternion.Inverse(eyes.transform.rotation);
         var lowerLeft = OnPlane(.05f, .075f);
-        var lowerRight = OnPlane(.95f, .075f);
+        var lowerRight = OnPlane(.975f, .075f);
         var upperLeft = OnPlane(.05f, .94f);
-        var upperRight = OnPlane(.95f, .94f);
+        var upperRight = OnPlane(.975f, .94f);
         return Rect.MinMaxRect(Mathf.Max(lowerLeft.x, upperLeft.x), Mathf.Max(lowerLeft.y, lowerRight.y),
             Mathf.Min(lowerRight.x, upperRight.x), Mathf.Min(upperLeft.y, upperRight.y));
 
@@ -311,7 +318,10 @@ public sealed class PlayerMenuQuickActions : MonoBehaviour
     public void MarkPointerEvent(int index, bool hovering)
     {
         protectedFrame = Time.frameCount;
-        if (index >= 0 && index < labels.Length && labels[index] != null) labels[index].SetActive(hovering && IsVisible);
+        if (index < 0 || index >= labels.Length || labels[index] == null) return;
+        bool focused = hovering && IsVisible;
+        labels[index].SetActive(focused);
+        rings[index].SetActive(focused);
     }
 
     void Press(int index)

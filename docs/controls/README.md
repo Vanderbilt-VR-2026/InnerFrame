@@ -17,7 +17,7 @@ Updated 2026-11-13 from Cici's five-page **InnerFrame controls: one button, one 
 | Left ≡ Menu | Open / close Player Menu; Controls opens the full guide in the current scene |
 | Left Ⓨ | Unassigned |
 
-From Gallery onward, the shortcuts stay in the lower right. A shortcut opens its panel in the centre. Hold the trigger on the title bar to drag it. Releasing pins the panel there until it closes.
+From Gallery onward, Menu, Audio and Gallery stay in a vertical column in the upper right of the view. Point at a symbol to see its gold ring and name. Gallery is dimmed while already in the Gallery. A shortcut opens its panel in the centre. Hold the trigger on the title bar to drag it. Releasing pins the panel there until it closes.
 
 Gallery uses Cici's new arch, corridor and hanging order: Self-portrait, The Bedroom, Café Terrace, The Starry Night, Almond Blossom. The self-portrait is for Vincent's Ⓑ conversation; the other four paintings have Trigger menus. Almond Blossom shows Coming soon with Enter disabled. The serialized Gallery scene, layout and artwork assets are taken unchanged from #199.
 

@@ -267,7 +267,26 @@ public static class PlayerMenuSplitPreview
             shortcuts.SetContext(camera, true, false);
             var quickButtons = shortcuts.GetComponentsInChildren<Button>(true);
             Check(quickButtons.Length == 3 && new[] { "Quick Menu", "Quick Audio", "Quick Gallery" }.All(n => quickButtons.Any(b => b.name == n)), "three named circular shortcuts are present");
-            Check(quickButtons.All(b => b.GetComponent<Image>().sprite == MenuLook.KeySprite && Mathf.Approximately(((RectTransform)b.transform).rect.width, ((RectTransform)b.transform).rect.height)), "shortcuts share the original circle sprite and square bounds");
+            Check(quickButtons.All(b => b.GetComponent<Image>().color.a == 0 &&
+                ((RectTransform)b.transform).rect.size == new Vector2(54f, 54f)), "idle shortcuts keep their original 54 by 54 targets");
+            Check(quickButtons.Select(b => b.GetComponentInChildren<PlayerMenuShortcutIcon>().Kind)
+                .SequenceEqual(new[] { PlayerMenuShortcutIcon.Symbol.Menu, PlayerMenuShortcutIcon.Symbol.Audio, PlayerMenuShortcutIcon.Symbol.Gallery }),
+                "top-to-bottom shortcuts reuse Menu, Audio and the original Gallery symbol");
+            var firstHand = new PointerEventData(EventSystem.current) { pointerId = 21 };
+            var secondHand = new PointerEventData(EventSystem.current) { pointerId = 22 };
+            foreach (var button in quickButtons)
+            {
+                var ring = button.transform.Find("Focus Ring").gameObject;
+                var label = button.GetComponentInChildren<Text>(true);
+                Check(!ring.activeSelf && !label.gameObject.activeInHierarchy, button.name + ": idle glyph has no ring or name");
+                ExecuteEvents.Execute(button.gameObject, firstHand, ExecuteEvents.pointerEnterHandler);
+                ExecuteEvents.Execute(button.gameObject, secondHand, ExecuteEvents.pointerEnterHandler);
+                ExecuteEvents.Execute(button.gameObject, firstHand, ExecuteEvents.pointerExitHandler);
+                Check(ring.activeSelf && label.gameObject.activeInHierarchy && label.text == button.name.Substring(6) &&
+                    label.transform.parent.localPosition.x < 0, button.name + ": a remaining pointer keeps the ring and name visible on the left");
+                ExecuteEvents.Execute(button.gameObject, secondHand, ExecuteEvents.pointerExitHandler);
+                Check(!ring.activeSelf && !label.gameObject.activeInHierarchy, button.name + ": final exit clears the highlight");
+            }
             Check(shortcuts.GetComponentInChildren<TrackedDeviceGraphicRaycaster>() != null, "shortcuts accept tracked UI rays");
             Check(shortcuts.GetComponentsInChildren<Graphic>(true).Count(g => g.raycastTarget) == 3, "only shortcut buttons consume UI rays");
             Check(shortcuts.GetComponentsInChildren<Text>(true).All(t => t.font == MenuLook.Font), "shortcut labels use the shared font");
@@ -379,23 +398,31 @@ public static class PlayerMenuSplitPreview
                                 name + ": stays at the same viewport coordinate immediately after late camera motion");
                             ((RectTransform)button.transform).GetWorldCorners(corners);
                             check(corners.Select(camera.WorldToViewportPoint).All(v =>
-                                v.z > 0f && v.x >= .50f && v.x <= .97f && v.y >= .05f && v.y <= .27f),
-                                name + ": all corners visible in the lower right");
+                                v.z > 0f && v.x >= .50f && v.x <= .985f && v.y >= .50f && v.y <= .96f),
+                                name + ": all corners visible in the upper right");
 
-                            hits.Clear();
-                            if (desktop)
-                                mouseRaycaster.Raycast(new PointerEventData(system) { position = camera.WorldToScreenPoint(center) }, hits);
-                            else
+                            if (i > 0)
+                                check(Mathf.Abs(before[i].x - before[0].x) < .001f && before[i].y < before[i - 1].y,
+                                    name + ": sits directly below the preceding shortcut");
+
+                            bool Hits(Vector3 point)
                             {
-                                Vector3 hand = camera.transform.position + camera.transform.rotation * new Vector3(.15f, -.12f, .12f);
-                                handRaycaster.Raycast(new TrackedDeviceEventData(system)
+                                hits.Clear();
+                                if (desktop)
+                                    mouseRaycaster.Raycast(new PointerEventData(system) { position = camera.WorldToScreenPoint(point) }, hits);
+                                else
                                 {
-                                    rayPoints = new List<Vector3> { hand, hand + (center - hand).normalized * 2f },
-                                    layerMask = 1 << FixtureLayer
-                                }, hits);
+                                    Vector3 hand = camera.transform.TransformPoint(new Vector3(.15f, -.12f, .12f));
+                                    handRaycaster.Raycast(new TrackedDeviceEventData(system)
+                                    {
+                                        rayPoints = new List<Vector3> { hand, hand + (point - hand).normalized * 2f },
+                                        layerMask = 1 << FixtureLayer
+                                    }, hits);
+                                }
+                                return hits.Count == 1 && hits[0].gameObject == button.gameObject;
                             }
-                            check(hits.Count == 1 && hits[0].gameObject == button.gameObject,
-                                name + ": pointer hits only the intended button after the late pose change");
+                            check(Hits(center) && corners.All(c => Hits(Vector3.Lerp(center, c, .95f))),
+                                name + ": centre and all four outer corners hit the intended button after the late pose change");
                         }
                     }
                 }

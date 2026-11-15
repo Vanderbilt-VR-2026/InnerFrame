@@ -45,6 +45,35 @@ public static class MenuLook
     /// <summary>The dialogue settings the hints size themselves from (a copy is made by whoever changes them), or null.</summary>
     public static VG_DialogueSettings Settings => Source != null ? Source.settings : null;
 
+    static Sprite focusRing;
+    public static Sprite FocusRing
+    {
+        get
+        {
+            if (focusRing != null) return focusRing;
+            const int size = 96;
+            const float radius = 45f, halfStroke = 1.8f;
+            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false)
+            {
+                name = "Shortcut focus ring", hideFlags = HideFlags.HideAndDontSave,
+                wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear
+            };
+            var pixels = new Color32[size * size];
+            for (int y = 0; y < size; ++y)
+                for (int x = 0; x < size; ++x)
+                {
+                    float distance = new Vector2(x + .5f - size / 2, y + .5f - size / 2).magnitude;
+                    float alpha = Mathf.Clamp01(halfStroke + .5f - Mathf.Abs(distance - radius));
+                    pixels[y * size + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(255 * alpha));
+                }
+            texture.SetPixels32(pixels);
+            texture.Apply(false, true);
+            focusRing = Sprite.Create(texture, new Rect(0, 0, size, size), Vector2.one * .5f, 100f, 0, SpriteMeshType.FullRect);
+            focusRing.hideFlags = HideFlags.HideAndDontSave;
+            return focusRing;
+        }
+    }
+
     static Sprite rounded;
 
     /// <summary>A white rounded rectangle (9-slice, 16 px corners), made once in code, for buttons and bars that take a

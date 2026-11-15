@@ -349,7 +349,7 @@ namespace InnerFrame.AlmondStudio
             leaf.localPosition = new Vector3(dir * width / 2f, 0f, 0f);
             var col = leaf.gameObject.AddComponent<BoxCollider>();
             col.size = new Vector3(width, height, 0.09f);
-            col.isTrigger = true;
+            col.isTrigger = false;   // XRI's Near-Far Interactor ignores trigger colliders (AS_Window)
             leaf.gameObject.AddComponent<XRSimpleInteractable>();
             return hinge;
         }
@@ -397,7 +397,7 @@ namespace InnerFrame.AlmondStudio
                 }
             var col = leaf.gameObject.AddComponent<BoxCollider>();
             col.size = new Vector3(width, height, 0.09f);
-            col.isTrigger = true;
+            col.isTrigger = false;   // XRI's Near-Far Interactor ignores trigger colliders (AS_Window)
             leaf.gameObject.AddComponent<XRSimpleInteractable>();
             return hinge;
         }
@@ -480,7 +480,7 @@ namespace InnerFrame.AlmondStudio
             // one box collider over the whole leaf, for grabbing it (it swings away; the rig is never pushed by it)
             var col = leaf.gameObject.AddComponent<BoxCollider>();
             col.size = new Vector3(width, height, depth * 2f);
-            col.isTrigger = true;
+            col.isTrigger = false;   // XRI's Near-Far Interactor ignores trigger colliders (AS_Window)
             leaf.gameObject.AddComponent<XRSimpleInteractable>();
             return hinge;
         }

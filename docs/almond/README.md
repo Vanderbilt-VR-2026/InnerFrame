@@ -46,14 +46,19 @@ and sways while he talks (in code, no clip).
 
 | Headset | Editor (no headset) | What it does |
 |---|---|---|
-| Point at the letter + select, or trigger within 1.8 m | **L** | Takes Theo's letter |
+| Point at the letter + trigger (or grip), or trigger within 1.8 m | **L** | Takes Theo's letter |
 | Trigger | **Space** | Puts the letter down |
-| Grip or ray on a casement | **O** | Opens the window |
-| Grip on the brush | **G** | Takes the brush, or puts it back |
+| Point at a casement + trigger, or grip on it (near or by its ray) | **O** | Opens the window |
+| Point at the brush + trigger, or trigger with the hand on it; or grip on it | **G** | Takes the brush (trigger: it stays in that hand; grip: until you let go) |
 | Hold the trigger, sweeping the beam over the branches | Hold **Space**, aiming the view's centre | Opens the buds near the beam |
 | | **N** | Finishes the painting (testing) |
 | | **R** | Starts over |
 | | W A S D, mouse | Walk and look (DesktopTestRig) |
+
+Both buttons work on a Quest: the hints say "trigger", and XRI's grip (Select) works as before. The trigger acts on what
+the hand points at (`AS_Game.PointAndPress`, from the Starter rig's `Left Controller` / `Right Controller` forward).
+The casements' colliders are solid, not triggers: the Starter rig's Near-Far Interactor ignores trigger colliders, so
+until 15 Nov the window could not be opened with a controller at all. They switch off once the window opens.
 | | **P**, **1 2 3**, **C**, **[ ]** | Comparison views over the reference pictures (below) |
 
 ## How it works
@@ -105,7 +110,8 @@ see-through (**[** and **]** change how much). Pictures in `Textures/Reference/`
 - [V] Every GUID the Almond Studio scene, prefab, materials and controller use resolves to a committed `.meta` or
   to Unity/URP (checked 14 Nov on `340447a`); the tree is no longer a missing prefab.
 - [I] Not yet opened from a clean worktree.
-- [I] Never built for or tested on a Quest.
+- [I] Never built for or tested on a Quest. The controller fixes of 15 Nov (trigger on the letter, window and brush;
+  solid casement colliders) were written without a compiler or a headset.
 
 ## Hardware tests
 

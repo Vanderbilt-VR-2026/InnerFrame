@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using InnerFrame.Tutorial;
+using InnerFrame.XR.UI;
+using UnityEngine.XR.OpenXR.NativeTypes;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -27,6 +29,37 @@ public static class VG_CompositorCaptureCheck
         void Check(bool ok, string message) => report.Add((ok ? "PASS " : "FAIL ") + message);
         try
         {
+            // Check the actual native quads, including handedness, eye masks, asymmetric
+            // eye projections and the points at the edge of the same captured UI texture.
+            foreach (float z in new[] { .7f, 1.3f, 1.6f })
+            {
+                bool flat = true;
+                foreach (float ipd in new[] { .058f, .064f, .071f })
+                {
+                    var centre = new Vector3(.34f * z, -.18f * z, z);
+                    var both = new XrCompositionLayerQuad { Pose = new XrPosef(centre, Quaternion.identity),
+                        Size = new XrExtent2Df { Width = .4f * z, Height = .2f * z } };
+                    var leftQuad = ViewHudHandler.FlatQuad(both, ipd / 2f, true);
+                    var rightQuad = ViewHudHandler.FlatQuad(both, ipd / 2f, false);
+                    flat &= leftQuad.EyeVisibility == 1 && rightQuad.EyeVisibility == 2 && both.EyeVisibility == 0;
+                    for (int i = 0; i < 2; ++i)
+                    {
+                        var q = i == 0 ? leftQuad : rightQuad;
+                        float eyeX = (i == 0 ? -.5f : .5f) * ipd;
+                        var projection = Matrix4x4.Frustum(i == 0 ? -.12f : -.09f, i == 0 ? .09f : .12f,
+                            -.11f, .11f, .1f, 100f);
+                        foreach (float u in new[] { -.5f, 0f, .5f })
+                        {
+                            float corner = u * q.Size.Width;
+                            var actual = projection * new Vector4(q.Pose.Position.X + corner - eyeX,
+                                q.Pose.Position.Y, q.Pose.Position.Z, 1f);
+                            var expected = projection * new Vector4(centre.x + corner, centre.y, -z, 1f);
+                            flat &= Vector4.Distance(actual / actual.w, expected / expected.w) < .00001f;
+                        }
+                    }
+                }
+                Check(flat, $"flat per-eye quads cancel near-field disparity at {z} m for three IPDs and asymmetric frusta");
+            }
             var eye = new GameObject("Scaled Gallery test eye").AddComponent<Camera>();
             eye.transform.localScale = Vector3.one * .8f;
             eye.transform.SetPositionAndRotation(new Vector3(2f, 1f, -1f), Quaternion.Euler(-21f, 48f, 17f));

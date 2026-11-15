@@ -30,6 +30,7 @@ public sealed class VG_CompositorCanvas : MonoBehaviour
     ViewHudLayer native;
     VG_EyeOverlay fallback;
     float depth;
+    bool flatHud;
     Rect frame;
     int captureLayer = -1;
     bool originalEyeBit;
@@ -50,7 +51,7 @@ public sealed class VG_CompositorCanvas : MonoBehaviour
         return camera.stereoEnabled;
     }
 
-    public static void Register(Canvas root, Camera camera, float viewDepth, Rect viewFrame)
+    public static void Register(Canvas root, Camera camera, float viewDepth, Rect viewFrame, bool flatHud = false)
     {
 #if UNITY_ANDROID || UNITY_EDITOR
         if (!Application.isPlaying || root == null || camera == null || viewDepth <= 0f) return;
@@ -61,6 +62,7 @@ public sealed class VG_CompositorCanvas : MonoBehaviour
         route.eye = camera;
         route.depth = viewDepth;
         route.frame = viewFrame;
+        route.flatHud = flatHud;
         route.enabled = true;
 #endif
     }
@@ -159,12 +161,21 @@ public sealed class VG_CompositorCanvas : MonoBehaviour
         if (!drewMesh) return;
         viewCentre = new Vector3(bounds.center.x, bounds.center.y, depth);
         viewSize = bounds.size;
-        if (ViewHudLayer.SessionActive)
+        float halfIPD = 0f;
+        if (eye.stereoEnabled)
+        {
+            var left = eye.GetStereoViewMatrix(Camera.StereoscopicEye.Left).inverse.GetColumn(3);
+            var right = eye.GetStereoViewMatrix(Camera.StereoscopicEye.Right).inverse.GetColumn(3);
+            halfIPD = eye.transform.InverseTransformVector((Vector3)(right - left)).magnitude * .5f;
+        }
+        // Keep the real raycast plane reachable. Only the displayed marks lose their near-field disparity.
+        float eyeOffset = flatHud ? halfIPD : 0f;
+        if (ViewHudLayer.SessionActive && (!flatHud || eyeOffset > 0f))
         {
             if (native == null)
                 native = ViewHudLayer.Create(texture, viewCentre, viewSize,
-                    100 + Mathf.Max(0, source.sortingOrder) * 8 + captureLayer - FirstLayer);
-            else native.SetSurface(texture, viewCentre, viewSize);
+                    100 + Mathf.Max(0, source.sortingOrder) * 8 + captureLayer - FirstLayer, eyeOffset);
+            else native.SetSurface(texture, viewCentre, viewSize, eyeOffset);
         }
         else if (native != null)
         {
@@ -175,7 +186,7 @@ public sealed class VG_CompositorCanvas : MonoBehaviour
         // Never render the raycast canvas in the scene, even during a missed submission or a resize.
         SetEyeBit(false);
         if (native == null || !native.Ready)
-            fallback.Draw(eye, texture, pixels, depth, source.sortingOrder);
+            fallback.Draw(eye, texture, pixels, depth, source.sortingOrder, flatHud ? 0f : halfIPD);
     }
 
     static bool Visible(Graphic graphic) => graphic.isActiveAndEnabled && graphic.color.a > 0f &&

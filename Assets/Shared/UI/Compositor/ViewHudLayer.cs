@@ -23,12 +23,14 @@ namespace InnerFrame.XR.UI
         internal Vector3 Centre { get; private set; }
         internal Vector2 Size { get; private set; }
 
+        internal float EyeOffset { get; private set; }
+
         CompositionLayer layer;
         int lastSubmission = -10;
         public bool Ready => Available && isActiveAndEnabled && Texture != null && Texture.IsCreated() &&
             Time.frameCount - lastSubmission <= 1;
 
-        public static ViewHudLayer Create(RenderTexture texture, Vector3 centre, Vector2 size, int order = 100)
+        public static ViewHudLayer Create(RenderTexture texture, Vector3 centre, Vector2 size, int order, float eyeOffset)
         {
             if (!SessionActive || texture == null || !texture.IsCreated()) return null;
             var go = new GameObject("View-space HUD");
@@ -37,7 +39,7 @@ namespace InnerFrame.XR.UI
             hud.layer = go.AddComponent<CompositionLayer>();
             hud.layer.ChangeLayerDataType(new ViewHudData());
             hud.layer.Order = order;
-            hud.SetSurface(texture, centre, size);
+            hud.SetSurface(texture, centre, size, eyeOffset);
             go.SetActive(true);
             // Unity binds its provider during OnSessionBegin only if a layer manager already exists.
             // A first HUD created on the Gallery scene load can start that manager afterwards.
@@ -48,12 +50,13 @@ namespace InnerFrame.XR.UI
             return hud;
         }
 
-        public void SetSurface(RenderTexture texture, Vector3 centre, Vector2 size)
+        public void SetSurface(RenderTexture texture, Vector3 centre, Vector2 size, float eyeOffset)
         {
             if (Texture != texture) lastSubmission = -10;
             Texture = texture;
             Centre = centre;
             Size = size;
+            EyeOffset = eyeOffset;
         }
 
         public void Hide()
@@ -65,7 +68,7 @@ namespace InnerFrame.XR.UI
         internal void Submitted()
         {
             if (lastSubmission < 0)
-                Debug.Log("[View HUD] Submitted textured OpenXR quad in VIEW space at order " + layer.Order);
+                Debug.Log($"[View HUD] {layer.Order}: {(EyeOffset > 0f ? "flat left/right" : "stereo popup")}, eye offset {EyeOffset:F4} m");
             lastSubmission = Time.frameCount;
         }
     }

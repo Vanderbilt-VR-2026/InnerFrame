@@ -10,6 +10,8 @@ using UnityEngine;
 using UnityEngine.XR.OpenXR.CompositionLayers;
 using UnityEngine.XR.OpenXR.NativeTypes;
 
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Assembly-CSharp-Editor")]
+
 namespace InnerFrame.XR.UI
 {
     // Only the ViewHudData type is registered. Stock quad/projection layers keep their own handlers.
@@ -131,15 +133,25 @@ namespace InnerFrame.XR.UI
             OpenXRLayerUtility.RequestRenderTextureId(surface.swapchainId, onTexture);
         }
 
+        // The two eyes see the same artwork in the same head-relative direction. OpenXR
+        // still uses the correct projection and lens distortion for each physical eye.
+        internal static XrCompositionLayerQuad FlatQuad(XrCompositionLayerQuad quad, float halfIPD, bool left)
+        {
+            quad.EyeVisibility = left ? 1u : 2u;
+            quad.Pose.Position.X += left ? -halfIPD : halfIPD;
+            return quad;
+        }
+
         public unsafe void OnUpdate()
         {
             if (!ViewHudLayer.Available || surfaces.Count == 0) return;
-            if (!quads.IsCreated || quads.Length < surfaces.Count)
+            int capacity = 2 * surfaces.Count;
+            if (!quads.IsCreated || quads.Length < capacity)
             {
                 if (quads.IsCreated) quads.Dispose();
                 if (orders.IsCreated) orders.Dispose();
-                quads = new NativeArray<XrCompositionLayerQuad>(surfaces.Count, Allocator.Persistent);
-                orders = new NativeArray<int>(surfaces.Count, Allocator.Persistent);
+                quads = new NativeArray<XrCompositionLayerQuad>(capacity, Allocator.Persistent);
+                orders = new NativeArray<int>(capacity, Allocator.Persistent);
             }
             int count = 0;
             foreach (var surface in surfaces.Values)
@@ -147,8 +159,19 @@ namespace InnerFrame.XR.UI
                 var hud = surface.hud;
                 if (surface.activeFrame != Time.frameCount || surface.copiedFrame < 0 || surface.copiedFrame < Time.frameCount - 1 ||
                     hud == null || !hud.isActiveAndEnabled || hud.Size.x <= 0f || hud.Size.y <= 0f) continue;
-                quads[count] = surface.quad;
-                orders[count++] = surface.order;
+                int order = 2 * surface.order;
+                if (hud.EyeOffset > 0f)
+                {
+                    quads[count] = FlatQuad(surface.quad, hud.EyeOffset, true);
+                    orders[count++] = order;
+                    quads[count] = FlatQuad(surface.quad, hud.EyeOffset, false);
+                    orders[count++] = order + 1;
+                }
+                else
+                {
+                    quads[count] = surface.quad;
+                    orders[count++] = order;
+                }
                 hud.Submitted();
             }
             if (count == 0) return;

@@ -24,7 +24,7 @@ internal sealed class VG_EyeOverlay : ScriptableRenderPass
         RenderPipelineManager.beginCameraRendering += Enqueue;
     }
 
-    public void Draw(Camera camera, RenderTexture pixels, Rect rect, float depth, int order)
+    public void Draw(Camera camera, RenderTexture pixels, Rect rect, float depth, int order, float halfIPD)
     {
         frame = Time.frameCount;
         target = camera;
@@ -39,13 +39,6 @@ internal sealed class VG_EyeOverlay : ScriptableRenderPass
         material.SetTexture("_MainTex", pixels);
         material.SetVector("_ViewRect", new Vector4(rect.xMin, rect.yMin, rect.width, rect.height));
         material.SetFloat("_ViewDepth", depth);
-        float halfIPD = 0f;
-        if (camera.stereoEnabled)
-        {
-            var left = camera.GetStereoViewMatrix(Camera.StereoscopicEye.Left).inverse.GetColumn(3);
-            var right = camera.GetStereoViewMatrix(Camera.StereoscopicEye.Right).inverse.GetColumn(3);
-            halfIPD = Vector3.Distance(left, right) * .5f / Mathf.Max(.001f, camera.transform.lossyScale.x);
-        }
         material.SetFloat("_HalfIPD", halfIPD);
     }
 

@@ -85,7 +85,7 @@ public sealed class PlayerMenuQuickActions : MonoBehaviour
             stack.anchorMin = stack.anchorMax = screenHud ? new Vector2(.975f, .925f) : new Vector2(.5f, .5f);
             // An XR camera can be selected before its display starts. The registered presenter
             // keeps the shortcuts in the eye buffer while the native layer starts or resumes.
-            if (!screenHud) VG_CompositorCanvas.Register(canvas, camera, Distance, VG_CompositorCanvas.ShortcutFrame);
+            if (!screenHud) VG_CompositorCanvas.Register(canvas, camera, Distance, VG_CompositorCanvas.ShortcutFrame, flatHud: true);
             else VG_CompositorCanvas.Unregister(canvas);
         }
         if (buttons[2] != null)

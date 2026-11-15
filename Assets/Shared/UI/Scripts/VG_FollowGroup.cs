@@ -146,7 +146,7 @@ public class VG_FollowGroup : MonoBehaviour
             surface.localPosition = new Vector3(0f, y, depth);
             surface.localScale = Vector3.one / VG_UI.UnitsPerMetre;
             Layout.localScale = Vector3.one * settings.Scale;
-            VG_CompositorCanvas.Register(DisplayCanvas, camera, depth, VG_CompositorCanvas.DialogueFrame);
+            VG_CompositorCanvas.Register(DisplayCanvas, camera, depth, VG_CompositorCanvas.DialogueFrame, flatHud: true);
         }
         else
         {

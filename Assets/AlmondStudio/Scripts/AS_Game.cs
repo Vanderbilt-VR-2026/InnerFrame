@@ -42,10 +42,25 @@ namespace InnerFrame.AlmondStudio
         Vector3 endPaintingScale = Vector3.one;
         bool endPaintingScaleRead;
 
-        public bool BrushHeld => BrushHeldInEditor || (brush != null && brush.isSelected);
+        /// <summary>The controller holding the brush when it was taken with the trigger (null: not held that way).</summary>
+        public Transform BrushHand { get; private set; }
+
+        public bool BrushHeld => BrushHeldInEditor || BrushHand != null || (brush != null && brush.isSelected);
+
+        bool brushWired;
+        UnityEngine.Pose brushHome;
+
+        [Tooltip("Pointing with the trigger: how far off the letter or the brush (degrees) the hand may point.")]
+        public float pointToleranceDeg = 8f;
+        [Tooltip("Pointing with the trigger: how far away (metres) the letter, a casement or the brush may be.")]
+        public float pointReach = 8f;
+        [Tooltip("Taking the brush with the trigger: within this many metres of it you needn't point at it.")]
+        public float brushHandReach = 0.3f;
 
         public void Begin()
         {
+            WireBrush();
+            ReleaseBrush();
             foreach (var b in Branches) b.progress = 0f;
             tree?.SetProgress(Branches);
             blossoms?.ResetAll();
@@ -131,6 +146,7 @@ namespace InnerFrame.AlmondStudio
             bool held = Input != null && Input.TriggerHeld;   // the trigger's press, once per frame
             triggerPressed = held && !triggerWas;
             triggerWas = held;
+            if (triggerPressed && PointAndPress()) triggerPressed = false;   // used on what you pointed at
             float dt = Time.deltaTime;
             stateTime += dt;
             switch (State)
@@ -271,6 +287,91 @@ namespace InnerFrame.AlmondStudio
 
         /// <summary>Called when the letter is picked (XRI select, or E on the desktop rig).</summary>
         public void TakeLetter() { if (State == AS_State.Arrive) letterTaken = true; }
+
+        // ------------------------------------------------------------------------------------- the trigger on things
+
+        /// <summary>
+        /// On a Quest the trigger is what people press, and what the hints say; XRI picks things up with the grip. So the
+        /// trigger also works on what you point at: the letter, a casement, the brush (or the brush within reach of the
+        /// hand). XRI's grip still works as before. True if the press was used.
+        /// </summary>
+        bool PointAndPress()
+        {
+            if (Input == null || !Input.TryGetPointer(out var ray, out var hand)) return false;
+            switch (State)
+            {
+                case AS_State.Arrive:
+                    if (letterInHand != null && letterInHand.gameObject.activeInHierarchy && PointsAt(ray, letterInHand.position)) { TakeLetter(); return true; }
+                    // the window is for after the letter; only without Vincent's letter can it open first
+                    if (letterInHand == null && PointsAtWindow(ray)) { window.Open(); return true; }
+                    return false;
+                case AS_State.Invite:
+                    if (PointsAtWindow(ray)) { window.Open(); return true; }
+                    return false;
+                case AS_State.TakeBrush:
+                    if (hand == null || brush == null || BrushHeld) return false;   // the Editor fallback has G
+                    if (Vector3.Distance(hand.position, brush.transform.position) <= brushHandReach || PointsAt(ray, brush.transform.position))
+                    {
+                        HoldBrushIn(hand);
+                        return true;
+                    }
+                    return false;
+            }
+            return false;
+        }
+
+        bool PointsAt(Ray ray, Vector3 p)
+        {
+            var to = p - ray.origin;
+            return to.magnitude <= pointReach && Vector3.Angle(ray.direction, to) <= pointToleranceDeg;
+        }
+
+        /// <summary>The ray's first hit (triggers too) is a casement.</summary>
+        bool PointsAtWindow(Ray ray)
+        {
+            if (window == null || window.IsOpening) return false;
+            return Physics.Raycast(ray, out var hit, pointReach, ~0, QueryTriggerInteraction.Collide) && hit.transform.IsChildOf(window.transform);
+        }
+
+        /// <summary>The brush taken with the trigger follows that hand (handle in the palm, tip along the controller's
+        /// forward) until XRI grabs it with the grip or the act starts over. It is not parented to the hand: XRI's grab
+        /// would remember the hand as its parent and put it back there on release.</summary>
+        void HoldBrushIn(Transform hand)
+        {
+            BrushHand = hand;
+            FollowHand();
+            Input?.Haptic(0.25f, 0.08f);
+        }
+
+        void FollowHand()
+        {
+            if (BrushHand == null || brush == null) return;
+            if (!BrushHand.gameObject.activeInHierarchy) return;   // tracking lost: it waits where it was
+            var attach = brush.attachTransform;
+            Vector3 back = attach != null && attach != brush.transform ? attach.localPosition : Vector3.zero;
+            brush.transform.SetPositionAndRotation(BrushHand.TransformPoint(-back), BrushHand.rotation);
+        }
+
+        void WireBrush()
+        {
+            if (brushWired || brush == null) return;
+            brushWired = true;
+            brushHome = new UnityEngine.Pose(brush.transform.position, brush.transform.rotation);
+            // the grip takes over from the trigger's hold
+            brush.selectEntered.AddListener(_ => BrushHand = null);
+        }
+
+        /// <summary>Ends the trigger's hold (a restart): the brush goes back to the sill.</summary>
+        void ReleaseBrush()
+        {
+            if (BrushHand == null) return;
+            BrushHand = null;
+            if (brush != null && !brush.isSelected) brush.transform.SetPositionAndRotation(brushHome.position, brushHome.rotation);
+        }
+
+        void LateUpdate() => FollowHand();
+        void OnEnable() => Application.onBeforeRender += FollowHand;   // the controller's newest pose, as XRI does
+        void OnDisable() => Application.onBeforeRender -= FollowHand;
 
         /// <summary>The trigger's press (not hold): true on the frame it goes down.</summary>
         bool triggerPressed;

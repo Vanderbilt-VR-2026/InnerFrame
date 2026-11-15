@@ -1,0 +1,304 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b243828db488845709fcc4eedd83b009, type: 3}
+  m_Name: AS_Layout
+  m_EditorClassIdentifier: Assembly-CSharp::InnerFrame.AlmondStudio.AS_Layout
+  layoutVersion: 10
+  roomWidth: 4.6
+  roomDepth: 4
+  roomHeight: 3.2
+  wallThickness: 0.35
+  windowWidth: 1
+  windowBottom: 0.9
+  windowTop: 3.03
+  revealSplayLeft: 0.04
+  revealSplayRight: 0.23
+  glassDepth: 0.6
+  sillOverhang: 0.08
+  casementOpenDegrees: 105
+  casementOpenSeconds: 1.2
+  beamCount: 3
+  beamDepth: 0.2
+  beamWidth: 0.22
+  showGeneratedTree: 0
+  paintEye: {x: 0, y: 1.6, z: 3}
+  paintingDistance: 0.4
+  paintingWidth: 1.5
+  paintingCentreY: 1.95
+  paintingAspect: 1.2658
+  treeClearance: 0.15
+  inkWidth: 0.006
+  skyRadius: 40
+  skyBehind: {r: 0.486, g: 0.682, b: 0.686, a: 1}
+  groundColour: {r: 0.55, g: 0.6, b: 0.38, a: 1}
+  showGround: 0
+  skyPaints:
+  - {r: 0.47, g: 0.73, b: 0.735, a: 1}
+  - {r: 0.3, g: 0.56, b: 0.64, a: 1}
+  - {r: 0.65, g: 0.83, b: 0.8, a: 1}
+  - {r: 0.38, g: 0.66, b: 0.64, a: 1}
+  skyStrokes: 140
+  skyStrokeLength: 1.5
+  skyStrokeWidth: 0.42
+  skyStrokeRidge: 0.5
+  skyDeeperTop: 0.35
+  startToleranceDeg: 4
+  followToleranceDeg: 5
+  lookAhead: 0.15
+  loseSeconds: 0.6
+  finishAt: 0.95
+  beamLength: 6
+  compareViews:
+  - name: Window in the Studio (his view)
+    file: AS_WindowInTheStudio.jpg
+    position: {x: -1, y: 1.35, z: 2.4}
+    yaw: 22
+    pitch: -10
+    roll: 0
+    fov: 62
+  - name: S02 arrival (concept)
+    file: AS_Ref_S02.jpg
+    position: {x: -0.31, y: 1.43, z: 2.52}
+    yaw: 15.7
+    pitch: -4.9
+    roll: -3.3
+    fov: 80
+  - name: S03 turned round (concept)
+    file: AS_Ref_S03.jpg
+    position: {x: 0, y: 1.15, z: 3.6}
+    yaw: 184.53535
+    pitch: -2.4523292
+    roll: 0
+    fov: 66
+  compareOpacity: 0.5
+  chairYawOffset: 180
+  chairGap: 0.3
+  easelYaw: 0
+  easelCanvas: 0
+  doorPanels: {x: 2, y: 3}
+  doorModelEuler: {x: 270, y: 0, z: 0}
+  doorModelHeight: 2.3
+  paintBoxSpot: {x: -0.3, y: 1.9}
+  paintBoxYaw: 12
+  paintBoxModelEuler: {x: 270, y: 180, z: 0}
+  paintBoxModelHeight: 0.08
+  brushPotSpot: {x: 0.38, y: 1.65}
+  brushesLying: 1
+  brushesYaw: -25
+  tableModelEuler: {x: 270, y: 180, z: 0}
+  sillModelEuler: {x: 270, y: 180, z: 0}
+  sillModelHeight: 0.32
+  sillModelOffset: {x: -0.03, y: 0, z: 0.01}
+  sillSplit: 1
+  sillSplitGap: 0.008
+  sillItemSpots:
+  - {x: -0.36, y: 0.01}
+  - {x: -0.02, y: 0.08}
+  - {x: 0.12, y: 0.14}
+  - {x: 0.25, y: 0.05}
+  - {x: 0.37, y: 0.14}
+  sillItemYaw:
+  - 0
+  - 20
+  - -10
+  - 15
+  - 0
+  brushStandsIn: 3
+  sideCanvases:
+  - name: The Large Plane Trees (Cleveland 1947.209, CC0)
+    file: AS_Canvas_PlaneTrees
+    wall: -1
+    centre: {x: 3, y: 1.75}
+    height: 0.62
+    blankAspect: 1.25
+  - name: Keisai Eisen, Courtesan with a Letter (RISD, CC0)
+    file: AS_Canvas_Print
+    wall: -1
+    centre: {x: 2.2, y: 1.6}
+    height: 0.62
+    blankAspect: 0.34
+  - name: Wheat Field with Cypresses (Met, Open Access)
+    file: AS_Canvas_WheatField
+    wall: -1
+    centre: {x: 1.2, y: 1.55}
+    height: 0.6
+    blankAspect: 1.26
+  - name: Cypresses (Met, Open Access)
+    file: AS_Canvas_Cypresses
+    wall: 1
+    centre: {x: 2.35, y: 1.75}
+    height: 0.75
+    blankAspect: 0.79
+  - name: First Steps, after Millet (Met 64.165.2, Open Access)
+    file: AS_Canvas_FirstSteps
+    wall: 1
+    centre: {x: 1.2, y: 1.6}
+    height: 0.58
+    blankAspect: 1.26
+  vincentLetterOffset: {x: 0.02, y: 0.12, z: 0.04}
+  vincentLetterEuler: {x: 0, y: 90, z: 0}
+  letterGripInset: 0.025
+  letterGripRoll: 0
+  letterGripTip: 0
+  letterSpot: {x: 0.1, y: 1.95}
+  letterYaw: -8
+  cardSpot: {x: 0.36, y: 2}
+  cardYaw: 12
+  wallPictures:
+  - name: Left, upper (reddish study)
+    centre: {x: -1, y: 1.9}
+    height: 0.67
+    topLeft: {x: 0.003, y: 0.24}
+    topRight: {x: 0.176, y: 0.25}
+    bottomRight: {x: 0.173, y: 0.473}
+    bottomLeft: {x: 0.003, y: 0.465}
+  - name: Left, lower (green study)
+    centre: {x: -0.95, y: 1.12}
+    height: 0.56
+    topLeft: {x: 0.003, y: 0.525}
+    topRight: {x: 0.137, y: 0.531}
+    bottomRight: {x: 0.137, y: 0.738}
+    bottomLeft: {x: 0.003, y: 0.731}
+  - name: Right, upper (framed drawing)
+    centre: {x: 1.52, y: 2.08}
+    height: 0.64
+    topLeft: {x: 0.834, y: 0.268}
+    topRight: {x: 0.961, y: 0.265}
+    bottomRight: {x: 0.967, y: 0.416}
+    bottomLeft: {x: 0.84, y: 0.414}
+  - name: Right, lower (drawing of a figure)
+    centre: {x: 1.27, y: 1.19}
+    height: 0.76
+    topLeft: {x: 0.754, y: 0.475}
+    topRight: {x: 0.974, y: 0.466}
+    bottomRight: {x: 0.974, y: 0.631}
+    bottomLeft: {x: 0.765, y: 0.638}
+  windowFrameWidth: 0.065
+  windowTransom: 0.075
+  windowStile: 0.04
+  windowBar: 0.022
+  windowHub: 0.075
+  paintedWindow: 1
+  casementFromModel: 1
+  casementModelEuler: {x: 270, y: 180, z: 0}
+  casementModelDepth: 0.05
+  chestModelEuler: {x: 270, y: 180, z: 0}
+  chestModelHeight: 0.85
+  chestSpot: {x: 1.8, y: 3.68}
+  blossomSize: 0.07
+  blossomStayBud: 0.2
+  blossomOpenSeconds: 0.6
+  blossomBeamDegrees: 3
+  blossomBeamMetres: 0.12
+  blossomFinish: 0.75
+  blossomWaveSeconds: 2.5
+  blossomCluster: 3
+  blossomClusterSpread: 0.07
+  blossomReachMargin: 0.25
+  blossomShower: 2.5
+  blossomShowerSeconds: 7
+  blossomBreeze: 0.9
+  blossomStreamPerSecond: 30
+  blossomStreamSeconds: 12
+  blossomFloorPetals: 500
+  blossomMaxDrifting: 1200
+  playerStart: {x: -0.31, y: 0, z: 2.52}
+  playerStartYaw: 15.7
+  vincentSpot: {x: 0.95, y: 0, z: 3.2}
+  vincentYaw: 200
+  ambient: {r: 0.56, g: 0.5, b: 0.45, a: 1}
+  sunColour: {r: 1, g: 0.93, b: 0.8, a: 1}
+  sunIntensity: 1.1
+  flatShading: 1
+  shadeDirection: {x: 0.25, y: 0.8, z: 0.55}
+  shadeMin: 0.78
+  flatAmbient: {r: 0.82, g: 0.78, b: 0.72, a: 1}
+  flatSunIntensity: 0.45
+  editorGrabReach: 3
+  editorHoldOffset: {x: 0.18, y: -0.22, z: 0.35}
+  hintTitle: "Saint-R\xE9my, February 1890"
+  lineArrive: A letter from Theo! My hands are shaking. Will you read it to me?
+  linePaint: Slowly. Let each one open.
+  lineDone: Now I know what to paint for his room.
+  hintOpen: Open the window
+  hintBrush: Take a brush
+  hintFollow: Hold the trigger and follow the branch
+  hintSweep: Hold the trigger and brush over the branches
+  hintOthers: Wake the other branches
+  hintLetter: Take the letter
+  hintRead: Pull the trigger to put the letter down
+  lineHappy: A boy, and they have named him Vincent! After me. I could not be happier.
+  lineInvite: I want to paint it for his room, to hang above his cradle. Will you
+    help me? Open the window.
+  linePoint: Look, the almond tree outside is just coming into blossom.
+  hintDone: "Almond Blossom, Saint-R\xE9my, February 1890"
+  letterBackground: "Saint-R\xE9my, February 1890. Vincent has lived in the asylum
+    here since last May, painting whenever he is well enough. A letter comes from
+    his brother Theo in Paris."
+  letterText: 'Paris, 31 January 1890
+
+
+    My dear Vincent,
+
+
+    Today Jo gave
+    birth to a fine boy, and mother and child are both well. As we promised, we are
+    naming him after you: Vincent Willem. I wish that he may be as determined and
+    as courageous as you.
+
+
+    There is good news of your work too: Aurier has written
+    about your paintings in the Mercure de France, and your canvases are hanging
+    in Brussels with Les Vingt.
+
+
+    Jo sends you her love.
+
+
+    Your brother,
+
+    Theo'
+  letterReach: 1.8
+  letterMinSeconds: 2
+  letterMaxSeconds: 25
+  happySeconds: 4
+  vincentIdleClip: Idle
+  vincentGiveClip: Giving
+  vincentHappyClip: Happy
+  vincentTalkClip: Talking
+  vincentRestClip: Idle
+  vincentPointClip: Pointing
+  giveHoldAt: 0.6
+  pointHoldAt: 0.6
+  pointTurn: 0.9
+  pointSeconds: 3.5
+  vincentTurnSpeed: 140
+  endPaintingCentre: {x: -1.15, y: 1.18, z: 0.4}
+  endPaintingHeight: 0.62
+  endPaintingTilt: 8
+  endPaintingSeconds: 2
+  endEaselDelay: 7
+  lineEasel: Come, look.
+  hintTurn: Turn around
+  endLookDegrees: 30
+  endEpilogueWait: 15
+  epilogueTitle: "Almond Blossom, Saint-R\xE9my, February 1890"
+  epilogueText: 'Vincent painted these branches of white almond blossom against a
+    blue sky as a gift for his newborn nephew. He meant it to hang in Theo and Jo''s
+    bedroom; they gave it a place of honour above the piano in their Paris home.
+
+
+    The
+    boy, Vincent Willem van Gogh, grew up to found the Van Gogh Museum in Amsterdam,
+    where Almond Blossom hangs today.'
+  epilogueCredit: Vincent van Gogh, Almond Blossom, 1890. Van Gogh Museum, Amsterdam
+    (Vincent van Gogh Foundation)

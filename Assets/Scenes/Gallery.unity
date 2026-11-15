@@ -636,8 +636,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InnerFrame.ArtworkCici.ArtworkCiciActions
   detailPanel: {fileID: 1955702932}
-  paintingEntrance: {fileID: 0}
-  expectedScene: 
+  paintingEntrance: {fileID: 1367178650}
+  expectedScene: AlmondStudio
   exclusiveDetails: 1
   onEnter:
     m_PersistentCalls:
@@ -3690,6 +3690,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 932003054}
+  - {fileID: 1367178651}
   m_Father: {fileID: 1055218407}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &598434450
@@ -3706,7 +3707,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::InnerFrame.Gallery.GalleryPainting
   title: Almond Blossom
   caption: "Vincent van Gogh \xB7 1890"
-  entrance: {fileID: 0}
+  entrance: {fileID: 1367178650}
   canvas: {fileID: 182329462}
   frame: {fileID: 1572672995}
   closeDistance: 5
@@ -8328,6 +8329,54 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 300, y: 610}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!1 &1367178649
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1367178651}
+  - component: {fileID: 1367178650}
+  m_Layer: 0
+  m_Name: Entrance_AlmondBlossom
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1367178650
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1367178649}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e6aaa5e4429f648ea85d977eda274560, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SceneChangeButton
+  targetScene: AlmondStudio
+  fadeTime: 1
+  useTrigger: 0
+  requiredTag: Player
+--- !u!4 &1367178651
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1367178649}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 598434449}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1411658494
 GameObject:
   m_ObjectHideFlags: 0

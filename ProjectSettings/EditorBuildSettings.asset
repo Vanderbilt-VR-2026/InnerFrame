@@ -20,6 +20,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/CafeTerrace/Scenes/CafeTerrace.unity
     guid: ad1e02e6bfc8e4c77b4d71bac247517d
+  - enabled: 1
+    path: Assets/AlmondStudio/Scenes/AlmondStudio.unity
+    guid: 17d51c0840b1e44fb8e021399ae7efbd
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
     com.unity.xr.management.loader_settings: {fileID: 11400000, guid: 92cc784bb05aa4dbc94a81266d583884, type: 2}

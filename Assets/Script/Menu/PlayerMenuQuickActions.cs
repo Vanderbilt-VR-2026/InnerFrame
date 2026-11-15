@@ -66,7 +66,7 @@ public sealed class PlayerMenuQuickActions : MonoBehaviour
         {
             transform.SetParent(camera.transform, false);
             transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
-            bool screenHud = desktop && !camera.stereoEnabled;
+            bool screenHud = desktop && !VG_CompositorCanvas.UsesViewPlane(camera);
             canvas.renderMode = screenHud ? RenderMode.ScreenSpaceCamera : RenderMode.WorldSpace;
             canvas.worldCamera = camera;
             canvas.planeDistance = Distance;
@@ -80,7 +80,7 @@ public sealed class PlayerMenuQuickActions : MonoBehaviour
             }
             row.anchorMin = row.anchorMax = screenHud ? new Vector2(.95f, .075f) : new Vector2(.5f, .5f);
             // An XR camera can be selected before its display starts. The registered presenter
-            // watches for an active headset/session and restores the fallback when it pauses.
+            // keeps the shortcuts in the eye buffer while the native layer starts or resumes.
             if (!screenHud) VG_CompositorCanvas.Register(canvas, camera, Distance, VG_CompositorCanvas.ShortcutFrame);
             else VG_CompositorCanvas.Unregister(canvas);
         }
@@ -181,7 +181,7 @@ public sealed class PlayerMenuQuickActions : MonoBehaviour
             if (!show) for (int i = 0; i < labels.Length; i++) labels[i].SetActive(false);
         }
         if (!show) return;
-        if ((desktop && !eyes.stereoEnabled) != (canvas.renderMode == RenderMode.ScreenSpaceCamera))
+        if ((desktop && !VG_CompositorCanvas.UsesViewPlane(eyes)) != (canvas.renderMode == RenderMode.ScreenSpaceCamera))
             SetContext(eyes, desktop, owner != null && owner.BackScene != null);
         Layout();
         if (Time.unscaledTime >= nextFind) FindHands();
@@ -205,7 +205,7 @@ public sealed class PlayerMenuQuickActions : MonoBehaviour
             row.anchoredPosition3D = new Vector3(-rowWidth * .5f * scale, Diameter * .5f * scale, 0f);
             return;
         }
-        if (eyes.stereoEnabled)
+        if (VG_CompositorCanvas.UsesViewPlane(eyes))
         {
             // Layout and ray targets use the same head-local metres as the OpenXR layer.
             // Keep all three circles inside the binocular view, including the headset's lens mask.

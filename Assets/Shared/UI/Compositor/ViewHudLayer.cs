@@ -1,6 +1,9 @@
 using System;
 using Unity.XR.CompositionLayers;
 using Unity.XR.CompositionLayers.Layers;
+using Unity.XR.CompositionLayers.Services;
+using UnityEngine.XR.OpenXR;
+using UnityEngine.XR.OpenXR.Features.CompositionLayers;
 using UnityEngine;
 using UnityEngine.Scripting;
 using UnityEngine.XR.OpenXR.CompositionLayers;
@@ -14,7 +17,8 @@ namespace InnerFrame.XR.UI
     /// <summary>Owns the visible OpenXR quad. Its caller owns the transparent capture texture and the fallback UI.</summary>
     public sealed class ViewHudLayer : MonoBehaviour
     {
-        public static bool Available => ViewHudFeature.ViewSpace != 0 && ViewHudFeature.Running && OpenXRLayerProvider.isStarted;
+        public static bool SessionActive => ViewHudFeature.ViewSpace != 0 && ViewHudFeature.Running;
+        public static bool Available => SessionActive && OpenXRLayerProvider.isStarted;
         internal RenderTexture Texture { get; private set; }
         internal Vector3 Centre { get; private set; }
         internal Vector2 Size { get; private set; }
@@ -26,7 +30,7 @@ namespace InnerFrame.XR.UI
 
         public static ViewHudLayer Create(RenderTexture texture, Vector3 centre, Vector2 size, int order = 100)
         {
-            if (!Available || texture == null || !texture.IsCreated()) return null;
+            if (!SessionActive || texture == null || !texture.IsCreated()) return null;
             var go = new GameObject("View-space HUD");
             go.SetActive(false);
             var hud = go.AddComponent<ViewHudLayer>();
@@ -35,6 +39,12 @@ namespace InnerFrame.XR.UI
             hud.layer.Order = order;
             hud.SetSurface(texture, centre, size);
             go.SetActive(true);
+            // Unity binds its provider during OnSessionBegin only if a layer manager already exists.
+            // A first HUD created on the Gallery scene load can start that manager afterwards.
+            var manager = CompositionLayerManager.Instance;
+            if (manager != null && manager.LayerProvider == null &&
+                OpenXRSettings.Instance?.GetFeature<OpenXRCompositionLayersFeature>()?.enabled == true)
+                manager.LayerProvider = new OpenXRLayerProvider();
             return hud;
         }
 

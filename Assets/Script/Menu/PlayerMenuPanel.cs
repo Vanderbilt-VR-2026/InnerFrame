@@ -89,8 +89,8 @@ public class PlayerMenuPanel : MonoBehaviour
         float depth = transform.localPosition.z;
         var camera = canvas.worldCamera;
         if (camera == null || depth <= 0f) return;
-        float halfHeight = camera.stereoEnabled ? .62f : Mathf.Tan(camera.fieldOfView * Mathf.Deg2Rad * .5f);
-        float halfWidth = camera.stereoEnabled ? .80f : halfHeight * camera.aspect;
+        float halfHeight = VG_CompositorCanvas.UsesViewPlane(camera) ? .62f : Mathf.Tan(camera.fieldOfView * Mathf.Deg2Rad * .5f);
+        float halfWidth = VG_CompositorCanvas.UsesViewPlane(camera) ? .80f : halfHeight * camera.aspect;
         Vector2 room = Vector2.Max(Vector2.zero, new Vector2(halfWidth, halfHeight) - PopupFrame().size * .5f) * depth;
         transform.localPosition = new Vector3(Mathf.Clamp(offset.x, -room.x, room.x), Mathf.Clamp(offset.y, -room.y, room.y), depth);
         VG_CompositorCanvas.Register(canvas, camera, depth, PopupFrame());

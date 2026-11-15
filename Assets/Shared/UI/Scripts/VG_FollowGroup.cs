@@ -120,7 +120,7 @@ public class VG_FollowGroup : MonoBehaviour
     {
         float depth = settings.distance;
         var surface = (RectTransform)DisplayCanvas.transform;
-        var mode = camera.stereoEnabled ? RenderMode.WorldSpace : RenderMode.ScreenSpaceCamera;
+        var mode = VG_CompositorCanvas.UsesViewPlane(camera) ? RenderMode.WorldSpace : RenderMode.ScreenSpaceCamera;
         if (surface.parent != camera.transform || DisplayCanvas.renderMode != mode || DisplayCanvas.worldCamera != camera)
         {
             VG_CompositorCanvas.Unregister(DisplayCanvas);

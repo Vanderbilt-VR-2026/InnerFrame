@@ -45,6 +45,7 @@ namespace InnerFrame.XR.UI
 
         public void CreateLayer(CompositionLayerManager.LayerInfo info)
         {
+            if (surfaces.ContainsKey(info.Id)) return;
             var hud = info.Layer.GetComponent<ViewHudLayer>();
             if (hud == null || !ViewHudLayer.Available) return;
             var surface = new Surface { hud = hud };
@@ -91,7 +92,13 @@ namespace InnerFrame.XR.UI
 
         public void SetActiveLayer(CompositionLayerManager.LayerInfo info)
         {
-            if (!surfaces.TryGetValue(info.Id, out var surface) || surface.hud == null) return;
+            if (!surfaces.TryGetValue(info.Id, out var surface))
+            {
+                // A layer can be announced before the headset is running or before the provider was bound.
+                CreateLayer(info);
+                if (!surfaces.TryGetValue(info.Id, out surface)) return;
+            }
+            if (surface.hud == null) return;
             if (Volatile.Read(ref surface.failed)) return;
             var texture = surface.hud.Texture;
             if (!ViewHudLayer.Available || texture == null || !texture.IsCreated()) return;
@@ -138,7 +145,7 @@ namespace InnerFrame.XR.UI
             foreach (var surface in surfaces.Values)
             {
                 var hud = surface.hud;
-                if (surface.activeFrame != Time.frameCount || (surface.copiedFrame < 0 || surface.copiedFrame < Time.frameCount - 1) ||
+                if (surface.activeFrame != Time.frameCount || surface.copiedFrame < 0 || surface.copiedFrame < Time.frameCount - 1 ||
                     hud == null || !hud.isActiveAndEnabled || hud.Size.x <= 0f || hud.Size.y <= 0f) continue;
                 quads[count] = surface.quad;
                 orders[count++] = surface.order;

@@ -5,7 +5,7 @@ using UnityEngine.Rendering;
 using UnityEngine.UI;
 
 /// <summary>Renders the actual interactive canvas into a cropped transparent VIEW-space quad on Quest.
-/// The headset camera keeps drawing the original canvas until the compositor accepts its first frame.</summary>
+/// The original canvas supplies interactions. Display pixels always use a view-space projection.</summary>
 [DisallowMultipleComponent, DefaultExecutionOrder(15000)]
 public sealed class VG_CompositorCanvas : MonoBehaviour
 {
@@ -28,6 +28,7 @@ public sealed class VG_CompositorCanvas : MonoBehaviour
         MainTexture = Shader.PropertyToID("_MainTex"), SampleAdd = Shader.PropertyToID("_TextureSampleAdd");
     RenderTexture texture;
     ViewHudLayer native;
+    VG_EyeOverlay fallback;
     float depth;
     Rect frame;
     int captureLayer = -1;
@@ -39,10 +40,20 @@ public sealed class VG_CompositorCanvas : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetSlots() => occupied = 0;
 
+    public static bool UsesViewPlane(Camera camera)
+    {
+#if UNITY_ANDROID
+        // Use the headset layout on startup and resume, before stereoEnabled becomes true.
+        // Android Play Mode uses the same layout when testing on a Mac without an XR display.
+        if (Application.isPlaying && camera.targetTexture == null) return true;
+#endif
+        return camera.stereoEnabled;
+    }
+
     public static void Register(Canvas root, Camera camera, float viewDepth, Rect viewFrame)
     {
-#if UNITY_ANDROID && !UNITY_EDITOR
-        if (root == null || camera == null || viewDepth <= 0f) return;
+#if UNITY_ANDROID || UNITY_EDITOR
+        if (!Application.isPlaying || root == null || camera == null || viewDepth <= 0f) return;
         var route = root.GetComponent<VG_CompositorCanvas>();
         if (route == null) route = root.gameObject.AddComponent<VG_CompositorCanvas>();
         if (route.eye != camera) route.Release();
@@ -56,7 +67,7 @@ public sealed class VG_CompositorCanvas : MonoBehaviour
 
     public static void Unregister(Canvas root)
     {
-#if UNITY_ANDROID && !UNITY_EDITOR
+#if UNITY_ANDROID || UNITY_EDITOR
         if (root != null && root.TryGetComponent<VG_CompositorCanvas>(out var route)) route.enabled = false;
 #endif
     }
@@ -67,7 +78,7 @@ public sealed class VG_CompositorCanvas : MonoBehaviour
 
     void LateUpdate()
     {
-        if (!ViewHudLayer.Available || eye == null || !eye.isActiveAndEnabled || !eye.stereoEnabled)
+        if (eye == null || !eye.isActiveAndEnabled || !UsesViewPlane(eye))
         {
             Release();
             return;
@@ -145,14 +156,26 @@ public sealed class VG_CompositorCanvas : MonoBehaviour
             drewMesh = true;
         }
         Graphics.ExecuteCommandBuffer(draw);
-        if (!drewMesh || !ViewHudLayer.Available) return;
+        if (!drewMesh) return;
         viewCentre = new Vector3(bounds.center.x, bounds.center.y, depth);
         viewSize = bounds.size;
-        if (native == null)
-            native = ViewHudLayer.Create(texture, viewCentre, viewSize,
-                100 + Mathf.Max(0, source.sortingOrder) * 8 + captureLayer - FirstLayer);
-        else native.SetSurface(texture, viewCentre, viewSize);
-        if (native != null) SetEyeBit(!native.Ready);
+        if (ViewHudLayer.SessionActive)
+        {
+            if (native == null)
+                native = ViewHudLayer.Create(texture, viewCentre, viewSize,
+                    100 + Mathf.Max(0, source.sortingOrder) * 8 + captureLayer - FirstLayer);
+            else native.SetSurface(texture, viewCentre, viewSize);
+        }
+        else if (native != null)
+        {
+            native.Hide();
+            Dispose(native.gameObject);
+            native = null;
+        }
+        // Never render the raycast canvas in the scene, even during a missed submission or a resize.
+        SetEyeBit(false);
+        if (native == null || !native.Ready)
+            fallback.Draw(eye, texture, pixels, depth, source.sortingOrder);
     }
 
     static bool Visible(Graphic graphic) => graphic.isActiveAndEnabled && graphic.color.a > 0f &&
@@ -185,7 +208,8 @@ public sealed class VG_CompositorCanvas : MonoBehaviour
     bool StartCapture()
     {
         var shader = Resources.Load<Shader>("VG_ViewPixels");
-        if (shader == null) return false;
+        var overlayShader = Resources.Load<Shader>("VG_EyeOverlay");
+        if (shader == null || overlayShader == null) return false;
         for (int layer = FirstLayer; layer <= LastLayer; ++layer)
             if ((occupied & (1 << layer)) == 0 && string.IsNullOrEmpty(LayerMask.LayerToName(layer)))
             {
@@ -195,7 +219,8 @@ public sealed class VG_CompositorCanvas : MonoBehaviour
             }
         if (captureLayer < 0) return false;
         originalEyeBit = (eye.cullingMask & (1 << captureLayer)) != 0;
-        SetEyeBit(true);
+        SetEyeBit(false);
+        fallback = new VG_EyeOverlay(overlayShader);
         properties ??= new MaterialPropertyBlock();
         painter = new Material(shader) { hideFlags = HideFlags.HideAndDontSave };
         draw = new CommandBuffer { name = "InnerFrame fixed HUD" };
@@ -233,7 +258,6 @@ public sealed class VG_CompositorCanvas : MonoBehaviour
             Dispose(native.gameObject);
             native = null;
         }
-        SetEyeBit(true);
         if (texture != null)
         {
             Dispose(texture);
@@ -245,6 +269,8 @@ public sealed class VG_CompositorCanvas : MonoBehaviour
     {
         if (captureLayer < 0) return;
         RetireSurface();
+        fallback?.Dispose();
+        fallback = null;
         draw?.Release();
         draw = null;
         if (painter != null) Dispose(painter);

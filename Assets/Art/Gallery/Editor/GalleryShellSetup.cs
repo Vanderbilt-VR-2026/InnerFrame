@@ -21,9 +21,10 @@ namespace InnerFrame.Gallery.EditorTools
     ///     and The Starry Night's and Vincent's portrait's, which share it) takes GT_Frame, the gilt, along the frame's own
     ///     UVs; Mat_Bench (the button pedestals) GT_Pedestal. Mat_Metal and Mat_Baseboard stay as they are;
     ///   - Gallery.unity: the Rug gets a copy of the Floor's TeleportationArea (Gallery.fbx generates a mesh collider for
-    ///     every object, so the rug's would otherwise stop teleports in the middle of the room); the Door keeps its
-    ///     generated collider, so nobody walks out through the arch; the XR Origin at Spawn_Point; Slot_Bedroom and
-    ///     Button_Bedroom at their distance from the north wall (FromNorthWall).
+    ///     every object, so the rug's would otherwise stop teleports in the middle of the room); the XR Origin at
+    ///     Spawn_Point; Slot_Bedroom and Button_Bedroom at their distance from the north wall (FromNorthWall). (The Door,
+    ///     and the collider it had so nobody walked out through the arch, went with the old arch on 2026-11-12: Build
+    ///     Layout puts the Tripo arch, the corridor card and a blocker in the doorway.)
     /// </summary>
     public static class GalleryShellSetup
     {
@@ -37,11 +38,15 @@ namespace InnerFrame.Gallery.EditorTools
         // material, plain colour (no texture), texture name; metres per repeat across (u) and up (v), 0 = once across the
         // object (the rug and the door are UV-mapped 0..1); v0: the height (m) where the image's bottom edge sits, for a
         // band mapped once up its height (Gallery.fbx's wall UVs are (along the wall, height) in metres); smoothness; both
-        // faces. Colours from the concept sheet: Pompeian red walls, grey wood wainscot, warm stone trim, honey oak floor.
+        // faces. Colours from the concept sheet: yellow walls (Pompeian red until 2026-11-12), grey wood wainscot, warm stone
+        // trim, honey oak floor. Since 2026-11-12 a real corridor runs behind the arch (build_gallery.py): yellow walls, the
+        // same wainscot, the floor's wood, a walnut ceiling (Mat_BenchWood), and at its end a closed double door
+        // (Mat_CorridorDoor: GT_CorridorDoor, cropped by make_textures.py from the corridor picture, its panes glowing
+        // through GT_CorridorDoor_Emission). Mat_Door (a pair of doors, then the flat corridor picture) is gone.
         // The band heights are build_gallery.py's: cornice 0.25 m under the 4 m ceiling, rail 0.06 m round the 1 m wainscot.
         public static readonly (string mat, Color plain, string tex, float mu, float mv, float v0, float smooth, bool twoSided)[] Slots =
         {
-            ("Mat_Wall",      Hex("8E2A1F"), "Wall",      2.0f, 2.0f,  0f,    0.05f, false),
+            ("Mat_Wall",      Hex("F6B937"), "Wall",      2.0f, 2.0f,  0f,    0.05f, false),
             ("Mat_Ceiling",   Hex("A8957E"), "Ceiling",   2.0f, 2.0f,  0f,    0.05f, false),
             ("Mat_Wainscot",  Hex("7C766C"), "Wainscot",  1.5f, 1.0f,  0f,    0.15f, false),
             ("Mat_Cornice",   Hex("B49A78"), "Cornice",   0.5f, 0.25f, 3.75f, 0.15f, false),
@@ -51,13 +56,21 @@ namespace InnerFrame.Gallery.EditorTools
             ("Mat_Rug",       Hex("7A1E1E"), "Rug",       0f,   0f,    0f,    0.0f,  false),
             ("Mat_BenchWood", Hex("3B2414"), "BenchWood", 0.6f, 0.6f,  0f,    0.35f, false),
             ("Mat_Cushion",   Hex("4A2A1E"), "Cushion",   0.5f, 0.5f,  0f,    0.2f,  false),
-            ("Mat_Door",      Hex("4F5A36"), "Door",      0f,   0f,    0f,    0.2f,  true),
+            ("Mat_CorridorDoor", Hex("5A3418"), "CorridorDoor", 0f, 0f,  0f,    0.25f, false),
             // the carved frame's own gilt (GT_Frame); its UVs, made by build_gallery.py, already run along each rail and up its
             // profile, so the texture repeats once per UV unit
             // the button pedestals (Pedestal_Bedroom, and The Starry Night's copy): ebonised wood, UVs in metres
             ("Mat_Bench",     Hex("1C1B1A"), "Pedestal",  0.5f, 0.5f,  0f,    0.3f,  false),
             ("Mat_Frame",     Hex("C9973F"), "Frame",     1f,   1f,    0f,    0.45f, false),
         };
+        // A surface that glows through an emission image (Textures/GT_<tex>.jpg), and how bright: the
+        // corridor door's panes, warm, as if lit from the far side (no light: the scene is at its per-object limit).
+        public static readonly Dictionary<string, (string tex, Color glow)> Glows = new Dictionary<string, (string, Color)>
+        {
+            ["Mat_CorridorDoor"] = ("CorridorDoor_Emission", new Color(1.6f, 1.6f, 1.6f)),
+        };
+        // Gallery.fbx materials that are no longer made (their remap is dropped): the door and then the flat corridor picture.
+        public static readonly string[] Retired = { "Mat_Door" };
         // A texture's tint where it isn't white (none at the moment: Mat_Frame had one while it borrowed GT_Trim).
         public static readonly Dictionary<string, Color> Tints = new Dictionary<string, Color>();
         public static string TexPath(string name) => $"{Textures}/GT_{name}_BaseColor.jpg";
@@ -66,7 +79,9 @@ namespace InnerFrame.Gallery.EditorTools
         // as its distance into the room from the north wall's face, so it follows the wall (z -7 then, -4.5 now). The
         // painting's slot stands 0.1 m off the wall (Slot_Bedroom z -6.9 then); the button sits 1.518 m out (z -5.482
         // then), lower and smaller than Gallery.fbx's. SN_GallerySetup copies both onto The Starry Night.
-        public static readonly (string name, float fromWall)[] FromNorthWall = { ("Slot_Bedroom", 0.1f), ("Button_Bedroom", 1.518f) };
+        // (2026-11-12, Part B: Button_Bedroom went with the stands, and Slot_Bedroom hangs where GalleryLayout.asset says,
+        // set by GalleryLayoutSetup; nothing is kept to the north wall here any more.)
+        public static readonly (string name, float fromWall)[] FromNorthWall = { };
 
         public static void Apply(List<string> changes)
         {
@@ -76,19 +91,21 @@ namespace InnerFrame.Gallery.EditorTools
             var why = new List<string>();
             var all = scene.GetRootGameObjects().SelectMany(g => g.GetComponentsInChildren<Transform>(true)).ToList();
 
-            var door = all.FirstOrDefault(t => t.name == "Door") ?? throw new Exception($"{Tag} Gallery.unity has no Door: is Gallery.fbx rebuilt?");
-            if (door.GetComponent<Collider>() == null) { door.gameObject.AddComponent<MeshCollider>(); why.Add("a collider on the Door"); }
             var floorArea = all.Select(t => t.GetComponent<TeleportationArea>()).FirstOrDefault(a => a != null && a.name == "Floor")
                             ?? throw new Exception($"{Tag} the Floor has no TeleportationArea");
-            var rug = all.First(t => t.name == "Rug");
-            var rugArea = rug.GetComponent<TeleportationArea>();
-            if (rugArea == null) { rugArea = rug.gameObject.AddComponent<TeleportationArea>(); why.Add("a TeleportationArea on the Rug"); }
-            // the Floor's settings (its colliders list is empty: each area finds its own object's collider on Awake): when it is
-            // first added, or on Reset to Built; Add Decor otherwise keeps the Rug's as they are
-            if ((GalleryDecorSetup.Reset || why.Any(w => w.Contains("on the Rug"))) && EditorJsonUtility.ToJson(rugArea) != EditorJsonUtility.ToJson(floorArea))
+            // the Rug, and the corridor's floor (2026-11-12, its own object so the Floor stays the room's size), as the Floor
+            foreach (var name in new[] { "Rug", "Corridor_Floor" })
             {
-                EditorUtility.CopySerialized(floorArea, rugArea);
-                why.Add("the Rug's TeleportationArea set as the Floor's");
+                var part = all.FirstOrDefault(t => t.name == name) ?? throw new Exception($"{Tag} Gallery.unity has no {name}: is Gallery.fbx rebuilt?");
+                var area = part.GetComponent<TeleportationArea>();
+                if (area == null) { area = part.gameObject.AddComponent<TeleportationArea>(); why.Add($"a TeleportationArea on the {name}"); }
+                // the Floor's settings (its colliders list is empty: each area finds its own object's collider on Awake): when
+                // it is first added, or on Reset to Built; Add Decor otherwise keeps it as it is
+                if ((GalleryDecorSetup.Reset || why.Any(w => w.EndsWith("on the " + name))) && EditorJsonUtility.ToJson(area) != EditorJsonUtility.ToJson(floorArea))
+                {
+                    EditorUtility.CopySerialized(floorArea, area);
+                    why.Add($"the {name}'s TeleportationArea set as the Floor's");
+                }
             }
 
             float wall = -GalleryDecorSetup.HalfL;
@@ -125,8 +142,14 @@ namespace InnerFrame.Gallery.EditorTools
             if (has) GalleryDecorSetup.ImportTexture(texPath, 2048, changes, repeat: !once);
             var tiling = once ? Vector2.one : new Vector2(1f / s.mu, 1f / s.mv);
             var offset = once ? Vector2.zero : new Vector2(0f, -s.v0 / s.mv);
+            Color? glow = null; string glowTex = null;
+            if (has && Glows.TryGetValue(s.mat, out var g) && File.Exists($"{Textures}/GT_{g.tex}.jpg"))
+            {
+                glowTex = $"{Textures}/GT_{g.tex}.jpg"; glow = g.glow;
+                GalleryDecorSetup.ImportTexture(glowTex, 2048, changes, repeat: false);
+            }
             return GalleryDecorSetup.MakeMaterial($"{Materials}/{s.mat}.mat", has ? texPath : null, has ? (Tints.TryGetValue(s.mat, out var tint) ? tint : Color.white) : s.plain,
-                s.smooth, s.twoSided, false, changes, tiling, offset);
+                s.smooth, s.twoSided, false, changes, tiling, offset, glow, glowTex);
         }
 
         static void Remap(Dictionary<string, Material> mats, List<string> changes)
@@ -140,6 +163,11 @@ namespace InnerFrame.Gallery.EditorTools
                 if (existing.TryGetValue(id, out var have) && have == m) continue;
                 mi.AddRemap(id, m);
                 why.Add(name);
+            }
+            foreach (var name in Retired)
+            {
+                var id = new AssetImporter.SourceAssetIdentifier(typeof(Material), name);
+                if (existing.ContainsKey(id)) { mi.RemoveRemap(id); why.Add($"{name} dropped"); }
             }
             if (why.Count > 0) { mi.SaveAndReimport(); changes.Add($"{Fbx}: materials {string.Join(", ", why)}"); }
         }

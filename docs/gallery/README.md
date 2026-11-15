@@ -1,12 +1,18 @@
 # Gallery
 
-The room visitors start in (Cici's scene): `Assets/Scenes/Gallery.unity`. The Bedroom hangs on the north wall and The
-Starry Night on the east wall; each has a pedestal with a button that fades into its painting's scene.
+The room visitors start in (Cici's scene): `Assets/Scenes/Gallery.unity`. Five paintings hang round it in the order you
+meet them from the door, left to right: Vincent's 1887 self-portrait, then the four of the story, each with its wall
+label (number and time of day): 1 The Bedroom (Afternoon), 2 Café Terrace at Night (Late afternoon), 3 The Starry Night
+(Evening), 4 Almond Blossom (Morning). You enter a painting by pointing at it and pulling the trigger: a small menu opens
+beside it (Enter, Back). There are no stands (2026-11-12, Part B; until then each painting had a pedestal with a button).
 
-Since 2026-11-10 the room follows the team's concept sheet (a small, warm 19th-century gallery): red walls over a grey
-wood wainscot, a cornice, a skylight in the middle of the ceiling, an arched entrance with a closed door and lanterns,
-one upholstered bench on a rug, a statue, plants and flowers. Its textures come from ChatGPT:
-[TEXTURE_PROMPTS.md](TEXTURE_PROMPTS.md) has the prompts and how to bring the images in.
+Since 2026-11-10 the room follows the team's concept sheet (a small, warm 19th-century gallery): painted walls over a grey
+wood wainscot, a cornice, a skylight in the middle of the ceiling, an arched entrance with lanterns, one upholstered
+bench on a rug, a statue, plants and flowers. Its textures come from ChatGPT:
+[TEXTURE_PROMPTS.md](TEXTURE_PROMPTS.md) has the prompts and how to bring the images in. Since 2026-11-12, after the
+yellow concept photo (`Art/Source/Gallery/textures/concept_yellow.png`), the walls are yellow, the entrance is Cici's Tripo
+arch, and through it a short corridor runs to a closed double door; until then the walls were red and a closed double
+door filled a plain round arch.
 
 ## Open it
 
@@ -14,45 +20,106 @@ Open `Assets/Scenes/Gallery.unity` and press Play (XR Device Simulator) or build
 
 ## Layout (Unity coordinates)
 
-The room is 7 × 9 × 4 m: x from −3.5 (east wall) to 3.5 (west wall), z from −4.5 (north wall, The Bedroom) to 4.5
-(south wall, the arch). Visitors spawn at (0, 0, 3.5) facing north. (It was 10 × 14 × 6 m until 2026-11-10.)
+**One source of truth: `Assets/Art/Gallery/Layout/GalleryLayout.asset`** (class `Assets/Art/Gallery/Scripts/GalleryLayout.cs`).
+It holds the room's size, the bench, the paintings in order (title, caption, real canvas size in cm, image, material, the
+scene Enter opens or none for "Coming soon", wall and place, label number and time) and where the decor stands. Edit it in
+the Inspector, then build:
+
+1. `Art/Source/Gallery/build_gallery.py` (Blender) reads the room, the bench and The Bedroom's place and size from it
+   and writes `Gallery.fbx` (only needed when those change).
+2. **Tools > InnerFrame > Gallery > Build Layout** (`GalleryLayoutSetup.cs`) works out the hanging sizes, writes them back
+   into the asset, and builds the scene from it. It is idempotent: a second run changes nothing.
+
+The room is 9 × 12 × 4 m: x from −4.5 (east wall) to 4.5 (west wall), z from −6 (north wall) to 6 (south wall, the arch).
+Visitors spawn at (0, 0, 5) facing The Bedroom. (7 × 9 m until 2026-11-12, 10 × 14 m until 2026-11-10.)
+
+**Hanging.** Every painting at one scale (2.163 m of wall per metre of canvas), so their real sizes compare; The Bedroom
+was to be 2.2 m wide, but then the Café's centre would be at 2.29 m, so all shrank by the same ratio until no centre is
+above 2.2 m (`maxCentre`): The Bedroom is 2.00 m wide. Every frame's bottom edge is 10 cm above the wainscot's rail
+(1.03 m), so no frame cuts the wainscot.
+
+| # | Painting | Wall, place | Canvas as hung | Enter |
+|---|---|---|---|---|
+| — | Self-Portrait, 1887 (AIC) | west, z 2.5 (by the door) | 0.70 × 0.89 m | none: hold B to ask Vincent |
+| 1 | The Bedroom, 1889 | west, z −2.5 | 2.00 × 1.59 m | PaintedBedroom |
+| 2 | Café Terrace at Night, 1888 | north, centre | 1.41 × 1.75 m | CafeTerrace |
+| 3 | The Starry Night, 1889 | east, z −2.5 | 1.99 × 1.59 m | StarryNight |
+| 4 | Almond Blossom, 1890 | east, z 2.5 (by the door) | 2.00 × 1.59 m | Coming soon (no scene yet) |
 
 | What | Where | Made by |
 |---|---|---|
-| Shell: walls, wainscot and rail, cornice, floor, ceiling and skylight, the arch and its door, the bench, the rug, The Bedroom's frame and pedestal | `Assets/Art/Gallery/Gallery.fbx` | `Art/Source/Gallery/build_gallery.py` |
-| The shell's materials and textures, the rug's teleport area, the XR Origin at the spawn point | `Assets/Art/Gallery/Materials`, `Textures`; `Gallery.unity` | `Assets/Art/Gallery/Editor/GalleryShellSetup.cs` (run by Add Decor) |
-| The Starry Night, its frame and pedestal: on the east wall, centred at z = −1.6 | `SN_GalleryEntrance` (last root) | `Assets/StarryNight/Editor/SN_GallerySetup.cs` |
-| Vincent's self-portrait (at run time), west of The Bedroom, 0.2 m from its frame | — | `Assets/VanGogh/Scripts/VanGoghSpawner.cs` |
-| Decoration (below) | `GalleryDecor` (the root before `SN_GalleryEntrance`) | `Assets/Art/Gallery/Editor/GalleryDecorSetup.cs` |
+| Shell: walls, wainscot and rail, cornice, floor, ceiling and skylight, the arch and its door, the bench, the rug, The Bedroom's frame | `Assets/Art/Gallery/Gallery.fbx` | `Art/Source/Gallery/build_gallery.py` (reads `GalleryLayout.asset`) |
+| The shell's materials and textures, the rug's teleport area | `Assets/Art/Gallery/Materials`, `Textures`; `Gallery.unity` | `GalleryShellSetup.cs` (run by Add Decor) |
+| The paintings (`Gallery Paintings`), their wall labels (`Cici Artwork Cards`), the pointer and menu (`Gallery Painting Menu`), the spotlights, the decor's places, the XR Origin at the spawn point | `Gallery.unity` | `GalleryLayoutSetup.cs` (Build Layout) |
+| Vincent's voice at his portrait (at run time, `VanGogh_Portrait` at `Slot_SelfPortrait`) | — | `Assets/VanGogh/Scripts/VanGoghSpawner.cs` |
+| The decoration's models (below) | `GalleryDecor` | `GalleryDecorSetup.cs` (Add Decor) |
+
+"Add to Gallery" (`SN_GallerySetup`, The Starry Night's image and material) and Rowling's "Install Cafe and space
+artworks" (`CafeGallerySetup`) now hand the placing to Build Layout.
+
+### Entering a painting
+
+- Point at a painting: its frame gets a pale rim (#178's hover look) and a thin cream ray shows, longer than the
+  controller's own 2 m ray. Pull the **trigger**: a menu opens beside the painting (or, from farther than 3.5 m, 3.5 m in
+  front of you toward it), always the same size to the eye. Point at **Enter** and pull the trigger: the usual fade into
+  the painting (its `SceneChangeButton`, as the pedestals did). **Back** closes it.
+- The menu closes on Back, when you open another painting's, when you walk 2 m from where you opened it, or when you
+  turn your back on it. It is yours alone (not shared). Almond Blossom says "Coming soon" until its scene exists.
+- Nothing is rebound: grip is still XRI Select, the trigger Activate (and UI Press), A Jump. The trigger is read from each
+  hand's own Activate input (`GalleryPaintingPointer`). In the Editor without a headset: the centre dot or the mouse, E or a click.
+- The wall labels' "More →" and "×" work with the trigger as well as the grip. ENTER is off the labels.
 
 ### The shell
 
 | Part | What | Material (texture slot) |
 |---|---|---|
-| Walls, arch spandrels | 0.2 m thick | `Mat_Wall` (`wall.png`, 2 m per repeat; shifted from crimson to orange-red by `make_textures.py`'s `GAIN`) |
-| Wainscot | 1.0 m panelling on every wall, stopping at the two frames and the arch | `Mat_Wainscot` (`wainscot.png`, 1.5 m per repeat, once upwards) |
+| Walls, arch spandrels | 0.2 m thick | `Mat_Wall` (`wall.png`, yellow, 2 m per repeat, colours as ChatGPT made them; the red wall before 2026-11-12 was shifted from crimson to orange-red by `make_textures.py`'s `GAIN`) |
+| Wainscot | 1.0 m panelling on every wall, unbroken except at the arch (the frames hang above it) | `Mat_Wainscot` (`wainscot.png`, 1.5 m per repeat, once upwards) |
 | Cornice (0.25 m under the ceiling) | | `Mat_Cornice` (`cornice.png`, a moulding profile mapped once up the band, 0.5 m across) |
 | Wainscot rail (0.06 m) | | `Mat_Rail` (`trim.png`, mapped once up the band) |
-| Arch moulding, skylight frame | | `Mat_Trim` (a plain panel cut from `trim.png`, 0.5 m) |
+| Skylight frame | | `Mat_Trim` (a plain panel cut from `trim.png`, 0.5 m) |
 | Ceiling, with the 3 × 2.5 m skylight in its middle | | `Mat_Ceiling` (`ceiling.png`, 2 m; lightened to cream by `GAIN`) |
 | Floor | | `Mat_Floor` (`floor.png`, 2 m) |
-| Arch | 1.6 m wide, round-headed, 2.6 m to the crown; the door fills it at the wall's outer face | door: `Mat_Door` (`door.png`, once) |
-| Frame (`Frame_Bedroom`, and The Starry Night's copy of it) | A carved baroque frame made in `build_gallery.py`, after the team's reference: a moulded profile (stepped sight edge, inner bead, hollow, broad flat band, bold rounded outer rim) swept round the opening, and at each corner a cartouche: a raised cushion, a C-scroll curling along each rail, a fan of five acanthus leaves and a boss. 0.18 m wide (the cartouches stand 1.5 cm past its edge; the wainscot's cut-outs leave 3 cm round it), about 2,600 triangles | `Mat_Frame` (`frame.png`, ChatGPT gilt): its UVs run along each rail and up the profile from the inner edge, so the strokes follow the moulding; each ornament takes a patch of the gilt's middle band, smooth-shaded (also Vincent's portrait's frame) |
-| Pedestals (`Pedestal_Bedroom`, and The Starry Night's copy of it) | A dark wood reading stand with no square edges: a moulded base with rounded corners, a turned round column (foot, shaft, collar) and a head with rounded corners, an eased underside and its top edge rounded over (2 cm), its top the same tilted reading surface as before; 784 triangles, filling the same 0.5 × 0.33 × 1 m box, so its button and placard did not move | `Mat_Bench` (`pedestal.png`, ChatGPT ebonised wood, 0.5 m; brightened 2.6× by `make_textures.py` so its grain shows) |
-| Bench (`Bench_01`) | 1.6 × 0.55 m, 0.48 m high, centred at z = 1.2: an upholstered top on a walnut frame with turned legs, on the rug, facing The Bedroom (0.5 m clear of where you stand at The Starry Night's pedestal) | `Mat_BenchWood` (`bench_wood.png`, 0.6 m), `Mat_Cushion` (`bench_fabric.png`, 0.5 m) |
+| Arch (`Gallery Arch`, placed by Build Layout) | Cici's Tripo model (`GP_Arch`, 10,140 triangles, 1.96 × 0.47 × 2.89 m; its opening 1.12-1.28 m wide, 2.60 m to the crown), made by `make_arch.py` (one scale on every axis, 2.893), its back 5 mm inside the south wall's outer face, so it covers the wall's thickness. The wall's doorway (1.71 × 2.70 m, round-headed, with no reveal) lies between the arch's opening and its outline (`arch.json`), so its cut edge is always behind the arch | `GP_Arch.mat` (URP Lit, `GP_Arch_BaseColor.jpg`, smoothness 0.05) |
+| Corridor (`Corridor_*`) | Behind the arch: `GalleryLayout.corridorLength` (4 m) from the wall's outer face to its end wall; 2.11 m wide (the doorway + 0.4 m, so its walls start behind the wall round the arch), 3.19 m high (0.3 m over the arch) with two recessed ceiling panels; the room's wainscot, rail and baseboard; its floor (`Corridor_Floor`, a teleport area as the room's) level with the room's, which runs through the doorway; at its end a closed double door (1.33 × 2.2 m, 5 cm into the wall, in a walnut casing and lining) that doesn't open. Its walls and door have colliders: the walk ends at the door. 270 triangles | walls `Mat_Wall`; floor `Mat_Floor`; ceiling, casing and lining `Mat_BenchWood`; door `Mat_CorridorDoor` (`GT_CorridorDoor`, mapped once; its panes glow through `GT_CorridorDoor_Emission`) |
+| Frame (`Frame_Bedroom`; every other painting's frame is a copy of it, scaled to its canvas) | A carved baroque frame made in `build_gallery.py`, after the team's reference: a moulded profile (stepped sight edge, inner bead, hollow, broad flat band, bold rounded outer rim) swept round the opening, and at each corner a cartouche: a raised cushion, a C-scroll curling along each rail, a fan of five acanthus leaves and a boss. 0.18 m wide (the cartouches stand 1.5 cm past its edge; the wainscot's cut-outs leave 3 cm round it), about 2,600 triangles | `Mat_Frame` (`frame.png`, ChatGPT gilt): its UVs run along each rail and up the profile from the inner edge, so the strokes follow the moulding; each ornament takes a patch of the gilt's middle band, smooth-shaded (also Vincent's portrait's frame) |
+| Bench (`Bench_01`) | 1.6 × 0.55 m, 0.48 m high, in the middle of the room (`GalleryLayout.bench`): an upholstered top on a walnut frame with turned legs, on the rug | `Mat_BenchWood` (`bench_wood.png`, 0.6 m), `Mat_Cushion` (`bench_fabric.png`, 0.5 m) |
 | Rug | 2 × 3 m under the bench, long side towards The Bedroom; you can teleport onto it | `Mat_Rug` (`rug.png`, once) |
 
-Without its texture a surface keeps a plain colour from the concept sheet. All eleven are in (2026-11-10). The door came as one quarter of a
-ChatGPT sheet: 423 × 546 pixels, so it is soft up close; a full-size `door.png` (1024 × 1536) would sharpen it.
+Without its texture a surface keeps a plain colour from the concept sheet. All eleven are in (2026-11-10).
 
-### Decoration (`GalleryDecor.prefab`)
+**The yellow wall and the corridor (2026-11-12).** Their source images are in the repo, in
+`Art/Source/Gallery/textures/` (`wall.png`, `corridor.png`, and the concept photo they follow, `concept_yellow.png`);
+`make_textures.py -- Art/Source/Gallery/textures` remakes `GT_Wall` and the corridor's door (`GT_CorridorDoor` and its
+`_Emission`) from them, then **Add Decor**.
+- Seams: ChatGPT's wall was nearly seamless already. `make_textures.py` prints the step across each repeat over the
+  99th percentile of the steps inside the image: left to right 1.00, top to bottom 1.17 (a faint seam). It cross-fades
+  12 % of each edge into the opposite one, as for every tiling texture, and now scales the image with a margin wrapped
+  round from the opposite edge (scaled on its own, the edges resampled differently and brought a faint seam back):
+  0.95 and 0.91 after. The 90 % JPEG adds a little at the edge (about 1.1 measured on the file, the red wall's was 1.08);
+  no line shows in a full-size crop where four repeats meet.
+- Brightness: the yellow is used as it came (mean sRGB 246, 185, 55; the red was 179, 63, 35), with no `GAIN`. Above
+  every painting the wall stays yellow where its spotlight's cone grazes it: no point as white as 235 in all three
+  channels; red clips on about 1 to 3 % of the 60 cm above the frame (The Starry Night most, 3 %, as with the red wall),
+  which shows as a light yellow (255, 200, 80), not white.
+- The corridor's door: the closed double door at the far end of `corridor.png` (its two leaves, pixels 386-638 across and
+  557-975 down the 1024 × 1536 original, `make_textures.py` CROPS), 512 × 1024; and its glass panes alone (where the
+  door is as bright as the lit panes, the rest black) as `GT_CorridorDoor_Emission`, so only they glow. `corridor.png`
+  stays as the reference the corridor is built after. (On the morning of 2026-11-12 it hung behind the arch as a flat
+  picture, blurred and darkened: the picture, its card, `GT_Corridor`, `Mat_Door` and the blur are gone.)
+
+### Decoration (`GalleryDecor.prefab`; where each stands: `GalleryLayout.asset`'s decor list, set by Build Layout)
+
+Since Part B everything stands along the walls, clear of every painting, its label and its menu: the statue in the
+north-west corner, plants in the north-east corner, on the west wall between the portrait and The Bedroom, and by the arch,
+a flower stand between The Starry Night and Almond Blossom and one by the arch. The table below is the models.
 
 | Prop | Count | Where |
 |---|---|---|
 | Marble statue on a cream marble plinth (`marble.png`, ChatGPT, 0.6 m) (0.7 m square, 0.6 m: base, step, die, cap, top slab) | 1 | West of the arch (1.9, 2.8), turned to the bench and The Bedroom |
 | Potted plant (0.7×, 0.9 m tall) | 3 | The two north corners, and one on the east side of the arch, beside the door (the one behind the statue was taken out) |
 | Hydrangeas on a turned walnut column stand (top 0.45 m square at 0.9 m) | 2 | East wall by the arch (−3.0, 2.4); west wall (3.0, −1.0) |
-| Lantern with a lit candle inside, on a wall arm | 4 | Each side of the arch (x = ±1.45, its ring at 2.35 m), and one on each side wall at z = 1 (just south of The Starry Night's frame, so neither covers a painting) |
+| Lantern with a lit candle inside, on a wall arm (its hook, arm and wall plate in old copper, `GP_Copper`, the lantern brass's median colour, since 2026-11-12) | 4 | Each side of the arch (x = ±1.45, its ring at 2.35 m), and one on each side wall at z = 1 (just south of The Starry Night's frame, so neither covers a painting) |
 | Sky | 1 | A painted sky card (`GT_Sky`, ChatGPT clouds) seen through the skylight: unlit at 95 % brightness (72 % until the room was brightened on 2026-11-11), facing down, 14 m square, 2 m above the ceiling, so its edge never shows; the clouds repeat every 4 m. It casts no shadow, so the sun still comes in |
 | Ceiling spotlight: a dark fitting, a warm bulb, a ball of light under it, a glow on the ceiling and a pool of light on the floor below | 16 | A ring 0.3 m outside the skylight's frame, five along each long side and three along each short one, as in the concept sheet. Not lights (the four lanterns use the four the Quest lights per object): the bulb is unlit; the ceiling glow (2 m), the ball (0.8 m) and the floor pool (1.8 m, just above the rug) are The Starry Night's glow shader and soft dot added on top. The ball is a card that `Scripts/GP_GlowBillboards.cs` turns to face each camera as it renders (and puts back after, so the scene never saves it turned); the ceiling hides its upper half. The floor pools brighten the floor, not the objects standing on it |
 
@@ -69,8 +136,17 @@ Each lantern is built like The Starry Night's (`SN_Lantern`):
 - **Light:** a warm (2800 K, `LampKelvin`) realtime point light 1 cm above the flame: intensity 1.6, range 4 m, no
   shadows. Decoration, not the room's main light (intensity 3 and range 6 m until 2026-11-11): dimmer, so its bright patch on the wall is small.
 
+**The corridor's lantern** (2026-11-12): the same Tripo lantern, hanging by a 0.25 m copper chain from the corridor's
+ceiling in its middle (Build Layout, `Gallery Arch/Corridor_Lantern`); its glass and flame glow, and it has no lamp at
+all. The corridor has no light of its own: the room's fill light (ambient) lights it as it lights the room's walls between
+the spotlights (measured on renders: the corridor's wall and floor as bright as the room's, luma 0.41 and 0.27).
+
+**Since Part B (2026-11-12) the lanterns' lamps are off**: their glass and flame still glow (the materials are
+unchanged), but they light nothing, so the five painting spotlights fit the budget below with one to spare
+(`GalleryLayout` decor `lit`). Before, the four lanterns and the two painting spotlights used all six.
+
 The Quest's render asset (`Mobile_RPAsset`) draws up to 6 extra per-pixel lights per object and no extra-light shadows.
-The four lanterns and the two painting spotlights use all six (the floor, walls and rug are one mesh each across the
+Before Part B, the four lanterns and the two painting spotlights used all six (the floor, walls and rug are one mesh each across the
 room, so they meet every light); the table lamp the concept sheet has (below) would have to replace one. `GalleryDecorCheck`
 fails if the scene has more point and spot lights than the limit. (A fifth, hanging in front of The Bedroom, was tried on 2026-11-11 and
 taken out: it added little.)
@@ -93,7 +169,7 @@ Three kinds of light, by colour temperature: the lanterns warmest (2800 K), the 
   (no glow: its spotlight lights it). It was URP Unlit tinted
   blue-grey (0.42, 0.58, 0.71), so no lamp lit it and the tint halved its brightness.
   The Starry Night's (`SN_GalleryPainting.mat`) is URP Lit, white and matte too.
-- **Painting spotlights** (`PaintingLights`, a scene root after the sun): one per painting, on a small dark fitting (a stem
+- **Painting spotlights** (`PaintingLights`, a scene root after the sun): one per painting in `GalleryLayout.asset` (five), on a small dark fitting (a stem
   and a can) 0.12 m below the ceiling and 1.2 m out from the painting, aimed at its middle, its cone 6° wider than the
   painting's diagonal; white (6600 K), intensity 5 (`SpotIntensity`), no shadows. Placed from the paintings' own positions in
   the scene, so they follow a painting that moves.
@@ -129,17 +205,22 @@ deletes objects you added yourself. **Reset Lighting to Built** does the same fo
 **Tools > InnerFrame > Gallery > Check Decor**. The check also renders
 nine views (five from eye height; a side-wall lamp, the frame's corner, the ceiling spots and a pedestal close up) to `Logs/GalleryDecor/`.
 
-To change the room itself, edit the parameters at the top of `build_gallery.py`, run it, then Add Decor. If the east
-wall or the north wall moves, move `SN_GallerySetup.RootPosition` and `BedroomWall` with it and run
-**Tools > InnerFrame > Starry Night > Add to Gallery**.
+To change the room, the paintings or where things stand, edit `GalleryLayout.asset`, run `build_gallery.py` if the room,
+the bench or The Bedroom changed, then **Build Layout**. Check it with **Tools > InnerFrame > Gallery > Check Layout**
+(`GalleryLayoutCheck`: order, places, no stands, every painting pointable, labels, spotlights, the light budget, a second
+run changing nothing; each with a control that must fail) and, in Play mode, `GalleryLayoutPlayCheck` (simulated XR input:
+point, rim, trigger, menu, Enter into each scene from 2 m, 5 m and across the room; the menu's closing rules; the music).
 
 Batch:
 
 ```
-Blender -b --factory-startup --python Art/Source/Gallery/build_gallery.py
+Blender -b --factory-startup --python Art/Source/Gallery/make_arch.py       # the Tripo arch, and the doorway it needs (arch.json)
+Blender -b --factory-startup --python Art/Source/Gallery/build_gallery.py   # the shell and the corridor (reads arch.json, GalleryLayout.asset)
 Unity -batchmode -nographics -projectPath . -executeMethod InnerFrame.Gallery.EditorTools.GalleryDecorSetup.RunBatch -quit
-Unity -batchmode -nographics -projectPath . -executeMethod InnerFrame.StarryNight.EditorTools.SN_GallerySetup.RunBatch -quit
+Unity -batchmode -projectPath . -executeMethod InnerFrame.Gallery.EditorTools.GalleryLayoutSetup.RunBatch
+Unity -batchmode -projectPath . -executeMethod InnerFrame.Gallery.EditorTools.Tests.GalleryLayoutCheck.RunBatch -glLog <file>
 Unity -batchmode -projectPath . -executeMethod InnerFrame.Gallery.EditorTools.Tests.GalleryDecorCheck.RunBatch -quit
+Unity -batchmode -projectPath . -executeMethod InnerFrame.Gallery.EditorTools.Tests.GalleryLayoutPlayCheck.RunBatch -gpOut <dir>
 ```
 
 To rebuild the meshes from Cici's Tripo GLBs (the `gallery-tripo` folder, not in the repo):
@@ -150,12 +231,21 @@ Blender --background --factory-startup --python Art/Source/Gallery/make_tripo_pr
 
 ## Hardware tests to run on a headset
 
-- Spawn: The Bedroom and Vincent's portrait are in full view; nothing is in the way.
+- Spawn: you face The Bedroom; Vincent's portrait is on your left by the door; nothing is in the way.
+- Point at each painting from close, from the middle and from across the room: the rim shows, the trigger opens the menu
+  beside it (or in front of you from afar), readable; Enter fades into the right scene; Almond Blossom says Coming soon.
+- The menu closes when you walk away or turn round; the grip and A do nothing new; B still asks Vincent.
 - Teleport onto the rug and round the bench; you can't walk through the bench, the plinths, the pots or the door.
-- Look back at the arch: the door fills it; the four lanterns glow, you see each candle through the amber glass.
+- Look back at the arch, from in front and from 45° on either side: no yellow inside the opening, no gap round the arch;
+  through it the corridor and its door. The four lanterns glow, you see each candle through the amber glass; their arms
+  are copper, not black.
+- Walk through the arch: no step at the threshold; teleport onto the corridor's floor; the door stops you. From the
+  corridor, look back: the arch frames the room, and nothing flickers where it meets the wall. Say whether the corridor
+  feels too dark (it has no light of its own).
+- The wall just above each painting, where its spotlight grazes it, stays yellow, not white.
 - Look up at the skylight: its bars throw crisp shadows on the floor, no light leaks between the bars and the frame.
   The Bedroom is lit, not dim and blue.
-- The wainscot stops cleanly at both paintings' frames; the frames' carving reads as one piece with the frame.
+- Every frame hangs above the wainscot's rail; the frames' carving reads as one piece with the frame.
 - The plant leaves, hydrangea petals and lantern panes look solid from every side.
 - With textures in: no visible seam where the wall, floor, wainscot, wood or fabric repeat.
 - Frame rate stays steady looking down the room.

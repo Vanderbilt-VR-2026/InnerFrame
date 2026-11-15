@@ -125,6 +125,8 @@ star, hold to trace the wind. The grip (middle finger) picks up (the lantern, op
 go, the lantern glides back to its hook in 0.4 s. A thin beam shows where you
 point while there are stars to wake or wind to trace (XRI's own rays stop at 2 m). Thumbsticks: the usual move, turn
 and teleport (the hilltop is a teleport area out to 5.5 m; low invisible walls stop you walking off).
+While a menu is open (the player menu: the left Menu button, or Done's way back), the trigger is the menu's: the night
+takes no input (no lantern, no star, no wind; the beam and the stars' glow step aside), 2026-11-12 (`SN_Game.MenuOpen`).
 
 **Editor, no headset** (the team's `DesktopTestRig` swaps in, as in the Gallery):
 
@@ -285,6 +287,14 @@ Session 1 joins `InnerFrame_StarryNight` for real only where Photon's App Settin
 checkout without them (2026-11-09) its join is stopped on its first frame, like session 2's, and the real join is reported
 as `SKIP`: before, Fusion's "Photon Application Settings not found" errors failed the session's "no errors" line.
 
+The menu and the trigger (`Editor/Tests/SN_MenuInputCheck.cs`, Play mode, offline, with XRI's simulated headset and
+controllers, and the input `SN_Bootstrap` gives the game on a headset; Tools > InnerFrame > Starry Night > Run Menu Input
+Check, or `-executeMethod InnerFrame.StarryNight.EditorTools.SN_MenuInputCheck.RunBatch -snOut <dir>`, without `-quit`),
+standing at the seat: A. the left Menu button opens the player menu; aimed at the lantern, the trigger leaves it alight
+and the menu open; B. aimed at the menu's ×, the trigger closes the menu (the menu took the press), the lantern still
+alight; C. control, the menu shut: the same trigger turns the lantern down. A picture before and after each press. Before
+the fix (2026-11-12) A failed: the lantern dimmed.
+
 The props' spawn check (`Editor/Tests/SN_SpawnCheck.cs`, Play mode, offline, the scene as `SN_Bootstrap` spawns it;
 `-executeMethod InnerFrame.StarryNight.EditorTools.SN_SpawnCheck.RunBatch -snLog <file>`, without `-quit`):
 1. `SN_World`'s Rigidbodies are exactly the lantern, the sketchbook and the page (the charcoal in his hand is only its model);
@@ -423,6 +433,11 @@ every number in `SN_Layout`, the `vincent*` fields):
 - **Arrive** is still measured from where the placeholder stood (`SN_Layout.vincentStand`), so the walk-up triggers his
   greeting at the same place as before; the bushes keep clear of that spot as before.
 - Batch-mode renders (for reports) draw his skin as last skinned, without that frame's IK: draw a `BakeMesh` copy instead.
+
+**Asking him about things (Convai, hold B):** a question that names something in the scene ("why did you paint the
+cypress?", "what is the lantern for?") goes to Convai with that thing's notes and whether it is in the painting or was
+made for this visit, so he doesn't claim to have painted the hilltop. No presses, and the story is unchanged. The list
+and the rules: `docs/convai/starry-night-objects.md` (notes: `Assets/VanGogh/Resources/VincentNotes/StarryNight.json`).
 
 ## Tests
 

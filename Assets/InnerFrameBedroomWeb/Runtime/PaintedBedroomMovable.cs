@@ -28,6 +28,13 @@ namespace InnerFrame.PaintedBedroom
         /// <summary>Kinematic, as painted, until first picked up; physics from then on. Set by PaintedBedroomPhysicsApplier.</summary>
         [System.NonSerialized] public bool restUntilGrabbed;
 
+        /// <summary>This headset's player took hold of an object (`lifted` true: picked it up, in VR or on desktop) or
+        /// pressed on one that can't be lifted (false: PaintedBedroomSelectable, a window casement, a desktop click).
+        /// Another player's grab doesn't raise it. VincentObjectTalk listens.</summary>
+        public static event System.Action<PaintedBedroomMovable, bool> Touched;
+
+        public void RaiseTouched(bool lifted) => Touched?.Invoke(this, lifted);
+
         Vector3 homePosition;
         Quaternion homeRotation;
 
@@ -39,7 +46,11 @@ namespace InnerFrame.PaintedBedroom
             ApplyWeightToGrab();
             // the grab puts the Rigidbody back as it found it (kinematic) on release, so wake it after that
             var grab = GetComponent<XRGrabInteractable>();
-            if (grab != null) grab.selectExited.AddListener(_ => Wake());
+            if (grab != null)
+            {
+                grab.selectExited.AddListener(_ => Wake());
+                grab.selectEntered.AddListener(_ => RaiseTouched(true));   // XRI only selects for this headset's hands
+            }
         }
 
         /// <summary>The room was resized about the world origin: its place in the painting moves with it.</summary>

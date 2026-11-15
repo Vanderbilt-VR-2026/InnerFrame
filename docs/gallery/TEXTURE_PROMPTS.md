@@ -21,7 +21,7 @@ Every prompt starts with the same house rules:
 
 | File | Ask for | Prompt (after the house rules) |
 |---|---|---|
-| `wall.png` | square, 1024 × 1024 | A **seamless, tileable** painted plaster wall in deep Pompeian red, as the concept's walls: broad, criss-crossing brushstrokes in warmer and darker reds, even overall, no blotch that stands out. About 2 m of wall across the image. |
+| `wall.png` | square, 1024 × 1024 | (Since 2026-11-12 the wall is yellow: Cici's ChatGPT image after the yellow concept photo, kept in `Art/Source/Gallery/textures/`; this prompt made the red one before it.) A **seamless, tileable** painted plaster wall in deep Pompeian red, as the concept's walls: broad, criss-crossing brushstrokes in warmer and darker reds, even overall, no blotch that stands out. About 2 m of wall across the image. |
 | `wainscot.png` | landscape, 1536 × 1024 | Wooden wall panelling (wainscot) as in the concept: weathered grey-brown painted boards running **up and down**, about 12 cm wide, with fine gaps between them. **Seamless from left to right.** The bottom edge of the image is the floor, the top edge is where a rail will sit; about 1.5 m of wall across and 1 m up. |
 | `floor.png` | square, 1024 × 1024 | A **seamless, tileable** wooden plank floor seen from directly above, as the concept's floor: warm honey-orange oak planks about 15 cm wide running left to right, staggered joints, painterly grain. About 2 m of floor across the image. |
 | `ceiling.png` | square, 1024 × 1024 | A **seamless, tileable** ceiling surface as in the concept: warm grey-beige painted wood and plaster, soft brushwork, very even. About 2 m across the image. |
@@ -33,7 +33,8 @@ Every prompt starts with the same house rules:
 | `marble.png` | square, 1024 × 1024 | A **seamless, tileable** texture of warm cream marble for a statue's plinth: ivory and pale beige with soft grey-ochre veining, light painted flat, no polish highlights, no vein crossing the whole image. About 60 cm across. |
 | `bench_wood.png` | square, 1024 × 1024 | A **seamless, tileable** dark walnut wood for furniture, as the bench's legs and frame: straight fine grain running left to right, oiled, painterly, no knots or joints. About 60 cm across the image. |
 | `bench_fabric.png` | square, 1024 × 1024 | A **seamless, tileable** upholstery for the bench's top, as in the concept: dark brown leather (or deep plum velvet), soft sheen painted flat, a faint grain, no buttons, seams or folds. About 50 cm across the image. |
-| `door.png` | portrait, 1024 × 1536 | The concept's entrance door, whole and straight on: a pair of closed wooden doors with a **round-arched top**, warm dark wood with raised panels and a little glass high up, painterly. The doors fill the image exactly: the image's edges are the doors' edges (the arch's corners can be dark), no wall or frame round them, no handles (the room adds brass ones). |
+| `corridor.png` | portrait, 1024 × 1536 | (Since 2026-11-12: Cici's image, kept in `Art/Source/Gallery/textures/`, the reference the 3D corridor behind the arch is built after; the script crops its door, `GT_CorridorDoor`, and the door's panes, `GT_CorridorDoor_Emission`. Its prompt isn't recorded; to remake it, ask for:) The corridor beyond the arch, seen straight down its middle from the doorway: yellow painted walls over the same grey-brown wainscot, a dark wood ceiling with a hanging lantern, a plank floor, a pair of glazed doors at the far end. |
+| `door.png` | portrait, 1024 × 1536 | (Until 2026-11-12; replaced by `corridor.png`.) The concept's entrance door, whole and straight on: a pair of closed wooden doors with a **round-arched top**, warm dark wood with raised panels and a little glass high up, painterly. The doors fill the image exactly: the image's edges are the doors' edges (the arch's corners can be dark), no wall or frame round them, no handles (the room adds brass ones). |
 
 Tips:
 
@@ -50,6 +51,10 @@ From the repo root (Blender 5.2):
 ```
 /Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup --python Art/Source/Gallery/make_textures.py -- ~/Desktop/gallery-textures
 ```
+
+The yellow wall and the corridor (2026-11-12) are in the repo: `make_textures.py -- Art/Source/Gallery/textures` remakes
+just those two. For a tiling texture the script prints how strong its seam is before and after (under 1: no sharper
+than the image's own brushwork).
 
 If ChatGPT gives several textures on one sheet, crop each out first (the door to its outer frame and the arch's apex).
 It writes `Assets/Art/Gallery/Textures/GT_<Name>_BaseColor.jpg` for each file it finds (missing files are skipped):

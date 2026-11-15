@@ -64,6 +64,10 @@ public static class VanGoghSpawner
 
     public static GameObject SpawnPortrait(Scene scene)
     {
+        // Part B (2026-11-12): the Gallery hangs the portrait itself, its picture and frame, at Slot_SelfPortrait
+        // (GalleryLayoutSetup, from GalleryLayout.asset); only Vincent's voice is added here, as before.
+        var own = GameObject.Find("Slot_SelfPortrait");
+        if (own != null) return GiveVoice(scene, own.transform);
         var slot = GameObject.Find("Slot_Bedroom");
         if (slot == null) { Debug.LogWarning("[VanGogh] Gallery has no Slot_Bedroom, so the portrait isn't shown."); return null; }
 
@@ -89,6 +93,22 @@ public static class VanGoghSpawner
         talker.voice = AddVoice(root);
         talker.labelOffset = new Vector3(0f, -(PortraitSize.y / 2f + FrameBorder), CaptionOut);   // under the frame
         Debug.Log($"[VanGogh] Portrait at {root.transform.position:F3}, facing {root.transform.forward:F2}");
+        return root;
+    }
+
+    /// <summary>His voice at a portrait the Gallery already hangs: VanGogh_Portrait at the slot (the picture's centre, facing
+    /// the room), talking through SpeechToProxy, its caption under the frame, exactly as on the portrait made below.</summary>
+    static GameObject GiveVoice(Scene scene, Transform slot)
+    {
+        var root = new GameObject("VanGogh_Portrait");
+        SceneManager.MoveGameObjectToScene(root, scene);
+        root.transform.SetPositionAndRotation(slot.position, slot.rotation);
+        var picture = slot.GetComponentInChildren<Renderer>();
+        float height = picture != null ? picture.bounds.size.y : PortraitSize.y;
+        var talker = root.AddComponent<SpeechToProxy>();
+        talker.voice = AddVoice(root);
+        talker.labelOffset = new Vector3(0f, -(height / 2f + FrameBorder * 0.6f), CaptionOut);   // under the frame
+        Debug.Log($"[VanGogh] Portrait's voice at {root.transform.position:F3}, facing {root.transform.forward:F2} (the Gallery's Slot_SelfPortrait)");
         return root;
     }
 

@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Text;
 using Fusion;
 using UnityEngine;
@@ -15,6 +16,11 @@ using UnityEngine.SceneManagement;
 ///
 /// Shared in both scenes: the Gallery portrait and the Painted Bedroom's Vincent, whose mirror scene MirrorLink shares
 /// (#77), so his answers there match what everyone sees.
+///
+/// With Convai, everyone shares one conversation per scene: after each answer the asker sends that scene's Convai
+/// session ID (RPC_Conversation), and every headset uses it for its next question, so Convai has everyone's questions
+/// in one history and a follow-up on someone else's question makes sense. Someone who joins gets the IDs a couple of
+/// seconds after their avatar appears. Questions carry who asked ("Player 2") when more than one player is here.
 /// </summary>
 public class VincentLink : NetworkBehaviour
 {
@@ -38,6 +44,7 @@ public class VincentLink : NetworkBehaviour
     int sentId;
     PlayerRef owner;   // whose avatar this is
     float nextSearch;
+    float shareAt = -1f;   // when to resend our Convai conversations, for someone who just joined
 
     // Fresh shared state for every run, even with domain reload turned off in Enter Play Mode Options.
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -50,6 +57,7 @@ public class VincentLink : NetworkBehaviour
     {
         owner = Object.StateAuthority;
         if (HasStateAuthority) Local = this;
+        else if (Local != null) Local.shareAt = Time.time + 2f;   // someone joined: once they're set up, tell them
     }
 
     public override void Despawned(NetworkRunner runner, bool hasState)
@@ -60,13 +68,19 @@ public class VincentLink : NetworkBehaviour
 
     void OnDisable()
     {
-        if (talker != null) { talker.Answered -= OnAnswered; talker.ThinkingStarted -= OnThinking; }
+        if (talker != null) { talker.Answered -= OnAnswered; talker.ThinkingStarted -= OnThinking; Unname(talker); }
     }
 
     void Update()
     {
         if (holder != PlayerRef.None && Time.time > holderUntil) Release();   // safety net
         if (Object == null || !Object.IsValid || !HasStateAuthority) return;
+
+        if (shareAt >= 0f && Time.time >= shareAt)
+        {
+            shareAt = -1f;
+            foreach (var c in SpeechToProxy.Conversations) RPC_Conversation(c.scene, c.id, c.roomKnown, true);
+        }
 
         var current = talker;
         if (talker == null || talker.gameObject.scene != SceneManager.GetActiveScene())
@@ -77,9 +91,9 @@ public class VincentLink : NetworkBehaviour
         }
         if (current != talker)
         {
-            if (talker != null) { talker.Answered -= OnAnswered; talker.ThinkingStarted -= OnThinking; }
+            if (talker != null) { talker.Answered -= OnAnswered; talker.ThinkingStarted -= OnThinking; Unname(talker); }
             talker = current;
-            if (talker != null) { talker.Answered += OnAnswered; talker.ThinkingStarted += OnThinking; }
+            if (talker != null) { talker.Answered += OnAnswered; talker.ThinkingStarted += OnThinking; talker.AskerName = AskerName; }
             holding = false;
         }
         if (talker == null || !Shared(talker)) return;
@@ -92,6 +106,9 @@ public class VincentLink : NetworkBehaviour
         else if (holding && !talker.IsBusy)   // our question failed, was cancelled, or its answer has finished
         {
             holding = false;
+            // the conversation first, so whoever asks next, once the lock is released, continues it
+            if (SpeechToProxy.TryGetConversation(talker.gameObject.scene.name, out var id, out bool roomKnown))
+                RPC_Conversation(talker.gameObject.scene.name, id, roomKnown, false);
             RPC_Done();
         }
     }
@@ -184,6 +201,14 @@ public class VincentLink : NetworkBehaviour
         if (t != null && Shared(t)) t.EndRemote();
     }
 
+    // A scene's Convai conversation, from the player who last talked to him there (or a resend for a newcomer, who
+    // only takes it if they have none). Every headset keeps it for that scene, whichever scene it is in now.
+    [Rpc(RpcSources.StateAuthority, RpcTargets.All, InvokeLocal = false)]
+    void RPC_Conversation(string scene, string id, NetworkBool roomKnown, NetworkBool onlyIfNone)
+    {
+        SpeechToProxy.Adopt(scene, id, roomKnown, onlyIfNone);
+    }
+
     [Rpc(RpcSources.StateAuthority, RpcTargets.All, InvokeLocal = false)]
     void RPC_Thinking(byte line)
     {
@@ -218,6 +243,14 @@ public class VincentLink : NetworkBehaviour
         foreach (var t in FindObjectsByType<SpeechToProxy>(FindObjectsSortMode.None))
             if (t.gameObject.scene == active) return t;
         return null;
+    }
+
+    // Who asks, for Convai: only when someone else is here to confuse him with.
+    string AskerName() => Runner != null && Runner.ActivePlayers.Count() > 1 ? Name(owner) : null;
+
+    void Unname(SpeechToProxy t)
+    {
+        if (t.AskerName == (System.Func<string>)AskerName) t.AskerName = null;
     }
 
     // Same name as the avatar ("Player 2"), so people can tell who is asking.

@@ -54,6 +54,8 @@ public class PaintingEntrancePrompt : MonoBehaviour
             foreach (var b in root.GetComponentsInChildren<SceneChangeButton>(true))
             {
                 if (string.IsNullOrEmpty(b.targetScene) || b.targetScene == PaintingNames.Gallery) continue;
+                // a painting entered from its own menu (Part B, 2026-11-12: InnerFrame.Gallery.GalleryPaintingMenu): no pedestal to light
+                if (b.GetComponentInParent<InnerFrame.Gallery.GalleryPainting>(true) != null) continue;
                 if (b.GetComponent<PaintingEntrancePrompt>() == null) b.gameObject.AddComponent<PaintingEntrancePrompt>();
                 count++;
             }

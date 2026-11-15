@@ -60,8 +60,10 @@ namespace InnerFrame.StarryNight.EditorTools
             DirectPrint = "SN_GalleryPlay.directPrint", DirectRender = "SN_GalleryPlay.directRender";
         const float GiveUpSeconds = 420f;
         const float OriginTolerance = 0.01f, DesktopRigTolerance = 0.10f;   // as SN_PlayCheck
-        static readonly Vector3 GalleryStart = new Vector3(0f, 0f, 3.5f);   // Spawn_Point in the 7 x 9 m Gallery (was z = 6)
-        const float GalleryStartYaw = 180f;
+        // Spawn_Point, wherever GalleryLayout.asset's room puts it (Gallery Part B, 2026-11-12: inside the arch, facing The Bedroom)
+        static Transform Spawn => Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None).FirstOrDefault(t => t.name == "Spawn_Point");
+        static Vector3 GalleryStart => Spawn != null ? Spawn.position : new Vector3(float.NaN, 0f, 0f);   // no Gallery loaded: the landing check fails
+        static float GalleryStartYaw => Spawn != null ? Spawn.eulerAngles.y : 0f;
         static readonly CultureInfo C = CultureInfo.InvariantCulture;
 
         static double t0 = -1, waitUntil, sceneSince, doneAt;
@@ -208,7 +210,7 @@ namespace InnerFrame.StarryNight.EditorTools
                     waitUntil = now + 0.6;
                     break;
                 case 2:
-                    Check(Hovers(), $"the desktop dot (the XR ray, {RayReach()}) is on {G.ButtonName} from 1.2 m in front of the pedestal");
+                    Check(Hovers(), $"the desktop dot (the painting pointer's ray) is on The Starry Night from 2 m in front of it");
                     Press();
                     maxFade = 0f;
                     waitScene = "StarryNight";
@@ -306,7 +308,7 @@ namespace InnerFrame.StarryNight.EditorTools
             var cam = Camera.main;
             var follow = game != null && game.ui != null ? game.ui.GetComponentInChildren<VG_FollowGroup>(true) : null;
             float d = follow != null && cam != null ? Vector3.Distance(follow.transform.position, cam.transform.position) : -1f;
-            Check(game != null && game.State == SN_State.Arrive && game.ui.HintLine == SN_Game.HintFor(SN_State.Arrive) && Mathf.Abs(d - game.ui.settings.distance) < 0.05f,
+            Check(game != null && game.State == SN_State.Arrive && game.ui.HintLine.StartsWith(SN_Game.HintFor(SN_State.Arrive)) && Mathf.Abs(d - game.ui.settings.distance) < 0.05f,
                 $"the night starts: {game?.State}, hint '{game?.ui?.HintLine}', the dialogue box {d:F2} m from the camera (settings {game?.ui?.settings.distance:F2})");
             string print = WorldPrint(), direct = SessionState.GetString(DirectPrint, "none");
             Check(print == direct, $"the same world as opened directly: {print} (direct: {direct})");
@@ -366,15 +368,16 @@ namespace InnerFrame.StarryNight.EditorTools
 
         // ---------------------------------------------------------------------------------------------- the player's hands
 
-        /// <summary>Stands the desktop rig 1.2 m in front of the button and points its dot at it (or away from it).</summary>
+        /// <summary>Stands the desktop rig 2 m in front of The Starry Night and points its dot at the canvas (or away from it).</summary>
         static void Aim(bool away)
         {
             var desk = Object.FindAnyObjectByType<DesktopTestRig>();
-            var button = Entrance().transform.Find(G.ButtonName);
+            var painting = Painting();
             var cc = desk.GetComponent<CharacterController>();
-            Vector3 target = button.position;
+            Vector3 target = painting.Centre;
             cc.enabled = false;
-            desk.transform.position = new Vector3(target.x + 1.2f, 0f, target.z);
+            var stand = target + painting.transform.forward * 2f;
+            desk.transform.position = new Vector3(stand.x, 0f, stand.z);
             cc.enabled = true;
             var cam = desk.GetComponentInChildren<Camera>().transform;
             Vector3 eye = desk.transform.position + Vector3.up * (cam.localPosition.y * desk.transform.lossyScale.y);
@@ -383,27 +386,32 @@ namespace InnerFrame.StarryNight.EditorTools
             float pitch = away ? 0f : -Mathf.Asin(dir.y / dir.magnitude) * Mathf.Rad2Deg;
             SetField(desk, "yaw", yaw);
             SetField(desk, "pitch", pitch);
-            W($"  the desktop rig at {V(desk.transform.position)}, looking {(away ? "away" : "at the button")} (yaw {yaw:F1}, pitch {pitch:F1})");
+            W($"  the desktop rig at {V(desk.transform.position)}, looking {(away ? "away" : "at the painting")} (yaw {yaw:F1}, pitch {pitch:F1})");
         }
 
         static XRRayInteractor Ray() => Object.FindAnyObjectByType<DesktopTestRig>()?.GetComponentInChildren<XRRayInteractor>();
         static string RayReach() { var r = Ray(); return r != null ? $"{r.maxRaycastDistance:F1} m" : "none"; }
 
+        /// <summary>The desktop dot (the screen's centre, where the painting pointer's ray goes when the mouse is captured)
+        /// rests on The Starry Night's canvas or frame.</summary>
         static bool Hovers()
         {
-            var ray = Ray();
-            var simple = Entrance().transform.Find(G.ButtonName).GetComponent<XRSimpleInteractable>();
-            return ray != null && ray.interactablesHovered.Contains(simple);
+            var cam = Object.FindAnyObjectByType<DesktopTestRig>()?.GetComponentInChildren<Camera>();
+            return cam != null && Physics.Raycast(cam.ViewportPointToRay(new Vector3(0.5f, 0.5f)), out var hit, InnerFrame.Gallery.GalleryPaintingPointer.MaxDistance, ~0, QueryTriggerInteraction.Ignore)
+                   && InnerFrame.Gallery.GalleryPainting.Of(hit.collider) == Painting();
         }
 
-        /// <summary>The press: a select from the desktop rig's ray on the button, as E (or a controller's grip) does.</summary>
+        /// <summary>The press (Gallery Part B): the trigger on the painting opens its menu, then the trigger on Enter, as E or
+        /// a click does from the desktop dot (GalleryPaintingPointer), so SceneFader fades to black and loads StarryNight.</summary>
         static void Press()
         {
-            var ray = Ray();
-            var simple = Entrance().transform.Find(G.ButtonName).GetComponent<XRSimpleInteractable>();
-            var manager = simple.interactionManager != null ? simple.interactionManager : Object.FindAnyObjectByType<XRInteractionManager>();
-            manager.SelectEnter((IXRSelectInteractor)ray, (IXRSelectInteractable)simple);
-            W($"  pressed {G.ButtonName} (XRI select from '{ray.name}' in '{ray.transform.root.name}')");
+            var cam = Object.FindAnyObjectByType<DesktopTestRig>().GetComponentInChildren<Camera>();
+            var pointer = Object.FindAnyObjectByType<InnerFrame.Gallery.GalleryPaintingPointer>();
+            pointer.Point(cam.ViewportPointToRay(new Vector3(0.5f, 0.5f)), true, out _);
+            var menu = InnerFrame.Gallery.GalleryPaintingMenu.Instance;
+            Check(menu != null && menu.IsOpen && menu.Painting == Painting() && menu.EnterButton.Interactable, "the trigger on The Starry Night opens its menu, with Enter on");
+            menu.EnterButton.Press();
+            W("  pressed Enter on The Starry Night's menu (the painting pointer's trigger)");
         }
 
         static void MenuBack(bool toggle)
@@ -455,8 +463,11 @@ namespace InnerFrame.StarryNight.EditorTools
 
         // ---------------------------------------------------------------------------------------------- what's there
 
-        static GameObject Entrance() => Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None).First(t => t.name == G.InstanceName).gameObject;
-        static int EntranceCount() => Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None).Count(t => t.name == G.InstanceName);
+        // The Starry Night's way in (Gallery Part B): its painting's menu, whose Enter is a SceneChangeButton to StarryNight
+        static InnerFrame.Gallery.GalleryPainting[] Ways() => Object.FindObjectsByType<InnerFrame.Gallery.GalleryPainting>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+            .Where(p => p.entrance != null && p.entrance.targetScene == G.TargetScene).ToArray();
+        static InnerFrame.Gallery.GalleryPainting Painting() => Ways().First();
+        static int EntranceCount() => Ways().Length;
         static XROrigin[] Origins() => Object.FindObjectsByType<XROrigin>(FindObjectsInactive.Include, FindObjectsSortMode.None);
         static Camera[] Cameras() => Object.FindObjectsByType<Camera>(FindObjectsInactive.Exclude, FindObjectsSortMode.None).Where(c => c.enabled).ToArray();
         static AudioListener[] Listeners() => Object.FindObjectsByType<AudioListener>(FindObjectsInactive.Exclude, FindObjectsSortMode.None).Where(l => l.enabled).ToArray();

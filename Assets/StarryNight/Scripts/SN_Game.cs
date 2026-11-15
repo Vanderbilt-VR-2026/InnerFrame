@@ -143,6 +143,10 @@ namespace InnerFrame.StarryNight
 
         Transform Head => HeadOverride != null ? HeadOverride : (Camera.main != null ? Camera.main.transform : null);
 
+        /// <summary>Whether a menu is open, so the scene takes no input (Step). The player menu (Assets/Script/Menu: Back to
+        /// Gallery, and the way back at Done) is this scene's only menu; a new one goes here too.</summary>
+        public static bool MenuOpen => PlayerMenu.MenuOpen;
+
         public void Begin()
         {
             Started = true;
@@ -172,15 +176,19 @@ namespace InnerFrame.StarryNight
             Vector3 hp = head.position;
             ApplyRoom();
 
+            // No scene input while a menu is open (2026-11-12): its trigger presses the menu's buttons, and must not also
+            // turn the lantern down, wake a star or trace the wind; the lantern's call, the stars' glow and the beam don't
+            // follow the hand either. The story, the voice and the sky go on.
+            bool menu = MenuOpen;
             int down = -1;
-            for (int h = 0; h < Input.HandCount; h++) if (Input.TriggerDown(h)) { down = h; break; }
+            if (!menu) for (int h = 0; h < Input.HandCount; h++) if (Input.TriggerDown(h)) { down = h; break; }
             if (down >= 0) aimHand = down;
 
             // the lantern (2026-11-09): the trigger turns it down when that hand holds it, points at it or touches it (or, held,
             // either hand's trigger); until then it calls (a slow pulse), and a ray or a hand on it brightens it and buzzes once
             bool calling = !lanternDown && !lantern.IsDown && !lantern.Dimming;
             int targets = 0;
-            if (calling) for (int h = 0; h < Input.HandCount && h < 31; h++) if (LanternTargeted(h)) targets |= 1 << h;
+            if (calling && !menu) for (int h = 0; h < Input.HandCount && h < 31; h++) if (LanternTargeted(h)) targets |= 1 << h;
             for (int h = 0; h < Input.HandCount && h < 31; h++)
                 if ((targets & (1 << h)) != 0 && (lanternTargets & (1 << h)) == 0) Input.Haptic(h, layout.lanternHapticAmplitude, layout.lanternHapticSeconds);
             lanternTargets = targets;
@@ -201,7 +209,7 @@ namespace InnerFrame.StarryNight
             if (State == SN_State.Sit && Flat(hp - layout.playerSeat) <= layout.playerSeatRadius) { voice.Say("L02"); Enter(SN_State.Lantern); }
 
             // the stars: any visible star can be woken; the named ones move the story on only in order
-            UpdateHover();
+            UpdateHover(menu);
             if (down >= 0 && !triggerUsed && Input.TryGetAim(down, out var aim)) TryWake(aim);
 
             StepPaint(dt);
@@ -214,7 +222,7 @@ namespace InnerFrame.StarryNight
             }
 
             // the wind: hold the trigger and follow the path, point by point, in order
-            if (State == SN_State.Wind && windPassed < sky.PathLength) StepWind();
+            if (State == SN_State.Wind && windPassed < sky.PathLength && !menu) StepWind();
             float swirlTarget = windPassed <= 1 ? 0f : (windPassed - 1) / (float)(sky.PathLength - 1);
             swirlShown = Mathf.MoveTowards(swirlShown, swirlTarget, dt * 0.6f);
             sky.SetSwirl(swirlShown);
@@ -269,7 +277,7 @@ namespace InnerFrame.StarryNight
             }
             else idle = 0f;
 
-            StepBeam(head);
+            StepBeam(head, menu);
             sky.Step(dt, hp, layout.starBloomSeconds);
             if (beam != null) beam.Step(dt);
             voice.Step(dt);
@@ -364,10 +372,10 @@ namespace InnerFrame.StarryNight
             return null;
         }
 
-        void UpdateHover()
+        void UpdateHover(bool menu)
         {
             SN_Star hover = null;
-            if (State >= SN_State.Arrive && State <= SN_State.Wind && Input.TryGetAim(aimHand >= 0 ? aimHand : Input.HandCount - 1, out var aim))
+            if (!menu && State >= SN_State.Arrive && State <= SN_State.Wind && Input.TryGetAim(aimHand >= 0 ? aimHand : Input.HandCount - 1, out var aim))
                 hover = sky.FindStar(aim, layout.aimAssistDeg);
             foreach (var s in sky.Stars) s.Hover = s == hover ? 1f : 0f;
         }
@@ -420,10 +428,10 @@ namespace InnerFrame.StarryNight
             return namedProgress == 0 ? "L04" : namedProgress == 1 ? "L05" : "L06";
         }
 
-        void StepBeam(Transform head)
+        void StepBeam(Transform head, bool menu)
         {
             if (beam == null) return;
-            bool aiming = State == SN_State.Stars || State == SN_State.Wind;
+            bool aiming = !menu && (State == SN_State.Stars || State == SN_State.Wind);
             int h = aimHand >= 0 ? aimHand : Input.HandCount - 1;
             if (!aiming || !Input.TryGetAim(h, out var aim)) { beam.Hide(); return; }
             Vector3 from = aim.origin, dir = aim.direction;

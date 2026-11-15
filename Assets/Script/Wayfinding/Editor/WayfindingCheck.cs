@@ -47,10 +47,16 @@ public static class WayfindingCheck
 
         // ---- the Gallery's ways in ----
         var gallery = EditorSceneManager.OpenScene(GalleryPath, OpenSceneMode.Single);
+        // Gallery Part B (2026-11-12): no pedestals. Each painting is entered from its own menu (point, trigger, Enter:
+        // InnerFrame.Gallery.GalleryPaintingMenu), which says how; so no pedestal prompt is attached in the Gallery.
         int count = PaintingEntrancePrompt.AttachAll(gallery);
         var prompts = gallery.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<PaintingEntrancePrompt>(true)).ToList();
         foreach (var p in prompts) p.Setup();
-        Check(count >= 2 && prompts.Count == count, $"every way into a painting has a prompt ({prompts.Count} of {count}: {string.Join(", ", prompts.Select(p => p.Target))})");
+        var ways = gallery.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<SceneChangeButton>(true))
+            .Where(b => !string.IsNullOrEmpty(b.targetScene) && b.targetScene != PaintingNames.Gallery).ToList();
+        Check(ways.Count >= 2 && ways.All(b => b.GetComponentInParent<InnerFrame.Gallery.GalleryPainting>(true) != null),
+            $"every way into a painting is a painting's menu ({ways.Count}: {string.Join(", ", ways.Select(b => b.targetScene))})");
+        Check(count == 0 && prompts.Count == 0, $"no pedestal prompt is attached in the Gallery ({prompts.Count})");
         Check(PaintingEntrancePrompt.AttachAll(gallery) == count && gallery.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<PaintingEntrancePrompt>(true)).Count() == count,
             "attaching twice adds nothing");
         foreach (var p in prompts)

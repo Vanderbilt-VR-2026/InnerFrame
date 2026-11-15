@@ -21,7 +21,7 @@ Sprint 3 gave us one painted room with Vincent in it. Sprint 4 turned it into **
 
 **Demo video:** recorded on a Quest 3 on Nov 15: [InnerFrame Sprint 4 demo (Google Drive)](https://drive.google.com/file/d/1JyyuADIitzsAxQNRA9j22kRiIk3k6dWJ/view?usp=sharing)
 
-**APK:** [InnerFrame-sprint4.apk (Google Drive)](https://drive.google.com/file/d/1RxKJHL6M9EJXow99q4mLI0xeaeGZbmk2/view?usp=sharing), built from this branch (`sprint_4`, `a83d32d`). Access is restricted, because the build carries the team's Convai key: **request access** on Drive and Serena will add you.
+**APK:** [InnerFrame-sprint4.apk (Google Drive)](https://drive.google.com/file/d/1RxKJHL6M9EJXow99q4mLI0xeaeGZbmk2/view?usp=sharing), built from this branch (`sprint_4`, `a83d32d`). Anyone with the link can download it.
 **Board:** [InnerFrame Dashboard](https://github.com/orgs/Vanderbilt-VR-2026/projects/12): 14 epics; every task tagged [S1]–[S5] and linked to its epic.
 
 ![From the demo: the opening, the Gallery, Café Terrace at Night, The Starry Night and Almond Blossom|800](docs/sprint4/journey.jpg)
@@ -32,7 +32,7 @@ Sprint 3 gave us one painted room with Vincent in it. Sprint 4 turned it into **
 - **Editor:** Unity **6000.3.23f1**. Clone, run `bash scripts/setup.sh` (Git LFS), open `Assets/Entrance/Scenes/Entrance.unity` and press Play: the build starts there, then the Gallery. Without a headset, the Editor has a desktop player.
 
 > [!IMPORTANT]
-> **Vincent's answers need Convai and the internet.** The headset talks to Convai directly: no Mac, no proxy, no USB. This APK has the team's Convai key built in, which is why its link is restricted; please don't pass the APK file on. Without Convai, his scripted lines still play in his voice, but he can't answer your own questions.
+> **Vincent's answers need Convai and the internet.** The headset talks to Convai directly: no Mac, no proxy, no USB. This APK has the team's Convai key built in, so Vincent answers with no setup. Without Convai, his scripted lines still play in his voice, but he can't answer your own questions.
 >
 > **To build with Convai:** paste Vincent's Character ID into `Assets/VanGogh/Resources/ConvaiDirectSettings`, and your Convai API key, alone on one line, into `Assets/VanGogh/Resources/ConvaiApiKey.txt`. Git ignores that file: never commit it. The key is packed into the APK, so a build with a key stays inside the team. Details: [docs/convai/README.md](docs/convai/README.md).
 
@@ -202,7 +202,7 @@ Other players on the hill see the same stars and wind ([#175](https://github.com
 - **The image is soft on Quest.** The sharper-image settings ([#201](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/201)) were merged after the freeze.
 - **Bedroom lighting:** the baked daylight ([#189](https://github.com/Vanderbilt-VR-2026/InnerFrame/pull/189)) isn't in this build; the room still uses flat lighting.
 - **Almond Blossom:** three Tripo props (chest, still life, paint box) are still at full size and need reducing for Quest.
-- **Convai key:** a build made with a key carries it inside the APK, so this APK is shared on request only (above). The free Photon plan allows 20 players at once and is for development only.
+- **Convai key:** a build made with a key carries it inside the APK, and this APK's link is public for now; the key may be moved out of the build or rotated in Sprint 5. The free Photon plan allows 20 players at once and is for development only.
 
 ## Next: Sprint 5 (Nov 15 – Dec 3): connect everything, then stabilise
 

@@ -59,7 +59,7 @@ public class PlayerMenu : MonoBehaviour
         if (wristTag && BackFrom(scene.name, homeScene) != null && PaintingNames.IsPainting(scene.name)) MenuWristTag.Attach();
     }
     public string BackScene => BackFrom(SceneManager.GetActiveScene().name, homeScene);
-    public static string BackFrom(string current, string home) => string.IsNullOrEmpty(home) || current == home ? null : home;
+    public static string BackFrom(string current, string home) => string.IsNullOrEmpty(home) || current == "Entrance" || current == home ? null : home;
     bool IsOpen => EntranceControllerGuide.IsOpen || (panel != null && panel.gameObject.activeSelf);
     bool PointerBusy => quick != null && quick.HasPointerFocus;
     bool DesktopPointerHeld => desktop && quick != null && Keyboard.current != null && Keyboard.current.tabKey.isPressed;

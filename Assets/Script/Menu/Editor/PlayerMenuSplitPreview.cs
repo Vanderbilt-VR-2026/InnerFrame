@@ -154,6 +154,7 @@ public static class PlayerMenuSplitPreview
             foreach (string scene in new[] { "PaintedBedroom", "StarryNight", "Bedroom_StyleExperiment", "SomeFuturePainting" })
                 Check(PlayerMenu.BackFrom(scene, PaintingNames.Gallery) == PaintingNames.Gallery, "Back from " + scene + " goes to Gallery");
             Check(PlayerMenu.BackFrom(PaintingNames.Gallery, PaintingNames.Gallery) == null, "Gallery has no return destination");
+            Check(PlayerMenu.BackFrom("Entrance", PaintingNames.Gallery) == null, "the player menu cannot bypass Entrance to skip onboarding");
             var panel = PlayerMenuPanel.Create(camera);
             // Verify menu actions without invoking the persistent scene-music singleton from a fixture click.
             foreach (var sound in panel.GetComponentsInChildren<InnerFrame.Entrance.EntranceButtonSound>(true))

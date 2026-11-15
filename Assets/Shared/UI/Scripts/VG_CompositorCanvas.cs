@@ -14,12 +14,17 @@ public sealed class VG_CompositorCanvas : MonoBehaviour
     const int FirstLayer = 24, LastLayer = 30;
     static int occupied;
     readonly Dictionary<Transform, int> originalLayers = new Dictionary<Transform, int>();
+    // Rectangles at one metre from the head, in OpenXR VIEW axes (Unity forward convention).
+    // Both the capture and the submitted quad keep this frame as text, pages and hover labels change.
+    public static readonly Rect DialogueFrame = Rect.MinMaxRect(-.58f, -.51f, .72f, .16f);
+    public static readonly Rect ShortcutFrame = Rect.MinMaxRect(.30f, -.47f, .70f, -.28f);
     readonly Vector3[] corners = new Vector3[4];
     Canvas source;
     Camera eye, capture;
     RenderTexture texture;
     ViewHudLayer native;
     float depth;
+    Rect frame;
     int captureLayer = -1;
     bool originalEyeBit;
     Vector2 centre, surfaceSize;
@@ -29,7 +34,7 @@ public sealed class VG_CompositorCanvas : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetSlots() => occupied = 0;
 
-    public static void Register(Canvas root, Camera camera, float viewDepth)
+    public static void Register(Canvas root, Camera camera, float viewDepth, Rect viewFrame)
     {
 #if UNITY_ANDROID && !UNITY_EDITOR
         if (root == null || camera == null || viewDepth <= 0f) return;
@@ -39,6 +44,7 @@ public sealed class VG_CompositorCanvas : MonoBehaviour
         route.source = root;
         route.eye = camera;
         route.depth = viewDepth;
+        route.frame = viewFrame;
         route.enabled = true;
 #endif
     }
@@ -103,16 +109,15 @@ public sealed class VG_CompositorCanvas : MonoBehaviour
         }
         centre = bounds.center;
         surfaceSize = nextSize;
-        // Relative placement follows the same eye as the true button geometry, including late XR poses.
-        // World camera art and this quad share their XY plane; lens distortion is applied once by OpenXR.
+        // Bounds and the native pose are in tracking metres. Only the offscreen Unity camera
+        // needs the XR Origin's scale to frame the matching world-space controller targets.
         var eyeScale = eye.transform.lossyScale;
-        capture.transform.localPosition = new Vector3(centre.x / eyeScale.x, centre.y / eyeScale.y, 0f);
-        // OpenXR takes tracking-space metres. Unity world coordinates include the XR Origin's scale.
-        viewCentre = new Vector3(centre.x / eyeScale.x, centre.y / eyeScale.y, depth / eyeScale.z);
-        viewSize = new Vector2(surfaceSize.x / eyeScale.x, surfaceSize.y / eyeScale.y);
-        capture.orthographicSize = surfaceSize.y * .5f;
-        capture.aspect = surfaceSize.x / surfaceSize.y;
-        capture.farClipPlane = Mathf.Max(eye.nearClipPlane + 1f, depth + .5f);
+        capture.transform.localPosition = new Vector3(centre.x, centre.y, 0f);
+        viewCentre = new Vector3(centre.x, centre.y, depth);
+        viewSize = surfaceSize;
+        capture.orthographicSize = surfaceSize.y * eyeScale.y * .5f;
+        capture.aspect = (surfaceSize.x * eyeScale.x) / (surfaceSize.y * eyeScale.y);
+        capture.farClipPlane = Mathf.Max(eye.nearClipPlane + 1f, depth * eyeScale.z + .5f);
         if (native != null) SetEyeBit(!native.Ready);
     }
 
@@ -120,36 +125,45 @@ public sealed class VG_CompositorCanvas : MonoBehaviour
     // Exercise the actual Android capture path on an editor GPU without claiming native OpenXR submission.
     public Camera PrepareEditorCapture(Canvas canvas, Camera camera, float viewDepth)
     {
-        source = canvas; eye = camera; depth = viewDepth;
+        source = canvas; eye = camera; depth = viewDepth; frame = DialogueFrame;
         PrepareFrame();
         return capture;
     }
+    public Rect EditorViewRect => new Rect((Vector2)viewCentre - viewSize * .5f, viewSize);
     public void EndEditorCapture() => Release();
 #endif
 
     bool Measure(out Rect bounds)
     {
         bounds = default;
-        Vector2 min = new Vector2(float.PositiveInfinity, float.PositiveInfinity), max = -min;
+        Vector2 min = frame.min * depth, max = frame.max * depth;
         var graphics = GraphicRegistry.GetGraphicsForCanvas(source);
-        var eyeOrigin = eye.transform.position;
-        var eyeRight = eye.transform.right;
-        var eyeUp = eye.transform.up;
+        bool visible = false;
         for (int i = 0; i < graphics.Count; ++i)
         {
             var graphic = graphics[i];
             if (graphic == null || !graphic.isActiveAndEnabled || graphic.canvasRenderer.GetInheritedAlpha() <= 0f ||
                 graphic.color.a <= 0f) continue;
-            graphic.rectTransform.GetWorldCorners(corners);
+            visible = true;
+            // Expand only for content outside the reserved frame (e.g. a long instruction). Walk local
+            // transforms to the eye: head pose and world coordinates never enter the submitted bounds.
+            Matrix4x4 toView = Matrix4x4.identity;
+            Transform node = graphic.rectTransform;
+            while (node != null && node != eye.transform)
+            {
+                toView = Matrix4x4.TRS(node.localPosition, node.localRotation, node.localScale) * toView;
+                node = node.parent;
+            }
+            if (node == null) return false;
+            graphic.rectTransform.GetLocalCorners(corners);
             for (int j = 0; j < 4; ++j)
             {
-                var delta = corners[j] - eyeOrigin;
-                var xy = new Vector2(Vector3.Dot(delta, eyeRight), Vector3.Dot(delta, eyeUp));
+                Vector2 xy = toView.MultiplyPoint3x4(corners[j]);
                 min = Vector2.Min(min, xy);
                 max = Vector2.Max(max, xy);
             }
         }
-        if (max.x <= min.x || max.y <= min.y) return false;
+        if (!visible) return false;
         bounds = Rect.MinMaxRect(min.x, min.y, max.x, max.y);
         return true;
     }

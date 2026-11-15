@@ -42,8 +42,8 @@ public static class VG_CompositorCaptureCheck
             canvas.worldCamera = eye;
             var surface = (RectTransform)canvas.transform;
             surface.SetParent(eye.transform, false);
-            surface.SetLocalPositionAndRotation(new Vector3(0f, -.3f, depth) / .8f, Quaternion.identity);
-            surface.localScale = Vector3.one / (.8f * VG_UI.UnitsPerMetre);
+            surface.SetLocalPositionAndRotation(new Vector3(0f, -.3f, depth), Quaternion.identity);
+            surface.localScale = Vector3.one / VG_UI.UnitsPerMetre;
             surface.sizeDelta = Vector2.zero;
             layout.anchorMin = layout.anchorMax = Vector2.one * .5f;
             layout.anchoredPosition3D = Vector3.zero;
@@ -75,6 +75,17 @@ public static class VG_CompositorCaptureCheck
                 Mathf.Abs(renderedAspect / realAspect - 1f) < .002f,
                 "guide order, bottom navigation and physical aspect are preserved by the cropped camera");
 
+            var originalFrame = route.EditorViewRect;
+            var originalPanel = capture.WorldToViewportPoint(c[0]);
+            var roomPoint = eye.transform.TransformPoint(new Vector3(.2f, .4f, 3f));
+            var originalRoom = eye.WorldToViewportPoint(roomPoint);
+            eye.transform.SetPositionAndRotation(new Vector3(-1f, .7f, 2f), Quaternion.Euler(26f, -38f, -12f));
+            capture = route.PrepareEditorCapture(canvas, eye, depth);
+            panel.GetWorldCorners(c);
+            Check(Vector3.Distance(originalRoom, eye.WorldToViewportPoint(roomPoint)) > .25f &&
+                route.EditorViewRect == originalFrame &&
+                Vector3.Distance(originalPanel, capture.WorldToViewportPoint(c[0])) < .0001f,
+                "turning, rolling and moving changes the scene while preserving the submitted rectangle and panel pixels");
             var system = new GameObject("HUD test event system").AddComponent<EventSystem>();
             var tracked = new TrackedDeviceEventData(system)
             {
@@ -91,6 +102,7 @@ public static class VG_CompositorCaptureCheck
             // The graphic bounds can change with the page. Compare an interior text region in panel coordinates.
             Canvas.ForceUpdateCanvases();
             capture = route.PrepareEditorCapture(canvas, eye, depth);
+            Check(route.EditorViewRect == originalFrame, "changing tutorial pages retains the same headset rectangle");
             second = Read(capture);
             panel.GetWorldCorners(c);
             var a2 = capture.WorldToViewportPoint(c[0]); var b2 = capture.WorldToViewportPoint(c[2]);

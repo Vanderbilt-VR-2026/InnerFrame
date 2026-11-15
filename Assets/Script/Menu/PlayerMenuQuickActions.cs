@@ -81,7 +81,7 @@ public sealed class PlayerMenuQuickActions : MonoBehaviour
             row.anchorMin = row.anchorMax = screenHud ? new Vector2(.95f, .075f) : new Vector2(.5f, .5f);
             // An XR camera can be selected before its display starts. The registered presenter
             // watches for an active headset/session and restores the fallback when it pauses.
-            if (!screenHud) VG_CompositorCanvas.Register(canvas, camera, Distance);
+            if (!screenHud) VG_CompositorCanvas.Register(canvas, camera, Distance, VG_CompositorCanvas.ShortcutFrame);
             else VG_CompositorCanvas.Unregister(canvas);
         }
         if (buttons[2] != null)
@@ -181,6 +181,8 @@ public sealed class PlayerMenuQuickActions : MonoBehaviour
             if (!show) for (int i = 0; i < labels.Length; i++) labels[i].SetActive(false);
         }
         if (!show) return;
+        if ((desktop && !eyes.stereoEnabled) != (canvas.renderMode == RenderMode.ScreenSpaceCamera))
+            SetContext(eyes, desktop, owner != null && owner.BackScene != null);
         Layout();
         if (Time.unscaledTime >= nextFind) FindHands();
         if (audioIcon != null) audioIcon.Muted = PlayerMenuPreferences.Muted;
@@ -203,14 +205,18 @@ public sealed class PlayerMenuQuickActions : MonoBehaviour
             row.anchoredPosition3D = new Vector3(-rowWidth * .5f * scale, Diameter * .5f * scale, 0f);
             return;
         }
-        // Measure the actual projections, including shifted lenses, portrait windows and both views of a headset.
-        Rect bounds = ViewBounds(eyes.stereoEnabled ? Camera.MonoOrStereoscopicEye.Left : Camera.MonoOrStereoscopicEye.Mono);
         if (eyes.stereoEnabled)
         {
-            var other = ViewBounds(Camera.MonoOrStereoscopicEye.Right);
-            bounds = Rect.MinMaxRect(Mathf.Max(bounds.xMin, other.xMin), Mathf.Max(bounds.yMin, other.yMin),
-                Mathf.Min(bounds.xMax, other.xMax), Mathf.Min(bounds.yMax, other.yMax));
+            // Layout and ray targets use the same head-local metres as the OpenXR layer.
+            // Keep all three circles inside the binocular view, including the headset's lens mask.
+            canvasRect.localScale = Vector3.one;
+            float diameter = 2f * Distance * Mathf.Tan(2.2f * Mathf.Deg2Rad);
+            row.localScale = Vector3.one * (diameter / Diameter);
+            row.localPosition = Distance * new Vector3(Mathf.Tan(28f * Mathf.Deg2Rad),
+                -Mathf.Tan(22f * Mathf.Deg2Rad), 1f);
+            return;
         }
+        Rect bounds = ViewBounds(Camera.MonoOrStereoscopicEye.Mono);
         if (bounds.width <= 0f || bounds.height <= 0f) return;
         float metres = Mathf.Min(UnitsToMetres, Mathf.Min(bounds.width * .44f / rowWidth, bounds.height * .09f / Diameter));
         row.localScale = Vector3.one * metres;

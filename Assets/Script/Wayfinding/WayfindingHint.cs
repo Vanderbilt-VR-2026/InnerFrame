@@ -147,33 +147,12 @@ public class WayfindingHint : MonoBehaviour
         }
         else
         {
-            var center = LayoutRoot.position;
-            var right = LayoutRoot.TransformVector(Vector3.right * (.5f * plate.rect.width));
-            var up = LayoutRoot.TransformVector(Vector3.up * (.5f * plate.rect.height));
-            fit = Mathf.Min(EyeFit(camera, Camera.MonoOrStereoscopicEye.Left, center, right, up),
-                EyeFit(camera, Camera.MonoOrStereoscopicEye.Right, center, right, up));
+            // Fit in the same binocular reading area at every head orientation.
+            var size = plate.rect.size * (Settings.Scale / VG_UI.UnitsPerMetre);
+            float depth = Settings.distance;
+            fit = Mathf.Min(1f, Mathf.Min(.9f * depth / size.x, .35f * depth / size.y));
         }
         layout.localScale = Vector3.one * fit;
-    }
-
-    static float EyeFit(Camera camera, Camera.MonoOrStereoscopicEye eye, Vector3 center, Vector3 right, Vector3 up)
-    {
-        const float inset = .08f;
-        var anchor = camera.WorldToViewportPoint(center, eye);
-        float left = (anchor.x - inset) * anchor.z, rightRoom = (1f - inset - anchor.x) * anchor.z;
-        float bottom = (anchor.y - inset) * anchor.z, top = (1f - inset - anchor.y) * anchor.z;
-        float fit = 1f;
-        for (int x = -1; x <= 1; x += 2)
-            for (int y = -1; y <= 1; y += 2)
-            {
-                var point = camera.WorldToViewportPoint(center + x * right + y * up, eye);
-                // Perspective divide matters for canted stereo eyes. Clip in homogeneous coordinates.
-                if (point.x < inset) fit = Mathf.Min(fit, left / (left + (inset - point.x) * point.z));
-                if (point.x > 1f - inset) fit = Mathf.Min(fit, rightRoom / (rightRoom + (point.x - 1f + inset) * point.z));
-                if (point.y < inset) fit = Mathf.Min(fit, bottom / (bottom + (inset - point.y) * point.z));
-                if (point.y > 1f - inset) fit = Mathf.Min(fit, top / (top + (point.y - 1f + inset) * point.z));
-            }
-        return Mathf.Clamp01(fit);
     }
 
     void Update()

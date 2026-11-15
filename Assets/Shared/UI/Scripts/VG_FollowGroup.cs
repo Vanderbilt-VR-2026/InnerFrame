@@ -139,25 +139,14 @@ public class VG_FollowGroup : MonoBehaviour
         }
         if (mode == RenderMode.WorldSpace)
         {
-            // Keep the real XRI button plane on the tracked camera. The compositor presents the same graphics.
-            // Use the eye-independent projection for the centre of the binocular view. The XR camera's
-            // local frame is the reference; no callback copies its pose into the canvas.
-            var lower = camera.ViewportToWorldPoint(new Vector3(0f, 0f, depth));
-            var upper = camera.ViewportToWorldPoint(new Vector3(1f, 1f, depth));
-            var point = camera.ViewportToWorldPoint(new Vector3(.5f, ViewportY, depth));
-            var pos = Quaternion.Inverse(camera.transform.rotation) * (point - camera.transform.position);
-            float scale = settings.Scale;
-            if (FitDialogueLayout)
-            {
-                float widthFit = .84f * Vector3.Dot(upper - lower, camera.transform.right) / VG_DialogueBox.Width;
-                float heightFit = (ViewportY - .08f) * Vector3.Dot(upper - lower, camera.transform.up) / .34f;
-                scale = Mathf.Min(scale, Mathf.Min(widthFit, heightFit));
-            }
-            var rigScale = camera.transform.lossyScale;
-            surface.localPosition = new Vector3(pos.x / rigScale.x, pos.y / rigScale.y, pos.z / rigScale.z);
-            SetWorldScale(surface, 1f / VG_UI.UnitsPerMetre);
-            Layout.localScale = Vector3.one * scale;
-            VG_CompositorCanvas.Register(DisplayCanvas, camera, depth);
+            // This is the same head-relative plane used for controller hits and the VIEW quad.
+            // A projection from the previous tracking sample must never determine a screen anchor.
+            float referenceHeight = 2f * depth * Mathf.Tan(30f * Mathf.Deg2Rad);
+            float y = (ViewportY - .5f) * referenceHeight;
+            surface.localPosition = new Vector3(0f, y, depth);
+            surface.localScale = Vector3.one / VG_UI.UnitsPerMetre;
+            Layout.localScale = Vector3.one * settings.Scale;
+            VG_CompositorCanvas.Register(DisplayCanvas, camera, depth, VG_CompositorCanvas.DialogueFrame);
         }
         else
         {

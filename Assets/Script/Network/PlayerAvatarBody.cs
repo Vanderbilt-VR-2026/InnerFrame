@@ -10,7 +10,7 @@ using UnityEngine;
 /// and head follow the player's controllers and gaze (PlayerAvatarRig). The NetworkPlayer's own head and hand
 /// shapes are hidden while a body is shown. Your own body stays hidden, like the rest of your own avatar.
 /// </summary>
-[DefaultExecutionOrder(10000)]   // after Fusion has moved the head and hands this frame
+[DefaultExecutionOrder(10000)]   // after other scripts' Update (Fusion's Render, which moves remote heads, comes later)
 public class PlayerAvatarBody : MonoBehaviour
 {
     /// <summary>Resources/PlayerAvatars/&lt;name&gt;, in room order: the first player gets the first one.</summary>
@@ -84,15 +84,21 @@ public class PlayerAvatarBody : MonoBehaviour
         body.name = name;
         body.head = player.head; body.leftHand = player.leftHand; body.rightHand = player.rightHand;
         if (player.HasStateAuthority)
+        {
+            // your own body: never seen, so it doesn't animate, reach or look for the floor either
             foreach (var r in body.GetComponentsInChildren<Renderer>(true)) r.enabled = false;
+            body.GetComponent<Animator>().enabled = false;
+            body.enabled = false;
+        }
         Debug.Log($"[PlayerAvatarBody] {player.name}: {name}");
     }
 
-    // After the Network Transforms have moved the head and hands this frame (Fusion renders in Update), and before
-    // the Animator runs its IK (between Update and LateUpdate), so the arms reach from where the body is now.
+    // Before the Animator runs its IK (between Update and LateUpdate), so the arms reach from where the body is now.
+    // Fusion moves the other players' head and hands in Render, just before LateUpdate, so this uses last frame's
+    // poses: the body and its arms trail the head by one frame, together.
     void Place()
     {
-        if (body == null || player.head == null) return;
+        if (body == null || player.head == null || player.HasStateAuthority) return;
         float dt = Time.deltaTime;
         var eyes = player.head.position;
         // the floor: a hit near the last floor if there is one, else the one about a standing player's height down

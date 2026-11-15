@@ -1,7 +1,7 @@
 # Multiplayer (Photon Fusion 2, Shared Mode)
 
 Everyone in the same scene joins the same room and sees each other as a
-head with two hands (each scene can have its own avatar, see below). Shared objects can be picked up by anyone and
+full body, the **Boy Worker**, in every scene (see "Player bodies" below). Shared objects can be picked up by anyone and
 handed from one player to another.
 
 Code: `Assets/Script/Network/`.
@@ -10,29 +10,67 @@ Code: `Assets/Script/Network/`.
 |---|---|
 | `NetworkSession` | Creates itself on startup. When a scene with an XR Origin loads (in the Editor without a headset: a desktop camera), joins room `InnerFrame_<SceneName>` (max 8 players) and spawns your avatar. `SceneFader` makes it leave the room before a scene change. |
 | `DesktopTestRig` | Editor only. Without a headset, replaces a scene's XR Origin with a W A S D + mouse player, so the Editor can walk around and count as a player (see "Testing with one headset"). |
-| `NetworkPlayer` | The avatar. Copies your headset and controllers onto it; your own copy is hidden. |
+| `NetworkPlayer` | The avatar. Copies your headset and controllers onto it; your own copy is hidden. Adds `PlayerAvatarBody` when it spawns. |
+| `PlayerAvatarBody`, `PlayerAvatarRig` | The full body the others see, placed under the head and posed by Unity's Humanoid IK (see "Player bodies"). |
+| `Editor/PlayerAvatarBuilder` | Builds `Resources/PlayerAvatars/Avatar_BoyWorker.prefab` and its material and Animator from the Mixamo FBX. Menu: **InnerFrame → Multiplayer → Build Player Avatars**. |
 | `NetworkGrabbable` | Makes a grab object shared (see below). |
 | `StarryNightLink` | On each avatar: shares The Starry Night's progress and its lantern, sketchbook and page (`docs/starry-night/README.md` → Two players). |
 | `Editor/NetworkPlayerPrefabBuilder` | Builds `Resources/NetworkPlayer.prefab`. Menu: **InnerFrame → Multiplayer → Rebuild Network Player Prefab**. |
-| `Editor/PaintedAvatarBuilder` | Builds the Painted Bedroom's avatar, `Resources/NetworkPlayer_PaintedBedroom.prefab`, and its textures, materials and meshes in `PaintedAvatar/`. Menu: **InnerFrame → Multiplayer → Rebuild Painted Bedroom Avatar**. |
+| `Editor/PaintedAvatarBuilder` | Builds the Painted Bedroom's older avatar, `Resources/NetworkPlayer_PaintedBedroom.prefab` (see "The older per-scene avatars"). Menu: **InnerFrame → Multiplayer → Rebuild Painted Bedroom Avatar**. |
 | `Editor/NetworkGrabbableMenu` | Makes many objects shared at once (see below). |
+| `Editor/PlayerAvatarPoseTest`, `Editor/PlayerAvatarRoomTest` | Checks for the player bodies (see "Player bodies"). |
 
-## A different avatar per scene
+## Player bodies
+
+Every player is seen by the others as the **Boy Worker** (`Resources/PlayerAvatars/Avatar_BoyWorker.prefab`: a Tripo
+model rigged in Mixamo, 1.70 m, Humanoid), in every scene, the Painted Bedroom included. Your own body stays hidden,
+and it doesn't animate either. `PlayerAvatarBody.Order` lists the bodies; with more than one, players get them by the
+order they joined the room, which every headset works out by itself.
+
+- **Size:** scaled to the player's *standing* eye height (0.6 to 1.25 times the model). Crouching or sitting doesn't
+  shrink it; the hips drop and the knees bend instead, up to 35% of eye height, then the back leans.
+- **Feet:** stand on the floor found below the head (the hit nearest the last floor, so a table under your head isn't
+  taken for it). Each foot stays planted and steps, one at a time, once it is 22 cm (times the body's scale) from its
+  place under the body or the body has turned 35°. A foot left slightly off tidies up after 0.8 s; a jump of 1 m or more
+  (a teleport) snaps both.
+- **Arms and head:** the hands reach for the controllers and the head looks where the player looks.
+- The body trails the head by one frame (Fusion moves the head just before LateUpdate), together with its arms.
+
+To change the body, rig a new model in Mixamo (`.claude/skills/tripo-mixamo-character/`), put the FBX in
+`Assets/Script/Network/Avatars/`, add its name to `PlayerAvatarBody.Order`, and run **Build Player Avatars**.
+
+Checks (close Unity first, or run them from the Editor's Play mode):
+
+```
+Unity -batchmode -projectPath . -executeMethod PlayerAvatarPoseTest.RunFromCommandLine
+```
+
+`PlayerAvatarPoseTest` poses each body on an empty floor (rest, reach, wave, crouch, walk) and fails if a hand misses
+its controller by more than 15 cm, the eyes miss the head by more than 12 cm (except crouching), a foot goes through the
+floor or both float, the hips bone drops less than 20 cm crouching, or a foot is left 50 cm behind walking. Pictures go
+to `Temp/PlayerAvatarPoses` (or `AVATAR_POSE_OUT`). It calls the posing code directly, so the sizing to standing
+height, the floor finding, the tidy-up and the teleport snap are **not** covered: check those on a headset.
+
+`PlayerAvatarRoomTest` (`-executeMethod PlayerAvatarRoomTest.RunFromCommandLine`, with a second player in the Painted
+Bedroom's room, e.g. a headset) checks that each player has a body, the others' are shown, your own is hidden, and the
+old head and hand shapes are hidden.
+
+On a headset, with two players: stand, crouch, sit, walk, turn on the spot and teleport, and watch the other player's
+body: feet on the floor, no sliding, hands on the controllers.
+
+## The older per-scene avatars
 
 `NetworkSession` first looks for `Resources/NetworkPlayer_<SceneName>`, and
-uses `Resources/NetworkPlayer` if there isn't one. Everyone in a room is in
-the same scene, so everyone sees the same kind of avatar there.
+uses `Resources/NetworkPlayer` if there isn't one. Since the player bodies, both only carry the head and hands that
+the body follows: their shapes are hidden while a body is shown, and show again only if no body is available (an
+empty `PlayerAvatarBody.Order` or a missing prefab).
 
 | Scene | Avatar |
 |---|---|
-| `PaintedBedroom` | `NetworkPlayer_PaintedBedroom`: a Van Gogh head and two hands, painted like the room. Brushstroke textures drawn by the room's own recipe (`strokeCanvas()` in `Art/Source/PaintedBedroom/web/index.html`, ported to C#), matte materials with the room's glow, and the room's dark blue ink outlines. Skin, a ginger beard, and the straw hat from the painting. The hat band and the cuffs are in the player's colour |
+| `PaintedBedroom` | `NetworkPlayer_PaintedBedroom`: a Van Gogh head and two hands, painted like the room (`PaintedAvatarBuilder`) |
 | Everything else | `NetworkPlayer`: a coloured head with a visor and two hands |
 
-To change the painted avatar, edit `PaintedAvatarBuilder.cs` (shapes, sizes,
-palettes) and run its menu item again. Everything it makes keeps its GUID, so
-nothing that points at it breaks.
-
-To give another scene its own avatar, make a prefab named
+To give another scene its own avatar prefab, make a prefab named
 `NetworkPlayer_<SceneName>` in a `Resources` folder. The easiest way is to
 duplicate an existing avatar prefab and change its pieces. It needs:
 

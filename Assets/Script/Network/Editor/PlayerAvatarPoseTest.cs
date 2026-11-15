@@ -22,6 +22,8 @@ public static class PlayerAvatarPoseTest
     const float HandTolerance = 0.15f, EyeTolerance = 0.12f;
     // a foot bone (the ankle) this far under the floor is through it; walking, a foot this far behind is left behind
     const float FloorTolerance = 0.03f, KeepUp = 0.5f;
+    // the ankle bone sits ~8-10 cm above the sole: lower feet both this high are a body hanging in the air
+    const float FloatTolerance = 0.2f;
 
     // name, head (eye) position, head yaw/pitch, left and right controller position (relative to the eyes) and aim,
     // and how fast the head moves over the floor while the pose settles (walking)
@@ -43,6 +45,7 @@ public static class PlayerAvatarPoseTest
     static string outDir;
     static float bodyYaw;
     static double poseStarted;
+    static float restHips;   // this avatar's hips bone height in the "rest" pose (the first), to measure the crouch's real drop
     static readonly System.Collections.Generic.List<string> failures = new System.Collections.Generic.List<string>();
 
     public static void RunFromCommandLine()
@@ -155,9 +158,15 @@ public static class PlayerAvatarPoseTest
         // feet on the floor, never through it; crouching, the hips dropped; walking, the feet kept up with the body
         float footL = animator.GetBoneTransform(HumanBodyBones.LeftFoot).position.y;
         float footR = animator.GetBoneTransform(HumanBodyBones.RightFoot).position.y;
-        Debug.Log($"[PlayerAvatarPoseTest] {who}: ankles at {footL * 100:F0}/{footR * 100:F0} cm, hips dropped {a.Crouch * 100:F0} cm");
+        // the hips BONE after IK, against the rest pose: a.Crouch is only what the rig asked for, and would pass even if
+        // the line that lowers the body were gone
+        float hips = animator.GetBoneTransform(HumanBodyBones.Hips).position.y;
+        if (p.name == "rest") restHips = hips;
+        float hipsDrop = restHips - hips;
+        Debug.Log($"[PlayerAvatarPoseTest] {who}: ankles at {footL * 100:F0}/{footR * 100:F0} cm, hips bone {hipsDrop * 100:F0} cm below rest (rig asked {a.Crouch * 100:F0})");
         if (Mathf.Min(footL, footR) < -FloorTolerance) failures.Add($"{who}: a foot {-Mathf.Min(footL, footR) * 100:F0} cm through the floor");
-        if (p.name == "crouch" && a.Crouch < 0.2f) failures.Add($"{who}: hips dropped only {a.Crouch * 100:F0} cm for a crouch");
+        if (Mathf.Min(footL, footR) > FloatTolerance) failures.Add($"{who}: both feet {Mathf.Min(footL, footR) * 100:F0} cm off the floor (floating)");
+        if (p.name == "crouch" && hipsDrop < 0.2f) failures.Add($"{who}: the hips bone dropped only {hipsDrop * 100:F0} cm for a crouch");
         if (p.move != Vector3.zero)
         {
             var root = new Vector3(a.transform.position.x, 0, a.transform.position.z);

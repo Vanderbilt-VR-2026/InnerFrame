@@ -17,7 +17,7 @@ Roles are flexible, and design and QA are everyone's job.
 
 ## Sprint 4 (Oct 29 – Nov 15)
 
-Sprint 3 gave us one painted room with Vincent in it. Sprint 4 turned it into **a journey**: a new opening, a rebuilt Gallery, and **three new paintings to step into**, *Café Terrace at Night*, *The Starry Night* and *Almond Blossom*, each with its own music and, in two of them, its own small game with Vincent. Vincent now answers straight from the headset, knows which scene he's in, and every player hears him.
+Sprint 3 gave us one painted room with Vincent in it. Sprint 4 turned it into **a journey**: a new opening, a rebuilt Gallery, and **three new paintings to step into**, *Café Terrace at Night*, *The Starry Night* and *Almond Blossom*. *Café Terrace* and *The Starry Night* each have their own music, and *The Starry Night* and *Almond Blossom* each have their own small game with Vincent. Vincent now answers straight from the headset, knows which scene he's in, and every player hears him.
 
 **Demo video:** recorded on a Quest 3 on Nov 15: [InnerFrame Sprint 4 demo (Google Drive)](https://drive.google.com/file/d/1JyyuADIitzsAxQNRA9j22kRiIk3k6dWJ/view?usp=sharing)
 

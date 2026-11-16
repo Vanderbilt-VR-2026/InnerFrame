@@ -129,6 +129,10 @@ lantern") and its notes go with the question, marked as in the painting or made 
 visit, so he never claims to have painted our hilltop. List:
 [`starry-night-objects.md`](starry-night-objects.md).
 
+Almond Studio works the same way (questions only), and each question also carries where the story is (Theo's letter
+not yet read, the news, the window open, the painting, the end: `AS_Game.StoryNow`), after any object's notes. His story
+lines there are spoken in the same headset voice. List: [`almond-studio-objects.md`](almond-studio-objects.md).
+
 **One Convai conversation per scene** (`SpeechToProxy.convaiSession`, keyed by the scene's
 name): what he heard in the Bedroom doesn't follow him into Starry Night, and each scene's
 first question or prompt tells him where he is and everything that is there. Back in a

@@ -42,6 +42,15 @@ output (56–65 MB each), to be reduced for Quest. The tree in the scene carries
 Vincent is Cici's Vincent v2 (read only), on Cici's idle; he looks at you (`AS_VincentLook`, look-at IK) and nods
 and sways while he talks (in code, no clip).
 
+**He speaks, and you can talk to him (16 Nov).** His story lines are spoken in his headset voice (Piper through
+`VincentVoice`, the voice of his Convai answers in every scene), made in the background in the order he says them; a
+line whose voice isn't ready within `lineVoiceWait` (3 s) shows as text only, as before. **Hold B** (B or T in the
+Editor) to ask him anything: `SpeechToProxy` on his body, Convai with the shared dialogue box, as in The Starry Night
+(set up once per machine: [`docs/convai/README.md`](../convai/README.md)). While you ask and he answers, his story
+lines wait and the hint shows "Listening…"; a line you cut off with B is said again afterwards. Each question carries
+where the story is (`AS_Game.StoryNow`) and, when it names something in the room, that thing's notes
+([`docs/convai/almond-studio-objects.md`](../convai/almond-studio-objects.md)). The music ducks under him.
+
 ## Controls
 
 | Headset | Editor (no headset) | What it does |
@@ -51,6 +60,7 @@ and sways while he talks (in code, no clip).
 | Point at a casement + trigger, or grip on it (near or by its ray) | **O** | Opens the window |
 | Point at the brush + trigger, or trigger with the hand on it; or grip on it | **G** | Takes the brush (trigger: it stays in that hand; grip: until you let go) |
 | Hold the trigger, sweeping the beam over the branches | Hold **Space**, aiming the view's centre | Opens the buds near the beam |
+| Hold **B** (right controller), speak, let go | Hold **B** or **T** (microphone) | Ask Vincent (Convai) |
 | | **N** | Finishes the painting (testing) |
 | | **R** | Starts over |
 | | W A S D, mouse | Walk and look (DesktopTestRig) |

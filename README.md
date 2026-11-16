@@ -22,7 +22,7 @@ Sprint 3 gave us one painted room with Vincent in it. Sprint 4 turned it into **
 **Demo video:** recorded on a Quest 3 on Nov 15: [InnerFrame Sprint 4 demo (Google Drive)](https://drive.google.com/file/d/1JyyuADIitzsAxQNRA9j22kRiIk3k6dWJ/view?usp=sharing)
 
 **APK:** [InnerFrame-sprint4.apk (Google Drive)](https://drive.google.com/file/d/1RxKJHL6M9EJXow99q4mLI0xeaeGZbmk2/view?usp=sharing), built from this branch (`sprint_4`, `a83d32d`). Anyone with the link can download it.
-**Board:** [InnerFrame Dashboard](https://github.com/orgs/Vanderbilt-VR-2026/projects/12): 14 epics; every task tagged [S1]–[S5] and linked to its epic. Sprint 4: 29 cards, all done, each checked against the code on this branch; unfinished work moved to Sprint 5.
+**Board:** [InnerFrame Dashboard](https://github.com/orgs/Vanderbilt-VR-2026/projects/12): 14 epics; every task tagged [S1]–[S5] and linked to its epic.
 
 ![From the demo: the opening, the Gallery, Café Terrace at Night, The Starry Night and Almond Blossom|800](docs/sprint4/journey.jpg)
 

@@ -9,3 +9,4 @@ stage1 If I can manage the colour of my own head, I'll be able to paint the head
 stage2 Now the colour. Hold still, my friend, this is the hard part.
 back Bring the mirror back, my friend. I can't paint my face without it.
 done There, it's done. Thank you, my friend. Hang the mirror back for me; Gauguin will want to look at himself too.
+follow There's something outside I want to show you. Will you come with me?

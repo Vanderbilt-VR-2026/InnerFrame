@@ -23,6 +23,8 @@ namespace InnerFrame.StarryNight
         bool AimsFromHead { get; }
         /// <summary>A short buzz on that hand's controller (none in the Editor fallback).</summary>
         void Haptic(int hand, float amplitude, float seconds);
+        /// <summary>That hand's transform, which holds what its trigger takes (the page); null: none (the head holds it).</summary>
+        Transform Hand(int hand);
     }
 
     /// <summary>The XR controllers: hand 0 is the left, 1 the right. The trigger is bound like XRI's Activate.</summary>
@@ -62,6 +64,8 @@ namespace InnerFrame.StarryNight
 
         public int HandCount => 2;
         public bool AimsFromHead => false;
+        /// <summary>The controller's transform (the page taken with the trigger is held there).</summary>
+        public Transform Hand(int hand) => hand >= 0 && hand < 2 ? hands[hand] : null;
 
         public bool TryGetAim(int hand, out Ray aim)
         {
@@ -107,6 +111,7 @@ namespace InnerFrame.StarryNight
         public bool TriggerUp(int hand) => Keyboard.current != null && Keyboard.current.spaceKey.wasReleasedThisFrame;
         public void Tick() { }
         public void Haptic(int hand, float amplitude, float seconds) { }
+        public Transform Hand(int hand) => null;
     }
 
     /// <summary>The test driver: a scripted aim and trigger, advanced once per SN_Game step.</summary>
@@ -128,5 +133,8 @@ namespace InnerFrame.StarryNight
         /// <summary>How many buzzes the game asked for (for the tests).</summary>
         public int haptics;
         public void Haptic(int hand, float amplitude, float seconds) => haptics++;
+        /// <summary>The scripted hand's transform (a Play check's controller); null: the head holds what it takes.</summary>
+        public Transform hand;
+        public Transform Hand(int h) => hand;
     }
 }

@@ -18,10 +18,9 @@ October 1888, text-to-speech), and his answer plays from the portrait.
   - The numbers come from `Art/Source/Gallery/build_gallery.py`; see the constants at the top of `VanGoghSpawner`.
 - In the Painted Bedroom, a 3D Vincent (Tripo model) stands by the left wall with
   an easel, palette and brush, facing where you arrive, and answers the same way.
-  His eyes are level with yours, so you look at each other while you talk: the XR rig
-  is scaled 0.8 in this room, which makes him 1.40 m tall in the room and about
-  1.75 m as you feel it. If the rig scale changes, change `VincentScale` in
-  `VanGoghSpawner` to match. He was made with Tripo on a paid plan, whose terms give
+  He is 1.70 m tall in the room, as in The Starry Night (Cici, 2026-11-17; `VincentScale` in
+  `VanGoghSpawner`, 1.0). The XR rig is scaled 0.8 here as there, so he feels about 2.1 m to you in both;
+  his eyes (1.55 m) are above a standing visitor's (1.28 m). He was 1.40 m before. He was made with Tripo on a paid plan, whose terms give
   paid users the rights to their models (see `docs/ASSETS.md`).
   - **His easel and palette** are Tripo models too (Smart Mesh P2.0 from painted reference images, 2026-10-27), cleaned
     by `Art/Source/VanGogh/Props/clean_easel.py` and `clean_palette.py` (no decimation: 4,727 and 4,884 triangles, one
@@ -315,19 +314,111 @@ On the desktop the mirror counts as held once it has left the wall, not at the c
    - that the box and hint follow your head calmly (no swimming while you look around a little), and how it feels when
      the easel or the mirror is nearer than the box but drawn behind it.
 
+## Vincent v2 in the Painted Bedroom (2026-11-17)
+
+`VG_Vincent` is now Vincent v2, the rigged model The Starry Night uses (`Assets/StarryNight/Models/Vincent/VincentV2.fbx`,
+its material and clips; imported by the Starry Night's setup), built by Tools > InnerFrame > Van Gogh > Rebuild assets
+(`Editor/VanGoghAssetSetup.cs`). The static v1 (`Art/Vincent/VG_Vincent.fbx`, `M_Vincent.mat`) is no longer in him; its
+files are still in the repo, unused.
+- **At the easel:** his spot and facing are v1's (`VanGoghSpawner`). Since 2026-11-17 he is 1.70 m in the room (v1
+  was 1.40 m), the model's own size. His easel, canvas, palette and brush are in his prefab and grow with him (21 %),
+  as v1's were scaled with v1; the parked mirror stays 10 cm off the wall, his canvas too. The mirror's Target follows
+  his head bone (1.45 m), 0.97 m from it, inside the 1 m zone: `MirrorScene.BesideCanvas` went from 0.25 to 0.19 for
+  that (at 0.25 the Target was 1.03 m out, so the mirror parked there would have stopped him painting).
+- **His clips:** `Art/Vincent/VG_VincentV2.controller`, made by the asset tool: Standing (BreathingIdle) all the time,
+  while he paints and while he talks (there is no standing Talking clip), and Walking for the way out. His voice is in
+  his head bone.
+- **His hands** (`Scripts/VG_Hands.cs`, Animator IK): the palette is in his left hand, held from below as v1 held it.
+  It is attached to his left hand bone, and IK puts his wrist in front of him at his waist and turns his hand palm up,
+  fingers forward under the board, his fingertips at the thumb hole. None of his hand, finger or forearm vertices is
+  inside the palette in any frame of his idle loop (the v2 check counts them, with a control). The brush (`VG_Brush_01`)
+  is in his right hand. On the way out he tips the palette up against his chest and takes its other edge with his right
+  hand, his elbows in (the room is too tight for it held out flat), and reaches for the door with his right hand; the brush's tip goes a
+  few centimetres into the door's edge for that second.
+- **His look:** v2 is as bright as v1 at the easel (his face's mean brightness 97 % of v1's in edit mode, 105 % in Play
+  with his real skin; the same spread, no dark patches). The dark, blotchy v2 in the first pictures was the pictures'
+  fault: the check drew a copy of his skin moved to world space with its normals left in the skin's space, and the PC
+  renderer's SSAO (on in the Editor, not on the Quest's Mobile renderer) darkened it. The room has no light probes and
+  flat white ambient light (its two lights are at intensity 0), so his material and texture weren't the cause; neither
+  changed, and The Starry Night's Vincent is untouched.
+- **The mirror scene's rules are unchanged** (`MirrorScene`, `MirrorLink`): the 1.0 m zone round his head, the Target
+  pose beside the canvas, hanging back on the wall. Only his head point changed: it is his head bone as he spawns
+  (8 cm lower than v1's, which was his eyes), so the Target is 8 cm lower too.
+- Check: Tools > InnerFrame > Van Gogh > Run v2 check (`Editor/VG_BedroomV2Check.cs`): v2's rig and controller, the
+  framing, Head = his head bone, every mirror rule, the palette in his left hand held from below (palm up, board flat,
+  at his waist; nothing of his hand inside it all through his idle loop), the brush in his right hand, no rig or Avatar
+  warning.
+
+## The way on from the Painted Bedroom (2026-11-17)
+
+`Assets/VanGogh/BedroomExit/` (added to Vincent by `VanGoghSpawner`), on the same beats as The Starry Night's exit
+(`Assets/VanGogh/Lead/VG_ExitFlow.cs`). On each headset by itself:
+1. Once the portrait is done and his closing line ("There, it's done…") has ended, and 3 s of quiet after it, he asks:
+   "There's something outside I want to show you. Will you come with me?" (`follow` in
+   `Art/Source/VanGogh/mirror_lines.txt`, Piper, the same voice as his other lines).
+2. When his line ends, the card: **Follow Vincent** or **Back to the Gallery**, pointed at with the controller ray and
+   picked with the trigger, as on the player menu. It follows your view and stays until you answer.
+3. **Back to the Gallery:** the player menu's own way back.
+4. **Follow Vincent:** he tips his palette up and walks round the front chair (`Chair_Front`; the gap between it and
+   the wall is narrower than he is) and through the 0.43 m between its back corner and the washstand's front legs to
+   `Door_Left`, the light-blue door by the window. At 1.70 m his left thigh and toe pass within 1 cm of the chair there,
+   not into it; his walk starts easing into standing 0.2 m before his place, so his last stride doesn't reach the shut
+   door. He turns to its handle and reaches
+   it with his right hand, and the door swings 90° into its niche, showing stairs: a landing and four steps going up
+   into the wall, lit gold from the top. He walks in and up the first two steps as the gold rises from the stairwell;
+   under it Café Terrace at Night starts (the next ready painting in the story order), as it does from the Gallery.
+- **The door** is the room's own `Door_Left`, opened through its own networked path, the way a grab or the room's reset
+  moves it: `NetworkGrabbable.WhenOwned` asks for its state authority, and once your headset has it the door turns on
+  its hinge, so its pose goes to everyone (the other players see it open; it stays open). Its components and settings
+  are not touched, and there is never a second door. The door stays open for everyone: another player's Vincent finds
+  it open, so the shut door's pose is kept in its frames' space (`Door_Frames`) from when the room loads, and an open
+  door isn't reached for or swung again. Open, the door lies flat against the niche's side by the window; its last
+  8.6 cm go into the niche's back (`Door_Frames_12`), which the other players still see (hidden behind it, see
+  `bedroom-7-other-players-view.png` in the PR's pictures). On your headset only, the niche's back (`Door_Frames_12`) is
+  hidden so the stairs can go deeper than the niche; its collider stays. `Door_Right` is untouched. Nothing in the
+  room's files changed. His way and the stairs are in the door's own space, so they follow the room's runtime scale
+  (0.889, `PaintedBedroomPhysicsApplier`).
+- **The card's controller rays** need an EventSystem with XRI's UI input module; the room has none until the player
+  menu first opens, so the card makes one (as `PlayerMenu` does) when it shows.
+- **The stairs** (`BedroomExit/Resources/VG_Stairs.prefab`, made by Tools > InnerFrame > Van Gogh > Build the Bedroom's
+  stairs): one mesh, 44 triangles, 2 materials (2 draw calls), no collider: nobody can walk or teleport onto them.
+  Unlit (`Art/VG_StairsUnlit.shader`: the texture times each face's shade, plus a gold vertex colour brightest at the
+  top) on Cici's textures `VG_Stairs_Wood.png` and `VG_Stairs_Wall.png` (imported at 1024).
+- Checks (the room scaled as in Play): Tools > InnerFrame > Van Gogh > Run the Bedroom exit check (with pictures) (edit
+  mode: the question only after the portrait and his lines, the card after the question; all the way, his skin (every
+  third vertex) in none of the furniture or his easel (a ray test on their meshes, with a control on their own
+  surfaces) and within 1 cm of no wall or door, and the vertices that pass within 1 cm of the furniture listed; his last
+  stride not past the shut door's face; the palette within 1 cm of nothing; his head at least 5 cm under the doorway and
+  the stairwell; the reach; the real door turning on its hinge, one door in the
+  doorway at every moment, its swing never into the room and clear of the easel, him and the chair; `Door_Right`
+  untouched; the stairs seen from six places across the room only through the doorway, never through the window or
+  a wall, with a positive control; the gold; Back) and `VG_BedroomExitPlayCheck.RunBatch` (Play mode: both answers
+  through SceneFader; the door under a Fusion runner in Single mode, its networked pose the open door's; the gold full
+  on the Café's first frame and clearing only after it is up; the Café starting exactly as from the Gallery).
+- Known limits: he climbs a smooth ramp through the treads' middles, so his feet float or sink a few centimetres on the
+  steps for the second before the gold covers him; the door stays open after he has gone (for everyone in the room); if
+  the door's state authority never comes (a network fault), he waits at the handle and the gold comes after 30 s; the
+  room's owners may want to look at the door and the niche. With Café Terrace off in `VG_StoryOrder`, The Bedroom leads
+  to The Starry Night instead.
+
+Headset checklist (not yet tried on a Quest): is the card readable and easy to point at from where you hold the mirror?
+Does his walk round the chair to the door, the palette tipped up, the reach and the swing read? From where you stand,
+do you see the stairs through the doorway, and does the gold rising from them read as "he goes up into the light"? With
+two headsets: does the other player's door open smoothly and stay open?
+
 ## Vincent feels alive (Painted Bedroom)
 
-Vincent's model has no rig and no blendshapes, so `Scripts/VincentAlive.cs` (on the `VG_Vincent` root) moves him as a
-whole. There is no mouth or blink animation.
+Vincent's model has no blendshapes, so `Scripts/VincentAlive.cs` (on the `VG_Vincent` root) moves him as a whole, on
+top of his BreathingIdle clip (v2, 2026-11-17). There is no mouth or blink animation. While he walks out (above) it is
+switched off.
 - **Breathing:** his height swells by 0.4 % every 4 s.
 - **Turning:** when your head is within 3.5 m he turns toward you, at most 12° either way, easing there in about
   0.6 s. While he paints he turns toward the mirror instead (`MirrorScene` tells him), and otherwise he turns back to
   the front. A slow ±1° sway keeps him from standing dead still.
 - **Leaning in:** while he speaks, the loudness of his voice (256 samples, RMS) leans him forward by up to 2°, about
   his feet.
-- **The Figure:** the asset tool groups his mesh, palette, brush and voice under a `Figure` whose pivot is between his
-  feet; the easel stays put. Only the Figure moves, so the palette and brush stay in his hands. `MirrorScene` finds the
-  brush inside the Figure, and its mirror target and his head point are still computed from the root, so they don't
-  move.
+- **The Figure:** the asset tool puts all of him (the palette, brush and voice are in his bones) under a `Figure` whose
+  pivot is between his feet; the easel stays put. Only the Figure moves. `MirrorScene` finds the brush inside it; its
+  mirror target and his head point are taken once, as he spawns, so they don't move.
 - Every amplitude is a named constant at the top of `VincentAlive`. Untick **Alive** on the component to stop all of
   it.

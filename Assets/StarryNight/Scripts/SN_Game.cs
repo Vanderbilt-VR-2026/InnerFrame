@@ -73,8 +73,10 @@ namespace InnerFrame.StarryNight
                 default: return null;
             }
         }
-        /// <summary>The hint's title and line once the page is there (still Dawn).</summary>
-        public const string PageTitle = "Take his page", TakeThePage = "Take the page";
+        /// <summary>The hint's title and line once the page is there (still Dawn): both ways to take it (Cici, 2026-11-17), the
+        /// grip with its finger as every hint names a button (its first time in the night); the trigger as the Stars line says it.
+        /// Three rows: the hint's plate is no wider than the box (SN_UICheck).</summary>
+        public const string PageTitle = "Take his page", TakeThePage = "Point at his page and pull the trigger,\nor reach out and squeeze the grip\nwith your middle finger.";
 
         [Header("Set by SN_Bootstrap")]
         public SN_Layout layout;
@@ -84,6 +86,7 @@ namespace InnerFrame.StarryNight
         public Transform vincent;
         [Tooltip("Vincent v2's body (look, point, talk, stand): stepped here, after the voice and the box.")]
         public SN_VincentDriver vincentDriver;
+        [Tooltip("The way on after Done (set by SN_Bootstrap); stepped here so the tests' clock drives it too.")] public SN_Exit exit;
         public SN_Voice voice;
         [Tooltip("The shared dialogue box and hint (VG_DialogueUI, the StarryNight settings); stepped here, not by itself.")]
         public VG_DialogueUI ui;
@@ -102,9 +105,14 @@ namespace InnerFrame.StarryNight
         public int WindPassed => windPassed;
         public bool PageShown => pageShown;
         public bool LetterFound => letterFound;
+        /// <summary>The page is there and not yet taken, here or by another player: it is outlined and can be taken.</summary>
+        public bool PageOpen => State == SN_State.Dawn && pageShown && page != null && !page.IsHeld && !page.Following && !room.pageTaken;
+        /// <summary>The page's outline (made when it first appears).</summary>
+        public SN_PageOutline PageOutline => pageOutline;
 
-        int namedProgress, windPassed, aimHand = -1, lanternTargets;
-        BoxCollider lanternBox;
+        int namedProgress, windPassed, aimHand = -1, lanternTargets, pageTargets;
+        BoxCollider lanternBox, pageBox;
+        SN_PageOutline pageOutline;
         bool lanternDown, letterFound, pageShown, waitingForWind, morningStarArmed;
         float sketchTimer, idle, dawnDelay = -1f, dawnT = -1f, guideAlpha, swirlShown;
         float paint, paintFrom, paintTo, paintT = -1f, paintSeconds;
@@ -166,6 +174,7 @@ namespace InnerFrame.StarryNight
             if (voice != null && voice.ConversationPaused)
             {
                 if (ui != null) ui.Step(dt);
+                if (exit != null) exit.Hold();   // his walk waits too
                 if (vincentDriver != null) vincentDriver.Step(dt, Head);
                 return;
             }
@@ -203,6 +212,23 @@ namespace InnerFrame.StarryNight
             lantern.Step(dt);
             if (lantern.IsDown && !lanternDown) OnLanternDown();
 
+            // the page (Cici, 2026-11-17): outlined until it is taken, brighter while a ray or a hand is on it (this scene's
+            // aim, as for the lantern, or XRI's hover); the trigger of a hand on it takes it into that hand; XRI's grip takes
+            // it too (SN_Grabbable: its XRGrabInteractable)
+            bool pageOpen = PageOpen;
+            int pTargets = 0;
+            if (pageOpen && !menu) for (int h = 0; h < Input.HandCount && h < 31; h++) if (PageTargeted(h)) pTargets |= 1 << h;
+            for (int h = 0; h < Input.HandCount && h < 31; h++)
+                if ((pTargets & (1 << h)) != 0 && (pageTargets & (1 << h)) == 0) Input.Haptic(h, layout.lanternHapticAmplitude, layout.lanternHapticSeconds);
+            pageTargets = pTargets;
+            if (down >= 0 && !triggerUsed && pageOpen && (pTargets & (1 << down)) != 0)
+            {
+                TakePage(down, head);
+                triggerUsed = true;
+                pageOpen = false;
+            }
+            if (pageOutline != null) pageOutline.Show(pageOpen, pTargets != 0 || page.IsHovered);
+
             // walking up, sitting down
             // within arriveDistance of where he stood until step 3 (vincentStand): seated on the rock, he greets you at the same place
             if (State == SN_State.Arrive && Flat(hp - layout.vincentStand) <= layout.arriveDistance) { voice.Say("L01"); Enter(SN_State.Sit); }
@@ -210,7 +236,7 @@ namespace InnerFrame.StarryNight
 
             // the stars: any visible star can be woken; the named ones move the story on only in order
             UpdateHover(menu);
-            if (down >= 0 && !triggerUsed && Input.TryGetAim(down, out var aim)) TryWake(aim);
+            if (down >= 0 && !triggerUsed && !(exit != null && exit.CardOpen) && Input.TryGetAim(down, out var aim)) TryWake(aim);   // the card's trigger is the card's
 
             StepPaint(dt);
             if (waitingForWind && paintT < 0f)
@@ -248,7 +274,13 @@ namespace InnerFrame.StarryNight
                 if (!pageShown && dawnT >= layout.dawnSeconds)
                 {
                     pageShown = true;
-                    if (page != null) page.gameObject.SetActive(true);
+                    if (page != null)
+                    {
+                        page.gameObject.SetActive(true);
+                        if (!room.pageTaken && !page.IsHeld && !page.Following) page.Float(PageHeldOut(head, layout));   // in view, within reach
+                        if (pageOutline == null) pageOutline = SN_PageOutline.Make(page.transform);
+                        pageOutline.Show(PageOpen, false);
+                    }
                     voice.Say("L09");
                     morningStarArmed = true;
                     if (ui != null) ui.SetHint(PageTitle, TakeThePage);
@@ -282,6 +314,7 @@ namespace InnerFrame.StarryNight
             if (beam != null) beam.Step(dt);
             voice.Step(dt);
             if (ui != null) ui.Step(dt);   // pages and fades (its autoStep is off: the game's clock drives it)
+            if (exit != null) exit.Step(dt);   // after Done: his question, the card, his walk
             if (vincentDriver != null) vincentDriver.Step(dt, head);   // his body follows the words and the story
         }
 
@@ -323,16 +356,60 @@ namespace InnerFrame.StarryNight
         /// lanternTouchReach of its box (measured to the box's surface).</summary>
         public bool LanternTargeted(int hand)
         {
-            if (lanternGrab == null || !Input.TryGetAim(hand, out var aim)) return false;
+            if (lanternGrab == null) return false;
             if (lanternBox == null) lanternBox = lanternGrab.GetComponent<BoxCollider>();
-            if (lanternBox == null) return false;
-            var t = lanternBox.transform;
-            Vector3 centre = t.TransformPoint(lanternBox.center);
-            Vector3 local = t.InverseTransformPoint(aim.origin) - lanternBox.center, half = lanternBox.size * 0.5f;
+            return BoxTargeted(lanternBox, hand);
+        }
+
+        /// <summary>The page, by the lantern's rule (BoxTargeted), the hand on it within pageTouchReach: held out by the
+        /// hand, the lantern's 0.2 m would count a resting hand as on it.</summary>
+        public bool PageTargeted(int hand)
+        {
+            if (page == null) return false;
+            if (pageBox == null) pageBox = page.GetComponent<BoxCollider>();
+            return BoxTargeted(pageBox, hand, layout.pageTouchReach);
+        }
+
+        /// <summary>This hand's ray within lanternAimDeg of the box's centre and within lanternAimReach of it, or the hand
+        /// within `touchReach` (default lanternTouchReach) of the box (measured to its surface).</summary>
+        bool BoxTargeted(BoxCollider box, int hand, float touchReach = -1f)
+        {
+            if (touchReach < 0f) touchReach = layout.lanternTouchReach;
+            if (box == null || !Input.TryGetAim(hand, out var aim)) return false;
+            var t = box.transform;
+            Vector3 centre = t.TransformPoint(box.center);
+            Vector3 local = t.InverseTransformPoint(aim.origin) - box.center, half = box.size * 0.5f;
             Vector3 nearest = new Vector3(Mathf.Clamp(local.x, -half.x, half.x), Mathf.Clamp(local.y, -half.y, half.y), Mathf.Clamp(local.z, -half.z, half.z));
-            if (Vector3.Distance(t.TransformPoint(lanternBox.center + nearest), aim.origin) <= layout.lanternTouchReach) return true;
+            if (Vector3.Distance(t.TransformPoint(box.center + nearest), aim.origin) <= touchReach) return true;
             Vector3 to = centre - aim.origin;
             return to.magnitude <= layout.lanternAimReach && Vector3.Angle(aim.direction, to) <= layout.lanternAimDeg;
+        }
+
+        /// <summary>The trigger took the page: into that hand (its controller), under its ray; with no hand (the Editor's mouse,
+        /// a scripted check) the head holds it, as the Editor fallback does.</summary>
+        void TakePage(int hand, Transform head)
+        {
+            var holder = Input.Hand(hand);
+            if (holder != null) page.HoldFallback(holder, layout.pageInHand, Quaternion.Euler(layout.pageInHandTilt, 0f, 0f), lockGrab: true);
+            else page.HoldFallback(head);
+        }
+
+        /// <summary>Where the page is held out when it appears (Cici, 2026-11-17): layout.pageReach from the eye, pageBelowGaze
+        /// under and pageRightOfGaze right of the gaze as it is then (its pitch clamped to pageGazeClamp), never lower than
+        /// 0.15 m over the ground; its drawing (its +y) turned to the eye, its top (+z) up.</summary>
+        public static Pose PageHeldOut(Transform head, SN_Layout l)
+        {
+            var f = head.forward;
+            float yaw = Mathf.Atan2(f.x, f.z) * Mathf.Rad2Deg;
+            float pitch = Mathf.Clamp(Mathf.Asin(Mathf.Clamp(f.y, -1f, 1f)) * Mathf.Rad2Deg, l.pageGazeClamp.x, l.pageGazeClamp.y);
+            var dir = Quaternion.Euler(0f, yaw + l.pageRightOfGaze, 0f) * Quaternion.Euler(l.pageBelowGaze - pitch, 0f, 0f) * Vector3.forward;
+            var at = head.position + dir * l.pageReach;
+            float floor = l.OnGround(new Vector3(at.x, 0f, at.z)).y + 0.15f;
+            if (at.y < floor) at.y = floor;
+            var toEye = (head.position - at).normalized;
+            var up = Vector3.ProjectOnPlane(Vector3.up, toEye);
+            if (up.sqrMagnitude < 1e-6f) up = Vector3.ProjectOnPlane(head.up, toEye);
+            return new Pose(at, Quaternion.LookRotation(up.normalized, toEye));
         }
 
         void TryWake(Ray aim)
@@ -431,7 +508,7 @@ namespace InnerFrame.StarryNight
         void StepBeam(Transform head, bool menu)
         {
             if (beam == null) return;
-            bool aiming = !menu && (State == SN_State.Stars || State == SN_State.Wind);
+            bool aiming = !menu && (State == SN_State.Stars || State == SN_State.Wind || PageOpen || (exit != null && exit.CardOpen));
             int h = aimHand >= 0 ? aimHand : Input.HandCount - 1;
             if (!aiming || !Input.TryGetAim(h, out var aim)) { beam.Hide(); return; }
             Vector3 from = aim.origin, dir = aim.direction;

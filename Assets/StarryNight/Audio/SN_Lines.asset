@@ -43,3 +43,6 @@ MonoBehaviour:
   - id: L10
     text: You found my sketch. The hills are right. The sky is not, yet.
     clip: {fileID: 8300000, guid: 3ee5b270a31254b8e8b0ada896b2597c, type: 3}
+  - id: L11
+    text: The almond trees are waking down the hill. Will you come with me?
+    clip: {fileID: 8300000, guid: 5cfe704fbcaf34be985936d3c087f290, type: 3}

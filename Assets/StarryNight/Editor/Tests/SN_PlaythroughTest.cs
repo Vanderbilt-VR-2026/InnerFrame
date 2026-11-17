@@ -166,9 +166,32 @@ namespace InnerFrame.StarryNight.EditorTools
             Step(w, L.dawnSeconds + 0.2f);
             Check(w.game.PageShown && w.game.page.gameObject.activeSelf && w.game.sky.Dawn > 0.99f, "_Dawn reaches 1 -> the page appears (L09)");
             Check(Star(w, "N3").IsVisible && !Star(w, "S8").IsVisible, "the stars faded, the morning star still there");
+            // the page held out (Cici, 2026-11-17): in view and within reach of the head as it was, outlined until taken
+            PageInReach(w, w.head, "where the head was looking (the wind's dots)", w.game.page.transform);
+            Check(w.game.PageOutline != null && w.game.PageOutline.Shown && !w.game.PageOutline.IsBright, "the page outlined as it appears, not yet bright (no ray or hand on it)");
+            foreach (var (name, gaze) in Gazes(w))
+            {
+                var probe = new GameObject("GazeProbe").transform;
+                probe.SetPositionAndRotation(w.L.SeatEye, Quaternion.LookRotation(gaze));
+                var pose = SN_Game.PageHeldOut(probe, w.L);
+                var copy = new GameObject("PageAt").transform; copy.SetPositionAndRotation(pose.position, pose.rotation);
+                PageInReach(w, probe, name, copy);
+                var old = w.L.page;   // before 2026-11-17 the page appeared on the rock, here
+                W($"    (before: on the rock at {old.x:F2}, {old.y:F2}, {old.z:F2}: {Vector3.Angle(gaze, old - probe.position):F0} deg off this gaze, {Vector3.Distance(probe.position, old):F2} m from the eye)");
+                UnityEngine.Object.DestroyImmediate(copy.gameObject); UnityEngine.Object.DestroyImmediate(probe.gameObject);
+            }
             Step(w, 6f);
-            LookAt(w, w.game.page.transform.position);
-            w.game.page.HoldFallback(w.head);
+            Vector3 pageAt = w.game.page.transform.position, away = w.head.position - w.head.right * 0.3f - w.head.up * 0.3f;
+            w.input.aim = new Ray(away, -w.head.right);   // the other hand, pointing away to the left
+            Trigger(w);
+            Check(w.game.State == SN_State.Dawn && !w.game.page.IsHeld && w.game.PageOutline.Shown, "control: the trigger pulled pointing away from it, the hand 0.3 m left -> not taken, still outlined");
+            Vector3 hand = Hand(w);
+            int buzzes = w.input.haptics;
+            w.input.aim = new Ray(hand, (pageAt - hand).normalized);
+            Tick(w); Tick(w);
+            Check(w.game.PageOutline.IsBright && w.game.PageTargeted(0) && w.input.haptics - buzzes == 1, $"the ray on it -> its outline brighter, one buzz ({w.input.haptics - buzzes})");
+            Trigger(w);
+            Check(w.game.page.IsHeld && w.game.State == SN_State.Done && !w.game.PageOutline.Shown, "the trigger pulled with the ray on it -> taken (held: the scripted input has no hand, so the head holds it), Done, its outline off");
             Step(w, 0.1f);
             Check(w.game.State == SN_State.Done, "the page taken -> Done");
             Step(w, L.morningStarFadeSeconds + 2f);
@@ -416,6 +439,34 @@ namespace InnerFrame.StarryNight.EditorTools
         }
 
         static void LookAt(World w, Vector3 p) => w.head.rotation = Quaternion.LookRotation(p - w.head.position);
+
+        /// <summary>Where a player may be looking when the page appears, from the seat: the morning star (the sky pales), Vincent's
+        /// head (he says L09), straight out over the village, the ground before the seat.</summary>
+        static IEnumerable<(string name, Vector3 gaze)> Gazes(World w)
+        {
+            var eye = w.L.SeatEye;
+            var star = w.L.MorningStarYawPitch();
+            yield return ("the morning star", Quaternion.Euler(-star.y, star.x, 0f) * Vector3.forward);
+            var anim = w.game.vincent != null ? w.game.vincent.GetComponentInChildren<Animator>() : null;
+            var headBone = anim != null && anim.isHuman ? anim.GetBoneTransform(HumanBodyBones.Head) : null;
+            if (headBone != null) yield return ("Vincent's head", (headBone.position - eye).normalized);
+            yield return ("level, over the village", Quaternion.Euler(0f, star.x, 0f) * Vector3.forward);
+            yield return ("50 deg down", Quaternion.Euler(50f, star.x, 0f) * Vector3.forward);
+        }
+
+        /// <summary>In view: its centre within 45 deg of the gaze (a Quest 3 sees 110 x 96 deg); within reach: within 0.5 m of
+        /// the eye and of the right shoulder (the 0.8 rig: 0.16 m under the eye, 0.14 m right of it), as the 0.8 rig's arm
+        /// reaches about 0.52 m.</summary>
+        static void PageInReach(World w, Transform head, string name, Transform page)
+        {
+            var box = w.game.page.GetComponent<BoxCollider>();
+            Vector3 centre = page.TransformPoint(box.center), eye = head.position;
+            Vector3 shoulder = eye - Vector3.up * 0.16f + Vector3.ProjectOnPlane(head.right, Vector3.up).normalized * 0.14f;
+            float off = Vector3.Angle(head.forward, centre - eye), dist = Vector3.Distance(eye, centre), reach = Vector3.Distance(shoulder, centre);
+            float facing = Vector3.Angle(page.up, eye - centre);
+            Check(off <= 45f && dist <= 0.5f && reach <= 0.5f && facing <= 5f && centre.y >= w.L.OnGround(new Vector3(centre.x, 0f, centre.z)).y + 0.15f,
+                $"the page held out, gaze {name} (pitch {Mathf.Asin(Mathf.Clamp(head.forward.y, -1f, 1f)) * Mathf.Rad2Deg:F0} deg): {off:F0} deg off the gaze, {dist:F2} m from the eye, {reach:F2} m from the right shoulder, its drawing {facing:F0} deg off facing the eye, {centre.y:F2} m up");
+        }
 
         static Vector3 Hand(World w) => w.head.position + w.head.right * 0.18f - w.head.up * 0.3f + w.head.forward * 0.2f;
 

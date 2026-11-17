@@ -34,8 +34,8 @@ namespace InnerFrame.StarryNight
     {
         /// <summary>2: the art pass's values; 3: the dialogue box moved to VG_DialogueUI (uiBelowGaze went to its
         /// settings); 4: the look pass; 5: step 3, Vincent v2 on the rock; 6: the rock's keep-off rim; 7: the lantern's home,
-        /// the blanket; 8: the two cards gone. An asset below it is brought up to it once by SN_Setup.</summary>
-        public const int CurrentVersion = 8;
+        /// the blanket; 8: the two cards gone; 9: the exit (Vincent asks, the card, the walk onto the trail). An asset below it is brought up to it once by SN_Setup.</summary>
+        public const int CurrentVersion = 9;
 
         [Tooltip("0: the blockout's values. SN_Setup brings an older asset up to CurrentVersion once, step by step.")]
         public int version;
@@ -79,6 +79,14 @@ namespace InnerFrame.StarryNight
         public Vector3 page = new Vector3(0.24f, 0.355f, -0.20f);
         public Vector3 sketchbookSize = new Vector3(0.30f, 0.02f, 0.22f);
         public Vector2 pageSize = new Vector2(0.21f, 0.297f);
+        [Tooltip("Cici, 2026-11-17: when the page appears it is held out in view and within reach of the player's head as it is then: this far from the eye (world metres; the 0.8 rig's arm reaches about 0.5 m), this many degrees under and right of the gaze (its pitch clamped to pageGazeClamp), its near edge right of the dialogue box and hint (from 13 deg under the gaze down, 20 deg either side), its drawing turned to the eye.")]
+        public float pageReach = 0.45f, pageBelowGaze = 20f, pageRightOfGaze = 36f;
+        public Vector2 pageGazeClamp = new Vector2(-45f, 30f);
+        [Tooltip("The page taken with the trigger: where it sits in that controller's space (world metres; below the controller's ray) and its tilt (its drawing toward the eye).")]
+        public Vector3 pageInHand = new Vector3(0f, -0.11f, 0.06f);
+        public float pageInHandTilt = -45f;
+        [Tooltip("The hand on the page (its trigger takes it, its outline brightens): within this of it (the lantern's ray rule otherwise).")]
+        public float pageTouchReach = 0.08f;
 
         [Header("Cypress")]
         public Vector3 cypressBase = new Vector3(-1.9f, 0f, 2.4f);   // y above the ground
@@ -313,6 +321,26 @@ namespace InnerFrame.StarryNight
         public float sketchMaxDistance = 0.6f, sketchMaxViewAngle = 25f, sketchValleyYaw = 60f, sketchHoldSeconds = 1.5f;
         public float editorGrabReach = 1.5f;
         public float beamLength = 45f;
+
+        [Header("The exit (2026-11-17): Vincent asks, a card offers Follow or Back; on Follow he walks the dirt trail over the rim into the opening's gold (SN_Exit)")]
+        [Tooltip("His walk (x, z), from where he stands since dawn (about -0.17, 0.49, on the valley side of his rock): two points round the rock's east side (between the rock and the bushes, 0.39 m from the lantern's post); then the dirt trail's centre line (SN_MeshGen.PathLine, from pathPoints: every third of its points) from beside the seat to its end at the player start; then on in the trail's last direction, over the rim (r 5.5) and the invisible wall (r 5.65) into the mist. Measured 2026-11-17 against the rock, the post, the bushes' vertices and the colliders.")]
+        public Vector2[] exitPath =
+        {
+            new Vector2(1.0f, 0.62f), new Vector2(1.18f, -0.42f),
+            new Vector2(1.056f, -1.217f), new Vector2(1.219f, -1.328f), new Vector2(1.386f, -1.455f), new Vector2(1.559f, -1.601f), new Vector2(1.744f, -1.764f),
+            new Vector2(1.929f, -1.945f), new Vector2(2.100f, -2.150f), new Vector2(2.265f, -2.382f), new Vector2(2.420f, -2.637f), new Vector2(2.530f, -2.908f),
+            new Vector2(2.556f, -3.206f), new Vector2(2.503f, -3.553f), new Vector2(2.430f, -3.862f), new Vector2(2.400f, -4.000f),
+            new Vector2(2.191f, -5.080f), new Vector2(1.830f, -6.946f),
+        };
+        [Tooltip("exitPath's points on the trail: from this one to exitTrailTo (the ones before take him round his rock to it, the ones after go on past its end).")]
+        public int exitTrailFrom = 2, exitTrailTo = 15;
+        [Tooltip("From Done to his question (L11).")] public float exitDelaySeconds = 3f;
+        [Tooltip("His walking speed: the Walking clip's own (exitWalkStride), so its state plays at speed 1.")] public float exitWalkSpeed = 1.5f;
+        [Tooltip("The Walking clip's own ground speed (m/s at speed 1): how fast its planted foot travels back under him, measured by SN_ExitCheck (1.50; the hips' travel in Mixamo's file gives 1.54). The clip's averageSpeed in Unity (1.68) is too high: his feet slid.")]
+        public float exitWalkStride = 1.5f;
+        [Tooltip("Past the rim the ground falls at 33-60 deg; he goes down no steeper than this (in the mist, over the slope).")] public float exitMaxDescentDeg = 17f;
+        [Tooltip("The gold rises this long after he set off: he is at the rim then.")] public float exitGoldAfterSeconds = 5f;
+        public float exitTurnDegPerSecond = 240f;
 
         [Header("Light")]
         public Color ambient = new Color32(0x28, 0x33, 0x55, 0xFF);

@@ -43,6 +43,21 @@ namespace InnerFrame.StarryNight
 
         public bool IsHeld => fallbackHeld || (Grab != null && Grab.isSelected);
         public bool HeldByFallback => fallbackHeld;
+        /// <summary>XRI's hand or ray is on it (its near or far hover).</summary>
+        public bool IsHovered => Grab != null && Grab.isHovered;
+        /// <summary>Hanging where Float put it, not yet taken.</summary>
+        public bool Floating => floating;
+        bool floating;
+
+        /// <summary>Hangs it at `pose`, kinematic, until it is first taken (the page, held out to the player at dawn); let go
+        /// after that, it falls.</summary>
+        public void Float(Pose pose)
+        {
+            floating = true;
+            Body.isKinematic = true;
+            Body.useGravity = false;
+            Place(pose.position, pose.rotation);
+        }
 
         Collider[] Own => own ??= GetComponentsInChildren<Collider>(true);
 
@@ -120,6 +135,7 @@ namespace InnerFrame.StarryNight
         {
             bool held = IsHeld;
             if (hasHome && wasHeld && !held && !following) StartReturn();
+            if (floating && wasHeld && !held && !following) { floating = false; Body.isKinematic = false; Body.useGravity = true; Body.WakeUp(); }   // taken, then let go: it falls
             wasHeld = held;
             bool trigger = held || following || returning;
             if (trigger != asTrigger)
@@ -148,15 +164,22 @@ namespace InnerFrame.StarryNight
             }
         }
 
-        public void HoldFallback(Transform head)
+        public void HoldFallback(Transform head) => HoldFallback(head, fallbackHoldOffset, Quaternion.Euler(-20f, 0f, 0f));
+
+        /// <summary>Held by `holder` (the head in the Editor fallback; a controller when its trigger takes the page) at `at`
+        /// in its space (world metres), turned `turn`. `lockGrab`: XRI's grip can't take it from that hand meanwhile.</summary>
+        public void HoldFallback(Transform holder, Vector3 at, Quaternion turn, bool lockGrab = false)
         {
             if (fallbackHeld || following) return;   // another player has it
             homeParent = transform.parent;
+            floating = false;
             Body.isKinematic = true;
-            transform.SetParent(head, true);   // keeps its world size (the rig is scaled 0.8)
-            transform.SetPositionAndRotation(head.position + head.rotation * fallbackHoldOffset, head.rotation * Quaternion.Euler(-20f, 0f, 0f));
+            transform.SetParent(holder, true);   // keeps its world size (the rig is scaled 0.8)
+            transform.SetPositionAndRotation(holder.position + holder.rotation * at, holder.rotation * turn);
             fallbackHeld = true;
+            if (lockGrab && Grab != null && Grab.enabled) { Grab.enabled = false; grabLocked = true; }
         }
+        bool grabLocked;
 
         public void ReleaseFallback()
         {
@@ -165,6 +188,8 @@ namespace InnerFrame.StarryNight
             Body.isKinematic = false;
             Body.useGravity = true;
             fallbackHeld = false;
+            if (grabLocked && Grab != null) Grab.enabled = true;
+            grabLocked = false;
         }
 
         // ---- shared with the room (StarryNightLink) ----

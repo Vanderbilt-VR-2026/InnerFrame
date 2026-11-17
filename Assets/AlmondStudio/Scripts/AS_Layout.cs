@@ -304,6 +304,17 @@ namespace InnerFrame.AlmondStudio
             "Vincent painted these branches of white almond blossom against a blue sky as a gift for his newborn nephew. He meant it to hang in Theo and Jo's bedroom; they gave it a place of honour above the piano in their Paris home.\n\nThe boy, Vincent Willem van Gogh, grew up to found the Van Gogh Museum in Amsterdam, where Almond Blossom hangs today.";
         public string epilogueCredit = "Vincent van Gogh, Almond Blossom, 1890. Van Gogh Museum, Amsterdam (Vincent van Gogh Foundation)";
 
+        [Header("Leaving (2026-11-17): every way out ends on the window in full bloom, fading to a canvas's cream")]
+        [Tooltip("After the epilogue card appears, you leave by yourself after this many seconds...")] public float leaveAfterEpilogue = 20f;
+        [Tooltip("...or with the trigger, once the card has been up this long.")] public float leaveTriggerAfter = 3f;
+        [Tooltip("The last look: your eyes over this spot (x, z; paintEye's, where the whole tree fits the window), facing leaveYaw.")]
+        public Vector3 leaveEye = new Vector3(0f, 0f, 3f);
+        public float leaveYaw = 0f;
+        [Tooltip("The quick dip that moves you there, seconds each way.")] public float leaveDipSeconds = 0.3f;
+        [Tooltip("Looking at the tree before the colour goes, seconds (the bloom's wave, if it wasn't done, comes first).")] public float leaveHoldSeconds = 2f;
+        [Tooltip("The colour drains and the cream comes up over this many seconds; the Gallery comes out of the same cream.")] public float leaveFadeSeconds = 4f;
+        [Tooltip("A primed canvas's white: the colour the studio fades to and the Gallery's blank canvas.")] public Color leaveCream = new Color(0.96f, 0.94f, 0.89f);
+
         public float Springing => windowTop - windowWidth / 2f;
         public Vector3 WindowCentreInner => new Vector3(0f, (windowBottom + windowTop) * 0.5f, roomDepth);
         public Vector3 WindowCentreOuter => new Vector3(0f, (windowBottom + windowTop) * 0.5f, roomDepth + wallThickness);

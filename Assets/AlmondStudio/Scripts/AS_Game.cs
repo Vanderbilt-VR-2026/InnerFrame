@@ -153,6 +153,7 @@ namespace InnerFrame.AlmondStudio
 
         void Update()
         {
+            if (leaving) { guides.HideBeam(); return; }   // the last look at the window: the story has ended
             bool held = Input != null && Input.TriggerHeld;   // the trigger's press, once per frame
             triggerPressed = held && !triggerWas;
             triggerWas = held;
@@ -383,8 +384,17 @@ namespace InnerFrame.AlmondStudio
         }
 
         void LateUpdate() => FollowHand();
-        void OnEnable() => Application.onBeforeRender += FollowHand;   // the controller's newest pose, as XRI does
-        void OnDisable() => Application.onBeforeRender -= FollowHand;
+        void OnEnable()
+        {
+            Application.onBeforeRender += FollowHand;   // the controller's newest pose, as XRI does
+            HookLeaving();
+        }
+
+        void OnDisable()
+        {
+            Application.onBeforeRender -= FollowHand;
+            UnhookLeaving();
+        }
 
         /// <summary>The trigger's press (not hold): true on the frame it goes down.</summary>
         bool triggerPressed;
@@ -467,13 +477,160 @@ namespace InnerFrame.AlmondStudio
                                Vector3.Angle(cam.transform.forward, endPainting.transform.position - cam.transform.position) < layout.endLookDegrees;
                 if ((looking && t > layout.endPaintingSeconds) || t > layout.endEpilogueWait || endPainting == null)
                 {
-                    endPhase = 2;
+                    endPhase = 2; endPhaseAt = stateTime;
                     Hint(null);
                     if (ui != null) ui.Clear();
                     if (epilogue != null && cam != null) epilogue.Show(cam.transform, layout.epilogueTitle, layout.epilogueText, layout.epilogueCredit);
                     Input?.Haptic(0.3f, 0.15f);
                 }
             }
+            else if (endPhase == 2)
+            {
+                // the card is read: you leave by yourself after a while, or sooner with the trigger
+                float t = stateTime - endPhaseAt;
+                if (t > layout.leaveAfterEpilogue || (t > layout.leaveTriggerAfter && TriggerPressed()))
+                {
+                    endPhase = 3;
+                    var fader = SceneFader.Instance;
+                    if (!fader.IsTransitioning) fader.FadeToScene(PaintingNames.Gallery, 1f);   // LeaveHook runs first
+                }
+            }
+        }
+
+        // ------------------------------------------------------------------------------------------------ leaving
+        // Every way out (the end of the story, or Back to Gallery from the menu at any moment) ends the same way (Serena,
+        // 2026-11-17): a quick dip, and you stand where the whole tree fits the window; the window opens and the tree is
+        // in full bloom (if you hadn't finished, it blooms now); a moment's look; then the colour drains and a canvas's
+        // cream comes up (SceneFader.NextPlainColour), and the Gallery comes out of the same cream in front of the blank
+        // frame, which then shows Almond Blossom (InnerFrame.Gallery.GalleryPainting.blankUntilPainted).
+
+        bool leaving;
+        Func<string, IEnumerator> leaveHook, leaveBefore;
+        UnityEngine.Rendering.VolumeProfile drainProfile;
+
+        /// <summary>True from the moment the last look at the window begins (for the checks).</summary>
+        public bool Leaving => leaving;
+
+        void HookLeaving()
+        {
+            if (leaveHook == null) leaveHook = LeaveHook;
+            if (SceneFader.BeforeSceneChange == leaveHook) return;
+            leaveBefore = SceneFader.BeforeSceneChange;
+            SceneFader.BeforeSceneChange = leaveHook;
+        }
+
+        void UnhookLeaving()
+        {
+            if (leaveHook != null && SceneFader.BeforeSceneChange == leaveHook) SceneFader.BeforeSceneChange = leaveBefore;
+            leaveBefore = null;
+        }
+
+        /// <summary>SceneFader.BeforeSceneChange while the studio is open: whatever was hooked before, then the ending.</summary>
+        IEnumerator LeaveHook(string to)
+        {
+            if (leaveBefore != null) yield return leaveBefore(to);
+            if (this != null && isActiveAndEnabled) yield return Leave(to);
+        }
+
+        IEnumerator Leave(string to)
+        {
+            if (leaving) yield break;
+            leaving = true;
+            Active = -1;
+            ResetLines();
+            if (ui != null) ui.Clear();
+            Hint(null);
+            if (letterView != null) letterView.Hide(atOnce: true);
+            if (epilogue != null) epilogue.Hide();
+            guides.Show(false);
+            guides.HideBeam();
+            if (PlayerMenu.MenuOpen) PlayerMenu.Instance.Toggle();   // its Back started this: out of the way of the last look
+
+            // a quick dip; under it you are moved to the window, which opens, and the tree comes into full bloom
+            var dip = MakeDip(out var dipMat);
+            yield return DipTo(dipMat, 0f, 1f, layout.leaveDipSeconds);
+            var eye = transform.TransformPoint(layout.leaveEye);
+            float yaw = transform.eulerAngles.y + layout.leaveYaw;
+            NetworkSession.PutPlayer(eye, yaw);
+            if (window != null && !window.IsOpening) window.Open();
+            bool wasInBloom = blossoms == null || blossoms.AllOpen;
+            if (blossoms != null) blossoms.OpenAllInAWave(layout.blossomWaveSeconds);
+            else if (Branches != null) { foreach (var b in Branches) b.progress = 1f; tree?.SetProgress(Branches); }
+            yield return null;
+            NetworkSession.PutPlayer(eye, yaw);   // again, with the headset's newest pose
+            yield return DipTo(dipMat, 1f, 0f, layout.leaveDipSeconds);
+            if (dip != null) Destroy(dip);
+            if (dipMat != null) Destroy(dipMat);
+
+            // the look: the wave first if the tree wasn't in bloom yet
+            float hold = layout.leaveHoldSeconds + (wasInBloom ? 0f : layout.blossomWaveSeconds);
+            for (float t = 0f; t < hold; t += Time.unscaledDeltaTime) yield return null;
+
+            // it's painted: the Gallery's blank canvas shows it from now on, for good
+            PlayerPrefs.SetInt(PaintingNames.AlmondPaintedPref, 1);
+            PlayerPrefs.Save();
+            PaintingNames.LeftAlmondStudio = to == PaintingNames.Gallery;
+            // the fader's own fade-out is the cream; the colour drains under it at the same pace
+            var fader = SceneFader.Instance;
+            fader.NextPlainColour = layout.leaveCream;
+            fader.NextFadeOutSeconds = layout.leaveFadeSeconds;
+            StartCoroutine(Drain(layout.leaveFadeSeconds));
+        }
+
+        /// <summary>A black sphere round the eyes for the dip (SceneFader's own is busy with this transition).</summary>
+        GameObject MakeDip(out Material mat)
+        {
+            mat = null;
+            var cam = Camera.main;
+            if (cam == null) return null;
+            var s = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            Destroy(s.GetComponent<Collider>());
+            s.name = "AS Leave Dip";
+            s.transform.SetParent(cam.transform, false);
+            float d = Mathf.Max(cam.nearClipPlane * 3f, 0.1f) * 2f;
+            s.transform.localScale = new Vector3(-d, d, d);
+            mat = new Material(Shader.Find("Sprites/Default")) { renderQueue = 5000, color = new Color(0f, 0f, 0f, 0f) };
+            var r = s.GetComponent<Renderer>();
+            r.sharedMaterial = mat;
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            r.receiveShadows = false;
+            return s;
+        }
+
+        static IEnumerator DipTo(Material mat, float from, float to, float seconds)
+        {
+            if (mat == null) yield break;
+            for (float t = 0f; t < seconds; t += Time.unscaledDeltaTime)
+            {
+                mat.color = new Color(0f, 0f, 0f, Mathf.Lerp(from, to, t / seconds));
+                yield return null;
+            }
+            mat.color = new Color(0f, 0f, 0f, to);
+        }
+
+        /// <summary>The colour drains out of the studio while the cream comes up (a global Volume's saturation, -100 at
+        /// 60% of the way); near the end, under the cream, it comes back, so the last frame is the cream itself and not
+        /// a grey one.</summary>
+        IEnumerator Drain(float seconds)
+        {
+            var cam = Camera.main;
+            var data = cam != null ? cam.GetComponent<UnityEngine.Rendering.Universal.UniversalAdditionalCameraData>() : null;
+            if (data != null) data.renderPostProcessing = true;
+            var go = new GameObject("AS Leave Drain");
+            var volume = go.AddComponent<UnityEngine.Rendering.Volume>();
+            volume.isGlobal = true;
+            volume.priority = 100f;
+            drainProfile = ScriptableObject.CreateInstance<UnityEngine.Rendering.VolumeProfile>();
+            volume.sharedProfile = drainProfile;
+            var colour = drainProfile.Add<UnityEngine.Rendering.Universal.ColorAdjustments>();
+            colour.saturation.overrideState = true;
+            for (float t = 0f; t < seconds; t += Time.unscaledDeltaTime)
+            {
+                float k = t / seconds;
+                colour.saturation.value = -100f * Mathf.SmoothStep(0f, 1f, k / 0.6f) * (1f - Mathf.SmoothStep(0f, 1f, (k - 0.85f) / 0.15f));
+                yield return null;
+            }
+            colour.saturation.value = 0f;
         }
 
         /// <summary>His yaw to face a point.</summary>
@@ -527,6 +684,7 @@ namespace InnerFrame.AlmondStudio
         void OnDestroy()
         {
             if (talker != null) talker.ConversationChanged -= OnConversation;
+            if (drainProfile != null) Destroy(drainProfile);
         }
 
         void OnConversation(bool active)

@@ -13,7 +13,7 @@ namespace InnerFrame.Gallery
     /// hangs beside the frame (on the side away from the wall label), parallel to the wall, its lower edge no lower than
     /// lowestEdge (clear of the wainscot's rail); farther away it floats MaxBeside in front of you, toward that place.
     /// It closes on Back, after Enter, when you walk LeaveDistance from where you opened it, or when you turn your back
-    /// on it. A painting with no scene yet shows "Coming soon" in place of Enter, and that button does nothing.
+    /// on it. A painting with no scene yet shows "Coming soon" in place of Enter (the blank frame: "Not painted yet"), and that button does nothing.
     /// </summary>
     public class GalleryPaintingMenu : MonoBehaviour
     {
@@ -49,7 +49,7 @@ namespace InnerFrame.Gallery
             title.text = painting.title;
             caption.text = painting.caption;
             bool enter = painting.CanEnter;
-            EnterButton.Set(enter ? "Enter" : "Coming soon", enter);
+            EnterButton.Set(enter ? "Enter" : painting.ClosedLabel, enter);
             openedAt = eye;
             Place(painting, eye);
             root.gameObject.SetActive(true);

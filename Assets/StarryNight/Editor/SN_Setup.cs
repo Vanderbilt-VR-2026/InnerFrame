@@ -689,6 +689,26 @@ namespace InnerFrame.StarryNight.EditorTools
             Glow("SN_Village", "SN_Dot", new Color(StarYellow.r * 1.3f, StarYellow.g * 1.2f, StarYellow.b, 1f), true);
             Glow("SN_VillageGlow", "SN_StarCore", new Color(1f, 0.74f, 0.38f, 0.55f), true);
             Glow("SN_Flame", "SN_Flame", Color.white, true);
+            PageOutlineMaterial();
+        }
+
+        /// <summary>The page's outline (SN_PageOutline loads it from Resources, 2026-11-17): URP Unlit, opaque, both sides,
+        /// the Bedroom mirror outline's chrome yellow; the outline tints it per renderer.</summary>
+        [MenuItem("Tools/InnerFrame/Starry Night/Make the page outline material")]
+        public static void PageOutlineMaterial()
+        {
+            const string path = "Assets/StarryNight/Resources/" + SN_PageOutline.MaterialName + ".mat";
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            var sh = Shader.Find("Universal Render Pipeline/Unlit");
+            if (sh == null) throw new Exception("[SN Setup] Shader Universal Render Pipeline/Unlit not found");
+            var m = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (m == null) { m = new Material(sh) { name = SN_PageOutline.MaterialName }; AssetDatabase.CreateAsset(m, path); }
+            else if (m.shader != sh) m.shader = sh;
+            m.SetColor("_BaseColor", SN_PageOutline.Chrome);
+            m.SetFloat("_Cull", (float)CullMode.Off);
+            m.doubleSidedGI = true;
+            EditorUtility.SetDirty(m);
+            AssetDatabase.SaveAssets();
         }
 
         // ---------------------------------------------------------------------------------------------- meshes

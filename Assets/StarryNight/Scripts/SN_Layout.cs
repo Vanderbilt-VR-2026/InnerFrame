@@ -79,6 +79,14 @@ namespace InnerFrame.StarryNight
         public Vector3 page = new Vector3(0.24f, 0.355f, -0.20f);
         public Vector3 sketchbookSize = new Vector3(0.30f, 0.02f, 0.22f);
         public Vector2 pageSize = new Vector2(0.21f, 0.297f);
+        [Tooltip("Cici, 2026-11-17: when the page appears it is held out in view and within reach of the player's head as it is then: this far from the eye (world metres; the 0.8 rig's arm reaches about 0.5 m), this many degrees under and right of the gaze (its pitch clamped to pageGazeClamp), its near edge right of the dialogue box and hint (from 13 deg under the gaze down, 20 deg either side), its drawing turned to the eye.")]
+        public float pageReach = 0.45f, pageBelowGaze = 20f, pageRightOfGaze = 36f;
+        public Vector2 pageGazeClamp = new Vector2(-45f, 30f);
+        [Tooltip("The page taken with the trigger: where it sits in that controller's space (world metres; below the controller's ray) and its tilt (its drawing toward the eye).")]
+        public Vector3 pageInHand = new Vector3(0f, -0.11f, 0.06f);
+        public float pageInHandTilt = -45f;
+        [Tooltip("The hand on the page (its trigger takes it, its outline brightens): within this of it (the lantern's ray rule otherwise).")]
+        public float pageTouchReach = 0.08f;
 
         [Header("Cypress")]
         public Vector3 cypressBase = new Vector3(-1.9f, 0f, 2.4f);   // y above the ground

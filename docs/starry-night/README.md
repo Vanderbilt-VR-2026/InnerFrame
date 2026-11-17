@@ -107,8 +107,8 @@ the build list now, after the existing scenes; the Gallery still starts the game
 | Lantern | points at the lantern on its post (or touches it, or holds it) and pulls the trigger: light and flame ease down over 1.5 s, the other stars fade in | L03, then L04 names N1 | Dim the lantern / Point at it, pull the trigger (index finger). |
 | Stars | points at a star and pulls the trigger (4° aim assist): it blooms. Any star can be woken; N1, N2, N3 move the story only in order | L05 names N2, L06 names N3 | Wake the stars / Point at the star he names, pull the trigger. |
 | Wind | after N3 the sky starts to paint; a dotted curve appears along the painted swirl (Cici's red line, 21 points): hold the trigger and follow it, point by point (6°) | L07, then L08 at 100 % | Trace the wind / Hold the trigger and follow the dots. |
-| Dawn | 10 s after the wind: the sky pales over 20 s, the stars fade, then a page appears on the rock | L09 | Dawn / Wait for dawn; once the page is there, Take his page / Take the page |
-| Done | takes the page; the morning star fades last | | A Night with Vincent / The night is painted |
+| Dawn | 10 s after the wind: the sky pales over 20 s, the stars fade, then his page appears held out to you, in view and within reach, outlined in chrome yellow (see "Taking his page") | L09 | Dawn / Wait for dawn; once the page is there, Take his page / Point at his page and pull the trigger, / or reach out and squeeze the grip / with your middle finger. |
+| Done | takes the page: points at it and pulls the trigger (it goes to that hand), or reaches out and squeezes the grip; the morning star fades last | | A Night with Vincent / The night is painted |
 | The exit (3 s after Done; not a state of `SN_Game`) | listens to his question, then answers on the card: point at Follow Vincent or Back to the Gallery and pull the trigger | L11 | (unchanged: A Night with Vincent / The night is painted) |
 | Sketchbook (any time after the lantern) | holds his sketchbook up against the view toward the valley for 1.5 s | L10 | (unchanged: the current state's title and line stay, and its repeat still fires) |
 
@@ -119,13 +119,35 @@ the build list now, after the existing scenes; the Gallery still starts the game
   already done (L08–L10 are never dropped).
 - Score (logged at Done): stars woken (of 12), named stars in order (of 3), wind traced, letter found.
 
+### Taking his page (Cici, 2026-11-17)
+
+Players didn't see how to take the page: it appeared on the rock 1.18 m from the seat's eye (84° off the gaze when you
+look at the morning star, 52° when you look out over the village; out of reach without getting up), the hint said only
+"Take the page", and only the grip took it (XRI's Select; the trigger on it did nothing). Now:
+- **Where:** when it appears it is held out to you where you are looking then (`SN_Game.PageHeldOut`): 0.45 m from your
+  eye, 36° right and 20° under your gaze (its pitch clamped to −45..30°), its drawing turned to you, right of the dialogue
+  box and the hint so they stay readable. Measured from the seat for four gazes (the morning star, Vincent, level, 50°
+  down): 24–41° off the gaze, within 0.45 m of the right shoulder (the 0.8 rig's arm reaches about 0.52 m). It hangs
+  there until it is taken; let go after that, it falls. Vincent's lines are unchanged.
+- **The outline** (`SN_PageOutline`): a chrome-yellow line round it, like the Bedroom mirror's, until it is taken (here or
+  by another player); brighter while a ray or a hand is on it (this scene's aim: the ray within 10° and 1.6 m, or the
+  hand within 8 cm, `pageTouchReach`; or XRI's hover), with one buzz. Its material is `Resources/SN_PageOutline.mat`
+  (Tools > InnerFrame > Starry Night > Make the page outline material; also made by the setup).
+- **Both inputs:** the trigger with the ray (or the hand) on it takes it into that hand, under the controller's ray
+  (XRI's grip can't pull it from that hand meanwhile); the grip takes it as before (XRI, near or far). The beam shows
+  while the page waits, as for the stars.
+- **The hint:** "Take his page" / "Point at his page and pull the trigger, / or reach out and squeeze the grip / with
+  your middle finger." Three rows: the hint's plate is no wider than the box. The dialogue hint has one button token,
+  a letter in a circle (`{B}`); there's none for the trigger or the grip, so like every hint here it names them in
+  words, the grip with its finger.
+
 ## Controls
 
 **Quest (either hand):** the trigger (index finger) acts (XRI's Activate, unused anywhere else in our gameplay): turn the
 lantern down (that hand's ray within 10° of it and 1.6 m, or the hand within 0.2 m of it, or the lantern held), wake a
-star, hold to trace the wind. The grip (middle finger) picks up (the lantern, optional; the sketchbook; the page); let
-go, the lantern glides back to its hook in 0.4 s. A thin beam shows where you
-point while there are stars to wake or wind to trace (XRI's own rays stop at 2 m). Thumbsticks: the usual move, turn
+star, hold to trace the wind, take his page (the ray within 10° of it, or the hand on it). The grip (middle finger)
+picks up (the lantern, optional; the sketchbook; the page); let go, the lantern glides back to its hook in 0.4 s. A thin
+beam shows where you point while there are stars to wake, wind to trace or the page to take (XRI's own rays stop at 2 m). Thumbsticks: the usual move, turn
 and teleport (the hilltop is a teleport area out to 5.5 m; low invisible walls stop you walking off).
 While a menu is open (the player menu: the left Menu button, or Done's way back), the trigger is the menu's: the night
 takes no input (no lantern, no star, no wind; the beam and the stars' glow step aside), 2026-11-12 (`SN_Game.MenuOpen`).
@@ -422,8 +444,9 @@ Install the APK (ask Cici), sit on the floor beside the rock when the hint says 
    top edge), 1.6 m away, and moves only once you look more than 20° away: does it follow comfortably, and does it ever
    cover the village or the swirl you're tracing?
 2. **Aiming:** the aim assist is 4°. Can you wake each star he names on the first or second try? Too generous?
-3. **Reach from the seat:** can you take the page (0.73 m from the seat) and the sketchbook (0.78 m, at the rock's right
-   end) without getting up?
+3. **Reach from the seat:** can you take the sketchbook (0.78 m, at the rock's right end) without getting up? And his
+   page, held out to you at dawn: do you notice it, and can you take it both ways (point and pull the trigger; reach out
+   and squeeze the grip)?
 4. **The halos:** do the woken stars' halos read as painted, and is the morning star (N3) easy to tell from the cypress?
 5. **The mist and the clouds:** does the hill float in a sea of mist and cloud round the rim? Anything flat, doubled or
    popping at the far ridge?
@@ -540,6 +563,13 @@ and the rules: `docs/convai/starry-night-objects.md` (notes: `Assets/VanGogh/Res
 - `SN_PlayCheck.RunBatch` (batch, without `-quit`): the Play-mode check of the temporary network measure above, and that
   the dialogue UI shows the first hint at the settings' distance from the camera.
 - `SN_GalleryCheck.RunBatch` and `SN_GalleryPlayCheck.RunBatch`: the Gallery's way in and back (see "Checks").
+- `SN_PagePlayCheck.RunBatch [-snLog <file>] [-snRenders <dir>]` (batch, without `-quit`; also in Run all checks): taking
+  his page in Play mode on the scene's XR Origin, no headset. Session 1, looking at the morning star: the page appears
+  held out (in view, within reach) and outlined, not bright; the trigger pulled pointing away does nothing (control);
+  the right controller pointed at it brightens it; the trigger takes it into that controller, Done, the outline off;
+  his question 3 s after Done (and his lines). Session 2, StarryNight again, looking at Vincent: the hand on it is
+  hovered by XRI and brightens it; the grip takes it (XRI), Done, the outline off; the question 3 s after. No errors.
+  The playthrough test also measures where it is held out for four gazes from the seat.
 
 ## Headset checklist: the exit (2026-11-17, not yet tried on a Quest)
 
@@ -567,7 +597,7 @@ and the rules: `docs/convai/starry-night-objects.md` (notes: `Assets/VanGogh/Res
    Vincent (35 transparent renderers at the most, about 161,100 triangles, one skinned mesh; then once more with
    `SN_Layout.colourGrading` on).
 8. The art pass: from the seat, do the cypress, Vincent and the valley sit where the concept (G2) has them? Is N3 easy to
-   tell from the cypress? Can you reach the page (0.73 m from the seat) and the sketchbook (0.78 m) without getting up?
+   tell from the cypress? Can you reach the sketchbook (0.78 m) without getting up?
 9. The look pass: does the hilltop read lush and the hill float in a sea of cloud? Do the bushes near the seat stay out
    of the way? Does the far ridge read as one line all round, with no doubled hills where the painted strip ends?
 10. Vincent (step 3): see item 6 of the headset checklist above.

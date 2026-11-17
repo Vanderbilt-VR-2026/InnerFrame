@@ -28,12 +28,18 @@ public class VG_BedroomExit : MonoBehaviour
     public const float Doorway = 0.06f, FirstRiser = 0.55f, Tread = 0.25f, Rise = 0.16f, Back = 1.85f, Ceiling = 2.745f;
     public const int Steps = 4;
     public static readonly Vector2 Sides = new Vector2(-0.405f, 0.405f);
-    /// <summary>His way to the door in the door's space (x z, +x into the room): round the chair's far side, then his place
-    /// before the door, the last leg down the middle between the chair and the washstand (2026-11-17); then in the stairs'
-    /// space: the doorway, the landing, the middle of the first and second steps.</summary>
-    public static readonly Vector2[] ToTheDoor = { new Vector2(0.677f, -1.142f), new Vector2(1.240f, -1.086f), new Vector2(1.240f, -0.135f), new Vector2(0.283f, -0.135f) };
-    public static readonly Vector2[] Inside = { new Vector2(0.05f, 0f), new Vector2(0.35f, 0f), new Vector2(0.675f, 0f), new Vector2(0.925f, 0f) };
+    /// <summary>His way to the door in the door's space (x z, +x into the room): east from his easel, north past the chair's
+    /// far side, short of the washstand and Chair_Back, then across to his place before the door, through the 0.43 m
+    /// between Chair_Front's back corner and the Washstand's front legs; then in the stairs' space: the doorway, the
+    /// landing, the middle of the first and second steps, midway between the doorway's casing and the open door
+    /// (2026-11-17, at his 1.70 m: no part of him in the furniture or within 1 cm of a wall or door; his left thigh and toe
+    /// pass within 1 cm of Chair_Front's corner and leg, VG_BedroomExitCheck).</summary>
+    public static readonly Vector2[] ToTheDoor = { new Vector2(1.408f, -1.187f), new Vector2(1.408f, -0.220f), new Vector2(1.127f, -0.079f), new Vector2(0.373f, -0.096f) };
+    public static readonly Vector2[] Inside = { new Vector2(0.05f, 0.023f), new Vector2(0.35f, 0.023f), new Vector2(0.675f, 0.023f), new Vector2(0.925f, 0.023f) };
     public const float Stride = 1.5f;   // the Walking clip's ground speed at his own size (SN_Layout.exitWalkStride)
+    const float TurnDegPerSecond = 480f;   // he turns quickly at the corners: his long strides sweep wide while he turns
+    const float HaltWithin = 0.2f;   // metres before his place at the door his walk starts easing into standing: his walk clip
+                                     // plays on for its 0.25 s blend after he stops, and its last stride would reach the shut door
     public const float AskAfter = 3f, CarrySeconds = 0.5f, ReachSeconds = 0.5f, SwingSeconds = 1.2f, LetGoAt = 0.35f, InAfter = 0.8f;
 
     public VG_ExitFlow flow;
@@ -75,6 +81,7 @@ public class VG_BedroomExit : MonoBehaviour
         lead.animator = anim;
         lead.body = anim.transform.parent;   // his Figure: all of him, without the easel
         lead.speed = Stride * anim.transform.lossyScale.x;
+        lead.turnDegPerSecond = TurnDegPerSecond;
         lead.GroundHeight = exit.Height;
         var talker = vincent.GetComponent<SpeechToProxy>();
         var f = exit.flow = vincent.AddComponent<VG_ExitFlow>();
@@ -144,6 +151,7 @@ public class VG_BedroomExit : MonoBehaviour
                 started = true;
             }
             lead.Step(dt);
+            if (lead.Remaining < HaltWithin && lead.animator != null) lead.animator.SetBool("Walking", false);   // he comes to a halt
             if (lead.State == VG_LeadState.Arrived) Next();
             return false;
         }

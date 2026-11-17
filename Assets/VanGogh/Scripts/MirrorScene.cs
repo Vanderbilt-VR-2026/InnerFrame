@@ -22,9 +22,9 @@ public enum VG_MirrorStep { None, Asked, HeldOutside, HeldInside, Parked, Finish
 public class MirrorScene : MonoBehaviour
 {
     // Room metres (the rig is scaled 0.8 here) and seconds; all guesses until tried on a Quest.
-    const float EyeHeight = 1.55f;        // without a head bone: his eyes on the 1.70 m model; times his spawn scale, 1.28 m in the room
-    const float BesideCanvas = 0.25f;     // the target: half the canvas's width plus this, sideways from its centre
-    const float ZoneRadius = 1.0f;        // the glass's centre within this of his head, in any orientation (Target is 0.88 m out)
+    const float EyeHeight = 1.55f;        // without a head bone: his eyes on the 1.70 m model, times his spawn scale (1.0 since 2026-11-17)
+    const float BesideCanvas = 0.19f;     // the target: half the canvas's width plus this, sideways from its centre (the glass's edge 4 cm off the canvas's)
+    const float ZoneRadius = 1.0f;        // the glass's centre within this of his head, in any orientation (Target is 0.97 m out at his 1.70 m)
     const float GlideSeconds = 0.25f;     // let go near him: to the Target pose in this long
     const float PaintSeconds = 24f;       // near his face this long, all told, finishes the portrait
 

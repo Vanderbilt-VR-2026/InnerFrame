@@ -173,6 +173,23 @@ public static class VG_BedroomExitCheck
         Vector3 hingeWorld = door.TransformPoint(VG_BedroomExit.Hinge);
         var own = new HashSet<Collider>(w.vincent.GetComponentsInChildren<Collider>(true));
         var easel = Easel(w.vincent);   // its vertices: its box would take in where he stands
+        // the furniture (the room's movables but its doors) and his easel by their meshes' surfaces, sampled every 5 mm into 1 cm
+        // cells: their colliders are boxes round them (Chair_Front's takes in 15 cm of air beside the chair)
+        var furniture = UnityEngine.Object.FindObjectsByType<InnerFrame.PaintedBedroom.PaintedBedroomMovable>(FindObjectsSortMode.None).Where(m => !m.name.StartsWith("Door_")).ToArray();
+        var furnitureColliders = new HashSet<Collider>(furniture.SelectMany(m => m.GetComponentsInChildren<Collider>(true)));
+        var furnitureCells = Surface(furniture.SelectMany(m => m.GetComponentsInChildren<MeshFilter>()).Where(m => m.GetComponent<MeshRenderer>() != null && m.GetComponent<MeshRenderer>().enabled), out var cellOwner);
+        var easelCells = Surface(w.vincent.GetComponentsInChildren<MeshFilter>().Where(m => m.name == "VG_Easel" || m.name == "VG_Canvas"), out _);
+        // and whether a vertex near them is in them: their meshes as (temporary) mesh colliders, on a layer of their own
+        var solids = new Solids(furniture.SelectMany(m => m.GetComponentsInChildren<MeshFilter>()).Where(m => m.GetComponent<MeshRenderer>() != null && m.GetComponent<MeshRenderer>().enabled)
+            .Concat(w.vincent.GetComponentsInChildren<MeshFilter>().Where(m => m.name == "VG_Easel" || m.name == "VG_Canvas")));
+        foreach (var c in solids.All) furnitureColliders.Add(c);
+        var control = solids.Control();
+        var near = control.Where(c => c.piece == "Chair_Front" || c.piece == "Washstand" || c.piece == "his easel").ToArray();
+        // what matters is that a point in them reads inside (a point outside read inside only makes the test stricter)
+        Check(near.Length == 3 && near.All(c => c.inside >= (c.piece == "his easel" ? 0.8f : 0.95f)), $"the inside test (rays in 6 directions from a point; inside when most first meet a back face of one piece's mesh) catches points in the pieces his way passes: their own surface points pushed 5 mm in read inside (at least 95 %, his easel's thin bars 80 %); pushed 5 mm out, read inside too: " +
+            string.Join("; ", near.Select(c => $"{c.piece} {c.n} points, in {c.inside:P0}, out {c.outside:P0}")));
+        W("  the same on the room's other pieces: " + string.Join("; ", control.Except(near).Select(c => $"{c.piece} {c.n}, in {c.inside:P0}, out {c.outside:P0}")));
+        var grazes = new List<string>();
         var palette = hands.palette.GetComponent<MeshFilter>();
         System.Action<System.Action> ask = w.exit.AskForDoor; System.Action granted = null;
         w.exit.AskForDoor = g => granted = g;   // the door's state authority held back for a second, as a slow network would
@@ -189,16 +206,58 @@ public static class VG_BedroomExitCheck
             foreach (var e in easel) if (DistanceToSegment(e, a, b) < r) return $"{what}: his easel";
             return null;
         }
+        var paletteVerts = palette.sharedMesh.vertices;
         string HitPalette()
         {
             var lb = palette.sharedMesh.bounds; var t = palette.transform;
             Vector3 centre = t.TransformPoint(lb.center), half = Vector3.Scale(lb.extents, t.lossyScale);
             foreach (var c in Physics.OverlapBox(centre, half, t.rotation, ~0, QueryTriggerInteraction.Ignore))
-                if (!own.Contains(c) && c.name != "Room_Floor") return $"palette: {c.name}";
-            foreach (var e in easel) { var q = Quaternion.Inverse(t.rotation) * (e - centre); if (Mathf.Abs(q.x) < half.x && Mathf.Abs(q.y) < half.y && Mathf.Abs(q.z) < half.z) return "palette: his easel"; }
+                if (!own.Contains(c) && !c.name.StartsWith("Room_Floor") && !furnitureColliders.Contains(c)) return $"palette: {c.name}";
+            for (int i = 0; i < paletteVerts.Length; i += 2)
+            {
+                var p = t.TransformPoint(paletteVerts[i]);
+                if (cellOwner.TryGetValue(Cell(p), out var piece)) return $"palette: {piece}";
+                if (easelCells.Contains(Cell(p))) return "palette: his easel";
+            }
             return null;
         }
         var spot = lead.body.position;
+        var skin = w.vincent.GetComponentInChildren<SkinnedMeshRenderer>(); var skinMesh = new Mesh();
+        // no part of him (his skin's vertices, every third) touches a collider or his easel's mesh; `except`: colliders he
+        // may pass through (the niche's back, hidden on this headset: its collider is the room's and stays)
+        var boneOf = skin.sharedMesh.boneWeights.Select(b => skin.bones[b.boneIndex0]).ToArray();
+        var rightHand = new HashSet<Transform>(w.anim.GetBoneTransform(HumanBodyBones.RightHand).GetComponentsInChildren<Transform>()) { w.anim.GetBoneTransform(HumanBodyBones.RightLowerArm) };   // the arm on the handle
+        // where he stands by his easel to begin with: a vertex still within 2 cm of it is part of that pose (his right shoe
+        // stands by an easel leg), not of his way
+        skin.BakeMesh(skinMesh, true); var standing = skinMesh.vertices.Select(v => skin.transform.TransformPoint(v)).ToArray();
+        float intoDoor = 0f;   // walking up to the shut door: how far any of him goes past its face, in the doorway
+        string SkinHit(string except = null, Transform only = null, bool notRightHand = false, bool upToTheDoor = false)
+        {
+            skin.BakeMesh(skinMesh, true); var sv = skinMesh.vertices;
+            for (int i = 0; i < sv.Length; i += 3)
+            {
+                if (notRightHand && rightHand.Contains(boneOf[i])) continue;
+                var p = skin.transform.TransformPoint(sv[i]);
+                if ((p - standing[i]).sqrMagnitude < 0.0004f) continue;
+                if (upToTheDoor)
+                {
+                    var q = door.InverseTransformPoint(p);   // shut: the door's room-side face at x -0.008 of its own space
+                    if (Mathf.Abs(q.z) < 0.41f && q.y > 0f && q.y < 2.73f) intoDoor = Mathf.Max(intoDoor, (-0.008f - q.x) * door.lossyScale.x);
+                }
+                foreach (var c in Physics.OverlapSphere(p, 0.01f, ~0, QueryTriggerInteraction.Ignore))
+                    if (!own.Contains(c) && c.bounds.max.y > 0.01f && c.name != except && !furnitureColliders.Contains(c) && (only == null || c.transform.IsChildOf(only)) && !(upToTheDoor && c.transform.IsChildOf(door)))   // floors (the room's, the niche's) are walked on
+                        return $"his {boneOf[i].name.Replace("mixamorig:", "")}: {c.name} at ({p.x:F2}, {p.y:F2}, {p.z:F2}), him at ({lead.body.position.x:F2}, {lead.body.position.z:F2}) facing {lead.body.eulerAngles.y:F0}";
+                string piece = null;
+                bool nearPiece = only == null && cellOwner.TryGetValue(Cell(p), out piece), nearEasel = only == null && easelCells.Contains(Cell(p));
+                if (nearPiece || nearEasel)
+                {
+                    string what = $"his {boneOf[i].name.Replace("mixamorig:", "")}: {(nearPiece ? piece : "his easel")} at ({p.x:F2}, {p.y:F2}, {p.z:F2}), him at ({lead.body.position.x:F2}, {lead.body.position.z:F2}) facing {lead.body.eulerAngles.y:F0}";
+                    if (solids.Inside(p)) return what;   // in it
+                    grazes.Add(what);                    // within about 1 cm of its surface, outside it
+                }
+            }
+            return null;
+        }
         for (float t = 0f; t < 10f && w.exit.Phase == 0; t += Dt)
         {
             Tick(w);
@@ -207,12 +266,13 @@ public static class VG_BedroomExitCheck
             maxSpeed = Mathf.Max(maxSpeed, step / Dt); last = p;
             offFloor = Mathf.Max(offFloor, Mathf.Abs(p.y));
             walking |= w.anim.GetCurrentAnimatorStateInfo(0).IsName("Walking");
-            bool onSpot = Vector3.Distance(p, spot) < 0.01f;   // his body where he always stands, by his easel: not tested there; his hands and the palette are
-            foreach (var h in new[] { onSpot ? null : Hit(p + Vector3.up * 0.30f, p + Vector3.up * 1.20f, BodyRadius, "body"), Hit(handL.position, handL.position, 0.04f, "left hand"), Hit(handR.position, handR.position, 0.04f, "right hand"), HitPalette() })
+            foreach (var h in new[] { SkinHit(upToTheDoor: true), HitPalette() })
                 if (h != null) blocked.Add($"{h} at ({p.x:F2}, {p.z:F2})");
             if (renderDir != null && t > 1.4f && t < 1.4f + Dt) Picture(w, "bedroom-2-mid-walk.png", lead.body.position + Vector3.up * 0.9f, eye: new Vector3(0.35f, 1.28f, 0.85f));
         }
-        Check(blocked.Count == 0, $"his way round Chair_Front to the door ({path:F2} m) is clear from his first step: his body (a {BodyRadius} m capsule), both hands (4 cm) and the palette (its turned box), of every collider and of his easel's mesh{(blocked.Count > 0 ? ": " + string.Join("; ", blocked.Take(6)) : "")}");
+        Check(blocked.Count == 0, $"his way round Chair_Front to the door ({path:F2} m) is clear from his first step: no vertex of his skin within about 1 cm of the walls, the doors and their frames (their colliders), none in the furniture or in his easel (their meshes: their colliders are boxes round them); what hasn't moved from where he stood by his easel is that pose, not his way; the palette not within about 1 cm of any{(blocked.Count > 0 ? ": " + string.Join("; ", blocked.Take(6)) : "")}");
+        W($"  grazes on his way (a vertex of his skin within about 1 cm of the furniture's or his easel's surface, outside it): {grazes.Count} (vertex, frame){(grazes.Count > 0 ? ": " + string.Join("; ", grazes.Distinct().Take(8)) : "")}");
+        Check(intoDoor <= 0.01f, $"walking up to the shut door (left out above: he is about to open it, and his last stride reaches it) no part of him goes more than 1 cm past its face: {intoDoor * 100f:F1} cm at most");
         Check(maxSpeed <= lead.speed * 1.01f && offFloor < 0.001f && walking, $"he walks at {maxSpeed:F2} m/s at most (his speed {lead.speed:F2}: the clip's stride at his size), on the floor, in the Walking state");
         Check(w.exit.Phase == 1 && lead.State == VG_LeadState.Arrived && hands.carry >= 1f, $"he arrives at his place before the door ({new Vector2(lead.body.position.x, lead.body.position.z):F2}; the room at scale {door.lossyScale.x:F3}), the palette upright against his chest");
         Run(w, VG_BedroomExit.ReachSeconds - 2f * Dt, () => w.exit.Phase != 1);
@@ -243,7 +303,9 @@ public static class VG_BedroomExitCheck
             if (renderDir != null) Picture(w, "bedroom-5-gold-starts.png", w.exit.InStairs(1.2f, 1.0f, 0f), eye: DoorwayEye);
         }
         var chair = GameObject.Find("Chair_Front").GetComponent<Collider>().bounds;
-        var him = new Bounds(lead.body.position + Vector3.up * 0.7f, new Vector3(2f * BodyRadius, 1.4f, 2f * BodyRadius));
+        skin.BakeMesh(skinMesh, true);   // him as he stands at the door: his skin's box
+        var him = new Bounds(skin.transform.TransformPoint(skinMesh.vertices[0]), Vector3.zero);
+        foreach (var v in skinMesh.vertices) him.Encapsulate(skin.transform.TransformPoint(v));
         for (float t = 0f; t < VG_BedroomExit.SwingSeconds + 0.1f; t += Dt)
         {
             Tick(w); Watch();
@@ -256,14 +318,14 @@ public static class VG_BedroomExitCheck
                 worstInRoom = Mathf.Max(worstInRoom, Vector3.Dot(b.max - closed.position, roomward) - closedFront);
                 if (easel.Any(e => b.Contains(e))) swingHits.Add("his easel");
                 if (b.Intersects(chair)) swingHits.Add("Chair_Front");
-                if (b.Intersects(him)) swingHits.Add("Vincent");
+                if (b.Intersects(him) && SkinHit(only: door, notRightHand: true) is string hh) swingHits.Add(hh);
             }
             if (renderDir != null && Mathf.Abs(t - 0.85f) < Dt / 2f) Picture(w, "bedroom-4-door-opening.png", w.exit.InStairs(0.6f, 1.0f, 0f), concept: true, eye: DoorwayEye);
         }
         Check(worstDoors == 1, $"one door in that doorway at every moment of the swing (Door_Left's own renderers; no copy, no second Door_Left): at most {worstDoors}");
         Check(Mathf.Abs(w.exit.DoorAngle - VG_BedroomExit.OpenDeg) < 0.5f && Quaternion.Angle(door.rotation, Quaternion.AngleAxis(VG_BedroomExit.OpenDeg, Vector3.up) * closed.rotation) < 0.5f && Vector3.Distance(door.TransformPoint(VG_BedroomExit.Hinge), hingeWorld) < 0.002f,
             $"the real Door_Left turns {w.exit.DoorAngle:F1} deg into its niche about its hinge (the hinge {Vector3.Distance(door.TransformPoint(VG_BedroomExit.Hinge), hingeWorld) * 1000f:F1} mm from where it was)");
-        Check(swingHits.Count == 0 && worstInRoom <= 0.002f, $"its swing stays in the niche: never further into the room than the shut door ({worstInRoom * 100f:F1} cm at most), clear of his easel, Vincent and Chair_Front{(swingHits.Count > 0 ? ": hits " + string.Join(", ", swingHits) : "")}");
+        Check(swingHits.Count == 0 && worstInRoom <= 0.002f, $"its swing stays in the niche: never further into the room than the shut door ({worstInRoom * 100f:F1} cm at most), clear of his easel, of Chair_Front and of him (no vertex of his skin within 1 cm of it but the hand and forearm on its handle){(swingHits.Count > 0 ? ": hits " + string.Join(", ", swingHits) : "")}");
         Check(door.GetComponents<Component>().Select(c => c.GetType().Name).SequenceEqual(doorComponents) && (grab == null || grab.enabled == grabWas) && door.GetComponent<NetworkGrabbable>().enabled,
             $"the door keeps its components ({string.Join(", ", doorComponents.Where(n => n.StartsWith("Network") || n.Contains("Grab")))}) and their settings: none is switched off, nothing copied");
         Check(Snapshot(other) == otherBefore && otherBack.enabled, "Door_Right and its niche's back (Door_Frames_07) are untouched: pose, renderers, components");
@@ -281,11 +343,29 @@ public static class VG_BedroomExitCheck
             back.GetComponent<Renderer>().enabled = false; stairs.gameObject.SetActive(true); if (gold != null) gold.enabled = true; foreach (var r in vis) r.enabled = true;
         }
         StairsFromTheRoom(w, stairs, closed, door.lossyScale.x);
-        for (float t = 0f; t < 6f && !(f.Gold != null && f.Gold.FullAfter >= 0f); t += Dt) { Tick(w); Watch(); }
+        var inHits = new HashSet<string>(); float headRoom = 99f; bool firstStepShot = false;
+        float doorTop = closed.position.y + door.lossyScale.y * door.Find("Door_Left_03").GetComponent<MeshFilter>().sharedMesh.bounds.max.y;   // the doorway's top (the doorGap)
+        float stairsTop = closed.position.y + door.lossyScale.y * VG_BedroomExit.Ceiling;
+        for (float t = 0f; t < 6f && !(f.Gold != null && f.Gold.FullAfter >= 0f); t += Dt)
+        {
+            Tick(w); Watch();
+            var h = SkinHit(VG_BedroomExit.NicheBack); if (h != null) inHits.Add(h);
+            float top = skinMesh.vertices.Max(v => skin.transform.TransformPoint(v).y);
+            headRoom = Mathf.Min(headRoom, Mathf.Min(doorTop, stairsTop) - top);
+            if (renderDir != null && !firstStepShot && lead.body.position.y >= VG_BedroomExit.Rise * door.lossyScale.y * 0.95f)
+            {
+                firstStepShot = true;
+                var gold = VG_GoldLight.Active != null ? VG_GoldLight.Active.GetComponentInChildren<Renderer>() : null; if (gold != null) gold.enabled = false;
+                Picture(w, "bedroom-5b-first-step.png", lead.body.position + Vector3.up * 1.0f, eye: DoorwayEye);
+                if (gold != null) gold.enabled = true;
+            }
+        }
+        Check(inHits.Count == 0, $"through the doorway and up the steps no part of him touches anything (the niche's hidden back excepted: its collider is the room's){(inHits.Count > 0 ? ": " + string.Join(", ", inHits) : "")}");
+        Check(headRoom >= 0.05f, $"his head clears the doorway's top ({doorTop:F2} m) and the stairwell's ceiling ({stairsTop:F2} m) by {headRoom * 100f:F0} cm at the least (5 at the least)");
         fullHeight = lead.body.position.y;
         float rise = VG_BedroomExit.Rise * door.lossyScale.y;   // a step's height in the scaled room
-        Check(f.Gold != null && goldHeight >= 0f && goldDist > -0.3f && goldDist < VG_BedroomExit.FirstRiser && fullHeight >= rise * 0.99f && fullHeight <= 2.01f * rise,
-            $"the gold begins as he steps into the doorway ({goldDist:F2} in the stairs' units: between -0.3, just in front of it, and the first riser at {VG_BedroomExit.FirstRiser}) and is full with him on step {Mathf.RoundToInt(fullHeight / rise)} ({fullHeight:F2} m up; a step {rise:F3} m)");
+        Check(f.Gold != null && goldHeight >= 0f && goldDist > -0.4f && goldDist < VG_BedroomExit.FirstRiser && fullHeight >= rise * 0.99f && fullHeight <= 2.01f * rise,
+            $"the gold begins as he steps into the doorway ({goldDist:F2} in the stairs' units: between -0.4, just in front of it, and the first riser at {VG_BedroomExit.FirstRiser}) and is full with him on step {Mathf.RoundToInt(fullHeight / rise)} ({fullHeight:F2} m up; a step {rise:F3} m)");
         Check(f.VincentHidden && Mathf.Abs(f.Gold.FullAfter - VG_GoldLight.RiseSeconds) <= Dt + 1e-4f, $"full {f.Gold.FullAfter:F2} s after it began; he is hidden");
         var focus = f.Focus();
         Check(focus.HasValue && stairs.InverseTransformPoint(focus.Value).x > VG_BedroomExit.FirstRiser, "its bright centre rises from the stairwell (the top of the stairs)");
@@ -302,9 +382,110 @@ public static class VG_BedroomExitCheck
         Check(lightsNow == lights, $"realtime lights: {lightsNow}, as before the exit ({lights}); no Volume added: {UnityEngine.Object.FindObjectsByType<UnityEngine.Rendering.Volume>(FindObjectsSortMode.None).Length} in the room");
         UnityEngine.Object.DestroyImmediate(w.cam.gameObject);
         if (VG_GoldLight.Active != null) VG_GoldLight.Active.End();
+        solids.Dispose();
     }
 
-    const float BodyRadius = 0.18f;   // his body without his arms (his chest is 0.50 m across at his size, 0.41 in the room)
+    /// <summary>Meshes as temporary (non-convex) mesh colliders on an unused layer, to tell whether a point is inside one:
+    /// rays from it in 6 directions, back faces on; inside when at least 4 first meet a face of that piece turned away
+    /// from the point (the face's own normal from the mesh, not the hit's).</summary>
+    sealed class Solids : System.IDisposable
+    {
+        readonly List<GameObject> made = new List<GameObject>();
+        readonly Dictionary<Collider, MeshFilter> source = new Dictionary<Collider, MeshFilter>();
+        readonly int layer;
+        public IEnumerable<Collider> All => source.Keys;
+        static readonly Vector3[] Ways = { Vector3.right, Vector3.left, Vector3.up, Vector3.down, Vector3.forward, Vector3.back };
+
+        public Solids(IEnumerable<MeshFilter> meshes)
+        {
+            layer = Enumerable.Range(8, 24).Last(l => string.IsNullOrEmpty(LayerMask.LayerToName(l)));
+            foreach (var mf in meshes)
+            {
+                if (mf.sharedMesh == null) continue;
+                var go = new GameObject("VGCheck_Solid_" + mf.name) { layer = layer, hideFlags = HideFlags.DontSave };
+                go.transform.SetPositionAndRotation(mf.transform.position, mf.transform.rotation);
+                go.transform.localScale = mf.transform.lossyScale;
+                var mc = go.AddComponent<MeshCollider>(); mc.sharedMesh = mf.sharedMesh; mc.convex = false;
+                made.Add(go); source[mc] = mf;
+            }
+            Physics.SyncTransforms();
+        }
+
+        public bool Inside(Vector3 p)
+        {
+            bool was = Physics.queriesHitBackfaces; Physics.queriesHitBackfaces = true;
+            var votes = new Dictionary<MeshFilter, int>();
+            try
+            {
+                foreach (var d in Ways)
+                {
+                    if (!Physics.Raycast(p, d, out var hit, 4f, 1 << layer, QueryTriggerInteraction.Collide) || !source.TryGetValue(hit.collider, out var mf)) continue;
+                    var m = mf.sharedMesh; var tr = m.triangles; var v = m.vertices; int t = hit.triangleIndex * 3;
+                    if (t < 0 || t + 2 >= tr.Length) continue;
+                    var tf = hit.collider.transform;
+                    Vector3 a = tf.TransformPoint(v[tr[t]]), b = tf.TransformPoint(v[tr[t + 1]]), c = tf.TransformPoint(v[tr[t + 2]]);
+                    if (Vector3.Dot(Vector3.Cross(b - a, c - a), d) > 0f) votes[mf] = votes.TryGetValue(mf, out var k) ? k + 1 : 1;
+                }
+            }
+            finally { Physics.queriesHitBackfaces = was; }
+            return votes.Values.Any(k => k >= 4);
+        }
+
+        /// <summary>The test on the meshes' own surfaces, per piece (a movable's name, or "his easel"): points (every 7th
+        /// vertex) pushed 5 mm in and 5 mm out along their normals.</summary>
+        public List<(string piece, int n, float inside, float outside)> Control()
+        {
+            var tally = new Dictionary<string, int[]>();
+            foreach (var mf in source.Values.Distinct())
+            {
+                var m = mf.sharedMesh; var v = m.vertices; var nm = m.normals;
+                if (nm == null || nm.Length != v.Length) continue;
+                var mov = mf.GetComponentInParent<InnerFrame.PaintedBedroom.PaintedBedroomMovable>();
+                string piece = mov != null ? mov.name : "his easel";
+                if (!tally.TryGetValue(piece, out var t)) tally[piece] = t = new int[3];
+                for (int i = 0; i < v.Length; i += 7)
+                {
+                    Vector3 p = mf.transform.TransformPoint(v[i]), nw = mf.transform.TransformDirection(nm[i]).normalized;
+                    t[0]++;
+                    if (Inside(p - nw * 0.005f)) t[1]++;
+                    if (Inside(p + nw * 0.005f)) t[2]++;
+                }
+            }
+            return tally.Select(kv => (kv.Key, kv.Value[0], kv.Value[0] > 0 ? kv.Value[1] / (float)kv.Value[0] : 0f, kv.Value[0] > 0 ? kv.Value[2] / (float)kv.Value[0] : 1f)).OrderBy(c => c.Item1).ToList();
+        }
+
+        public void Dispose()
+        {
+            foreach (var go in made) if (go != null) UnityEngine.Object.DestroyImmediate(go);
+            made.Clear(); source.Clear();
+        }
+    }
+
+    static (int, int, int) Cell(Vector3 p) => (Mathf.FloorToInt(p.x / 0.01f), Mathf.FloorToInt(p.y / 0.01f), Mathf.FloorToInt(p.z / 0.01f));
+
+    /// <summary>The 1 cm cells these meshes' surfaces pass through (each triangle sampled every 5 mm, in the world), and
+    /// which object each cell belongs to.</summary>
+    static HashSet<(int, int, int)> Surface(IEnumerable<MeshFilter> meshes, out Dictionary<(int, int, int), string> owner)
+    {
+        var cells = new HashSet<(int, int, int)>(); owner = new Dictionary<(int, int, int), string>();
+        foreach (var mf in meshes)
+        {
+            if (mf.sharedMesh == null) continue;
+            var v = mf.sharedMesh.vertices.Select(p => mf.transform.TransformPoint(p)).ToArray(); var tr = mf.sharedMesh.triangles;
+            string name = mf.transform.root == mf.transform ? mf.name : (mf.GetComponentInParent<InnerFrame.PaintedBedroom.PaintedBedroomMovable>()?.name ?? mf.name);
+            for (int i = 0; i < tr.Length; i += 3)
+            {
+                Vector3 a = v[tr[i]], b = v[tr[i + 1]], c = v[tr[i + 2]];
+                int n = Mathf.Max(1, Mathf.CeilToInt(Mathf.Max((b - a).magnitude, (c - a).magnitude, (c - b).magnitude) / 0.005f));
+                for (int p = 0; p <= n; p++) for (int q = 0; q <= n - p; q++)
+                {
+                    var k = Cell(a + (b - a) * (p / (float)n) + (c - a) * (q / (float)n));
+                    if (cells.Add(k)) owner[k] = name;
+                }
+            }
+        }
+        return cells;
+    }
 
     static string Snapshot(Transform t) =>
         $"{t.position:F5} {t.rotation.eulerAngles:F3} {string.Join(",", t.GetComponentsInChildren<Renderer>(true).Select(r => r.name + r.enabled))} {string.Join(",", t.GetComponents<Component>().Select(c => c.GetType().Name + (c is Behaviour b ? b.enabled.ToString() : "")))}";

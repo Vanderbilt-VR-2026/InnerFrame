@@ -14,7 +14,7 @@ using UnityEngine;
 /// (the room scaled as in Play, 0.889)
 /// 1. v2, not v1: Mixamo's rig with a valid human avatar, his controller (Standing = BreathingIdle by default, Walking),
 ///    his material; no warning or error while he spawns and animates;
-/// 2. the same framing as v1 at the easel: his spot, facing and height (1.70 m in his own space, 0.826 in the room);
+/// 2. at the easel: v1's spot and facing; 1.70 m tall in the room, as in The Starry Night (2026-11-17; v1 was 1.40 m);
 ///    MirrorScene's Head is his head bone (and how far it is from v1's Head and Target, recorded on main 2026-11-17);
 /// 3. the mirror rules as on main: the 1.0 m zone round his Head; let go in it before he is done, it glides to the Target
 ///    pose; let go outside it, or once he is done, it hangs back on the wall; held in it he paints to the finished
@@ -29,7 +29,7 @@ public static class VG_BedroomV2Check
     public const string ScenePath = "Assets/InnerFrameBedroomWeb/Scenes/PaintedBedroom.unity";
     // v1 on main (fe0b99d), measured in this scene 2026-11-17 (cc-reports/2026-11-17-vg-lead/raw/p2-bedroom-measure.md)
     public static readonly Vector3 V1Spot = new Vector3(-1.289f, 0f, 0.578f), V1Head = new Vector3(-1.289f, 1.280f, 0.578f), V1Target = new Vector3(-1.298f, 1.280f, -0.306f);
-    public const float V1Height = 1.404f, V1Yaw = 123.7f;
+    public const float V1Height = 1.404f, V1Yaw = 123.7f, Height = 1.70f;
     const float Dt = 1f / 72f;
     static StringBuilder log;
     static int passes, failures;
@@ -114,7 +114,7 @@ public static class VG_BedroomV2Check
     static void Framing(GameObject vincent)
     {
         W("");
-        W("== 2. The same framing as v1 at the easel");
+        W("== 2. At the easel: v1's spot and facing, the Starry Night's size");
         var anim = vincent.GetComponentInChildren<Animator>();
         anim.Rebind(); anim.Update(0f);
         var skin = vincent.GetComponentInChildren<SkinnedMeshRenderer>();
@@ -126,11 +126,29 @@ public static class VG_BedroomV2Check
         var head = anim.GetBoneTransform(HumanBodyBones.Head).position;
         Check(Vector3.Distance(vincent.transform.position, V1Spot) < 0.005f && Mathf.Abs(Mathf.DeltaAngle(vincent.transform.eulerAngles.y, V1Yaw)) < 0.2f,
             $"his spot {vincent.transform.position:F3} and facing {vincent.transform.eulerAngles.y:F1} deg, as v1's ({V1Spot:F3}, {V1Yaw} deg)");
-        Check(Mathf.Abs(height - V1Height) < 0.01f, $"standing {height:F3} m tall in the room (v1 {V1Height:F3} m)");
+        Check(Mathf.Abs(height - Height) < 0.01f, $"standing {height:F3} m tall in the room, as in The Starry Night (v1 was {V1Height:F3} m)");
         Check(Vector3.Distance(ms.Head, head) < 0.005f, $"MirrorScene's Head is his head bone as he spawns: {ms.Head:F3}, {Vector3.Distance(ms.Head, head) * 1000f:F1} mm from the bone in his first animated frame (the prefab keeps BreathingIdle's first frame sampled; the Animator's own evaluation differs by millimetres)");
         W($"  against v1 on main: Head {ms.Head:F3} vs {V1Head:F3} ({Vector3.Distance(ms.Head, V1Head) * 100f:F1} cm; {(ms.Head.y - V1Head.y) * 100f:F1} cm in height: v1's was his eyes, v2's is the head bone); Target {ms.Target:F3} vs {V1Target:F3} ({Vector3.Distance(ms.Target, V1Target) * 100f:F1} cm)");
-        Check(Vector3.Distance(ms.Target, V1Target) < 0.15f, $"the Target pose moved {Vector3.Distance(ms.Target, V1Target) * 100f:F1} cm with his head (less than 15)");
+        Check(Mathf.Abs(ms.Target.y - ms.Head.y) < 0.001f, $"the Target pose follows his head: at its height ({ms.Target.y:F3} m), beside his canvas");
+        // at his size: the parked mirror and the canvas clear of the left wall, his body clear of the furniture and walls
+        float wall = WallX();
+        var mirror = ms.Mirror; var keep = new Pose(mirror.position, mirror.rotation); var park = ms.ParkPose();
+        mirror.SetPositionAndRotation(park.position, park.rotation);
+        float mirrorOff = mirror.GetComponentsInChildren<Renderer>().Min(r => r.bounds.min.x) - wall;
+        mirror.SetPositionAndRotation(keep.position, keep.rotation);
+        var canvasR = vincent.GetComponentsInChildren<Renderer>().First(r => r.name == "VG_Canvas");
+        float canvasOff = canvasR.bounds.min.x - wall;
+        var own = new HashSet<Collider>(vincent.GetComponentsInChildren<Collider>(true));
+        var touches = new HashSet<string>();
+        for (int i = 0; i < pts.Length; i += 3)
+            foreach (var c in Physics.OverlapSphere(pts[i], 0.01f, ~0, QueryTriggerInteraction.Ignore))
+                if (!own.Contains(c) && !c.name.StartsWith("Room_Floor")) touches.Add(c.name);
+        Check(mirrorOff > 0.02f && canvasOff > 0.02f && touches.Count == 0,
+            $"at his size the parked mirror is {mirrorOff * 100f:F1} cm off the left wall, his canvas {canvasOff * 100f:F1} cm, and no part of him touches a collider (his skin's vertices){(touches.Count > 0 ? ": " + string.Join(", ", touches) : "")}");
     }
+
+    /// <summary>The left wall's face in the room (Room_Walls_02's inner side).</summary>
+    static float WallX() => GameObject.Find("Room_Walls_02").GetComponent<Collider>().bounds.max.x;
 
     static void Mirror(GameObject vincent)
     {

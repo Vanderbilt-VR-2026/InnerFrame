@@ -18,10 +18,9 @@ October 1888, text-to-speech), and his answer plays from the portrait.
   - The numbers come from `Art/Source/Gallery/build_gallery.py`; see the constants at the top of `VanGoghSpawner`.
 - In the Painted Bedroom, a 3D Vincent (Tripo model) stands by the left wall with
   an easel, palette and brush, facing where you arrive, and answers the same way.
-  His eyes are level with yours, so you look at each other while you talk: the XR rig
-  is scaled 0.8 in this room, which makes him 1.40 m tall in the room and about
-  1.75 m as you feel it. If the rig scale changes, change `VincentScale` in
-  `VanGoghSpawner` to match. He was made with Tripo on a paid plan, whose terms give
+  He is 1.70 m tall in the room, as in The Starry Night (Cici, 2026-11-17; `VincentScale` in
+  `VanGoghSpawner`, 1.0). The XR rig is scaled 0.8 here as there, so he feels about 2.1 m to you in both;
+  his eyes (1.55 m) are above a standing visitor's (1.28 m). He was 1.40 m before. He was made with Tripo on a paid plan, whose terms give
   paid users the rights to their models (see `docs/ASSETS.md`).
   - **His easel and palette** are Tripo models too (Smart Mesh P2.0 from painted reference images, 2026-10-27), cleaned
     by `Art/Source/VanGogh/Props/clean_easel.py` and `clean_palette.py` (no decimation: 4,727 and 4,884 triangles, one
@@ -321,8 +320,11 @@ On the desktop the mirror counts as held once it has left the wall, not at the c
 its material and clips; imported by the Starry Night's setup), built by Tools > InnerFrame > Van Gogh > Rebuild assets
 (`Editor/VanGoghAssetSetup.cs`). The static v1 (`Art/Vincent/VG_Vincent.fbx`, `M_Vincent.mat`) is no longer in him; its
 files are still in the repo, unused.
-- **The same framing at the easel:** his spot, facing and scale are v1's (`VanGoghSpawner`, unchanged), and he is as tall
-  as v1 (1.70 m in his own space, 1.40 m in the room).
+- **At the easel:** his spot and facing are v1's (`VanGoghSpawner`). Since 2026-11-17 he is 1.70 m in the room (v1
+  was 1.40 m), the model's own size. His easel, canvas, palette and brush are in his prefab and grow with him (21 %),
+  as v1's were scaled with v1; the parked mirror stays 10 cm off the wall, his canvas too. The mirror's Target follows
+  his head bone (1.45 m), 0.97 m from it, inside the 1 m zone: `MirrorScene.BesideCanvas` went from 0.25 to 0.19 for
+  that (at 0.25 the Target was 1.03 m out, so the mirror parked there would have stopped him painting).
 - **His clips:** `Art/Vincent/VG_VincentV2.controller`, made by the asset tool: Standing (BreathingIdle) all the time,
   while he paints and while he talks (there is no standing Talking clip), and Walking for the way out. His voice is in
   his head bone.
@@ -331,7 +333,7 @@ files are still in the repo, unused.
   fingers forward under the board, his fingertips at the thumb hole. None of his hand, finger or forearm vertices is
   inside the palette in any frame of his idle loop (the v2 check counts them, with a control). The brush (`VG_Brush_01`)
   is in his right hand. On the way out he tips the palette up against his chest and takes its other edge with his right
-  hand (the room is too tight for it held out flat), and reaches for the door with his right hand; the brush's tip goes a
+  hand, his elbows in (the room is too tight for it held out flat), and reaches for the door with his right hand; the brush's tip goes a
   few centimetres into the door's edge for that second.
 - **His look:** v2 is as bright as v1 at the easel (his face's mean brightness 97 % of v1's in edit mode, 105 % in Play
   with his real skin; the same spread, no dark patches). The dark, blotchy v2 in the first pictures was the pictures'
@@ -358,7 +360,10 @@ files are still in the repo, unused.
    picked with the trigger, as on the player menu. It follows your view and stays until you answer.
 3. **Back to the Gallery:** the player menu's own way back.
 4. **Follow Vincent:** he tips his palette up and walks round the front chair (`Chair_Front`; the gap between it and
-   the wall is narrower than he is) to `Door_Left`, the light-blue door by the window, turns to its handle and reaches
+   the wall is narrower than he is) and through the 0.43 m between its back corner and the washstand's front legs to
+   `Door_Left`, the light-blue door by the window. At 1.70 m his left thigh and toe pass within 1 cm of the chair there,
+   not into it; his walk starts easing into standing 0.2 m before his place, so his last stride doesn't reach the shut
+   door. He turns to its handle and reaches
    it with his right hand, and the door swings 90° into its niche, showing stairs: a landing and four steps going up
    into the wall, lit gold from the top. He walks in and up the first two steps as the gold rises from the stairwell;
    under it Café Terrace at Night starts (the next ready painting in the story order), as it does from the Gallery.
@@ -380,8 +385,11 @@ files are still in the repo, unused.
   Unlit (`Art/VG_StairsUnlit.shader`: the texture times each face's shade, plus a gold vertex colour brightest at the
   top) on Cici's textures `VG_Stairs_Wood.png` and `VG_Stairs_Wall.png` (imported at 1024).
 - Checks (the room scaled as in Play): Tools > InnerFrame > Van Gogh > Run the Bedroom exit check (with pictures) (edit
-  mode: the question only after the portrait and his lines, the card after the question; his body, hands and palette
-  clear of every collider and his easel all the way; the reach; the real door turning on its hinge, one door in the
+  mode: the question only after the portrait and his lines, the card after the question; all the way, his skin (every
+  third vertex) in none of the furniture or his easel (a ray test on their meshes, with a control on their own
+  surfaces) and within 1 cm of no wall or door, and the vertices that pass within 1 cm of the furniture listed; his last
+  stride not past the shut door's face; the palette within 1 cm of nothing; his head at least 5 cm under the doorway and
+  the stairwell; the reach; the real door turning on its hinge, one door in the
   doorway at every moment, its swing never into the room and clear of the easel, him and the chair; `Door_Right`
   untouched; the stairs seen from six places across the room only through the doorway, never through the window or
   a wall, with a positive control; the gold; Back) and `VG_BedroomExitPlayCheck.RunBatch` (Play mode: both answers

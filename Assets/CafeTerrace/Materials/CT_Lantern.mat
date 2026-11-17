@@ -30,6 +30,7 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
+    - _Cull: 2
     - _LightRange: 4
     - _Saturation: 0.94
     - _TexDesat: 0

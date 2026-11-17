@@ -154,6 +154,7 @@ MonoBehaviour:
   chairsPrefab: {fileID: 6638624537404387687, guid: 1e2a120c01c6e450684f5c6aa055e1c8, type: 3}
   tablesPrefab: {fileID: 6960371495984368557, guid: 345dd83098fac47829bec9e60e5559b7, type: 3}
   lanternPrefab: {fileID: 234049321703706737, guid: 99012a2716e1f4bb5ab05a8e12b2409c, type: 3}
+  treePrefab: {fileID: 5197069546318413445, guid: de167afd2a8e74d209d2b4a37dd3d01b, type: 3}
   flamePrefab: {fileID: 2678960293267544333, guid: 58059382c3aa14ec78eb6fde0434196b, type: 3}
   skyPrefab: {fileID: 9221042447877037652, guid: 5262bde6b7ed14469aefb2d9bcafbc9f, type: 3}
 --- !u!4 &1350869294

@@ -5,7 +5,7 @@ terrace with its tables, the cobbled street running down between blue houses, a 
 will stand at his easel where the scene lines up with the painting.
 
 **State (2026-11-11): the environment only.** It builds and renders in the Editor. Not yet: in the build list, entered
-from the Gallery, a multiplayer room, Vincent, people, the tree, the carriage (grey and pink stand-ins named `PH_...`),
+from the Gallery, a multiplayer room, Vincent, people, the carriage (grey and pink stand-ins named `PH_...`),
 sound. **Not tried on a headset yet.**
 
 ## Open it
@@ -73,14 +73,15 @@ has to be scaled by the same 0.9 / 0.8.
 
 ## Counts (Editor, edit mode, 2026-11-11)
 
-About 414,000 triangles, 51 renderers, 56 material slots, 19 materials. Budget on Quest: 300–500k triangles. The people,
-tree and carriage are not in yet. Draw calls in a frame and frame rate on a headset: not measured.
+About 434,000 triangles, 51 renderers, 55 material slots, 20 materials. Budget on Quest: 300–500k triangles. The people
+and the carriage are not in yet. Draw calls in a frame and frame rate on a headset: not measured.
 
 ## Known gaps
 
 - Surfaces: the yellow wall, cobbles, planks and awning use prototype textures cut from the target images; the other
   walls, the shop front and the shutters use script-made streaks. Painted swatches are to come.
-- Stand-ins for people, tree, carriage, easel.
+- Stand-ins for people, carriage, easel. The tree is the full Tripo model reduced by script (no Tripo retopo yet), and
+  it branches lower than in the target images.
 - No colliders on chairs; tables have boxes. The ground, terrace and pavements are teleport areas.
 
 ## Headset tests wanted

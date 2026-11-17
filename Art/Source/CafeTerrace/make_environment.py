@@ -1122,6 +1122,15 @@ class Env(bo.Builder):
             meshes = [o for o in new if o.type == "MESH"]
             ob = meshes[0]
             me = ob.data
+            if sp.get("decimate_to"):                      # a full-detail model with no retopo yet: reduce it here
+                me.calc_loop_triangles()
+                mod = ob.modifiers.new("reduce", "DECIMATE")
+                mod.ratio = min(1.0, sp["decimate_to"] / max(1, len(me.loop_triangles)))
+                bpy.ops.object.select_all(action="DESELECT")
+                ob.select_set(True)
+                bpy.context.view_layer.objects.active = ob
+                bpy.ops.object.modifier_apply(modifier=mod.name)
+                me = ob.data
             me.transform(ob.matrix_world)
             for o in new:
                 bpy.data.objects.remove(o)
@@ -1181,6 +1190,14 @@ class Env(bo.Builder):
         faces = math.atan2(-bx, -by)                             # the way a sitter faces, as made
         jitter = (self.rng.random() - 0.5) * 0.12 if self.chair_jitter else 0.0   # only the plan's chairs get a hand's turn of chance
         self.place("chair", name.replace("PH_", ""), (x, y, z), faces - math.radians(yaw_deg) + jitter, (k, k, k))
+
+    def tree(self):
+        if "tree" not in self.models:
+            return super().tree()
+        info, tr, sz = self.models["tree"], self.L["tree"], self.L["sizes"]["tree"]
+        height = sz.get("height", sz["crown_z"] + sz["crown_r"] * 0.8)
+        k = height / info["size"][2]
+        self.place("tree", "Tree", (tr["pos"][0], tr["pos"][1], 0.0), math.radians(tr.get("yaw_deg", 0.0)), (k, k, k))
 
     def lantern(self):
         if "lantern" not in self.models:

@@ -257,7 +257,9 @@
       "trunk_h": 3.4,
       "crown_r": 2.6,
       "crown_z": 6.4,
-      "ring_r": 0.65
+      "ring_r": 0.65,
+      "height": 8.5,
+      "_note": "height = the tree model's full height (trunk and crown), from 07_right and 03_overview: the first branches clear the ground-floor windows and the crown reaches above the eaves. The other numbers are the old stand-in's."
     }
   },
   "_tables_note_2": "Charlyne, 2026-11-11: place the tables as the pictures show them, nothing made up. Read from the painting, 01_master_v2 and 03_overview, which agree: the front row is TWO tables standing on the cobbles right at the terrace's front edge (their feet below the edge, their tops over it): one near the cafe wall, one in the middle; a chair on the terrace behind each, a chair on the cobbles between them and one at the front right corner; a third table stands on the cobbles off the terrace's street edge, a little further back, with a chair on the terrace edge turned to it. Positions measured in 01_master_v2 (terrace front edge = 3.0 m = 1055 px; depth from the feet's height under the horizon) [I: the horizon line is estimated]. 04_plan disagrees here (it draws three front tables a metre inside the terrace and two outside); where they differ the front views win, and the plan only places what they do not show clearly: the five tables with customers and the further outside table (09).",

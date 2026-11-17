@@ -38,7 +38,10 @@ ASSETS = os.path.normpath(os.path.join(HERE, "..", "..", "..", "Assets", "CafeTe
 FIXED_TIME = datetime.datetime(2026, 11, 10, 12, 0, 0)
 LIGHT_RANGE = 4.0          # the brightest value a vertex can carry
 OBJECT_TEXTURE = 1024
-JOINED = {"chair": "CT_Chairs", "table": "CT_Tables", "lantern": "CT_Lantern"}
+# The tree: in the effect images its leaves are a bright yellow-green and its bark a warm brown, lit as if by the
+# cafe's glow, though the night light alone leaves them nearly black. So it keeps part of its own colour, warm.
+OBJECT_GLOW = {"tree": (0.75, (0.62, 0.56, 0.36))}
+JOINED = {"chair": "CT_Chairs", "table": "CT_Tables", "lantern": "CT_Lantern", "tree": "CT_Tree"}
 
 # how much of a surface's look is its own glow rather than received light (the same mixes as its lit material)
 OWN_GLOW = {"WallCafe": (0.5, 0.42), "Cloth": (0.55, 0.45 * 0.9)}   # the cafe wall is yellow all the way up in the effect images
@@ -312,6 +315,9 @@ def main():
             joined.append((key, one, info, len(insts)))
         for key, one, info, n in joined:
             light = bake_light(one)
+            if key in OBJECT_GLOW:                         # painted light, as on the cafe wall
+                ga, gb = OBJECT_GLOW[key]
+                light = ga * light + np.array(gb, dtype=np.float32)
             set_colour(one.data, encode(light))
             export_fbx(one.name, [one])
             model_rows.append({"name": one.name, "texture": "CT_%s.png" % key.capitalize(), "triangles": info["tris"] * n,

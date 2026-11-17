@@ -23,3 +23,21 @@ Modifications by InnerFrame for scene BGM, 2026-11-12:
 
 These are adaptations of Scott Buckley's recordings, not original InnerFrame compositions.
 Keep this attribution and license information with distributed copies. In-game credits appear in the painting's player menu. If using the music in a YouTube video, also credit Scott Buckley in that video's description as requested on his official site.
+
+--- ALMOND STUDIO (Almond Blossom) ---
+
+'Deuxième Arabesque' (Arabesque No. 2, L. 66) by Claude Debussy (composed c. 1890, published 1891; public domain),
+performed on piano by Patrizia Prati, live at the Museum of Romanticism, Madrid, 2016-05-17.
+Recording released by Patrizia Prati under CC BY-SA 4.0 (via Wikimedia España), on Wikimedia Commons:
+https://commons.wikimedia.org/wiki/File:Claude_Debussy_-_Deuxi%C3%A8me_Arabesque_-_Patrizia_Prati.ogg
+License: Creative Commons Attribution-ShareAlike 4.0 International
+https://creativecommons.org/licenses/by-sa/4.0/
+Source and license checked 2026-11-16.
+
+Modifications by InnerFrame for scene BGM, 2026-11-16 (AlmondArabesqueLoop.wav):
+- Source 33.35–151.71 s: the opening theme returns at about 151.7 s, so the loop jumps back to the same notes at 33.35 s;
+  the seam sits 30 ms before a note's attack, with a 150 ms crossfade. 118.35-second loop.
+- Loudness set to -27 LUFS (+0.6 dB); no change to pitch or playback speed.
+- Stereo 48 kHz / 16-bit PCM; looping without a silence/fade-out gap.
+This loop edit is an adaptation of Patrizia Prati's recording and is shared under the same license, CC BY-SA 4.0.
+Credit in the Almond Studio player menu.

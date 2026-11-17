@@ -58,6 +58,7 @@ public static class VanGoghSpawner
         vincent.name = "VG_Vincent";
         vincent.transform.localScale = Vector3.one * VincentScale;
         SceneManager.MoveGameObjectToScene(vincent, scene);
+        VG_BedroomExit.Build(vincent);   // the way on: his question, the card, the door and the stairs (2026-11-17)
         Debug.Log($"[VanGogh] Vincent at {at:F2}, turned {VincentTurn} deg, scale {VincentScale}");
         return vincent;
     }

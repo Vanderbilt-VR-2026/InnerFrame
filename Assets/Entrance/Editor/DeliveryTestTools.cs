@@ -9,7 +9,7 @@ public static class DeliveryTestTools
     const string PreviewKey = "InnerFrame.GalleryMusicPreview";
     static int previewStep;
     static double nextPreviewClick;
-    static readonly string[] PreviewButtons = { "Begin sign", "Boy portrait", "Enter the Story sign", "New Room sign", "Start sign", "Continue" };
+    static readonly string[] PreviewButtons = { "Begin sign", "Boy portrait", "Enter the Story sign", "New Room sign", "Start sign" };
     static DeliveryTestTools()
     {
         EditorApplication.playModeStateChanged += state =>

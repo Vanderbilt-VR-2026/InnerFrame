@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using InnerFrame.Tutorial;
 
 /// <summary>
 /// A hint plate for finding your way (#163), in the same look as the dialogue's hint: VG_Hint (star, title, one line
@@ -15,12 +16,16 @@ public class WayfindingHint : MonoBehaviour
 
     VG_Hint hint;
     RectTransform hintRect, plate;
+    Transform layout;
     CanvasGroup group;
     Material onTop;
     GameObject icon;
     string iconKey;
     Transform key;
     Text letter;
+    VG_FollowGroup follow;
+    public Transform LayoutRoot => follow.Layout;
+    public Canvas DisplayCanvas => follow.DisplayCanvas;
 
     /// <summary>Shown (fading in) or hidden (fading out).</summary>
     public bool Visible { get; set; }
@@ -30,6 +35,33 @@ public class WayfindingHint : MonoBehaviour
     public VG_DialogueSettings Settings { get; private set; }
     /// <summary>The title and line last shown, for the checks.</summary>
     public string Shown { get; private set; }
+
+    /// <summary>Keep the shared hint immediately below the current view; null head follows Camera.main as it changes.</summary>
+    public void FollowView(Transform head = null)
+    {
+        follow.PlaceAutomatically = true;
+        follow.head = head;
+        follow.LockToView = true;
+        follow.ViewportY = .43f; // The standalone instruction sits above the dialogue box.
+        follow.Snap();
+        FitView();
+    }
+
+    /// <summary>Wayfinding yields to an existing conversation, instruction, or open interface.</summary>
+    public static bool InstructionBusy()
+    {
+        if (PlayerMenu.ModalOpen || EntranceControllerGuide.IsOpen || SceneFader.IsFading) return true;
+        foreach (var ui in VG_DialogueUI.ActiveViews)
+            if (ui != null && ui.isActiveAndEnabled &&
+                (ui.IsSpeaking || ui.HintVisible || (ui.Voice != null && ui.Voice.isPlaying))) return true;
+        foreach (var talker in FindObjectsByType<SpeechToProxy>(FindObjectsSortMode.None))
+            if (talker.isActiveAndEnabled && (talker.ConversationActive || (talker.voice != null && talker.voice.isPlaying))) return true;
+        var menu = InnerFrame.Gallery.GalleryPaintingMenu.Instance;
+        if (menu != null && menu.isActiveAndEnabled && menu.IsOpen && menu.Panel.gameObject.activeInHierarchy) return true;
+        foreach (var card in FindObjectsByType<InnerFrame.ArtworkCici.ArtworkCiciActions>(FindObjectsSortMode.None))
+            if (card.isActiveAndEnabled && card.IsOpen) return true;
+        return false;
+    }
 
     /// <summary>A hint under `parent` (null: the scene root), sized to be read from `viewDistance` metres. `onTop`: drawn
     /// over the room (nothing cuts through it), for hints that follow the head. Null without the dialogue assets.</summary>
@@ -50,18 +82,16 @@ public class WayfindingHint : MonoBehaviour
         Settings.name = source.name + " (wayfinding)";
         Settings.distance = viewDistance;
 
-        var canvas = gameObject.AddComponent<Canvas>();
-        canvas.renderMode = RenderMode.WorldSpace;
-        float parentScale = transform.parent != null ? transform.parent.lossyScale.x : 1f;
-        transform.localScale = Vector3.one / (VG_UI.UnitsPerMetre * parentScale);
-        group = gameObject.AddComponent<CanvasGroup>();
+        follow = gameObject.AddComponent<VG_FollowGroup>();
+        follow.PlaceAutomatically = false;
+        follow.CreateLayout(Settings);
+        group = DisplayCanvas.gameObject.AddComponent<CanvasGroup>();
         group.alpha = 0f;
         group.interactable = false;
         group.blocksRaycasts = false;
 
-        var layout = new GameObject("Layout", typeof(RectTransform)).transform;
-        layout.SetParent(transform, false);
-        layout.localScale = Vector3.one * Settings.Scale;
+        layout = new GameObject("Layout", typeof(RectTransform)).transform;
+        layout.SetParent(LayoutRoot, false);
 
         if (drawOnTop)
         {
@@ -92,10 +122,38 @@ public class WayfindingHint : MonoBehaviour
         }
         if (letter != null) letter.enabled = !drawn;
         hintRect.anchoredPosition = -plate.sizeDelta / 2f;   // VG_Hint hangs from its bottom-left corner; centre it
+        FitView();
     }
 
     /// <summary>The plate's size in world metres (for the checks and for placing it).</summary>
-    public Vector2 WorldSize => plate.sizeDelta * Settings.Scale / VG_UI.UnitsPerMetre * (transform.parent != null ? transform.parent.lossyScale.x : 1f);
+    public Vector2 WorldSize => new Vector2(plate.TransformVector(Vector3.right * plate.rect.width).magnitude,
+        plate.TransformVector(Vector3.up * plate.rect.height).magnitude);
+
+    void LateUpdate() { if (Visible) FitView(); }
+
+    // A wayfinding plate is centred on its anchor and sized to its own text. Fit that content, leaving the
+    // canvas/follower transform intact. In stereo both eye projections must be able to see the same plate.
+    void FitView()
+    {
+        if (follow == null || !follow.PlaceAutomatically || !follow.LockToView || plate == null) return;
+        var camera = DisplayCanvas.worldCamera;
+        if (camera == null || plate.rect.width <= 0f) return;
+        float fit;
+        if (DisplayCanvas.renderMode == RenderMode.ScreenSpaceCamera)
+        {
+            var pixels = follow.ViewSize;
+            var size = plate.rect.size * LayoutRoot.localScale.x;
+            fit = Mathf.Clamp01(Mathf.Min(.84f * pixels.x / size.x, 2f * (follow.ViewportY - .08f) * pixels.y / size.y));
+        }
+        else
+        {
+            // Fit in the same binocular reading area at every head orientation.
+            var size = plate.rect.size * (Settings.Scale / VG_UI.UnitsPerMetre);
+            float depth = Settings.distance;
+            fit = Mathf.Min(1f, Mathf.Min(.9f * depth / size.x, .35f * depth / size.y));
+        }
+        layout.localScale = Vector3.one * fit;
+    }
 
     void Update()
     {

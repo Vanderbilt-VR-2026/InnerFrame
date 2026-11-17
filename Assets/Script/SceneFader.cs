@@ -29,6 +29,8 @@ public class SceneFader : MonoBehaviour
     Renderer sphereRenderer;
     Transform sphere;
     Material mat;
+    Material fadeMaterial;
+    Material goldMaterial;
     Camera cam;
     Color tint = Color.whiteSmoke;
     bool busy;
@@ -42,6 +44,7 @@ public class SceneFader : MonoBehaviour
     TMPro.TextMeshPro loadingLabel;
     float holdStarted;
     bool holdingGold;
+    bool galleryEnvironment;
 
     void LateUpdate()
     {
@@ -72,6 +75,7 @@ public class SceneFader : MonoBehaviour
         loadingLabel.fontSharedMaterial = new Material(loadingLabel.fontSharedMaterial);
         loadingLabel.fontSharedMaterial.renderQueue = 5010;
         loadingLabel.fontSharedMaterial.SetFloat("_ZTestMode",8);
+        if (galleryEnvironment) loadingLabel.GetComponent<Renderer>().sortingOrder = sphereRenderer.sortingOrder + 1;
     }
 
     void HideLoading()
@@ -109,6 +113,7 @@ public class SceneFader : MonoBehaviour
 
         mat = new Material(Shader.Find("Sprites/Default"));
         mat.renderQueue = 5000; // draw last, on top of everything
+        fadeMaterial = mat;
 
         sphereRenderer = s.GetComponent<Renderer>();
         sphereRenderer.sharedMaterial = mat;
@@ -119,7 +124,8 @@ public class SceneFader : MonoBehaviour
 
     void FollowCamera()
     {
-        if (cam == null)
+        if (sphere == null) return;
+        if (cam == null || !cam.isActiveAndEnabled)
         {
             cam = Camera.main;
             if (cam == null && Camera.allCamerasCount > 0) cam = Camera.allCameras[0];
@@ -128,7 +134,8 @@ public class SceneFader : MonoBehaviour
 
         sphere.position = cam.transform.position;
 
-        float radius = Mathf.Max(cam.nearClipPlane * 3f, 0.1f);
+        // Both stereo eyes must remain inside the gold when an XR rig uses a very small near plane.
+        float radius = Mathf.Max(cam.nearClipPlane * 3f, galleryEnvironment ? .5f : .1f);
         float d = radius * 2f;
         // Negative X flips the image so it isn't mirrored when seen from inside
         sphere.localScale = new Vector3(-d, d, d);
@@ -137,21 +144,52 @@ public class SceneFader : MonoBehaviour
     /// <param name="fadeImage">Optional. Leave null for plain black.</param>
     public void FadeToScene(string sceneName, float fadeTime = 1f, Texture2D fadeImage = null, float revealTime = 1.2f, float transitionBudget = 0f)
     {
-        if (busy) return;
+        if (!BeginTransition(sceneName, fadeImage)) return;
+        StartCoroutine(Guard(FadeRoutine(sceneName, Mathf.Max(.01f, fadeTime), Mathf.Max(.01f, revealTime), Mathf.Max(0f, transitionBudget))));
+    }
+
+    /// <summary>From the title or Skip, the first gold frame already surrounds both eyes. Keep this same sphere through loading.</summary>
+    public bool EnterGalleryWithGold(Texture2D gold, bool skipIntro)
+    {
+        const string destination = "Assets/Scenes/Gallery.unity";
+        if (gold == null || !BeginTransition(destination, gold)) return false;
+        galleryEnvironment = true;
+        if (goldMaterial == null)
+        {
+            goldMaterial = new Material(Canvas.GetDefaultCanvasMaterial()) { renderQueue = 5000 };
+            goldMaterial.SetInt("unity_GUIZTestMode", (int)UnityEngine.Rendering.CompareFunction.Always);
+        }
+        mat = goldMaterial;
+        sphereRenderer.sharedMaterial = mat;
+        sphereRenderer.sortingOrder = 32766;
+        mat.mainTexture = ownedImage;
+        tint = Color.white;
+        FollowCamera();
+        SetAlpha(1f);
+        sphereRenderer.enabled = true;
+        // Preserve the 1.1-second title prelude and the .6-second transition before loading. Skip omits the prelude.
+        float hold = skipIntro ? .6f : 1.7f;
+        StartCoroutine(Guard(FadeRoutine(destination, .6f, .6f, skipIntro ? 13.9f : 15f, hold)));
+        return true;
+    }
+
+    bool BeginTransition(string sceneName, Texture2D image)
+    {
+        if (busy) return false;
         if (!Application.CanStreamedLevelBeLoaded(sceneName))
         {
             LastFailure = "Scene is not enabled in Build Settings: " + sceneName;
             Debug.LogError("[SceneFader] " + LastFailure);
-            return;
+            return false;
         }
         busy = true;
         LastFailure = null;
         LastCompletedScene = null;
-        SetTransitionImage(fadeImage);
-        StartCoroutine(Guard(FadeRoutine(sceneName, Mathf.Max(.01f, fadeTime), fadeImage, Mathf.Max(.01f, revealTime), Mathf.Max(0f, transitionBudget))));
+        SetTransitionImage(image);
+        return true;
     }
 
-    IEnumerator FadeRoutine(string sceneName, float fadeTime, Texture2D fadeImage, float revealTime, float transitionBudget)
+    IEnumerator FadeRoutine(string sceneName, float fadeTime, float revealTime, float transitionBudget, float goldHold = 0f)
     {
         float transitionStarted = Time.realtimeSinceStartup;
         if (BeforeSceneChange != null) yield return BeforeSceneChange(sceneName);
@@ -160,7 +198,14 @@ public class SceneFader : MonoBehaviour
         mat.mainTexture = ownedImage;
         tint = ownedImage != null ? Color.white : Color.black;
 
-        yield return Fade(0f, 1f, fadeTime);              // fade out
+        if (galleryEnvironment)
+        {
+            holdingGold = true;
+            holdStarted = Time.unscaledTime;
+            float until = Time.unscaledTime + goldHold;
+            while (Time.unscaledTime < until) yield return null;
+        }
+        else yield return Fade(0f, 1f, fadeTime);
 
         ShowLoading(sceneName);
 
@@ -197,10 +242,27 @@ public class SceneFader : MonoBehaviour
         yield return Fade(1f, 0f, Mathf.Max(fadeTime,revealTime));              // fade in
         LastCompletedScene = sceneName;
         Debug.Log("[Entrance] Land complete: " + sceneName + ". Physical Quest validation remains pending.");
+        EndTransition();
+    }
+
+    void EndTransition()
+    {
+        galleryEnvironment = false;
+        sphereRenderer.enabled = false;
         mat.mainTexture = null;
+        mat = fadeMaterial;
+        sphereRenderer.sharedMaterial = fadeMaterial;
+        sphereRenderer.sortingOrder = 0;
         if (ownedImage != null) Destroy(ownedImage);
         ownedImage = null;
         busy = false;
+    }
+
+    void OnDestroy()
+    {
+        if (ownedImage != null) Destroy(ownedImage);
+        if (goldMaterial != null) Destroy(goldMaterial);
+        if (fadeMaterial != null) Destroy(fadeMaterial);
     }
 
     IEnumerator Guard(IEnumerator routine)
@@ -217,9 +279,8 @@ public class SceneFader : MonoBehaviour
             if (failure != null)
             {
                 LastFailure = failure.ToString();
-                busy = false;
                 HideLoading();
-                sphereRenderer.enabled = false;
+                EndTransition();
                 Debug.LogException(failure);
                 yield break;
             }

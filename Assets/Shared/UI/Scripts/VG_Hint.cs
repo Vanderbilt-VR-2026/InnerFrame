@@ -17,6 +17,7 @@ public class VG_Hint : MonoBehaviour
     Text title, instruction, before, after, letter;
     float titleCap, lineCap;
     string shown;
+    GameObject menuGlyph;
 
     public static VG_Hint Make(Transform parent, Vector2 bottomLeft, VG_DialogueSettings settings, Font font, Sprite plateSprite, Sprite starSprite, Sprite keySprite, Material material)
     {
@@ -56,6 +57,14 @@ public class VG_Hint : MonoBehaviour
         instruction.text = extra;
         title.text = titleText; before.text = split >= 0 ? line.Substring(split + 1) : line;
         letter.text = buttonKey; after.text = rest;
+        bool menu = buttonKey == "≡";
+        if (menu && menuGlyph == null)
+        {
+            menuGlyph = MenuLook.DrawIcon(key, MenuLook.Icon.Menu, Vector2.zero, KeySize * 0.82f, KeyLetter);
+            foreach (var image in menuGlyph.GetComponentsInChildren<Image>()) image.material = letter.material;
+        }
+        if (menuGlyph != null) menuGlyph.SetActive(menu);
+        letter.enabled = !menu;
         float lineHeight = VG_UI.LineHeight(lineCap) / VG_UI.UnitsPerMetre;
         float lineMiddle = Pad + lineHeight / 2f;
         float titleMiddle = lineMiddle + extraRows * lineHeight + (VG_UI.LineHeight(lineCap) + VG_UI.LineHeight(titleCap)) / VG_UI.UnitsPerMetre / 2f;

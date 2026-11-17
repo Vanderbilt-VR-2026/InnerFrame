@@ -12,8 +12,8 @@ namespace InnerFrame.StarryNight
 {
     /// <summary>
     /// Every check of The Starry Night in one go: the playthrough test, the dialogue box check, the layout check, the
-    /// Vincent check, the Gallery entrance check and the lantern check (edit mode), then the Play-mode check, the props' spawn check, the rig
-    /// check and the Gallery way in and back (Play mode, one after the other). One summary line per check; in batchmode the exit code is 0 only if all passed.
+    /// Vincent check, the Gallery entrance check, the lantern check, Vincent's walk, the story order with the gold and the card, and the exit (edit mode), then the Play-mode check, the props' spawn check, the rig
+    /// check, the Gallery way in and back, the exit into Almond Blossom and taking his page (Play mode, one after the other). One summary line per check; in batchmode the exit code is 0 only if all passed.
     /// Menu: Tools > InnerFrame > Starry Night > Run all checks. Batch (without -quit, so the Play-mode checks can run):
     ///   Unity -batchmode -projectPath . -executeMethod InnerFrame.StarryNight.SN_Checks.RunAll [-snLogDir &lt;dir&gt;]
     /// With -quit the Play-mode checks can't run: they are skipped and the summary says so. Logs: Logs/SN_checks/ (or -snLogDir).
@@ -33,6 +33,9 @@ namespace InnerFrame.StarryNight
             ("Vincent", "SN_vincentcheck.log", SN_VincentCheck.Run),
             ("gallery entrance", "SN_gallerycheck.log", SN_GalleryCheck.Run),
             ("the lantern and the hints", "SN_lanterncheck.log", SN_LanternCheck.Run),
+            ("Vincent's walk", "VG_leadcheck.log", VG_LeadCheck.Run),
+            ("the story order, the gold and the card", "VG_transitionscheck.log", VG_TransitionsCheck.Run),
+            ("the exit", "SN_exitcheck.log", SN_ExitCheck.Run),
         };
 
         /// <summary>The Play-mode checks, run one after the other (each enters Play mode and reports to TakePlayResult).</summary>
@@ -42,6 +45,8 @@ namespace InnerFrame.StarryNight
             ("props at their spots", SN_SpawnCheck.Begin),
             ("the rig and the props", SN_RigCheck.Begin),
             ("gallery way in and back", SN_GalleryPlayCheck.Begin),
+            ("the exit into Almond Blossom", SN_ExitPlayCheck.Begin),
+            ("taking his page", SN_PagePlayCheck.Begin),
         };
 
         static SN_Checks()
@@ -123,7 +128,7 @@ namespace InnerFrame.StarryNight
         }
 
         /// <summary>The checks' logs that may hold SKIP lines (a check that couldn't test something here: not a pass).</summary>
-        static readonly string[] PlayLogs = { "SN_spawncheck.log", "SN_rigcheck.log", "SN_galleryplaycheck.log" };
+        static readonly string[] PlayLogs = { "SN_spawncheck.log", "SN_rigcheck.log", "SN_galleryplaycheck.log", "SN_exitplaycheck.log" };
 
         static void Finish(List<string> lines, bool failed, string dir)
         {

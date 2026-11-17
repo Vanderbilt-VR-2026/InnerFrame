@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5dadae0b1232c4c3d9d053a29573bbf8, type: 3}
   m_Name: SN_Layout
   m_EditorClassIdentifier: Assembly-CSharp::InnerFrame.StarryNight.SN_Layout
-  version: 8
+  version: 9
   rigScale: 0.8
   eyeHeight: 1.28
   playerStart: {x: 2.4, y: 0, z: -4}
@@ -347,6 +347,33 @@ MonoBehaviour:
   sketchHoldSeconds: 1.5
   editorGrabReach: 1.5
   beamLength: 45
+  exitPath:
+  - {x: 1, y: 0.62}
+  - {x: 1.18, y: -0.42}
+  - {x: 1.056, y: -1.217}
+  - {x: 1.219, y: -1.328}
+  - {x: 1.386, y: -1.455}
+  - {x: 1.559, y: -1.601}
+  - {x: 1.744, y: -1.764}
+  - {x: 1.929, y: -1.945}
+  - {x: 2.1, y: -2.15}
+  - {x: 2.265, y: -2.382}
+  - {x: 2.42, y: -2.637}
+  - {x: 2.53, y: -2.908}
+  - {x: 2.556, y: -3.206}
+  - {x: 2.503, y: -3.553}
+  - {x: 2.43, y: -3.862}
+  - {x: 2.4, y: -4}
+  - {x: 2.191, y: -5.08}
+  - {x: 1.83, y: -6.946}
+  exitTrailFrom: 2
+  exitTrailTo: 15
+  exitDelaySeconds: 3
+  exitWalkSpeed: 1.5
+  exitWalkStride: 1.5
+  exitMaxDescentDeg: 17
+  exitGoldAfterSeconds: 5
+  exitTurnDegPerSecond: 240
   ambient: {r: 0.15686275, g: 0.2, b: 0.33333334, a: 1}
   moonLight: {r: 0.5254902, g: 0.65882355, b: 0.9254902, a: 1}
   moonLightIntensity: 0.55

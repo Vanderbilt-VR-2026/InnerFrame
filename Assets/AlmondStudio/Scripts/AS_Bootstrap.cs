@@ -332,6 +332,7 @@ namespace InnerFrame.AlmondStudio
             Game.Branches = branches;
             // the story: the letter he hands you, reading it, and Almond Blossom on his easel at the end
             Game.vincent = vincentAnimator;
+            Game.vincentBody = vincentBody;   // his voice, and hold B to ask him
             Game.letterInHand = handLetter;
             Game.letterView = AS_LetterView.Make(world, letterSheet != null ? letterSheet.GetTexture("_BaseMap") : null, ui != null ? ui.font : null);
             Game.endPainting = EndPainting(world);
@@ -822,6 +823,7 @@ namespace InnerFrame.AlmondStudio
 
         Vector3? brushStand;   // where the brush stands, if the still life was cut (SplitSill)
         Animator vincentAnimator;
+        Transform vincentBody;   // v2 or the stand-in
 
         /// <summary>Almond Blossom on his easel: the painting on a 2 cm canvas, leaning back, hidden until the end.</summary>
         GameObject EndPainting(Transform world)
@@ -993,6 +995,7 @@ namespace InnerFrame.AlmondStudio
         void VincentStandIn(Transform world)
         {
             var v = new GameObject("Vincent (stand-in)").transform;
+            vincentBody = v;
             v.SetParent(world, false);
             v.SetPositionAndRotation(layout.vincentSpot, Quaternion.Euler(0f, layout.vincentYaw, 0f));
             var body = Prim(v, PrimitiveType.Capsule, "Body", new Vector3(0f, 0.8f, 0f), new Vector3(0.42f, 0.8f, 0.3f), vincent);
@@ -1012,6 +1015,7 @@ namespace InnerFrame.AlmondStudio
         {
             var vin = Instantiate(vincentModel, world);
             vin.name = "Vincent (v2)";
+            vincentBody = vin.transform;
             vin.transform.SetPositionAndRotation(layout.vincentSpot, Quaternion.Euler(0f, layout.vincentYaw, 0f));
             var anim = vin.GetComponent<Animator>();
             if (anim == null) anim = vin.AddComponent<Animator>();

@@ -56,8 +56,7 @@ namespace InnerFrame.StarryNight
                 Game.Input = xrInput = new SN_InputXR(FindAnyObjectByType<XROrigin>());
             Game.ui.Snap();   // in place at once; it follows the main camera from here
             if (layout.colourGrading) GradeCamera(Camera.main);
-            // the way back: at Done, once the morning star has faded, the player menu opens with "Back to Gallery"
-            gameObject.AddComponent<SN_GalleryReturn>().openAfterSeconds = layout.morningStarFadeSeconds + 2f;
+            // the way back: the player menu's Back to Gallery any time; at Done, Vincent's question and its card (SN_Exit)
             Game.Begin();
             var conversation = Game.vincent.gameObject.AddComponent<SN_Conversation>();
             conversation.Connect(Game);
@@ -229,6 +228,7 @@ namespace InnerFrame.StarryNight
             game.voice = voice;
             game.ui = ui;
             game.beam = beam;
+            game.exit = SN_Exit.Build(game, layout);   // after Done: Vincent asks, the card, the walk into the gold
             Game = game;
             return game;
         }

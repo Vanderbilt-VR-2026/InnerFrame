@@ -1,6 +1,7 @@
 using System.IO;
 using System.Linq;
 using UnityEditor;
+using UnityEditor.Animations;
 using UnityEngine;
 
 /// <summary>
@@ -15,9 +16,11 @@ public static class VanGoghAssetSetup
     const string ResourcesDir = "Assets/VanGogh/Resources";   // loaded at runtime by VanGoghSpawner
     const string PortraitTexture = Art + "/VG_SelfPortrait_1887.jpg";
     const string PortraitMaterial = ResourcesDir + "/VG_SelfPortrait.mat";
-    const string Vincent = Art + "/Vincent/VG_Vincent.fbx";
-    const string VincentTexture = Art + "/Vincent/VG_Vincent_BaseColor.jpg";
-    const string VincentMaterial = Art + "/M_Vincent.mat";
+    // Vincent v2 (2026-11-17, replacing the static v1 VG_Vincent.fbx): Mixamo's rig of the Tripo model and its clips,
+    // imported (Humanoid, the clips' avatar) and given its material by the Starry Night's setup (SN_Setup), used here as they are
+    const string V2Dir = "Assets/StarryNight/Models/Vincent/", V2 = V2Dir + "VincentV2.fbx", V2Material = "Assets/StarryNight/Materials/SN_VincentV2.mat";
+    const string V2Controller = Art + "/Vincent/VG_VincentV2.controller";   // made here: Standing (BreathingIdle), Walking
+    static readonly Vector3 MouthInHead = new Vector3(0f, 0.07f, 0.1f);   // his voice in his head bone's space (SN_Layout.vincentMouthInHead)
     const string Props = Art + "/Props/";
     // the Tripo easel and palette, cleaned by Art/Source/VanGogh/Props/clean_easel.py and clean_palette.py
     const string EaselTexture = Props + "VG_Easel_BaseColor.jpg", EaselMaterial = Props + "M_Easel.mat";
@@ -44,28 +47,28 @@ public static class VanGoghAssetSetup
     const float VincentHeight = 1.70f;
 
     // Prefab layout in Vincent's own space: he faces +z, his right hand is at +x, metres at 1.70 m tall.
-    // Hands were estimated from the mesh (forearms held forward); see the A2 report.
     static readonly Vector3 EaselAt = new Vector3(0.627f, 0f, 0.073f);   // puts the canvas's centre where the 10/26 placeholder's was (clean_easel.py)
     const float EaselTurn = -45f;   // canvas faces halfway between him and a visitor in front of him
-    static readonly Vector3 LeftHand = new Vector3(-0.07f, 1.03f, 0.39f), PaletteTurn = Vector3.zero;     // board out to his left
-    static readonly Vector3 RightHand = new Vector3(0.24f, 1.23f, 0.37f), BrushTurn = new Vector3(20f, 0f, 0f);   // tip leans forward
-    const float MouthHeight = 1.55f;
+    // the palette in his left hand, held from below as v1 held it: its grip (the thumb hole) and its turn in his left hand
+    // bone's space, so that with VG_Hands' held pose (palm up, his wrist at his waist in front of him) it lies flat on his
+    // palm and fingers, his thumb under the hole, nothing of his hand or forearm inside it over his whole idle loop
+    // (derived 2026-11-17 by sweeping its height; VG_BedroomV2Check counts it)
+    static readonly Vector3 PaletteGripInHand = new Vector3(-0.00284f, 0.12274f, 0.11087f);
+    static readonly Quaternion PaletteInHand = new Quaternion(0.139219f, -0.608354f, -0.693267f, -0.360424f);
+    static readonly Vector3 BrushTurn = new Vector3(20f, 0f, 0f);   // in his right hand bone's space
 
     [MenuItem("Tools/InnerFrame/Van Gogh/Rebuild assets")]
     public static void Rebuild()
     {
         SaveMaterial(PortraitMaterial, "Universal Render Pipeline/Unlit", ImportTexture(PortraitTexture, 1024));
         BuildCaption();
-        if (AssetDatabase.LoadAssetAtPath<GameObject>(Vincent) != null)
+        if (AssetDatabase.LoadAssetAtPath<GameObject>(V2) != null)
         {
-            ImportModel(Vincent, false);
-            FitHeight(Vincent, VincentHeight);
             foreach (var prop in new[] { "VG_Easel", "VG_Palette", "VG_Brush_01" }) ImportModel(Props + prop + ".fbx", true);
-            var skin = SaveMaterial(VincentMaterial, "Universal Render Pipeline/Lit", ImportTexture(VincentTexture, 2048));
             var easel = Furniture(SaveMaterial(EaselMaterial, "Universal Render Pipeline/Lit", ImportTexture(EaselTexture, 1024)));
             var palette = Furniture(SaveMaterial(PaletteMaterial, "Universal Render Pipeline/Lit", ImportTexture(PaletteTexture, 1024)));
             var stages = Stages.Select(s => ImportTexture(CanvasStages + s + ".png", 1024)).ToArray();
-            BuildVincent(skin, easel, palette, stages, ReadMirrorLines(), Outline());
+            BuildVincent(easel, palette, stages, ReadMirrorLines(), Outline());
         }
         AssetDatabase.SaveAssets();
         Debug.Log("[VanGoghAssetSetup] Rebuild done");
@@ -264,18 +267,6 @@ public static class VanGoghAssetSetup
         m.SaveAndReimport();
     }
 
-    // Scales the import so the model stands exactly `height` tall.
-    static void FitHeight(string path, float height)
-    {
-        var model = Spawn(path, null);
-        float measured = BoundsOf(model).size.y;
-        Object.DestroyImmediate(model);
-        if (Mathf.Abs(measured - height) < 0.001f) return;
-        var importer = (ModelImporter)AssetImporter.GetAtPath(path);
-        importer.globalScale *= height / measured;
-        importer.SaveAndReimport();
-    }
-
     public static Bounds BoundsOf(GameObject go)
     {
         var renderers = go.GetComponentsInChildren<Renderer>();
@@ -287,24 +278,40 @@ public static class VanGoghAssetSetup
     static GameObject Spawn(string path, Transform parent) =>
         (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(path), parent);
 
-    static void BuildVincent(Material skin, Material easel, Material palette, Texture2D[] stages, MirrorScene.Line[] lines, Material outline)
+    static void BuildVincent(Material easel, Material palette, Texture2D[] stages, MirrorScene.Line[] lines, Material outline)
     {
         var root = new GameObject("VG_Vincent");
-        var body = Spawn(Vincent, root.transform);
-        foreach (var r in body.GetComponentsInChildren<Renderer>()) r.sharedMaterial = skin;
+        // v2, as tall as v1 (the same framing at the easel), saved in his idle pose: his head bone is MirrorScene's Head
+        var body = Spawn(V2, root.transform);
+        var anim = body.GetComponent<Animator>();
+        if (anim == null) anim = body.AddComponent<Animator>();
+        anim.avatar = AssetDatabase.LoadAllAssetsAtPath(V2Dir + "VincentV2@BreathingIdle.fbx").OfType<Avatar>().First();
+        anim.runtimeAnimatorController = BuildController();
+        anim.applyRootMotion = false;   // the walk clip plays in place (VG_Lead moves him)
+        anim.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+        var skin = body.GetComponentInChildren<SkinnedMeshRenderer>(true);
+        skin.sharedMaterial = AssetDatabase.LoadAssetAtPath<Material>(V2Material);
+        skin.quality = SkinQuality.Bone4;   // the Mobile quality level's skin weights cap it (a team setting)
+        skin.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        skin.updateWhenOffscreen = false;
+        Clip("BreathingIdle").SampleAnimation(body, 0f);
+        var baked = Baked(skin);
+        body.transform.localScale = Vector3.one * (VincentHeight / (baked.Max(v => v.y) - baked.Min(v => v.y)));
         var stand = Spawn(Props + "VG_Easel.fbx", root.transform);
         stand.transform.SetLocalPositionAndRotation(EaselAt, Quaternion.Euler(0f, EaselTurn, 0f));
         stand.GetComponent<Renderer>().sharedMaterial = easel;   // its child VG_Canvas keeps the FBX's M_Canvas: MirrorScene paints the stages on it
-        Hold(Props + "VG_Palette.fbx", root.transform, LeftHand, PaletteTurn).GetComponent<Renderer>().sharedMaterial = palette;
-        Hold(Props + "VG_Brush_01.fbx", root.transform, RightHand, BrushTurn);
+        // the palette in his left hand (held from below by IK, VG_Hands), the brush in his right hand
+        var held = Hold(Props + "VG_Palette.fbx", anim.GetBoneTransform(HumanBodyBones.LeftHand), PaletteGripInHand, PaletteInHand, ownSize: true);
+        held.GetComponent<Renderer>().sharedMaterial = palette;
+        Hold(Props + "VG_Brush_01.fbx", anim.GetBoneTransform(HumanBodyBones.RightHand), Vector3.zero, BrushTurn);
 
         var capsule = root.AddComponent<CapsuleCollider>();   // Default layer, not Teleport: nobody lands inside him
         capsule.center = new Vector3(0f, VincentHeight / 2f, 0f);
         capsule.height = VincentHeight;
         capsule.radius = 0.3f;
         var mouth = new GameObject("Voice");
-        mouth.transform.SetParent(root.transform, false);
-        mouth.transform.localPosition = new Vector3(0f, MouthHeight, 0.08f);
+        mouth.transform.SetParent(anim.GetBoneTransform(HumanBodyBones.Head), false);
+        mouth.transform.localPosition = MouthInHead;
         var talker = root.AddComponent<SpeechToProxy>();
         talker.voice = VanGoghSpawner.AddVoice(mouth);
         talker.labelOffset = new Vector3(0f, VincentHeight, 0f);   // the top of his head: the caption stands on it
@@ -313,32 +320,75 @@ public static class VanGoghAssetSetup
         mirrorScene.lines = lines;
         mirrorScene.outline = outline;
 
-        // What VincentAlive moves: everything but the easel, about a pivot between his feet
+        // What VincentAlive moves: all of him (the palette, brush and voice are in his bones), about a pivot between his feet
         var figure = new GameObject("Figure").transform;
         figure.SetParent(root.transform, false);
-        figure.localPosition = FeetCentre(body);
-        foreach (var part in new[] { body.transform, root.transform.Find("VG_Palette"), root.transform.Find("VG_Brush_01"), mouth.transform })
-            part.SetParent(figure, true);
+        var feet = Baked(skin);
+        float floor = feet.Min(v => v.y);
+        feet = feet.Where(v => v.y < floor + 0.05f).ToArray();
+        figure.localPosition = new Vector3(feet.Average(v => v.x), 0f, feet.Average(v => v.z));
+        body.transform.SetParent(figure, true);
+        anim.gameObject.AddComponent<VG_Hands>().palette = held.transform;
         root.AddComponent<VincentAlive>();
         PrefabUtility.SaveAsPrefabAsset(root, VincentPrefab);
         Object.DestroyImmediate(root);
     }
 
-    // Between his feet: the middle of the mesh's lowest 5 cm, in his own space (the root is at the origin here).
-    static Vector3 FeetCentre(GameObject body)
+    static AnimationClip Clip(string name) => AssetDatabase.LoadAllAssetsAtPath($"{V2Dir}VincentV2@{name}.fbx").OfType<AnimationClip>().First(c => !c.name.StartsWith("__"));
+
+    // His skin as posed now, in world space (the root is at the origin here).
+    static Vector3[] Baked(SkinnedMeshRenderer skin)
     {
-        var points = body.GetComponentsInChildren<MeshFilter>()
-            .SelectMany(f => f.sharedMesh.vertices.Select(v => f.transform.TransformPoint(v))).ToArray();
-        float floor = points.Min(p => p.y);
-        var feet = points.Where(p => p.y < floor + 0.05f).ToArray();
-        return new Vector3(feet.Average(p => p.x), 0f, feet.Average(p => p.z));
+        var mesh = new Mesh();
+        skin.BakeMesh(mesh, true);
+        var points = mesh.vertices.Select(v => skin.transform.TransformPoint(v)).ToArray();
+        Object.DestroyImmediate(mesh);
+        return points;
+    }
+
+    // His Animator controller in the Bedroom: Standing (BreathingIdle; also while he paints and talks, there is no standing
+    // talking clip) and Walking (the bool Walking, VG_Lead), with the IK pass his hands use (VG_Hands: the palette, the door).
+    static AnimatorController BuildController()
+    {
+        var c = AssetDatabase.LoadAssetAtPath<AnimatorController>(V2Controller);
+        if (c == null) c = AnimatorController.CreateAnimatorControllerAtPath(V2Controller);
+        if (!c.parameters.Any(p => p.name == "Walking")) c.AddParameter("Walking", AnimatorControllerParameterType.Bool);
+        var layers = c.layers;
+        if (!layers[0].iKPass) { layers[0].iKPass = true; c.layers = layers; }
+        var sm = c.layers[0].stateMachine;
+        AnimatorState State(string name, string clip, Vector3 at)
+        {
+            var s = sm.states.Select(x => x.state).FirstOrDefault(x => x.name == name);
+            if (s == null) s = sm.AddState(name, at);
+            s.motion = Clip(clip);
+            return s;
+        }
+        var standing = State("Standing", "BreathingIdle", new Vector3(300f, 100f, 0f));
+        var walking = State("Walking", "Walking", new Vector3(300f, 200f, 0f));
+        sm.defaultState = standing;
+        void T(AnimatorState from, AnimatorState to, AnimatorConditionMode mode)
+        {
+            if (from.transitions.Any(x => x.destinationState == to)) return;
+            var t = from.AddTransition(to);
+            t.hasExitTime = false;
+            t.duration = 0.25f;
+            t.AddCondition(mode, 0f, "Walking");
+        }
+        T(standing, walking, AnimatorConditionMode.If);
+        T(walking, standing, AnimatorConditionMode.IfNot);
+        EditorUtility.SetDirty(c);
+        return c;
     }
 
     // Places a prop so that its GrabPoint (an empty from Blender) sits at the hand.
-    static GameObject Hold(string path, Transform parent, Vector3 hand, Vector3 turn)
+    static GameObject Hold(string path, Transform parent, Vector3 hand, Vector3 turn) => Hold(path, parent, hand, Quaternion.Euler(turn), false);
+
+    // ownSize: its own size, whatever the parent's scale (a bone)
+    static GameObject Hold(string path, Transform parent, Vector3 hand, Quaternion turn, bool ownSize)
     {
         var prop = Spawn(path, parent);
-        prop.transform.localRotation = Quaternion.Euler(turn);
+        if (ownSize) prop.transform.localScale = Vector3.one / parent.lossyScale.x;
+        prop.transform.localRotation = turn;
         var grab = prop.GetComponentsInChildren<Transform>().First(t => t.name.StartsWith("GrabPoint"));
         prop.transform.localPosition += hand - parent.InverseTransformPoint(grab.position);
         return prop;

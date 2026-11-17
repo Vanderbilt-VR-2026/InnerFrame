@@ -1,3 +1,6 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
 
@@ -28,6 +31,11 @@ namespace InnerFrame.AlmondStudio
         [Tooltip("Almond Blossom on his easel, shown at the end.")] public GameObject endPainting;
         [Tooltip("The epilogue card: the painting and what became of it.")] public AS_EpilogueView epilogue;
         public AS_IInput Input { get; set; }
+        [Header("Vincent talks (his voice, and hold B to ask him)")]
+        [Tooltip("Vincent's body (v2 or the stand-in): his voice plays from here, and hold B asks him (SpeechToProxy, Convai).")]
+        public Transform vincentBody;
+        [Tooltip("A story line waits this long (seconds) for its voice, then shows as text only.")]
+        public float lineVoiceWait = 3f;
 
         public AS_Branch[] Branches { get; set; }
         public AS_State State { get; private set; }
@@ -59,6 +67,8 @@ namespace InnerFrame.AlmondStudio
 
         public void Begin()
         {
+            ConnectTalk();
+            ResetLines();
             WireBrush();
             ReleaseBrush();
             foreach (var b in Branches) b.progress = 0f;
@@ -187,7 +197,8 @@ namespace InnerFrame.AlmondStudio
                     if (BrushHeld) Enter(AS_State.Paint);
                     break;
                 case AS_State.Paint:
-                    if (stateTime > 4f && ui != null && ui.IsSpeaking) ui.Clear();
+                    // his "Slowly..." goes after a while; never his answer to your question, or a line he is still saying
+                    if (stateTime > 4f && ui != null && ui.IsSpeaking && lineNow == null && (talker == null || !talker.IsBusy)) ui.Clear();
                     if (blossoms != null) SweepStep(); else PaintStep(dt);
                     break;
                 case AS_State.Done:
@@ -196,6 +207,8 @@ namespace InnerFrame.AlmondStudio
                     break;
             }
             HoldAndTurn(dt);
+            StepLines();
+            KeepStoryContext();
             var cam = Camera.main;
             guides.Refresh(Branches, Active, cam != null ? cam.transform.position : layout.paintEye, dt);
         }
@@ -478,17 +491,201 @@ namespace InnerFrame.AlmondStudio
             return Mathf.LerpAngle(vincentYaw, full, layout.pointTurn);
         }
 
-        void Say(string line)
+        // ------------------------------------------------------------------- Vincent's voice, and asking him (B)
+
+        SpeechToProxy talker;
+        Func<string, string> storyContext;
+        string hintLine;
+        readonly List<string> lineQueue = new List<string>();                // story lines not started yet
+        readonly Dictionary<string, AudioClip> lineClips = new Dictionary<string, AudioClip>();   // null: no voice for it
+        readonly List<string> toVoice = new List<string>();
+        bool voicing, lineLoading;
+        string lineNow;
+        float lineEndsAt;
+        Coroutine lineRoutine;
+
+        /// <summary>Hold B to ask him (SpeechToProxy on his body: Convai, his headset voice, the shared dialogue box), as in
+        /// The Starry Night; his story lines are spoken in the same voice. Once.</summary>
+        void ConnectTalk()
         {
-            if (ui == null || string.IsNullOrEmpty(line)) return;
-            ui.Say(Speaker, line, null);
-            // he talks while the line is up: nods and a slight sway, in code (AS_VincentLook), over any clip
-            if (vincent != null && vincent.TryGetComponent<AS_VincentLook>(out var look)) look.Talk(Mathf.Clamp(line.Length * 0.065f, 2f, 9f));
+            if (talker != null || vincentBody == null) return;
+            talker = vincentBody.gameObject.AddComponent<SpeechToProxy>();
+            // his voice from his head, not his feet
+            var mouth = new GameObject("Voice").transform;
+            mouth.SetParent(vincentBody, false);
+            mouth.position = vincentBody.position + Vector3.up * 1.6f;
+            talker.voice = VanGoghSpawner.AddVoice(mouth.gameObject);
+            talker.dialogueUI = ui;
+            talker.ConversationChanged += OnConversation;
+            if (ui != null) ui.Voice = talker.voice;   // the music ducks under him (EntranceAudioDirector)
+            // his lines in the order he says them, so each is ready when its moment comes
+            if (VincentVoice.Enabled)
+                foreach (var l in new[] { layout.lineArrive, layout.lineHappy, layout.linePoint, layout.lineInvite, layout.linePaint, layout.lineDone, layout.lineEasel })
+                    Want(l, false);
         }
 
+        void OnDestroy()
+        {
+            if (talker != null) talker.ConversationChanged -= OnConversation;
+        }
+
+        void OnConversation(bool active)
+        {
+            if (active)
+            {
+                // B cut his line short (SpeechToProxy stops his voice): he says it again after your conversation
+                if (lineNow != null && lineQueue.Count == 0 && Time.time < lineEndsAt - 0.5f) lineQueue.Add(lineNow);
+                lineNow = null;
+            }
+            else ShowHint();   // the story's hint again, in place of "Listening..."
+        }
+
+        void ResetLines()
+        {
+            if (lineRoutine != null) { StopCoroutine(lineRoutine); lineRoutine = null; }
+            lineQueue.Clear();
+            lineNow = null;
+            lineLoading = false;
+            if (talker != null && !talker.IsBusy && talker.voice != null) talker.voice.Stop();
+        }
+
+        /// <summary>He says `line`: in his voice when it's ready within lineVoiceWait, else as text only. A line already
+        /// playing finishes; lines not started yet are dropped for the newest (he never says what's already done).
+        /// While you are asking him or he is answering, it waits.</summary>
+        void Say(string line)
+        {
+            if (string.IsNullOrEmpty(line)) return;
+            if (talker == null) { ShowLine(line, null); return; }
+            lineQueue.Clear();
+            lineQueue.Add(line);
+            if (VincentVoice.Enabled) Want(line, true);
+        }
+
+        void StepLines()
+        {
+            if (talker == null) return;
+            if (lineNow != null)
+            {
+                if ((talker.voice != null && talker.voice.isPlaying) || Time.time < lineEndsAt) return;
+                lineNow = null;
+            }
+            if (lineQueue.Count == 0 || lineLoading || talker.IsBusy || talker.ConversationActive) return;
+            string line = lineQueue[0];
+            lineQueue.RemoveAt(0);
+            lineRoutine = StartCoroutine(PlayLine(line));
+        }
+
+        IEnumerator PlayLine(string line)
+        {
+            lineLoading = true;
+            float waitFrom = Time.time;
+            while (VincentVoice.Enabled && !lineClips.ContainsKey(line) && Time.time - waitFrom < lineVoiceWait) yield return null;
+            lineLoading = false;
+            lineRoutine = null;
+            lineClips.TryGetValue(line, out var clip);
+            if (lineQueue.Count > 0) yield break;   // a newer line came while this one waited for its voice: that one instead
+            if (talker.IsBusy || talker.ConversationActive) { if (lineQueue.Count == 0) lineQueue.Add(line); yield break; }   // B meanwhile
+            lineNow = line;
+            if (clip != null && talker.voice != null)
+            {
+                talker.voice.clip = clip;
+                talker.voice.Play();
+                lineEndsAt = Time.time + clip.length + 0.3f;
+            }
+            else
+            {
+                clip = null;
+                lineEndsAt = Time.time;   // text only: as before, the next line may replace it at once
+            }
+            ShowLine(line, clip);
+        }
+
+        void ShowLine(string line, AudioClip clip)
+        {
+            if (ui != null) ui.Say(Speaker, line, clip);
+            // he talks while the line is up: nods and a slight sway, in code (AS_VincentLook), over any clip
+            float seconds = clip != null ? clip.length : Mathf.Clamp(line.Length * 0.065f, 2f, 9f);
+            if (vincent != null && vincent.TryGetComponent<AS_VincentLook>(out var look)) look.Talk(seconds);
+        }
+
+        /// <summary>Makes `line`'s voice in the background (first: before the others waiting).</summary>
+        void Want(string line, bool first)
+        {
+            if (string.IsNullOrEmpty(line) || lineClips.ContainsKey(line)) return;
+            if (toVoice.Contains(line)) { if (!first) return; toVoice.Remove(line); }
+            if (first) toVoice.Insert(0, line); else toVoice.Add(line);
+            if (!voicing) StartCoroutine(VoiceLines());
+        }
+
+        IEnumerator VoiceLines()
+        {
+            voicing = true;
+            while (toVoice.Count > 0)
+            {
+                string line = toVoice[0];
+                toVoice.RemoveAt(0);
+                AudioClip clip = null;
+                yield return VincentVoice.Speak(line, c => clip = c);
+                lineClips[line] = clip;   // null: no voice, the line shows as text
+            }
+            voicing = false;
+        }
+
+        /// <summary>Your question goes to Convai with what is happening in the story right now (after any notes on a
+        /// thing you named, VincentObjectTalk), so "what should we paint?" makes sense to him. The proxy gets it as the
+        /// scene sentence.</summary>
+        void KeepStoryContext()
+        {
+            if (talker == null) return;
+            talker.SceneContext = StoryNow();
+            if (talker.QuestionContext == storyContext && storyContext != null) return;
+            var inner = talker.QuestionContext;   // VincentObjectTalk's, set in its Start
+            storyContext = q =>
+            {
+                string notes = inner?.Invoke(q);
+                string now = "(What is happening now in this visit: " + StoryNow() + ")";
+                return string.IsNullOrEmpty(notes) ? now : notes + " " + now;
+            };
+            talker.QuestionContext = storyContext;
+        }
+
+        /// <summary>Where the story is, in a sentence to him (ours, not from the letters).</summary>
+        string StoryNow()
+        {
+            const string News = "Theo's letter of 31 January 1890 says Jo has given birth to a son, named Vincent Willem after you, " +
+                                "and that Aurier has written about your work and your canvases hang in Brussels with Les Vingt. ";
+            switch (State)
+            {
+                case AS_State.Arrive:
+                    return "A letter from Theo has just come. You are holding it out to the visitor and asking them to read it to you; you don't know its news yet.";
+                case AS_State.ReadLetter:
+                    return "The visitor is reading Theo's letter to you now; you are waiting to hear the news.";
+                case AS_State.Invite:
+                    return News + "You are overjoyed. The almond tree outside the window is coming into blossom, and you want to paint something " +
+                           "for the baby's room; you have asked the visitor to help, starting by opening the window.";
+                case AS_State.TakeBrush:
+                    return News + "The window is open onto the almond tree. A brush stands in a glass on the sill; the visitor is to take it.";
+                case AS_State.Paint:
+                    return News + "With your brush the visitor is waking the almond tree into blossom, branch by branch, through the open window.";
+                default:
+                    return News + "The almond tree is in full blossom against the blue sky, and you know what you will paint for the baby: branches of almond blossom.";
+            }
+        }
+
+        /// <summary>The story's hint; "Hold B to ask Vincent" under it, as in The Starry Night. While you talk to him the
+        /// hint is SpeechToProxy's ("Listening..."); the story's comes back after.</summary>
         void Hint(string line)
         {
-            if (ui != null) ui.SetHint(layout.hintTitle, line);
+            hintLine = line;
+            ShowHint();
+        }
+
+        void ShowHint()
+        {
+            if (ui == null || (talker != null && talker.ConversationActive)) return;
+            string line = hintLine;
+            if (talker != null && !string.IsNullOrEmpty(line)) line += $"\nHold {{{SpeechToProxy.ButtonKey}}} to ask Vincent";
+            ui.SetHint(layout.hintTitle, line);
         }
     }
 }

@@ -44,6 +44,8 @@ namespace InnerFrame.StarryNight
         /// <summary>The look's yaw (from his facing, right positive) and pitch now, after the smoothing.</summary>
         public float LookYaw => lookYaw;
         public float LookPitch => lookPitch;
+        /// <summary>Set (a world point) while something else decides where he looks: SN_Exit, ahead of him while he walks.</summary>
+        public Vector3? LookOverride { get; set; }
         /// <summary>The star he points at (or null), where, and the pointing weight now.</summary>
         public string PointTargetName { get; private set; }
         public Vector3 PointTarget { get; private set; }
@@ -113,7 +115,8 @@ namespace InnerFrame.StarryNight
             Vector3 eye = head.position;
             string targetName; Vector3 target; float targetWeight = 1f;
             Vector3 playerHead = player != null ? player.position : eye + transform.forward;
-            if (game.State == SN_State.Arrive)
+            if (LookOverride.HasValue) { targetName = "ahead"; target = LookOverride.Value; }
+            else if (game.State == SN_State.Arrive)
             {
                 targetName = "sketch";
                 target = hips.position + transform.forward * layout.vincentSketchLookDistance;

@@ -139,8 +139,11 @@ namespace InnerFrame.Gallery.EditorTools.Tests
                 yield return Aim(gp.Centre);
                 Check(pointer.Hovered.Contains(gp), $"{gp.title} {label}: pointed at, it is hovered");
                 Check(pointer.RayShown, $"{gp.title} {label}: the long ray shows");
+                Check(gp.RimLit, $"{gp.title} {label}: its frame's rim is lit");
+                // a rim copied from a static-batched frame is the whole room's merged mesh: a cream wash over the walls
                 var rim = gp.frame.transform.Find("Hover Outline")?.GetComponent<Renderer>();
-                Check(rim != null && rim.enabled, $"{gp.title} {label}: its frame's rim is lit");
+                Check(rim == null || rim.bounds.size.magnitude < gp.frame.bounds.size.magnitude * 1.5f + 0.5f,
+                    $"{gp.title} {label}: its rim is the size of its frame ({(rim != null ? rim.bounds.size.magnitude : 0f):F1} m across, the frame {gp.frame.bounds.size.magnitude:F1} m)");
                 Check(!menu.IsOpen, $"{gp.title} {label}: no menu before the trigger");
                 Shot($"play-{key}-{label}-1-before");
                 yield return Trigger();

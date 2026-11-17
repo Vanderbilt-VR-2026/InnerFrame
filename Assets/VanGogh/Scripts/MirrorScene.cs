@@ -22,7 +22,7 @@ public enum VG_MirrorStep { None, Asked, HeldOutside, HeldInside, Parked, Finish
 public class MirrorScene : MonoBehaviour
 {
     // Room metres (the rig is scaled 0.8 here) and seconds; all guesses until tried on a Quest.
-    const float EyeHeight = 1.55f;        // his eyes on the 1.70 m model; times his spawn scale, 1.28 m in the room
+    const float EyeHeight = 1.55f;        // without a head bone: his eyes on the 1.70 m model; times his spawn scale, 1.28 m in the room
     const float BesideCanvas = 0.25f;     // the target: half the canvas's width plus this, sideways from its centre
     const float ZoneRadius = 1.0f;        // the glass's centre within this of his head, in any orientation (Target is 0.88 m out)
     const float GlideSeconds = 0.25f;     // let go near him: to the Target pose in this long
@@ -54,7 +54,10 @@ public class MirrorScene : MonoBehaviour
     [Tooltip("Unlit chrome yellow for the outlines; set by VanGoghAssetSetup.")] public Material outline;
 
     public Vector3 Target { get; private set; }
+    /// <summary>His head: Vincent v2's head bone where he stands (2026-11-17), as he spawns.</summary>
     public Vector3 Head { get; private set; }
+    /// <summary>The portrait is finished (here, or on the headset that decides).</summary>
+    public bool PortraitDone => Done;
     public float Progress => painted / PaintSeconds;
     /// <summary>This frame's step, on every headset (the deciding one or not).</summary>
     public VG_MirrorStep Now { get; private set; }
@@ -362,10 +365,11 @@ public class MirrorScene : MonoBehaviour
 
     Renderer Canvas() => Array.Find(GetComponentsInChildren<Renderer>(true), r => r.name == CanvasName);
 
-    // The target: beside the canvas on the side away from him (the other side is his), level with his eyes.
+    // The target: beside the canvas on the side away from him (the other side is his), level with his Head (v2: his head bone).
     void Locate()
     {
-        Head = transform.TransformPoint(new Vector3(0f, EyeHeight, 0f));
+        var bone = GetComponentInChildren<Animator>() != null ? GetComponentInChildren<Animator>().GetBoneTransform(HumanBodyBones.Head) : null;
+        Head = bone != null ? bone.position : transform.TransformPoint(new Vector3(0f, EyeHeight, 0f));
         var canvas = Canvas();
         if (canvas == null) return;
         Vector3 centre = canvas.bounds.center, across = canvas.transform.right;   // the image's width runs along its local x

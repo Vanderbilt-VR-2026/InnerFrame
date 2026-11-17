@@ -87,7 +87,12 @@ public static class PlayerAvatarPoseTest
         Directory.CreateDirectory(outDir);
         avatars = PlayerAvatarBody.Order.Select(n => Resources.Load<PlayerAvatarRig>("PlayerAvatars/" + n)).Where(a => a != null)
                                        .Select(a => UnityEngine.Object.Instantiate(a)).ToArray();
-        if (avatars.Length == 0) { Finish(false, "no avatars in Resources/PlayerAvatars (run InnerFrame > Multiplayer > Build Player Avatars)"); return; }
+        if (avatars.Length < PlayerAvatarBody.Order.Length)
+        {
+            var missing = PlayerAvatarBody.Order.Where(n => Resources.Load<PlayerAvatarRig>("PlayerAvatars/" + n) == null);
+            Finish(false, $"missing from Resources/PlayerAvatars: {string.Join(", ", missing)} (run InnerFrame > Multiplayer > Build Player Avatars)");
+            return;
+        }
 
         var floor = GameObject.CreatePrimitive(PrimitiveType.Plane);
         floor.transform.localScale = Vector3.one * 0.5f;

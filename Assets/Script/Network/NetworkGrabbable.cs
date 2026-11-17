@@ -16,7 +16,7 @@ using UnityEngine.XR.Interaction.Toolkit.Interactables;
 /// previous holder's hand lets go.
 ///
 /// While someone holds it, everyone sees a glowing outline in the holder's player colour
-/// (the colour of their avatar, NetworkPlayer.PlayerColor), so you can tell who has it.
+/// (the player's colour, NetworkPlayer.PlayerColor), so you can tell who has it.
 /// The outline uses Resources/HeldOutline.mat (shader InnerFrame/Held Outline).
 /// </summary>
 [RequireComponent(typeof(XRGrabInteractable), typeof(Rigidbody))]

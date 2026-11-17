@@ -17,6 +17,17 @@ from mathutils import Vector
 from mathutils.geometry import intersect_point_line
 import addon_utils
 
+def save_clean(path):
+    """Write the scenes, objects and actions without the window/operator state, which keeps absolute paths
+    (the last Save As folder, old render output bytes); the repo is public."""
+    sc = bpy.context.scene
+    sc.render.filepath = 'x' * 1000   # overwrite the whole buffer, old bytes linger after a short path
+    sc.render.filepath = '//'
+    bpy.ops.file.make_paths_relative()
+    ids = set(bpy.data.scenes) | set(bpy.data.objects) | set(bpy.data.actions) | set(bpy.data.collections)
+    bpy.data.libraries.write(path, ids, compress=True, path_remap='RELATIVE_ALL')
+
+
 args = sys.argv[sys.argv.index('--') + 1:]
 SRC, OUT = args[0], args[1]
 os.makedirs(OUT, exist_ok=True)
@@ -482,7 +493,7 @@ for o in (meta, rig):
 meta.hide_set(True)
 body.data.name = 'Girl_Body'
 bpy.ops.object.select_all(action='DESELECT')
-bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, 'Girl_Rigged.blend'))
+save_clean(os.path.join(OUT, 'Girl_Rigged.blend'))
 print('[out] saved blend')
 # rest-pose check: with the rig at rest the skinned mesh must not move
 dg = bpy.context.evaluated_depsgraph_get()

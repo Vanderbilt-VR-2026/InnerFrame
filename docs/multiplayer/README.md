@@ -65,7 +65,12 @@ height, the floor finding, the tidy-up and the teleport snap are **not** covered
 
 `PlayerAvatarRoomTest` (`-executeMethod PlayerAvatarRoomTest.RunFromCommandLine`, with a second player in the Painted
 Bedroom's room, e.g. a headset) checks that each player has the body they chose, the others' are shown, your own is
-hidden, and nothing else of the players shows. It skips the Entrance: set `AVATAR_CHOICE=1` for the Girl.
+hidden, and nothing else of the players shows. It skips the Entrance, so the environment stands in for the choice:
+`AVATAR_CHOICE` is this copy's (0 Boy, 1 Girl) and `AVATAR_CHOICE_OTHER` the other copy's. With both set it also fails
+if a choice isn't the one sent or shown; run one copy with `0`/`1` and the other with `1`/`0`.
+
+Every headset in a room needs a build with the same `NetworkPlayer` (this PR adds a networked `AvatarChoice`): an
+older build in the same room reads the player's state wrongly.
 
 On a headset, with two players: stand, crouch, sit, walk, turn on the spot and teleport, and watch the other player's
 body: feet on the floor, no sliding, hands on the controllers.

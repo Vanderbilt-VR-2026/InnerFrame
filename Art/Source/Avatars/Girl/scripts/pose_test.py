@@ -11,6 +11,17 @@ pbs = rig.pose.bones
 H = 1.60
 print('CTRL', ' '.join(b.name for b in rig.data.bones if not b.name.startswith(('DEF-', 'ORG-', 'MCH-', 'VIS'))))
 
+def save_clean(path):
+    """Write the scenes, objects and actions without the window/operator state, which keeps absolute paths
+    (the last Save As folder, old render output bytes); the repo is public."""
+    sc = bpy.context.scene
+    sc.render.filepath = 'x' * 1000   # overwrite the whole buffer, old bytes linger after a short path
+    sc.render.filepath = '//'
+    bpy.ops.file.make_paths_relative()
+    ids = set(bpy.data.scenes) | set(bpy.data.objects) | set(bpy.data.actions) | set(bpy.data.collections)
+    bpy.data.libraries.write(path, ids, compress=True, path_remap='RELATIVE_ALL')
+
+
 def reset():
     for pb in pbs:
         pb.location = (0, 0, 0); pb.rotation_quaternion = (1, 0, 0, 0); pb.rotation_euler = (0, 0, 0); pb.scale = (1, 1, 1)
@@ -101,4 +112,4 @@ if SAVE:
     reset()
     rig.animation_data.action = None
     bpy.data.objects.remove(co)
-    bpy.ops.wm.save_as_mainfile(filepath=SAVE)
+    save_clean(SAVE)

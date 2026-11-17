@@ -11,8 +11,10 @@ using UnityEngine;
 /// same Photon room). Each joins the Painted Bedroom, waits for the other, and passes when:
 ///   - the other player has a body, shown, and it is the one they chose in the Entrance (NetworkPlayer.AvatarChoice);
 ///   - its own body is hidden (you don't see yourself), and nothing else of the players shows (no head or hand shapes).
-/// It opens the bedroom directly (no Entrance), so set AVATAR_CHOICE=0 (Boy) or 1 (Girl) in each copy's environment
-/// to try both bodies; without it both are the Boy.
+/// It opens the bedroom directly (no Entrance), so it stands in for the Entrance's choice: AVATAR_CHOICE=0 (Boy) or 1
+/// (Girl) is this copy's choice, and AVATAR_CHOICE_OTHER the other copy's. With them set it also fails if this copy's
+/// choice isn't the one sent (NetworkPlayer.AvatarChoice) or the other player's body isn't the one they chose. Run one
+/// copy with AVATAR_CHOICE=0 AVATAR_CHOICE_OTHER=1 and the other with 1 and 0. Without them both are the Boy.
 /// It also saves a picture of the other player, from a little way in front of them, to AVATAR_ROOM_OUT (if set).
 /// Command line: -executeMethod PlayerAvatarRoomTest.RunFromCommandLine (exit 0 = passed).
 /// </summary>
@@ -25,8 +27,6 @@ public static class PlayerAvatarRoomTest
 
     public static void RunFromCommandLine()
     {
-        if (int.TryParse(Environment.GetEnvironmentVariable("AVATAR_CHOICE"), out int choice))
-            InnerFrame.Entrance.EntranceChoice.SetRole((InnerFrame.Entrance.VisitorRole)choice);
         EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
         SessionState.SetBool(KeyRunning, true);
         Hook();
@@ -36,8 +36,14 @@ public static class PlayerAvatarRoomTest
     [InitializeOnLoadMethod]
     static void Resume() { if (SessionState.GetBool(KeyRunning, false)) Hook(); }
 
+    static int? EnvChoice(string name) => int.TryParse(Environment.GetEnvironmentVariable(name), out int c) ? c : (int?)null;
+
     static void Hook()
     {
+        // entering Play mode reloads the domain (EditorSettings: Enter Play Mode Options, nothing disabled), which
+        // resets EntranceChoice: set the choice again here, after the reload and before the player spawns
+        if (EnvChoice("AVATAR_CHOICE") is int choice)
+            InnerFrame.Entrance.EntranceChoice.SetRole((InnerFrame.Entrance.VisitorRole)choice);
         step = 0; stepStarted = EditorApplication.timeSinceStartup;
         EditorApplication.update -= Tick; EditorApplication.update += Tick;
     }
@@ -87,6 +93,9 @@ public static class PlayerAvatarRoomTest
             Debug.Log($"[PlayerAvatarRoomTest] {p.name}: body {(body ? body.BodyName : "none")} (expected {expected}), " +
                       $"{(bodyShown ? "shown" : "hidden")}; head and hand shapes {(shapesShown ? "shown" : "none")}");
             if (body == null || body.BodyName != expected) problems.Add($"{p.name} has {(body ? body.BodyName : "no body")}, expected {expected}");
+            int? chose = EnvChoice(mine ? "AVATAR_CHOICE" : "AVATAR_CHOICE_OTHER");
+            if (chose is int c && p.AvatarChoice != c) problems.Add($"{p.name} sent choice {p.AvatarChoice}, but chose {c}");
+            if (chose is int c2 && body != null && body.BodyName != PlayerAvatarBody.Order[c2]) problems.Add($"{p.name} shows {body.BodyName}, but chose {PlayerAvatarBody.Order[c2]}");
             if (mine && bodyShown) problems.Add($"{p.name}: your own body is showing");
             if (!mine && !bodyShown) problems.Add($"{p.name}: the other player's body is hidden");
             if (shapesShown) problems.Add($"{p.name}: head or hand shapes show (the placeholders should be gone)");

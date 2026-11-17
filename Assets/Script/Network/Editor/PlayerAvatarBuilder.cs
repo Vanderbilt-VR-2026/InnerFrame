@@ -5,9 +5,9 @@ using UnityEditor.Animations;
 using UnityEngine;
 
 /// <summary>
-/// Player avatars, step 3 of 3 (steps 1 and 2: Art/Source/Avatars/make_mixamo_upload.py and Mixamo). For each
-/// Mixamo character in Assets/Script/Network/Avatars/ named in PlayerAvatarBody.Order (now just
-/// Avatar_BoyWorker.fbx): imports it as a Humanoid, gives it a URP Lit material on its 2048 base colour
+/// Player avatars, last step. For each character in Assets/Script/Network/Avatars/ named in PlayerAvatarBody.Order
+/// (Avatar_BoyWorker.fbx: rigged in Mixamo, Art/Source/Avatars/make_mixamo_upload.py; Avatar_Girl.fbx: rigged with
+/// Rigify in Blender, Art/Source/Avatars/Girl/scripts/export_unity.py): imports it as a Humanoid, gives it a URP Lit material on its 2048 base colour
 /// (Avatars/Textures, from Art/Source/Avatars/make_textures.py) and an Animator with an IK pass, and saves
 /// Resources/PlayerAvatars/&lt;name&gt;.prefab with PlayerAvatarRig. An "Idle" clip in the folder (a Mixamo animation,
 /// "FBX for Unity, Without Skin", file name containing "Idle") plays under the IK if there is one.
@@ -67,7 +67,7 @@ public static class PlayerAvatarBuilder
         var avatar = AssetDatabase.LoadAllAssetsAtPath(fbx).OfType<Avatar>().FirstOrDefault();
         if (model == null || avatar == null || !avatar.isHuman || !avatar.isValid)
         {
-            Debug.LogError($"[PlayerAvatarBuilder] {fbx}: no valid Humanoid avatar (is it Mixamo's rigged download?)");
+            Debug.LogError($"[PlayerAvatarBuilder] {fbx}: no valid Humanoid avatar (is it a rigged, skinned FBX?)");
             return false;
         }
 

@@ -9,8 +9,10 @@ using UnityEngine;
 /// <summary>
 /// Two-player check of the player avatars: run it in two copies of the project at once (two Editors on one machine,
 /// same Photon room). Each joins the Painted Bedroom, waits for the other, and passes when:
-///   - the other player has a body, shown, and it is the one PlayerAvatarBody.Choose gives for them by room order;
-///   - its own body is hidden (you don't see yourself), and the old floating head and hands are hidden on both.
+///   - the other player has a body, shown, and it is the one they chose in the Entrance (NetworkPlayer.AvatarChoice);
+///   - its own body is hidden (you don't see yourself), and nothing else of the players shows (no head or hand shapes).
+/// It opens the bedroom directly (no Entrance), so set AVATAR_CHOICE=0 (Boy) or 1 (Girl) in each copy's environment
+/// to try both bodies; without it both are the Boy.
 /// It also saves a picture of the other player, from a little way in front of them, to AVATAR_ROOM_OUT (if set).
 /// Command line: -executeMethod PlayerAvatarRoomTest.RunFromCommandLine (exit 0 = passed).
 /// </summary>
@@ -23,6 +25,8 @@ public static class PlayerAvatarRoomTest
 
     public static void RunFromCommandLine()
     {
+        if (int.TryParse(Environment.GetEnvironmentVariable("AVATAR_CHOICE"), out int choice))
+            InnerFrame.Entrance.EntranceChoice.SetRole((InnerFrame.Entrance.VisitorRole)choice);
         EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
         SessionState.SetBool(KeyRunning, true);
         Hook();
@@ -62,7 +66,6 @@ public static class PlayerAvatarRoomTest
 
     static void Check(NetworkRunner runner, NetworkPlayer[] players)
     {
-        var ids = runner.ActivePlayers.Select(p => p.PlayerId).ToArray();
         var problems = new System.Collections.Generic.List<string>();
         NetworkPlayer other = null;
         foreach (var p in players)
@@ -71,7 +74,7 @@ public static class PlayerAvatarRoomTest
             if (!mine) other = p;
             var body = p.GetComponent<PlayerAvatarBody>();
             var rig = p.GetComponentInChildren<PlayerAvatarRig>(true);
-            string expected = PlayerAvatarBody.Choose(ids, p.Object.StateAuthority.PlayerId);
+            string expected = PlayerAvatarBody.Choose(p.AvatarChoice);
             bool bodyShown = rig != null && rig.GetComponentsInChildren<Renderer>(true).Any(r => r.enabled);
             bool shapesShown = new[] { p.head, p.leftHand, p.rightHand }.Where(t => t)
                 .SelectMany(t => t.GetComponentsInChildren<Renderer>(true)).Any(r => r.enabled);
@@ -82,15 +85,15 @@ public static class PlayerAvatarRoomTest
                           $"body scale {rig.transform.lossyScale.y:F2}, feet at y {rig.transform.position.y:F2}, other's eyes {(other && other.head ? Vector3.Distance(p.head.position, other.head.position) : 0):F2} m away");
             }
             Debug.Log($"[PlayerAvatarRoomTest] {p.name}: body {(body ? body.BodyName : "none")} (expected {expected}), " +
-                      $"{(bodyShown ? "shown" : "hidden")}; old shapes {(shapesShown ? "shown" : "hidden")}");
+                      $"{(bodyShown ? "shown" : "hidden")}; head and hand shapes {(shapesShown ? "shown" : "none")}");
             if (body == null || body.BodyName != expected) problems.Add($"{p.name} has {(body ? body.BodyName : "no body")}, expected {expected}");
             if (mine && bodyShown) problems.Add($"{p.name}: your own body is showing");
             if (!mine && !bodyShown) problems.Add($"{p.name}: the other player's body is hidden");
-            if (shapesShown) problems.Add($"{p.name}: the old head and hand shapes still show");
+            if (shapesShown) problems.Add($"{p.name}: head or hand shapes show (the placeholders should be gone)");
         }
         var me = players.FirstOrDefault(p => p.HasStateAuthority);
         if (other != null && me != null) Picture(me, other);
-        Finish(problems.Count == 0, problems.Count == 0 ? $"{players.Length} players, bodies by room order" : string.Join("; ", problems));
+        Finish(problems.Count == 0, problems.Count == 0 ? $"{players.Length} players, each with the body they chose" : string.Join("; ", problems));
     }
 
     // The other player's body from 2.2 m in front of it, at chest height (the room's floating captions left out).

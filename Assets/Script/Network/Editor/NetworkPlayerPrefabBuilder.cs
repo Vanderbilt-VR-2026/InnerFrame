@@ -4,8 +4,9 @@ using UnityEditor;
 using UnityEngine;
 
 /// <summary>
-/// Builds Assets/Script/Network/Resources/NetworkPlayer.prefab (head + two hands)
-/// and registers it with Fusion. Safe to run again after changing the layout here.
+/// Builds Assets/Script/Network/Resources/NetworkPlayer.prefab, the one player prefab for every scene, and registers
+/// it with Fusion: three tracked points (Head, LeftHand, RightHand) with no shapes; what the others see is the full
+/// body the player chose (PlayerAvatarBody). Safe to run again after changing the layout here.
 /// </summary>
 public static class NetworkPlayerPrefabBuilder
 {
@@ -32,13 +33,9 @@ public static class NetworkPlayerPrefabBuilder
         netObj.Flags |= NetworkObjectFlags.V1 | NetworkObjectFlags.DestroyWhenStateAuthorityLeaves;
 
         var player = root.AddComponent<NetworkPlayer>();
-        player.head = Part(root.transform, "Head", PrimitiveType.Sphere, new Vector3(0.2f, 0.24f, 0.22f));
-        // Dark strip on the face so others can tell which way you're looking
-        var visor = Shape(player.head, "Visor", PrimitiveType.Cube, new Vector3(0.16f, 0.05f, 0.06f));
-        visor.localPosition = new Vector3(0f, 0.02f, 0.085f);
-        visor.GetComponent<Renderer>().sharedMaterial = VisorMaterial();
-        player.leftHand = Part(root.transform, "LeftHand", PrimitiveType.Sphere, Vector3.one * 0.08f);
-        player.rightHand = Part(root.transform, "RightHand", PrimitiveType.Sphere, Vector3.one * 0.08f);
+        player.head = Part(root.transform, "Head");
+        player.leftHand = Part(root.transform, "LeftHand");
+        player.rightHand = Part(root.transform, "RightHand");
         NetworkPlayerVoiceBuilder.AddTo(root, player.head); // voice chat (Assets/Script/Voice)
         root.AddComponent<VincentLink>(); // shared Vincent: questions and answers for the room
         root.AddComponent<MirrorLink>(); // shared mirror scene (Painted Bedroom, #77)
@@ -56,39 +53,12 @@ public static class NetworkPlayerPrefabBuilder
         AssetDatabase.CreateFolder(parent, System.IO.Path.GetFileName(path));
     }
 
-    // A tracked part: the shape sits on a child so scaling it doesn't scale what NetworkTransform syncs.
-    static Transform Part(Transform parent, string name, PrimitiveType shape, Vector3 size)
+    // A tracked point: NetworkTransform syncs it; nothing to see (the body follows it).
+    static Transform Part(Transform parent, string name)
     {
         var part = new GameObject(name);
         part.transform.SetParent(parent, false);
         part.AddComponent<NetworkTransform>();
-        Shape(part.transform, "Mesh", shape, size);
         return part.transform;
-    }
-
-    static Transform Shape(Transform parent, string name, PrimitiveType shape, Vector3 size)
-    {
-        var go = GameObject.CreatePrimitive(shape);
-        go.name = name;
-        Object.DestroyImmediate(go.GetComponent<Collider>()); // avatars shouldn't push anything
-        go.transform.SetParent(parent, false);
-        go.transform.localScale = size;
-        var r = go.GetComponent<Renderer>();
-        r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-        return go.transform;
-    }
-
-    static Material VisorMaterial()
-    {
-        const string path = "Assets/Script/Network/Resources/NetworkPlayerVisor.mat";
-        var mat = AssetDatabase.LoadAssetAtPath<Material>(path);
-        if (mat != null) return mat;
-
-        var shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
-        mat = new Material(shader);
-        mat.SetColor("_BaseColor", new Color(0.08f, 0.08f, 0.1f));
-        mat.SetColor("_Color", new Color(0.08f, 0.08f, 0.1f));
-        AssetDatabase.CreateAsset(mat, path);
-        return mat;
     }
 }

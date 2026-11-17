@@ -1,20 +1,17 @@
-using System.Linq;
 using UnityEngine;
 
 /// <summary>
-/// Gives a NetworkPlayer a full body (NetworkPlayer adds this when it spawns). Which body: by order in the room,
-/// so the player who has been in it longest is the first avatar, the next the second, and so on round the list.
-/// Every headset works this out itself from the room's players, so all agree without sending anything.
+/// Gives a NetworkPlayer a full body (NetworkPlayer adds this when it spawns): the one the player chose in the
+/// Entrance, Boy or Girl (NetworkPlayer.AvatarChoice, set by its owner and sent to everyone), in every scene.
 ///
 /// The body stands under the player's head (the NetworkPlayer's head is their eyes), turns with them, and its arms
-/// and head follow the player's controllers and gaze (PlayerAvatarRig). The NetworkPlayer's own head and hand
-/// shapes are hidden while a body is shown. Your own body stays hidden, like the rest of your own avatar.
+/// and head follow the player's controllers and gaze (PlayerAvatarRig). Your own body stays hidden.
 /// </summary>
 [DefaultExecutionOrder(10000)]   // after other scripts' Update (Fusion's Render, which moves remote heads, comes later)
 public class PlayerAvatarBody : MonoBehaviour
 {
-    /// <summary>Resources/PlayerAvatars/&lt;name&gt;, in room order: the first player gets the first one.</summary>
-    public static readonly string[] Order = { "Avatar_BoyWorker" };
+    /// <summary>Resources/PlayerAvatars/&lt;name&gt;, indexed by InnerFrame.Entrance.VisitorRole (0 Boy, 1 Girl).</summary>
+    public static readonly string[] Order = { "Avatar_BoyWorker", "Avatar_Girl" };
     const string Folder = "PlayerAvatars/";
 
     const float TurnAfter = 35f;      // degrees the head may turn before the body follows quickly
@@ -51,19 +48,18 @@ public class PlayerAvatarBody : MonoBehaviour
         if (Time.unscaledTime >= nextCheck)
         {
             nextCheck = Time.unscaledTime + 0.5f;
-            var want = Choose(player.Runner.ActivePlayers.Select(p => p.PlayerId), player.Object.StateAuthority.PlayerId);
+            var want = Choose(player.AvatarChoice);
             if (want != bodyName) Show(want);
         }
         Place();
     }
 
-    /// <summary>The avatar for <paramref name="me"/> among the room's player ids: by order of joining (ids only grow).</summary>
-    public static string Choose(System.Collections.Generic.IEnumerable<int> roomPlayers, int me)
+    /// <summary>The avatar for a player's choice (a VisitorRole); the first one there is if that one is missing.</summary>
+    public static string Choose(int choice)
     {
-        var available = Order.Where(n => Resources.Load<PlayerAvatarRig>(Folder + n) != null).ToArray();
-        if (available.Length == 0) return null;
-        int slot = roomPlayers.Where(id => id < me).Count();
-        return available[slot % available.Length];
+        if (choice >= 0 && choice < Order.Length && Resources.Load<PlayerAvatarRig>(Folder + Order[choice]) != null) return Order[choice];
+        foreach (var n in Order) if (Resources.Load<PlayerAvatarRig>(Folder + n) != null) return n;
+        return null;
     }
 
     void Show(string name)
@@ -73,13 +69,7 @@ public class PlayerAvatarBody : MonoBehaviour
         bodyName = name;
         placed = false;
         var prefab = name != null ? Resources.Load<PlayerAvatarRig>(Folder + name) : null;
-        bool hasBody = prefab != null;
-
-        // the old floating shapes: hidden while there's a body (your own avatar stays hidden either way)
-        foreach (var part in new[] { player.head, player.leftHand, player.rightHand })
-            if (part) foreach (var r in part.GetComponentsInChildren<Renderer>(true)) r.enabled = !hasBody && !player.HasStateAuthority;
-
-        if (!hasBody) return;
+        if (prefab == null) return;
         body = Instantiate(prefab, transform);
         body.name = name;
         body.head = player.head; body.leftHand = player.leftHand; body.rightHand = player.rightHand;

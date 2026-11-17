@@ -43,7 +43,7 @@ namespace InnerFrame.StarryNight.EditorTools
         const string XrOriginName = "XR Origin (XR Rig)";
         /// <summary>Vincent v2 (step 3): Mixamo's rig of Cici's Tripo model and four of its clips, copied unchanged.</summary>
         public const string VincentDir = Models + "/Vincent", VincentFbx = VincentDir + "/VincentV2.fbx";
-        public static readonly string[] VincentClips = { "SittingIdle", "SittingTalking", "SitToStand", "BreathingIdle" };
+        public static readonly string[] VincentClips = { "SittingIdle", "SittingTalking", "SitToStand", "BreathingIdle", "Walking" };
         static string VincentClipPath(string clip) => $"{VincentDir}/VincentV2@{clip}.fbx";
         public const string VincentControllerPath = Prefabs + "/SN_Vincent.controller";
         const string DialoguePrefab = "Assets/Shared/UI/Prefabs/VG_DialogueUI.prefab";
@@ -141,6 +141,11 @@ namespace InnerFrame.StarryNight.EditorTools
             {
                 LogRemovedFields(CardsRemoved, "2026-11-10: the two cards are gone; the hint's title shows the step");
                 CopyDefaults(layout, new string[0], 8, "2026-11-10: no cards");
+            }
+            if (layout.version < 9)
+            {
+                LogNewFields(layout);
+                CopyDefaults(layout, new string[0], 9, "2026-11-17: the exit (his question, the card, his walk onto the trail)");
             }
             return layout;
         }
@@ -449,7 +454,9 @@ namespace InnerFrame.StarryNight.EditorTools
             take.loopTime = loop; take.loopPose = loop;
             take.lockRootRotation = true; take.keepOriginalOrientation = true;
             take.lockRootHeightY = true; take.keepOriginalPositionY = true; take.heightFromFeet = false;
-            take.lockRootPositionXZ = loop; take.keepOriginalPositionXZ = false;
+            // Walking (the exit): its forward travel is NOT baked into the pose, so with root motion off it plays in place
+            // and VG_Lead moves him (refs' clip is Mixamo's Walking without "In Place")
+            take.lockRootPositionXZ = loop && clip != "Walking"; take.keepOriginalPositionXZ = false;
             take.cycleOffset = 0f; take.mirror = false;
             c.clipAnimations = new[] { take };
             if (EditorJsonUtility.ToJson(c) != was) c.SaveAndReimport();
@@ -788,6 +795,7 @@ namespace InnerFrame.StarryNight.EditorTools
             if (c == null) c = AnimatorController.CreateAnimatorControllerAtPath(VincentControllerPath);
             if (!c.parameters.Any(p => p.name == "Talking")) c.AddParameter("Talking", AnimatorControllerParameterType.Bool);
             if (!c.parameters.Any(p => p.name == "Stand")) c.AddParameter("Stand", AnimatorControllerParameterType.Trigger);
+            if (!c.parameters.Any(p => p.name == "Walking")) c.AddParameter("Walking", AnimatorControllerParameterType.Bool);
             var layers = c.layers;
             if (!layers[0].iKPass) { layers[0].iKPass = true; c.layers = layers; }
             var sm = c.layers[0].stateMachine;
@@ -815,6 +823,14 @@ namespace InnerFrame.StarryNight.EditorTools
             T(idle, stand, l.vincentStandFadeSeconds, 0f, AnimatorConditionMode.If, "Stand");
             T(talk, stand, l.vincentStandFadeSeconds, 0f, AnimatorConditionMode.If, "Stand");
             T(stand, standing, l.vincentStandFadeSeconds, 1f - l.vincentStandFadeSeconds / VincentClip("SitToStand").length, AnimatorConditionMode.If, null);
+            // the exit (2026-11-16): Standing <-> Walking on the bool Walking (VG_Lead). The clip plays in place and VG_Lead moves
+            // him at exitWalkSpeed, so the state's speed is that over the clip's own ground speed (exitWalkStride, measured).
+            var walkClip = VincentClip("Walking");
+            var walk = St("Walking", walkClip, new Vector3(900f, 180f, 0f));
+            walk.speed = l.exitWalkStride > 0.01f ? l.exitWalkSpeed / l.exitWalkStride : 1f;
+            Debug.Log($"[SN Setup] Walking: {walkClip.length:F3} s a cycle, ground speed {l.exitWalkStride:F2} m/s -> state speed {walk.speed:F3} for {l.exitWalkSpeed} m/s");
+            T(standing, walk, l.vincentStandFadeSeconds, 0f, AnimatorConditionMode.If, "Walking");
+            T(walk, standing, l.vincentStandFadeSeconds, 0f, AnimatorConditionMode.IfNot, "Walking");
             EditorUtility.SetDirty(c);
             return c;
         }

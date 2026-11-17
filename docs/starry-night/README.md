@@ -47,7 +47,8 @@ over a slope and drops you; and the rig no longer steps up onto the lantern or t
 Vincent's lines and the sky, the wind and dawn are unchanged.
 
 In the Gallery (2026-11-05): **The Starry Night hangs on the Gallery's east wall** and is entered the way the Bedroom is,
-from its pedestal; the player menu brings you back, and at Done it opens by itself (see "In the Gallery"). The scene is in
+from its pedestal; the player menu brings you back. Since 2026-11-17 the night ends with Vincent asking you to come
+with him, and a card to answer: follow him into Almond Blossom, or go back to the Gallery (see "The exit"). The scene is in
 the build list now, after the existing scenes; the Gallery still starts the game.
 
 ## Open and play
@@ -82,8 +83,8 @@ the build list now, after the existing scenes; the Gallery still starts the game
   second to black, then The Starry Night starts at the path's foot, as when opened directly. Nothing in
   `SceneChangeButton`, `SceneFader` or the menu changed.
 - **The way back:** any time, the player menu (left Menu button, or M) → **Back to Gallery**, as from the Bedroom. At
-  Done ("The night is painted"), `SN_GalleryReturn` opens that menu by itself 10 s later (the morning star's 8 s fade,
-  then 2 s); X closes it and you can stay. You land at the Gallery's start (0, 0, 6), facing The Bedroom.
+  Done ("The night is painted") Vincent asks you to come with him, and his card offers **Back to the Gallery** too
+  (see "The exit"); no menu opens by itself any more (until 2026-11-17 `SN_GalleryReturn` opened it 10 s after Done). You land at the Gallery's start (0, 0, 6), facing The Bedroom.
 - **Two players:** each scene is its own room, so whoever enters first is alone in the night until the other follows;
   both then share one night (see "Two players (shared night)").
 - **Made by** Tools > InnerFrame > Starry Night > **Add to Gallery** (`Editor/SN_GallerySetup.cs`): the image's import,
@@ -108,6 +109,7 @@ the build list now, after the existing scenes; the Gallery still starts the game
 | Wind | after N3 the sky starts to paint; a dotted curve appears along the painted swirl (Cici's red line, 21 points): hold the trigger and follow it, point by point (6°) | L07, then L08 at 100 % | Trace the wind / Hold the trigger and follow the dots. |
 | Dawn | 10 s after the wind: the sky pales over 20 s, the stars fade, then a page appears on the rock | L09 | Dawn / Wait for dawn; once the page is there, Take his page / Take the page |
 | Done | takes the page; the morning star fades last | | A Night with Vincent / The night is painted |
+| The exit (3 s after Done; not a state of `SN_Game`) | listens to his question, then answers on the card: point at Follow Vincent or Back to the Gallery and pull the trigger | L11 | (unchanged: A Night with Vincent / The night is painted) |
 | Sketchbook (any time after the lantern) | holds his sketchbook up against the view toward the valley for 1.5 s | L10 | (unchanged: the current state's title and line stay, and its repeat still fires) |
 
 - Early steps are accepted: turning the lantern down before sitting skips Sit; waking N3 first wakes it but N1 must still
@@ -279,7 +281,8 @@ each scene's first frame it notes the join NetworkSession was starting, then sto
    no runner;
 3. back from anywhere (the menu): the Gallery's start (0, 0, 6) yaw 180, one rig, one listener, the portrait once, one
    entrance, NetworkSession starting the Gallery's join (for `InnerFrame_Gallery`) with no runner left;
-4. in again; Done: the menu still shut 9 s later, open by 11.5 s with "Back to Gallery"; Back → the same landing.
+4. in again; Done: 13.5 s later no menu has opened by itself and Vincent's card is up; the player menu opened by hand
+   offers "Back to Gallery"; Back → the same landing.
 Controls that must fail: the dot turned away, one extra object in SN_World, StarryNight loaded additively over the
 Gallery (two scenes, rigs, cameras, listeners), Back with the menu's home set to PaintedBedroom.
 Session 1 joins `InnerFrame_StarryNight` for real only where Photon's App Settings exist
@@ -363,6 +366,55 @@ edit mode and measures his bones and his baked skin:
 7. after SitToStand: no leg vertex inside the rock, no bush vertex inside him, 0.6 m or more from the player's seat, the
    soles on the ground (± 3 cm).
 
+## The exit (2026-11-17): Vincent asks, you answer, he walks into the gold
+
+What happens, on each headset by itself (Vincent isn't networked; `Done` is shared, so everyone's Vincent asks at the
+same time, and each player answers for themselves):
+
+1. 3 s after Done he asks (L11, "The almond trees are waking down the hill. Will you come with me?"), standing where he
+   stood up at dawn (the `Standing` state, BreathingIdle: there is no standing Talking clip). The hint stays "A Night
+   with Vincent / The night is painted"; nothing else opens.
+2. When his line ends, a card appears in the dialogue box's look (its box, its name tab "Vincent", his question) with
+   two answers, **Follow Vincent** and **Back to the Gallery**. Point at one (it gets a chrome-yellow ring) and pull the
+   trigger, as with the stars (Editor: aim with the mouse, Space). It follows your view like the dialogue box, a
+   little higher, and stays until you answer; while the player menu is open it hides and waits.
+3. **Back to the Gallery:** the player menu's own way back (`SceneFader.FadeToScene` to `PlayerMenu.BackScene`).
+   Vincent does nothing more.
+4. **Follow Vincent:** the card goes; he turns (on the spot first), walks round his rock's east side (between the rock
+   and the bushes, 0.39 m from the lantern's post), along the dirt trail's centre line to its end at the player start,
+   and on in the trail's last direction over the rim (r 5.5) and through the invisible wall (r 5.65: it stops the
+   player's rig, not him) a short way down into the mist, at 1.5 m/s, the Walking clip's own pace. Past the rim the
+   ground falls at 33–60°; he goes down no steeper than 17° (`exitMaxDescentDeg`), over the slope, in the mist. You
+   don't have to move. The opening's gold (Rowling's Entrance gold: the same radial texture and colours) rises 5 s
+   after your answer (`exitGoldAfterSeconds`), with him at the rim. It rises smoothly
+   to full in 0.8 s (no flicker: a full-view flicker in a headset is uncomfortable and a photosensitivity risk), its
+   bright centre on him; he is hidden when it is full. Under it the next ready painting in
+   `Assets/Shared/Transitions/Resources/VG_StoryOrder.asset` loads (Almond Blossom; `SceneFader.FadeToScene`,
+   unchanged, its black hidden); the gold clears in 0.6 s once Almond Blossom has drawn two frames. In the Editor the
+   gold is full for about 2 s.
+
+What is made of what: `Assets/VanGogh/Lead/VG_ExitFlow.cs` (the beats, the same in The Bedroom: wait, ask, the card,
+the walk, the gold), `Assets/VanGogh/Lead/VG_Lead.cs` (the walk along waypoints; no NavMesh),
+`Assets/Shared/Transitions/` (`VG_GoldLight`: the opening's gold, 2 triangles on a Canvas material, no light, no
+post-processing; `VG_StoryOrder`: The Bedroom, Café Terrace, The Starry Night, Almond Blossom, each with a ready flag),
+`Assets/Shared/UI/Scripts/VG_ChoiceCard.cs` (the card, built from the dialogue box; restyle it in its `Look` block),
+`Scripts/SN_Exit.cs` (this scene's part: the path, the beam and trigger; stepped by `SN_Game`), the
+numbers in `SN_Layout` ("The exit": `exitPath`, its first two points round the rock, then 14 on the trail's centre
+line, `SN_MeshGen.PathLine`, then two past its end; `exitMaxDescentDeg`, `exitGoldAfterSeconds`), the clip
+`Models/Vincent/VincentV2@Walking.fbx` (Mixamo's Walking, not "In Place": its travel isn't baked into the pose, root
+motion is off while he walks and `VG_Lead` moves him). Nothing in `SceneFader`, `NetworkSession`, the player menu, the
+dialogue box, the Entrance or Almond Blossom changed.
+
+**Jump to it** (Play mode in `StarryNight.unity`): Tools > InnerFrame > Starry Night > **Jump to the exit**. It hands the
+game a finished night (the way a late joiner gets one) and steps its clock to Done; he asks 3 s later.
+
+Known limits: he turns by script, so his feet slide a little in the turns (on the straight the planted foot slides
+0.004 m/s, measured); he walks through the low leaves at the trail's edge (the bushes have no colliders; their nearest
+vertex is 0.51 m from his line); two players see their own Vincents, and each answers alone; while you hold B to talk
+to him his walk waits (he stands), and his answer still comes from his rock (his voice stays there); if the next scene
+isn't up 15 s after the gold began loading it, the gold clears anyway (a warning in the log); if the load never began
+(another scene change was already running), the gold clears, he reappears and the card comes back.
+
 ## Headset checklist (team playtest, Thu 11/05)
 
 Install the APK (ask Cici), sit on the floor beside the rock when the hint says so, and note for each: fine, or what's wrong.
@@ -393,6 +445,33 @@ Install the APK (ask Cici), sit on the floor beside the rock when the hint says 
 9. **Two headsets (2026-11-09):** both in the night. One points at the lantern and turns it down without grabbing it:
    does it turn down on both headsets at the same moment (and the stars come out on both)? Then one grabs it, carries it
    away and lets go: does it glide back to its hook on both, and end on the hook on both? Then the other grabs it.
+
+## Checks for the exit (2026-11-17)
+
+All run from Tools > InnerFrame > Starry Night > Run all checks; each also has its own menu item and batch method.
+
+- `Assets/VanGogh/Lead/Editor/VG_LeadCheck.cs` (edit mode, a bare body on a 10-degree slope): he walks the path in the
+  planned time, at his speed, on the ground; he turns before he walks (control: a waypoint straight behind him);
+  he stays at the end; a second leg after he arrives; over a 45° drop he goes down no steeper than his limit (control:
+  without it he follows the drop).
+- `Assets/Shared/Transitions/Editor/VG_TransitionsCheck.cs` (edit mode): a TEST story order made in memory (Café off:
+  The Bedroom → The Starry Night; on: → Café Terrace); the project's asset and Build Settings; the gold's texture equal
+  to the Entrance's own (`EntranceMenu.GoldGradient`, pixel for pixel, with a control); its timing (full in 0.8 s; its
+  brightness never goes down and up again while it rises, stepped and rendered; control: the opening's 8 Hz flicker is
+  caught), its failure and timeout paths, and that it covers a 110-degree view; the card (its art, its hit test with
+  controls).
+- `Editor/Tests/SN_ExitCheck.cs` (edit mode, the scene's own world): the walk (the trail waypoints within 0.3 m of the
+  trail's centre line; past its end its direction kept, over the rim and the wall; on the hill's collider up to the
+  rim; a 0.25 × 1.7 m capsule from first to last step, the walls excepted; the post, the bushes; down no steeper than
+  17°; the player's rig still stopped by the wall); Walking in place (hip drift over two loops, foot slide ≤ 0.02 m/s);
+  Follow (the card only after L11, nothing else meanwhile, 4–5 s of walking before the gold, the gold full 0.8 s
+  later and rendered over the whole view, he still walking); Back; a conversation
+  mid-walk; the clip's import; the budget. With
+  pictures and the opening's gold beside ours: Tools > InnerFrame > Starry Night > Run exit check (with pictures), or
+  `-snExitRenders <dir>`.
+- `Editor/Tests/SN_ExitPlayCheck.cs` (Play mode, offline): Back → the Gallery; into the night again, Follow → Almond
+  Blossom; frame by frame the gold is full on Almond Blossom's first frame and starts to clear only after SceneFader
+  reported it up and it has drawn two frames; no "Loading" label ever shows; Almond Blossom starts as it always does.
 
 ## Vincent
 
@@ -462,6 +541,20 @@ and the rules: `docs/convai/starry-night-objects.md` (notes: `Assets/VanGogh/Res
   the dialogue UI shows the first hint at the settings' distance from the camera.
 - `SN_GalleryCheck.RunBatch` and `SN_GalleryPlayCheck.RunBatch`: the Gallery's way in and back (see "Checks").
 
+## Headset checklist: the exit (2026-11-17, not yet tried on a Quest)
+
+1. After you take the page: does Vincent's question come at a good moment (3 s), and is the card readable and in a
+   comfortable place? Is it clear you point and pull the trigger? Does the ring show which answer you point at?
+2. Back to the Gallery: the usual fade, the Gallery's start.
+3. Follow Vincent, standing still: does his turn and walk round the rock read, and is 1.5 m/s natural? Do his feet
+   slide enough to notice? Does he look where he is going?
+4. The gold: does it read as "he goes into the light"? Is the smooth 0.8 s rise right? Does he cross the rim before it
+   covers him, and does the 17° walk down into the mist look like walking down a hill? How long is it full on a Quest
+   before Almond Blossom shows? Any black frame, any "Loading" text, any stutter you can see
+   through it? Do you arrive at Almond Blossom's start, facing the window, with its first line?
+5. Two headsets: both get the question; one follows. Does the other keep their own Vincent and card?
+6. His skin while walking: any vertices snapping at the hips or knees (Quest skins with 2 bones per vertex)?
+
 ## Requested hardware tests (Quest)
 
 1. Text: is Vincent's line readable without leaning in, at the default distance? Too big or too small?
@@ -480,7 +573,7 @@ and the rules: `docs/convai/starry-night-objects.md` (notes: `Assets/VanGogh/Res
 10. Vincent (step 3): see item 6 of the headset checklist above.
 11. The Gallery: does The Starry Night on the east wall read as part of the gallery (size, frame, light), and is its
     pedestal easy to find and press (grip, pointing or touching)? The fade in, the start on the path, and Back to
-    Gallery from the menu, any time and at Done (the menu opens by itself 10 s after "The night is painted").
+    Gallery from the menu, any time, and from Vincent's card at Done.
 12. Online (not covered by the Editor check, which stays offline): two headsets in the Gallery; one enters The Starry
     Night: does the other see their avatar leave, and does the first rejoin `InnerFrame_Gallery` on the way back
     (`[NetworkSession] Joined InnerFrame_Gallery`)? With the other player already in the room, the returning one is moved

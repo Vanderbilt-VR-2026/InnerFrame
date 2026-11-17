@@ -84,6 +84,7 @@ namespace InnerFrame.StarryNight
         public Transform vincent;
         [Tooltip("Vincent v2's body (look, point, talk, stand): stepped here, after the voice and the box.")]
         public SN_VincentDriver vincentDriver;
+        [Tooltip("The way on after Done (set by SN_Bootstrap); stepped here so the tests' clock drives it too.")] public SN_Exit exit;
         public SN_Voice voice;
         [Tooltip("The shared dialogue box and hint (VG_DialogueUI, the StarryNight settings); stepped here, not by itself.")]
         public VG_DialogueUI ui;
@@ -166,6 +167,7 @@ namespace InnerFrame.StarryNight
             if (voice != null && voice.ConversationPaused)
             {
                 if (ui != null) ui.Step(dt);
+                if (exit != null) exit.Hold();   // his walk waits too
                 if (vincentDriver != null) vincentDriver.Step(dt, Head);
                 return;
             }
@@ -210,7 +212,7 @@ namespace InnerFrame.StarryNight
 
             // the stars: any visible star can be woken; the named ones move the story on only in order
             UpdateHover(menu);
-            if (down >= 0 && !triggerUsed && Input.TryGetAim(down, out var aim)) TryWake(aim);
+            if (down >= 0 && !triggerUsed && !(exit != null && exit.CardOpen) && Input.TryGetAim(down, out var aim)) TryWake(aim);   // the card's trigger is the card's
 
             StepPaint(dt);
             if (waitingForWind && paintT < 0f)
@@ -282,6 +284,7 @@ namespace InnerFrame.StarryNight
             if (beam != null) beam.Step(dt);
             voice.Step(dt);
             if (ui != null) ui.Step(dt);   // pages and fades (its autoStep is off: the game's clock drives it)
+            if (exit != null) exit.Step(dt);   // after Done: his question, the card, his walk
             if (vincentDriver != null) vincentDriver.Step(dt, head);   // his body follows the words and the story
         }
 
@@ -431,7 +434,7 @@ namespace InnerFrame.StarryNight
         void StepBeam(Transform head, bool menu)
         {
             if (beam == null) return;
-            bool aiming = !menu && (State == SN_State.Stars || State == SN_State.Wind);
+            bool aiming = !menu && (State == SN_State.Stars || State == SN_State.Wind || (exit != null && exit.CardOpen));
             int h = aimHand >= 0 ? aimHand : Input.HandCount - 1;
             if (!aiming || !Input.TryGetAim(h, out var aim)) { beam.Hide(); return; }
             Vector3 from = aim.origin, dir = aim.direction;

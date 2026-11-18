@@ -173,6 +173,19 @@ namespace InnerFrame.AlmondStudio.EditorTools
                 layout.layoutVersion = 10;
                 EditorUtility.SetDirty(layout);
             }
+            if (layout.layoutVersion < 11)
+            {
+                // version 11 (2026-11-17): "After me." on its own was a two-word sentence, and the headset voice (Piper,
+                // one sentence at a time) mumbled it; one sentence now. Only if it hadn't been edited.
+                if (layout.lineHappy == AS_Layout.LineHappyV10)
+                {
+                    var d11 = ScriptableObject.CreateInstance<AS_Layout>();
+                    layout.lineHappy = d11.lineHappy;
+                    Object.DestroyImmediate(d11);
+                }
+                layout.layoutVersion = 11;
+                EditorUtility.SetDirty(layout);
+            }
 
             var lit = Shader.Find("Universal Render Pipeline/Lit");
             var unlit = Shader.Find("Universal Render Pipeline/Unlit");

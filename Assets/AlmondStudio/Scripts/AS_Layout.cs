@@ -257,7 +257,11 @@ namespace InnerFrame.AlmondStudio
         [Header("The story: the letter, his joy, the invitation, the painting (2026-11-12)")]
         [Tooltip("When you arrive he holds the letter out.")] public string hintLetter = "Take the letter";
         public string hintRead = "Pull the trigger to put the letter down";
-        [Tooltip("After you've read it.")] public string lineHappy = "A boy, and they have named him Vincent! After me. I could not be happier.";
+        [Tooltip("After you've read it. Keep each sentence more than a couple of words: the headset voice (Piper) speaks one " +
+                 "sentence at a time and mumbles very short ones (\"After me.\", 17 Nov).")]
+        public string lineHappy = "A boy, and they have named him Vincent, after me! I could not be happier.";
+        /// <summary>lineHappy until layout version 11 (AS_Setup replaces it if unedited).</summary>
+        public const string LineHappyV10 = "A boy, and they have named him Vincent! After me. I could not be happier.";
         [Tooltip("Then, a few seconds later.")] public string lineInvite = "I want to paint it for his room, to hang above his cradle. Will you help me? Open the window.";
         public const string LineInviteV7 = "I want to paint something for his room, to hang above his cradle. The almond tree outside is just coming into blossom. Will you help me? Open the window.";
         [Tooltip("Said as he turns to the window and points at the tree, before lineInvite.")] public string linePoint = "Look, the almond tree outside is just coming into blossom.";

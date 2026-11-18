@@ -1,7 +1,7 @@
 # Multiplayer (Photon Fusion 2, Shared Mode)
 
 Everyone in the same scene joins the same room and sees each other as a
-head with two hands (each scene can have its own avatar, see below). Shared objects can be picked up by anyone and
+full body, the **Boy** or the **Girl** each player chose in the Entrance, in every scene (see "Player bodies" below). Shared objects can be picked up by anyone and
 handed from one player to another.
 
 Code: `Assets/Script/Network/`.
@@ -10,42 +10,85 @@ Code: `Assets/Script/Network/`.
 |---|---|
 | `NetworkSession` | Creates itself on startup. When a scene with an XR Origin loads (in the Editor without a headset: a desktop camera), joins room `InnerFrame_<SceneName>` (max 8 players) and spawns your avatar. `SceneFader` makes it leave the room before a scene change. |
 | `DesktopTestRig` | Editor only. Without a headset, replaces a scene's XR Origin with a W A S D + mouse player, so the Editor can walk around and count as a player (see "Testing with one headset"). |
-| `NetworkPlayer` | The avatar. Copies your headset and controllers onto it; your own copy is hidden. |
+| `NetworkPlayer` | A player in the room: head and hands as three tracked points with no shapes, and `AvatarChoice`, the body they chose in the Entrance (sent to everyone). Copies your headset and controllers onto the points. Adds `PlayerAvatarBody` when it spawns. |
+| `PlayerAvatarBody`, `PlayerAvatarRig`, `PlayerAvatarSkirt` | The full body the others see, placed under the head and posed by Unity's Humanoid IK; the Girl's skirt kept clear of her legs (see "Player bodies"). |
+| `Editor/PlayerAvatarBuilder` | Builds `Resources/PlayerAvatars/Avatar_BoyWorker.prefab` and `Avatar_Girl.prefab`, with their materials and Animator, from the FBXs in `Avatars/`. Menu: **InnerFrame → Multiplayer → Build Player Avatars**. |
 | `NetworkGrabbable` | Makes a grab object shared (see below). |
 | `StarryNightLink` | On each avatar: shares The Starry Night's progress and its lantern, sketchbook and page (`docs/starry-night/README.md` → Two players). |
-| `Editor/NetworkPlayerPrefabBuilder` | Builds `Resources/NetworkPlayer.prefab`. Menu: **InnerFrame → Multiplayer → Rebuild Network Player Prefab**. |
-| `Editor/PaintedAvatarBuilder` | Builds the Painted Bedroom's avatar, `Resources/NetworkPlayer_PaintedBedroom.prefab`, and its textures, materials and meshes in `PaintedAvatar/`. Menu: **InnerFrame → Multiplayer → Rebuild Painted Bedroom Avatar**. |
+| `Editor/NetworkPlayerPrefabBuilder` | Builds `Resources/NetworkPlayer.prefab`, the one player prefab for every scene. Menu: **InnerFrame → Multiplayer → Rebuild Network Player Prefab**. |
 | `Editor/NetworkGrabbableMenu` | Makes many objects shared at once (see below). |
+| `Editor/PlayerAvatarPoseTest`, `Editor/PlayerAvatarRoomTest` | Checks for the player bodies (see "Player bodies"). |
 
-## A different avatar per scene
+## Player bodies
 
-`NetworkSession` first looks for `Resources/NetworkPlayer_<SceneName>`, and
-uses `Resources/NetworkPlayer` if there isn't one. Everyone in a room is in
-the same scene, so everyone sees the same kind of avatar there.
+Each player picks who they'll be on the Entrance's "Choose Who You'll Be" page, **Boy** or **Girl**
+(`EntranceChoice.Role`), and everyone else sees that body in every scene: `NetworkPlayer.AvatarChoice` carries the
+choice into each room, and `PlayerAvatarBody` shows `PlayerAvatarBody.Order[choice]` from
+`Resources/PlayerAvatars`. Starting a scene directly (the Editor, skipping the Entrance) gives the Boy. Your own body
+stays hidden, and it doesn't animate either.
 
-| Scene | Avatar |
-|---|---|
-| `PaintedBedroom` | `NetworkPlayer_PaintedBedroom`: a Van Gogh head and two hands, painted like the room. Brushstroke textures drawn by the room's own recipe (`strokeCanvas()` in `Art/Source/PaintedBedroom/web/index.html`, ported to C#), matte materials with the room's glow, and the room's dark blue ink outlines. Skin, a ginger beard, and the straw hat from the painting. The hat band and the cuffs are in the player's colour |
-| Everything else | `NetworkPlayer`: a coloured head with a visor and two hands |
+| Choice | Prefab | Model |
+|---|---|---|
+| Boy | `Avatar_BoyWorker` | a boy in a worker's cap and jacket, 1.70 m; Tripo, rigged in Mixamo |
+| Girl | `Avatar_Girl` | a girl in a red Victorian dress and bonnet, 1.60 m; Tripo, rigged with Rigify in Blender (`Art/Source/Avatars/Girl/`), with 4 × 3 skirt bones (`Skirt_Front/Back/Left/Right_1-3`) under the hips. Body bones only, no fingers |
 
-To change the painted avatar, edit `PaintedAvatarBuilder.cs` (shapes, sizes,
-palettes) and run its menu item again. Everything it makes keeps its GUID, so
-nothing that points at it breaks.
+The skirt's front and sides follow the thighs a little (in the weights), and `PlayerAvatarSkirt` (added by **Build
+Player Avatars** to any body with `Skirt_*` bones) swings each skirt chain out of the way of the legs every frame,
+after the IK: the front lifts as the knees come forward in a crouch or a step, the back for a leg behind, the sides for
+a leg out, with the lower bones turning back so the hem drapes over the knee. Standing still it leaves the skirt as
+modelled (a 6° dead zone).
 
-To give another scene its own avatar, make a prefab named
-`NetworkPlayer_<SceneName>` in a `Resources` folder. The easiest way is to
-duplicate an existing avatar prefab and change its pieces. It needs:
+- **Size:** scaled to the player's *standing* eye height (0.6 to 1.25 times the model). Crouching or sitting doesn't
+  shrink it; the hips drop and the knees bend instead, up to 35% of eye height, then the back leans.
+- **Feet:** stand on the floor found below the head (the hit nearest the last floor, so a table under your head isn't
+  taken for it). Each foot stays planted and steps, one at a time, once it is 22 cm (times the body's scale) from its
+  place under the body or the body has turned 35°. A foot left slightly off tidies up after 0.8 s; a jump of 1 m or more
+  (a teleport) snaps both.
+- **Arms and head:** the hands reach for the controllers and the head looks where the player looks.
+- The body trails the head by one frame (Fusion moves the head just before LateUpdate), together with its arms.
 
-- `NetworkObject` and `NetworkPlayer` on the root, with **Head**, **Left
-  Hand** and **Right Hand** set. Head looks along +Z; each hand points along +Z.
-- A `NetworkTransform` on each of those three parts. Put the shapes under
-  them, so you can scale and offset the shapes freely.
-- No colliders, so avatars don't push things.
-- **Tinted** on `NetworkPlayer`: the renderers that take the player's colour.
-  If it's empty, every renderer except one named `Visor` is tinted.
+To change a body, rig a model (Mixamo: `.claude/skills/tripo-mixamo-character/`; the Girl's Blender scripts:
+`Art/Source/Avatars/Girl/scripts/`), export it with a one-frame standing take, put the FBX and its
+`Textures/<name>_BaseColor.jpg` in `Assets/Script/Network/Avatars/`, set its name in `PlayerAvatarBody.Order` (the
+index is the Entrance's `VisitorRole`), and run **Build Player Avatars**. That menu re-saves every body's importer;
+commit only the ones you meant to change.
 
-Fusion registers the prefab when it's imported; **Tools → Fusion → Rebuild
-Prefab Table** does it by hand.
+Checks (close Unity first, or run them from the Editor's Play mode):
+
+```
+Unity -batchmode -projectPath . -executeMethod PlayerAvatarPoseTest.RunFromCommandLine
+```
+
+`PlayerAvatarPoseTest` poses each body on an empty floor (rest, reach, wave, crouch, walk) and fails if a hand misses
+its controller by more than 15 cm, the eyes miss the head by more than 12 cm (except crouching), a foot goes through the
+floor or both float, the hips bone drops less than 20 cm crouching, or a foot is left 50 cm behind walking. Pictures go
+to `Temp/PlayerAvatarPoses` (or `AVATAR_POSE_OUT`). It calls the posing code directly, so the sizing to standing
+height, the floor finding, the tidy-up and the teleport snap are **not** covered: check those on a headset.
+
+`PlayerAvatarRoomTest` (`-executeMethod PlayerAvatarRoomTest.RunFromCommandLine`, with a second player in the Painted
+Bedroom's room, e.g. a headset) checks that each player has the body they chose, the others' are shown, your own is
+hidden, and nothing else of the players shows. It skips the Entrance, so the environment stands in for the choice:
+`AVATAR_CHOICE` is this copy's (0 Boy, 1 Girl) and `AVATAR_CHOICE_OTHER` the other copy's. With both set it also fails
+if a choice isn't the one sent or shown; run one copy with `0`/`1` and the other with `1`/`0`.
+
+Every headset in a room needs a build with the same `NetworkPlayer` (this PR adds a networked `AvatarChoice`): an
+older build in the same room reads the player's state wrongly.
+
+On a headset, with two players: stand, crouch, sit, walk, turn on the spot and teleport, and watch the other player's
+body: feet on the floor, no sliding, hands on the controllers.
+
+## One player prefab for every scene
+
+The per-scene placeholder avatars are gone (the coloured head with a visor that the Gallery and most scenes showed,
+and the Painted Bedroom's Van Gogh head with its straw hat, `NetworkPlayer_PaintedBedroom` and
+`Editor/PaintedAvatarBuilder`). Every scene uses `Resources/NetworkPlayer`: three tracked points, nothing to see,
+and the chosen body over them.
+
+`NetworkSession` still looks for `Resources/NetworkPlayer_<SceneName>` before `Resources/NetworkPlayer`; don't add
+one, or that scene's players lose the shared links on `NetworkPlayer` (voice, Vincent, the mirror, The Starry Night)
+unless you copy them all. If you change the prefab, it needs `NetworkObject` and `NetworkPlayer` on the root with
+**Head**, **Left Hand** and **Right Hand** set (head looks along +Z), a `NetworkTransform` on each, and no colliders.
+Fusion registers it when it's imported; **Tools → Fusion → Rebuild Prefab Table** does it by hand.
 
 ## Making an object interactable by both players
 

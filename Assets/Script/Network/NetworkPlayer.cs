@@ -1,21 +1,24 @@
 using Fusion;
+using InnerFrame.Entrance;
 using Unity.XR.CoreUtils;
 using UnityEngine;
 
 /// <summary>
-/// Simple networked VR avatar: a head and two hands.
-/// The owner copies their headset and controller poses onto it; the
-/// NetworkTransforms on each part send those poses to everyone else.
-/// The owner's own avatar is hidden so it doesn't block their view.
-/// A desktop player (Editor, no headset) sends its camera as the head; its hands hang at its sides.
+/// A player in the room: three tracked points (head and two hands) with no shapes of their own, and the full
+/// body the others see (PlayerAvatarBody), the one the player chose in the Entrance (Boy or Girl).
+/// The owner copies their headset and controller poses onto the points; the NetworkTransforms on each
+/// send those poses to everyone else. A desktop player (Editor, no headset) sends its camera as the head;
+/// its hands hang at its sides.
 /// </summary>
 public class NetworkPlayer : NetworkBehaviour
 {
     public Transform head;
     public Transform leftHand;
     public Transform rightHand;
-    [Tooltip("Renderers that take the player's colour. Empty: every renderer except the Visor")]
-    public Renderer[] tinted;
+
+    /// <summary>The body this player chose in the Entrance (an InnerFrame.Entrance.VisitorRole: 0 Boy, 1 Girl).
+    /// Its owner sets it when it spawns, in every scene; everyone's PlayerAvatarBody shows that body.</summary>
+    [Networked] public int AvatarChoice { get; set; }
 
     Transform srcHead, srcLeft, srcRight;
 
@@ -23,7 +26,9 @@ public class NetworkPlayer : NetworkBehaviour
     {
         var owner = Object.StateAuthority;
         name = $"Player {owner.PlayerId}" + (HasStateAuthority ? " (you)" : "");
-        Tint(PlayerColor(owner.PlayerId));
+        if (HasStateAuthority) AvatarChoice = (int)EntranceChoice.Role;   // Boy if the Entrance was skipped (Editor)
+        if (!TryGetComponent(out PlayerAvatarBody body)) body = gameObject.AddComponent<PlayerAvatarBody>();
+        body.Init(this);   // the chosen full body (Resources/PlayerAvatars)
 
         if (HasStateAuthority)
         {
@@ -74,22 +79,7 @@ public class NetworkPlayer : NetworkBehaviour
         return null;
     }
 
-    // Same colour for the same player on every screen, spread around the colour wheel.
+    // Same colour for the same player on every screen, spread around the colour wheel (the outline on what they hold).
     public static Color PlayerColor(int playerId) =>
         Color.HSVToRGB(Mathf.Repeat(playerId * 0.618f, 1f), 0.6f, 0.95f);
-
-    void Tint(Color c)
-    {
-        var block = new MaterialPropertyBlock();
-        block.SetColor("_BaseColor", c); // URP Lit
-        block.SetColor("_Color", c);
-        if (tinted != null && tinted.Length > 0)
-        {
-            foreach (var r in tinted)
-                if (r) r.SetPropertyBlock(block);
-            return;
-        }
-        foreach (var r in GetComponentsInChildren<Renderer>())
-            if (r.name != "Visor") r.SetPropertyBlock(block);
-    }
 }

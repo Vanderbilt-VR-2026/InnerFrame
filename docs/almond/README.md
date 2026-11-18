@@ -37,7 +37,18 @@ output (56–65 MB each), to be reduced for Quest. The tree in the scene carries
 | Invite | His joy; he turns to the window, points at the tree (Mixamo *Pointing*), turns back and asks you to paint it. Hint "Open the window" |
 | TakeBrush | The window opens; take the brush standing in the glass on the sill |
 | Paint | Hold the trigger and sweep the beam over the branches: buds near it open (`AS_Blossoms`). Once `blossomFinish` (75%) of the buds you can see through the window are open, the rest open in a wave |
-| Done | A petal shower drifts into the studio and settles on the floor; after `endEaselDelay` he turns to his easel, *Almond Blossom* grows onto it, hint "Turn around"; when you look at it, the epilogue card (`AS_EpilogueView`) |
+| Done | A petal shower drifts into the studio and settles on the floor; after `endEaselDelay` he turns to his easel, *Almond Blossom* grows onto it, hint "Turn around"; when you look at it, the epilogue card (`AS_EpilogueView`). After `leaveAfterEpilogue` (20 s), or the trigger once the card has been up `leaveTriggerAfter` (3 s), you leave |
+
+**Leaving (17 Nov).** Every way out ends the same way: the end of the story, or the player menu's **Back to Gallery**
+at any moment (`AS_Game` hooks `SceneFader.BeforeSceneChange` while the studio is open). A quick dip
+(`leaveDipSeconds`), and you stand at `leaveEye`, facing the window (paintEye's spot: the whole tree fits it); the
+window opens if it was shut, and the tree is in full bloom (if you hadn't finished, the wave comes now). A look of
+`leaveHoldSeconds`, then over `leaveFadeSeconds` the colour drains (a global Volume's saturation) while a primed
+canvas's cream (`leaveCream`) comes up: `SceneFader.NextPlainColour`, its fade-out for this one transition. Almond
+Blossom then counts as painted (PlayerPrefs `InnerFrame.AlmondBlossom.Painted`), and the Gallery comes out of the same
+cream in front of its blank frame, where the painting appears the first time
+([`docs/gallery/README.md`](../gallery/README.md), "Almond Blossom's blank frame"). The Gallery's way in is now
+*Window in the Studio*, hung beside that frame.
 
 Vincent is Cici's Vincent v2 (read only), on Cici's idle; he looks at you (`AS_VincentLook`, look-at IK) and nods
 and sways while he talks (in code, no clip).
@@ -94,7 +105,9 @@ or `seed`, and run **Tools > InnerFrame > Almond Studio > Scatter Blossoms On Se
 **Tuning** (all on `AS_Layout`, live in Play): `giveHoldAt`, `pointHoldAt`, `pointTurn`, `pointSeconds` (Vincent);
 `letterGripInset/Roll/Tip` (the letter in his hand); `blossomCluster`, `blossomSize`, `blossomBeamDegrees`,
 `blossomFinish`, `blossomShower`, `blossomStreamPerSecond`, `blossomFloorPetals`, `blossomMaxDrifting` (the
-painting and the petals); `skyTiles`, `skyTint`; `endEaselDelay`, `endPainting*`, `epilogueText` (the ending).
+painting and the petals); `skyTiles`, `skyTint`; `endEaselDelay`, `endPainting*`, `epilogueText` (the ending);
+`leaveAfterEpilogue`, `leaveTriggerAfter`, `leaveEye`, `leaveYaw`, `leaveDipSeconds`, `leaveHoldSeconds`,
+`leaveFadeSeconds`, `leaveCream` (leaving).
 
 **Almond Blossom** is `Textures/Reference/AS_AlmondBlossom.jpg`; without it Build uses the Gallery's copy
 (`Assets/Art/Gallery/Paintings/Almond_Blossom_Van_Gogh.jpg`).
@@ -131,6 +144,10 @@ see-through (**[** and **]** change how much). Pictures in `Textures/Reference/`
 4. The petal shower drifts into the room and settles; frame rate during it (OVR Metrics, target 72+).
 5. "Turn around": the painting on the easel, then the card, legible at 75 cm.
 6. Load hitch when the scene opens; the sky through the window (no seam).
+7. Leaving: the menu's Back early (window shut, nothing painted) and at the end of the story. Each time: a short dip,
+   you face the window, it opens, the tree is in full bloom, then the colour drains into cream with no hitch or flash
+   (the saturation needs post-processing on the camera for those seconds: is it there in a Quest build?), and the
+   Gallery comes out of the same cream in front of the blank frame. Comfortable (no motion felt in the move)?
 
 ## Next steps
 

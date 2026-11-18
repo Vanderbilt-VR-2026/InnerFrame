@@ -825,7 +825,40 @@ namespace InnerFrame.AlmondStudio
         Animator vincentAnimator;
         Transform vincentBody;   // v2 or the stand-in
 
-        /// <summary>Almond Blossom on his easel: the painting on a 2 cm canvas, leaning back, hidden until the end.</summary>
+        MeshFilter easelCanvasPlane;   // the easel model's own VG_Canvas (hidden): where a canvas rests on its ledge
+
+        /// <summary>The easel's canvas plane in world space: the middle of its bottom edge (on the ledge), the way up its
+        /// face (leaning back), and its normal toward the room. From the mesh's bounds, not its vertices: VG_Easel.fbx
+        /// isn't Read/Write, so a Quest build can't read them (bounds it always has). The plane is 0.50 x 0.61 m with no
+        /// thickness: its longest side is the height, the next the width.</summary>
+        bool EaselCanvasSpot(out Vector3 bottom, out Vector3 up, out Vector3 toRoom)
+        {
+            bottom = up = toRoom = Vector3.zero;
+            if (easelCanvasPlane == null || easelCanvasPlane.sharedMesh == null) return false;
+            var b = easelCanvasPlane.sharedMesh.bounds;
+            var e = b.extents;
+            int tall = 0, wide = 1;
+            for (int i = 1; i < 3; i++) if (e[i] > e[tall]) tall = i;
+            for (int i = 0; i < 3; i++) if (i != tall && (wide == tall || e[i] > e[wide])) wide = i;
+            Vector3 Along(int axis, float amount) { var d = Vector3.zero; d[axis] = amount; return d; }
+            var m = easelCanvasPlane.transform.localToWorldMatrix;
+            var lo = m.MultiplyPoint3x4(b.center - Along(tall, e[tall]));
+            var hi = m.MultiplyPoint3x4(b.center + Along(tall, e[tall]));
+            if (hi.y < lo.y) { var swap = lo; lo = hi; hi = swap; }
+            bottom = lo;
+            up = (hi - lo).normalized;
+            var across = m.MultiplyVector(Along(wide, 1f));
+            toRoom = Vector3.Cross(across, up).normalized;
+            var easel = easelCanvasPlane.transform.parent;
+            var roomward = easel != null ? easel.forward : Vector3.forward;   // the easel's ledge side (+z, easelYaw 0)
+            if (Vector3.Dot(toRoom, roomward) < 0f) toRoom = -toRoom;
+            return up.y > 0.5f && e[tall] > 0.1f;
+        }
+
+        /// <summary>Almond Blossom on his easel: the painting on a 2 cm canvas, hidden until the end. It rests on the
+        /// ledge of Vincent's easel and leans back as its own canvas plane does (17 Nov: placed by endPaintingCentre it
+        /// sat 18 cm below the ledge, and the easel's legs and ledge showed in front of it); endPaintingCentre and
+        /// endPaintingTilt place it only with the built easel.</summary>
         GameObject EndPainting(Transform world)
         {
             if (almondBlossom == null) { Debug.Log("[AS] No Textures/Reference/AS_AlmondBlossom (.jpg/.png): the end has no painting on the easel."); return null; }
@@ -835,6 +868,12 @@ namespace InnerFrame.AlmondStudio
             root.SetParent(world, false);
             // faces the room (+z): the picture quad faces -z, so turn it round, then lean its top back
             root.SetLocalPositionAndRotation(layout.endPaintingCentre, Quaternion.Euler(0f, 180f, 0f) * Quaternion.Euler(layout.endPaintingTilt, 0f, 0f));
+            if (EaselCanvasSpot(out var onLedge, out var up, out var toRoom))
+            {
+                // root's +z points into the easel (the picture faces -z locally); the canvas's back on the plane, plus 2 mm
+                root.SetPositionAndRotation(onLedge + up * (h / 2f) + toRoom * 0.012f, Quaternion.LookRotation(-toRoom, up));
+                Debug.Log($"[AS] Almond Blossom (the end) rests on the easel's ledge at {onLedge.y:F3} m, leaning {Vector3.Angle(up, Vector3.up):F0} deg back.");
+            }
             var face = Quad(root, "Painting", w, h, almondBlossom);
             face.localPosition = new Vector3(0f, 0f, -0.011f);
             Box(root, "Canvas", Vector3.zero, new Vector3(w, h, 0.02f), canvas, collider: false);
@@ -1188,6 +1227,7 @@ namespace InnerFrame.AlmondStudio
                 ToPainted(model.GetComponentsInChildren<Renderer>(true), "Easel");
                 var blank = model.transform.Find("VG_Canvas");
                 if (blank != null) blank.gameObject.SetActive(layout.easelCanvas);
+                easelCanvasPlane = blank != null ? blank.GetComponent<MeshFilter>() : null;
                 return;
             }
             Debug.Log("[AS] Vincent's easel (VanGogh/Art/Props/VG_Easel.fbx) isn't loaded (git lfs pull?): the built easel stands in.");

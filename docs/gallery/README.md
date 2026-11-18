@@ -1,9 +1,10 @@
 # Gallery
 
-The room visitors start in (Cici's scene): `Assets/Scenes/Gallery.unity`. Five paintings hang round it in the order you
-meet them from the door, left to right: Vincent's 1887 self-portrait, then the four of the story, each with its wall
+The room visitors start in (Cici's scene): `Assets/Scenes/Gallery.unity`. Six frames hang round it in the order you
+meet them from the door, left to right: Vincent's 1887 self-portrait, then the four acts of the story, each with its wall
 label (number and time of day): 1 The Bedroom (Afternoon), 2 Café Terrace at Night (Late afternoon), 3 The Starry Night
-(Evening), 4 Almond Blossom (Morning). You enter a painting by pointing at it and pulling the trigger: a small menu opens
+(Evening), 4 Window in the Studio (Morning), and beside it **Almond Blossom's frame, blank until you have painted it in
+the studio** (below). You enter a painting by pointing at it and pulling the trigger: a small menu opens
 beside it (Enter, Back). There are no stands (2026-11-12, Part B; until then each painting had a pedestal with a button).
 
 Since 2026-11-10 the room follows the team's concept sheet (a small, warm 19th-century gallery): painted walls over a grey
@@ -44,7 +45,8 @@ above 2.2 m (`maxCentre`): The Bedroom is 2.00 m wide. Every frame's bottom edge
 | 1 | The Bedroom, 1889 | west, z −2.5 | 2.00 × 1.59 m | PaintedBedroom |
 | 2 | Café Terrace at Night, 1888 | north, centre | 1.41 × 1.75 m | CafeTerrace |
 | 3 | The Starry Night, 1889 | east, z −2.5 | 1.99 × 1.59 m | StarryNight |
-| 4 | Almond Blossom, 1890 | east, z 2.5 (by the door) | 2.00 × 1.59 m | Coming soon (no scene yet) |
+| 4 | Window in the Studio, 1889 (VGM, chalk, oil and watercolour on paper) | east, z 1.0 | 1.03 × 1.34 m | AlmondStudio |
+| 4 | Almond Blossom, 1890 | east, z 3.8 (by the door) | 2.00 × 1.59 m | none until painted, then AlmondStudio too |
 
 | What | Where | Made by |
 |---|---|---|
@@ -64,7 +66,28 @@ artworks" (`CafeGallerySetup`) now hand the placing to Build Layout.
   front of you toward it), always the same size to the eye. Point at **Enter** and pull the trigger: the usual fade into
   the painting (its `SceneChangeButton`, as the pedestals did). **Back** closes it.
 - The menu closes on Back, when you open another painting's, when you walk 2 m from where you opened it, or when you
-  turn your back on it. It is yours alone (not shared). Almond Blossom says "Coming soon" until its scene exists.
+  turn your back on it. It is yours alone (not shared). A painting with no scene says "Coming soon"; the blank frame
+  says "Not painted yet".
+
+### Almond Blossom's blank frame (Serena, 2026-11-17)
+
+- Until you have been into Window in the Studio, Almond Blossom's frame holds a primed, cream-white canvas, lit like the
+  others. Its wall label has no title ("?"), the tab says "4 · To discover", and it carries a Vincent quote ("There is
+  nothing more truly artistic than to love people.", to Theo, Arles, 18 Sept 1888, Jo van Gogh-Bonger's translation)
+  and the way in: "This canvas is still waiting. Step into Window in the Studio to find out what belongs here." Its
+  menu: "?", "Find it in Window in the Studio", and "Not painted yet" in place of Enter.
+- The way in is also written on the canvas itself, big, in the Entrance's Caveat Brush (`BrushFontHD`, warm brown):
+  "This canvas is still waiting... Step into Window in the Studio to find out what belongs here." (`canvasWords`,
+  ASCII only: the font's atlas has nothing else). The words fade first when the painting comes through.
+- Every way out of Almond Studio (the end of the story, or Back to Gallery at any moment) ends on the window in full
+  bloom, then the colour drains into cream (`AS_Game`, "Leaving"). The Gallery comes out of the same cream with you
+  2.3 m in front of the blank frame, so the window becomes the frame. The first time, Almond Blossom comes through the
+  cream on it from its thick branch out (about 5 s, once you are looking); then its own title, label and picture come
+  back, and its Enter leads into the studio too.
+- It is remembered per player (PlayerPrefs `InnerFrame.AlmondBlossom.Painted` and `.Revealed`; in co-op each headset
+  has its own). To see the blank frame again on a machine: delete those two keys (Edit > Clear All PlayerPrefs in the Editor).
+- Build Layout writes the painting into the scene as before; the blank is applied at run time (`GalleryPainting`,
+  `blankUntilPainted`, set on Almond Blossom only), so outside Play the scene shows the painting.
 - Nothing is rebound: grip is still XRI Select, the trigger Activate (and UI Press), A Jump. The trigger is read from each
   hand's own Activate input (`GalleryPaintingPointer`). In the Editor without a headset: the centre dot or the mouse, E or a click.
 - The wall labels' "More →" and "×" work with the trigger as well as the grip. ENTER is off the labels.
@@ -233,7 +256,11 @@ Blender --background --factory-startup --python Art/Source/Gallery/make_tripo_pr
 
 - Spawn: you face The Bedroom; Vincent's portrait is on your left by the door; nothing is in the way.
 - Point at each painting from close, from the middle and from across the room: the rim shows, the trigger opens the menu
-  beside it (or in front of you from afar), readable; Enter fades into the right scene; Almond Blossom says Coming soon.
+  beside it (or in front of you from afar), readable; Enter fades into the right scene; the blank frame says Not painted yet.
+- Almond Blossom's blank frame (clear its two PlayerPrefs first): it reads as a cream canvas, on purpose, not a missing
+  texture; its label's quote and hint are readable. Enter Window in the Studio, press the menu's Back early: the window,
+  the bloom, the cream; back in the Gallery you stand in front of the frame and Almond Blossom appears on it. Again
+  through to the end of the story: the same ending, and the painting is already there.
 - The menu closes when you walk away or turn round; the grip and A do nothing new; B still asks Vincent.
 - Teleport onto the rug and round the bench; you can't walk through the bench, the plinths, the pots or the door.
 - Look back at the arch, from in front and from 45° on either side: no yellow inside the opening, no gap round the arch;

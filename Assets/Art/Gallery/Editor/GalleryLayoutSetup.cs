@@ -44,6 +44,14 @@ namespace InnerFrame.Gallery.EditorTools
         public const string Root = "Gallery Paintings", MenuRoot = "Gallery Painting Menu", CardsRoot = "Cici Artwork Cards";
         public const float OffWall = 0.1f;            // canvases stand this far off the wall (Slot_Bedroom's)
         public const float LabelGap = 0.25f, LabelOffWall = 0.03f, LabelHeight = 1.45f;
+        /// <summary>Act 4 in the Gallery (Serena, 2026-11-17): Window in the Studio leads into Almond Studio, and beside it
+        /// Almond Blossom's frame stays blank until the player has painted it there (GalleryPainting.blankUntilPainted).</summary>
+        public const string WindowKey = "WindowInTheStudio", BlankKey = "AlmondBlossom";
+        public const string WindowImage = "Assets/AlmondStudio/Textures/Reference/AS_WindowInTheStudio.jpg";
+        public const string WindowMaterial = PaintingsFolder + "/Mat_WindowInTheStudio.mat";
+        /// <summary>Along the east wall (z): clear of the lantern at -0.3 and The Starry Night's label; each label then
+        /// fits before the next frame, and Almond Blossom's before the south corner.</summary>
+        public const float WindowAlong = 1.0f, BlankAlong = 3.8f;
         public static readonly string[] Retired = { "SN_GalleryEntrance", "Cafe_GalleryEntrance", "Cafe layout Wainscot repair", "Cafe layout Wainscot_Rail repair" };
         const string Font = "Assets/Shared/UI/Fonts/LibreBaskerville-Regular.ttf", Box = "Assets/Shared/UI/Art/VG_Box.png", Pill = "Assets/Shared/UI/Art/VG_NameTab.png";
 
@@ -139,6 +147,8 @@ namespace InnerFrame.Gallery.EditorTools
             }
             GalleryLightingSetup.MakePainting(PaintingsFolder + "/Mat_CafeTerrace.mat", "Assets/ArtworkCici/Gallery/CafeTerraceAtNight.jpg", changes);
             GalleryLightingSetup.MakePainting(PaintingsFolder + "/Mat_AlmondBlossom.mat", almond, changes);
+            // Window in the Studio: Almond Studio's own reference image (the museum's, in LFS, its docs/ASSETS.md row), as imported there
+            if (AssetDatabase.LoadAssetAtPath<Texture2D>(WindowImage) != null) GalleryLightingSetup.MakePainting(WindowMaterial, WindowImage, changes);
             // Vincent's portrait lit like the others (its own Resources/VG_SelfPortrait.mat is Unlit, for the Bedroom scene's inset)
             GalleryLightingSetup.MakePainting(PaintingsFolder + "/Mat_SelfPortrait.mat", "Assets/VanGogh/Art/VG_SelfPortrait_1887.jpg", changes);
             if (AssetDatabase.LoadAssetAtPath<Material>(RayMaterial) == null)
@@ -152,23 +162,49 @@ namespace InnerFrame.Gallery.EditorTools
         /// <summary>Almond Blossom's scene: Act 4, Vincent's studio at Saint-Rémy (Serena, PR #202).</summary>
         public const string AlmondScenePath = "Assets/AlmondStudio/Scenes/AlmondStudio.unity";
 
-        /// <summary>Almond Blossom's Enter leads into Almond Studio once that scene is in the project (Serena, 2026-11-14):
-        /// its row in the asset gets the scene when it has none, and the scene goes into the build list (SceneFader loads
-        /// only scenes enabled there). Without the scene (a checkout before PR #202) nothing changes: Coming soon.
-        /// A row set to another scene is left alone.</summary>
+        /// <summary>Act 4's way in (Serena, 2026-11-17; before that Almond Blossom's own Enter led into the studio, 2026-11-14):
+        /// once Almond Studio is in the project, Window in the Studio hangs before Almond Blossom on the east wall and its
+        /// Enter opens the studio; Almond Blossom has no scene of its own (its frame is blank until painted, and its Enter
+        /// then borrows the window's at runtime). The scene goes into the build list (SceneFader loads only scenes enabled
+        /// there). Without the scene (a checkout before PR #202) nothing changes. Runs once: a row already there is left alone.</summary>
         static void AlmondStudioEntrance(GalleryLayout l, List<string> changes)
         {
             if (AssetDatabase.LoadAssetAtPath<SceneAsset>(AlmondScenePath) == null) return;
-            var p = l.Find("AlmondBlossom");
-            if (p == null) return;
-            if (string.IsNullOrEmpty(p.scene))
+            var almond = l.Find(BlankKey);
+            if (almond == null) return;
+            var window = l.Find(WindowKey);
+            if (window == null)
             {
-                p.scene = PaintingNames.AlmondStudio;
+                window = new GalleryLayout.Painting
+                {
+                    key = WindowKey, title = "Window in the Studio", caption = "Vincent van Gogh · 1889", number = almond.number, time = almond.time, menu = true,
+                    image = AssetDatabase.LoadAssetAtPath<Texture2D>(WindowImage) ?? throw new Exception($"{Tag} missing {WindowImage}"),
+                    material = AssetDatabase.LoadAssetAtPath<Material>(WindowMaterial), scene = PaintingNames.AlmondStudio,
+                    wall = almond.wall, along = WindowAlong, canvasCm = new Vector2(47.6f, 62f),   // the museum's: 62 x 47.6 cm, portrait
+                };
+                l.paintings.Insert(l.paintings.IndexOf(almond), window);   // you meet it first, walking from the door round to the right
+                almond.scene = "";
+                almond.along = BlankAlong;
+                l.WorkOutSizes();
                 EditorUtility.SetDirty(l);
                 AssetDatabase.SaveAssets();
-                changes.Add($"{LayoutPath}: Almond Blossom enters {p.scene}");
+                changes.Add($"{LayoutPath}: Window in the Studio (enters {PaintingNames.AlmondStudio}) hung before Almond Blossom, whose frame is blank until painted");
             }
-            if (p.scene != PaintingNames.AlmondStudio || EditorBuildSettings.scenes.Any(s => s.path == AlmondScenePath && s.enabled)) return;
+            if (string.IsNullOrEmpty(window.scene))   // the row as first set up (EnsureLayout) before the scene was there
+            {
+                window.scene = PaintingNames.AlmondStudio;
+                EditorUtility.SetDirty(l);
+                AssetDatabase.SaveAssets();
+                changes.Add($"{LayoutPath}: Window in the Studio enters {window.scene}");
+            }
+            if (window.material == null && AssetDatabase.LoadAssetAtPath<Material>(WindowMaterial) is Material m)
+            {
+                window.material = m;
+                EditorUtility.SetDirty(l);
+                AssetDatabase.SaveAssets();
+                changes.Add($"{LayoutPath}: Window in the Studio's material");
+            }
+            if (window.scene != PaintingNames.AlmondStudio || EditorBuildSettings.scenes.Any(s => s.path == AlmondScenePath && s.enabled)) return;
             var scenes = EditorBuildSettings.scenes.Where(s => s.path != AlmondScenePath).ToList();
             scenes.Add(new EditorBuildSettingsScene(AlmondScenePath, true));
             EditorBuildSettings.scenes = scenes.ToArray();
@@ -195,7 +231,8 @@ namespace InnerFrame.Gallery.EditorTools
             l.paintings.Add(P("Bedroom", "The Bedroom", "1889", "1", "Afternoon", "Assets/Art/Painting/The_Bedroom_Van_Gogh.jpg", GalleryLightingSetup.BedroomMat, "PaintedBedroom", GalleryLayout.Wall.West, -2.5f, 92.3f, 73.6f));
             l.paintings.Add(P("CafeTerrace", "Café Terrace at Night", "1888", "2", "Late afternoon", "Assets/ArtworkCici/Gallery/CafeTerraceAtNight.jpg", PaintingsFolder + "/Mat_CafeTerrace.mat", "CafeTerrace", GalleryLayout.Wall.North, 0f, 65.3f, 80.7f));
             l.paintings.Add(P("StarryNight", "The Starry Night", "1889", "3", "Evening", StarryNight.EditorTools.SN_GallerySetup.ImagePath, StarryNight.EditorTools.SN_GallerySetup.MaterialPath, "StarryNight", GalleryLayout.Wall.East, -2.5f, 92.1f, 73.7f));
-            l.paintings.Add(P("AlmondBlossom", "Almond Blossom", "1890", "4", "Morning", PaintingsFolder + "/Almond_Blossom_Van_Gogh.jpg", PaintingsFolder + "/Mat_AlmondBlossom.mat", "", GalleryLayout.Wall.East, 2.5f, 92.4f, 73.3f));
+            l.paintings.Add(P(WindowKey, "Window in the Studio", "1889", "4", "Morning", WindowImage, WindowMaterial, "", GalleryLayout.Wall.East, WindowAlong, 47.6f, 62f));
+            l.paintings.Add(P(BlankKey, "Almond Blossom", "1890", "4", "Morning", PaintingsFolder + "/Almond_Blossom_Van_Gogh.jpg", PaintingsFolder + "/Mat_AlmondBlossom.mat", "", GalleryLayout.Wall.East, BlankAlong, 92.4f, 73.3f));
             GalleryLayout.Prop D(string name, float x, float y, float z, float yaw, bool lit = true) => new GalleryLayout.Prop { name = name, position = new Vector3(x, y, z), yaw = yaw, lit = lit };
             // along the walls, clear of every painting, its label and the menu beside it; no lamp lights (5 spots fill the budget)
             l.decor.AddRange(new[]
@@ -308,6 +345,8 @@ namespace InnerFrame.Gallery.EditorTools
                 {
                     if (gp == null) { gp = holder.gameObject.AddComponent<GalleryPainting>(); why.Add($"{p.key}: GalleryPainting"); }
                     Change(gp, $"{p.key}: title, caption, entrance, canvas, frame", () => { gp.title = p.title; gp.caption = p.caption; gp.entrance = button; gp.canvas = canvas; gp.frame = frame; }, why);
+                    bool blank = p.key == BlankKey;
+                    Change(gp, $"{p.key}: {(blank ? "blank until painted" : "always shown")}", () => gp.blankUntilPainted = blank, why);
                 }
                 else if (gp != null) { Object.DestroyImmediate(gp); why.Add($"{p.key}: no menu"); }
             }
@@ -397,6 +436,13 @@ namespace InnerFrame.Gallery.EditorTools
                     "In Paris Van Gogh painted himself again and again, often because he could not pay a model. Short strokes of bright colour build his face.",
                     "Van Gogh made more than twenty self-portraits in his two years in Paris (1886–1888). With a mirror instead of a model, he tried out the bright colours and short, broken strokes he saw in the Impressionists' paintings.\n\nLook closer: the background is made of short dashes of blue and orange, and the same colours come back in his face and beard.\n\nHold B to ask him a question.\n\nCollection: The Art Institute of Chicago (1954.326)",
                     "Self-Portrait · 1887", "Vincent van Gogh · 1887\n\nOil on artist's board\nArt Institute of Chicago"),
+                // Van Gogh Museum, d0337V1962 (checked 17 Nov 2026): Saint-Rémy, September-October 1889; chalk, brush and oil
+                // paint and watercolour on paper, 62 x 47.6 cm; the room with a barred window he was allowed to use as a studio
+                // in the hospital, looking out over the walled garden
+                [WindowKey] = ("1889\nChalk, oil paint and watercolour on paper\n62 × 47.6 cm\nVan Gogh Museum, Amsterdam",
+                    "The barred window of the room Van Gogh was allowed to use as a studio in the hospital at Saint-Rémy, looking out over the walled garden.",
+                    "In the autumn of 1889, in the hospital at Saint-Rémy-de-Provence, Van Gogh was given a room on the ground floor to work in. He drew its window in chalk and brushed in colour: the bottles on the sill, the bars, and the green of the walled garden outside.\n\nLook closer: the window's deep sides are painted pale blue on one side and green on the other.\n\nStep inside: it is February 1890, and a letter from Theo has just arrived.\n\nCollection: Van Gogh Museum, Amsterdam (Vincent van Gogh Foundation)",
+                    "Window in the Studio · 1889 (detail)", "Vincent van Gogh · 1889\n\nChalk, oil and watercolour on paper\nVan Gogh Museum"),
                 ["AlmondBlossom"] = ("1890\nOil on canvas\n73.3 × 92.4 cm\nVan Gogh Museum, Amsterdam",
                     "White blossom on almond branches against a clear blue sky, painted in Saint-Rémy in February 1890 for his newborn nephew.",
                     "Van Gogh painted Almond Blossom in Saint-Rémy-de-Provence in February 1890, when his brother Theo and Jo had a son and named him Vincent. It was meant to hang over their bed.\n\nAlmond trees are among the first to flower each year, so the branches stand for new life. The strong outlines and the flat blue sky show what he learned from Japanese prints.\n\nLook closer: follow one branch from its thick, twisting base out to the buds at its tips.\n\nCollection: Van Gogh Museum, Amsterdam (Vincent van Gogh Foundation)",

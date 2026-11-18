@@ -197,7 +197,39 @@ public static class VincentVoice
 
     // Convai sometimes marks actions or emphasis (*smiles*); the voice would read the marks aloud.
     static string Clean(string text) =>
-        string.IsNullOrEmpty(text) ? "" : text.Replace("*", "").Replace("_", " ").Replace("~", "").Trim();
+        string.IsNullOrEmpty(text) ? "" : JoinShortSentences(text.Replace("*", "").Replace("_", " ").Replace("~", "").Trim());
+
+    /// <summary>The voice speaks one sentence at a time (MaxNumSentences 1), and a sentence of one or two words comes out
+    /// mumbled ("After me." in Almond Studio, 17 Nov). Such a sentence is joined to the one before it, or to the next if
+    /// it comes first, with a comma: "Vincent! After me. I could" -> "Vincent, after me. I could"; "Slowly. Let each one
+    /// open." -> "Slowly, let each one open." Only what he says changes; the words on screen stay as written.</summary>
+    public static string JoinShortSentences(string text)
+    {
+        var parts = new System.Collections.Generic.List<string>();
+        int from = 0;
+        for (int i = 0; i < text.Length; i++)
+        {
+            if (text[i] != '.' && text[i] != '!' && text[i] != '?') continue;
+            while (i + 1 < text.Length && (text[i + 1] == '.' || text[i + 1] == '!' || text[i + 1] == '?' || text[i + 1] == '"' || text[i + 1] == '\u201d')) i++;
+            if (i + 1 < text.Length && !char.IsWhiteSpace(text[i + 1])) continue;   // "3.5", "e.g."
+            parts.Add(text.Substring(from, i + 1 - from).Trim());
+            from = i + 1;
+        }
+        if (from < text.Length && text.Substring(from).Trim().Length > 0) parts.Add(text.Substring(from).Trim());
+        if (parts.Count < 2) return text;
+
+        static int Words(string s) => s.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).Length;
+        static string Open(string s) => s.TrimEnd('.', '!', '?', '"', '\u201d', ' ') + ",";   // its end becomes a comma
+        static string Lower(string s) => s.Length > 1 && char.IsUpper(s[0]) && !s.StartsWith("I ") && char.IsLower(s[1]) ? char.ToLowerInvariant(s[0]) + s.Substring(1) : s;
+
+        for (int i = 0; i < parts.Count && parts.Count > 1; )
+        {
+            if (Words(parts[i]) > 2) { i++; continue; }
+            if (i > 0) { parts[i - 1] = Open(parts[i - 1]) + " " + Lower(parts[i]); parts.RemoveAt(i); }
+            else { parts[0] = Open(parts[0]) + " " + Lower(parts[1]); parts.RemoveAt(1); }
+        }
+        return string.Join(" ", parts);
+    }
 
     static string Shorten(string s) => s.Length > 60 ? s.Substring(0, 57) + "…" : s;
 }

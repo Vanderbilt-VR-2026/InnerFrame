@@ -205,6 +205,8 @@ namespace InnerFrame.Gallery.EditorTools.Tests
                 Check(gp != null && gp.title == p.title && (string.IsNullOrEmpty(p.scene) ? gp.entrance == null : gp.entrance != null && gp.entrance.targetScene == p.scene && !gp.entrance.useTrigger),
                     $"{p.title}: its menu's Enter {(string.IsNullOrEmpty(p.scene) ? "is Coming soon (no SceneChangeButton)" : "is a SceneChangeButton to " + p.scene)}");
                 if (gp != null) Check(Pointable(gp, out var hit), $"{p.title}: from 2 m in front at 1.3 m, the first thing a ray hits is its canvas or frame ({hit})");
+                if (gp != null) Check(gp.blankUntilPainted == (p.key == GalleryLayoutSetup.BlankKey),
+                    $"{p.title}: {(p.key == GalleryLayoutSetup.BlankKey ? "blank until painted in Almond Studio" : "always shown")}");
             }
 
             // ------------------------------------------------------------------ wall labels

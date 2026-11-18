@@ -102,6 +102,15 @@ public class DesktopTestRig : MonoBehaviour
         Debug.Log($"[DesktopTestRig] {origin.gameObject.scene.name}: no headset, so you're a desktop player. W A S D to walk, click and move the mouse to look, Esc frees the mouse, E presses what the dot is on.");
     }
 
+    /// <summary>Faces this yaw, level (NetworkSession.PutPlayer: a scene placing the player).</summary>
+    public void Face(float newYaw)
+    {
+        yaw = newYaw;
+        pitch = 0f;
+        transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+        if (cam != null) cam.localRotation = Quaternion.identity;
+    }
+
     void Start()
     {
         controller = GetComponent<CharacterController>();

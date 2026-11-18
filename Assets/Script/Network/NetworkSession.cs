@@ -174,6 +174,29 @@ public class NetworkSession : MonoBehaviour
         return false;
     }
 
+    /// <summary>
+    /// Puts the local player's eyes over `eyesOverFloor` (its x and z; the height stays the player's own), facing `yaw`:
+    /// the rig turns about the eyes, then slides, the way a teleport does. Almond Studio's last look at the window and
+    /// the Gallery's arrival in front of the blank frame use it (2026-11-17). False when there is no player rig.
+    /// </summary>
+    public static bool PutPlayer(Vector3 eyesOverFloor, float yaw)
+    {
+        if (!FindPlayerRig(out var rig, out var eyes)) return false;
+        var cc = rig.GetComponent<CharacterController>();
+        bool ccWas = cc != null && cc.enabled;
+        if (cc) cc.enabled = false;
+        rig.RotateAround(eyes.position, Vector3.up, Mathf.DeltaAngle(eyes.eulerAngles.y, yaw));
+        var move = eyesOverFloor - eyes.position;
+        move.y = 0f;
+        rig.position += move;
+        if (cc) cc.enabled = ccWas;
+#if UNITY_EDITOR
+        var desktop = rig.GetComponent<DesktopTestRig>();
+        if (desktop != null) desktop.Face(rig.eulerAngles.y);   // it keeps its own yaw and sets it every frame
+#endif
+        return true;
+    }
+
     /// <summary>A scene can have its own avatar: Resources/NetworkPlayer_&lt;SceneName&gt;, else the default one.</summary>
     public static NetworkObject LoadAvatarPrefab(string sceneName)
     {

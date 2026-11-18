@@ -88,9 +88,18 @@ namespace InnerFrame.Gallery.EditorTools.Tests
             Vector3 headLocal; Quaternion headRot;
             Vector3 handLocal; Quaternion handRot;
             float trigger;
-            static readonly string[] Keys = { "Bedroom", "CafeTerrace", "StarryNight", "AlmondBlossom" };
+            static readonly string[] Keys = { "Bedroom", "CafeTerrace", "StarryNight", "WindowInTheStudio", "AlmondBlossom" };
 
-            void Start() => StartCoroutine(Run());
+            // entering Window in the Studio and coming back marks Almond Blossom painted (AS_Game): this run's visits must
+            // not change what the player's own Gallery shows, so the two prefs go back as they were at the end
+            int paintedWas, revealedWas;
+
+            void Start()
+            {
+                paintedWas = PlayerPrefs.GetInt(PaintingNames.AlmondPaintedPref, 0);
+                revealedWas = PlayerPrefs.GetInt(PaintingNames.AlmondRevealedPref, 0);
+                StartCoroutine(Run());
+            }
 
             void W(string s) { log.AppendLine(s); }
             void Check(bool ok, string what) { if (ok) passes++; else failures++; W((ok ? "PASS " : "FAIL ") + what); }
@@ -148,7 +157,7 @@ namespace InnerFrame.Gallery.EditorTools.Tests
                 Shot($"play-{key}-{label}-1-before");
                 yield return Trigger();
                 Check(menu.IsOpen && menu.Painting == gp, $"{gp.title} {label}: the trigger opens its menu ({(menu.IsOpen ? (menu.Floating ? "floating in front" : "beside the frame") : "closed")})");
-                string want = gp.CanEnter ? "Enter" : "Coming soon";
+                string want = gp.CanEnter ? "Enter" : gp.ClosedLabel;
                 Check(menu.EnterButton.Text == want && menu.EnterButton.Interactable == gp.CanEnter, $"{gp.title} {label}: the menu says \"{menu.EnterButton.Text}\" ({(gp.CanEnter ? "on" : "off")})");
                 yield return Stand(eye, (gp.Centre + menu.Panel.position) / 2f);   // look between the painting and its menu, for the picture
                 yield return new WaitForSecondsRealtime(0.2f);
@@ -181,7 +190,7 @@ namespace InnerFrame.Gallery.EditorTools.Tests
                     yield return Aim(menu.EnterButton.transform.position);
                     yield return Trigger();
                     yield return new WaitForSecondsRealtime(1f);
-                    Check(SceneManager.GetActiveScene().name == "Gallery" && menu.IsOpen, $"{gp.title} {label}: Coming soon does nothing (still in the Gallery, the menu open)");
+                    Check(SceneManager.GetActiveScene().name == "Gallery" && menu.IsOpen, $"{gp.title} {label}: {gp.ClosedLabel} does nothing (still in the Gallery, the menu open)");
                     yield return Aim(menu.BackButton.transform.position);
                     yield return Trigger();
                     Check(!menu.IsOpen, $"{gp.title} {label}: Back closes the menu");
@@ -349,6 +358,9 @@ namespace InnerFrame.Gallery.EditorTools.Tests
                 W($"\nRESULT: {passes} passed, {failures} failed");
                 File.WriteAllText(Path.Combine(outDir, "raw", "play-check.txt"), log.ToString());
                 foreach (var dev in new InputDevice[] { hmd, right, left }) if (dev != null) InputSystem.RemoveDevice(dev);
+                PlayerPrefs.SetInt(PaintingNames.AlmondPaintedPref, paintedWas);
+                PlayerPrefs.SetInt(PaintingNames.AlmondRevealedPref, revealedWas);
+                PlayerPrefs.Save();
                 Done(failures);
             }
         }

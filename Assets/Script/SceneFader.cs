@@ -38,6 +38,11 @@ public class SceneFader : MonoBehaviour
     public string LastCompletedScene { get; private set; }
     public string LastFailure { get; private set; }
     public static System.Func<string, IEnumerator> BeforeSceneChange;
+    /// <summary>The next transition only: its plain colour (no image) in place of black, and how long it fades out
+    /// (0: the caller's fadeTime). Set from a BeforeSceneChange (Almond Studio fades to a primed canvas's cream white,
+    /// 2026-11-17); back to black and 0 as that transition starts its fade.</summary>
+    public Color NextPlainColour { get; set; } = Color.black;
+    public float NextFadeOutSeconds { get; set; }
     Texture2D ownedImage;
     TMPro.TextMeshPro loadingLabel;
     float holdStarted;
@@ -156,11 +161,15 @@ public class SceneFader : MonoBehaviour
         float transitionStarted = Time.realtimeSinceStartup;
         if (BeforeSceneChange != null) yield return BeforeSceneChange(sceneName);
 
-        // Image: white tint so it shows true colours. No image: black.
+        // Image: white tint so it shows true colours. No image: black, or this transition's own colour.
+        Color plain = NextPlainColour;
+        float fadeOut = NextFadeOutSeconds > 0f ? NextFadeOutSeconds : fadeTime;
+        NextPlainColour = Color.black;
+        NextFadeOutSeconds = 0f;
         mat.mainTexture = ownedImage;
-        tint = ownedImage != null ? Color.white : Color.black;
+        tint = ownedImage != null ? Color.white : plain;
 
-        yield return Fade(0f, 1f, fadeTime);              // fade out
+        yield return Fade(0f, 1f, fadeOut);               // fade out
 
         ShowLoading(sceneName);
 
@@ -218,6 +227,8 @@ public class SceneFader : MonoBehaviour
             {
                 LastFailure = failure.ToString();
                 busy = false;
+                NextPlainColour = Color.black;
+                NextFadeOutSeconds = 0f;
                 HideLoading();
                 sphereRenderer.enabled = false;
                 Debug.LogException(failure);

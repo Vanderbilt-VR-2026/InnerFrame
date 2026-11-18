@@ -83,6 +83,21 @@ MonoBehaviour:
     width: 1.9918
     height: 1.5939
     bottom: 1.3102
+  - key: WindowInTheStudio
+    title: Window in the Studio
+    caption: "Vincent van Gogh \xB7 1889"
+    number: 4
+    time: Morning
+    image: {fileID: 2800000, guid: 3d2606e7f0898405e92be772325fc02b, type: 3}
+    material: {fileID: 2100000, guid: b34b8b6fa5866448f9f320821fba78a4, type: 2}
+    scene: AlmondStudio
+    menu: 1
+    wall: 1
+    along: 1
+    canvasCm: {x: 47.6, y: 62}
+    width: 1.0294
+    height: 1.3409
+    bottom: 1.2816
   - key: AlmondBlossom
     title: Almond Blossom
     caption: "Vincent van Gogh \xB7 1890"
@@ -90,10 +105,10 @@ MonoBehaviour:
     time: Morning
     image: {fileID: 2800000, guid: 648cb3cea4bf14cf8882ea01ed90648f, type: 3}
     material: {fileID: 2100000, guid: d8a7713c18c5e4829997f8f397423015, type: 2}
-    scene: AlmondStudio
+    scene: 
     menu: 1
     wall: 1
-    along: 2.5
+    along: 3.8
     canvasCm: {x: 92.4, y: 73.3}
     width: 1.9983
     height: 1.5853

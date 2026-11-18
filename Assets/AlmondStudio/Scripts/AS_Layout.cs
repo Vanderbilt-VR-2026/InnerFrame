@@ -257,7 +257,11 @@ namespace InnerFrame.AlmondStudio
         [Header("The story: the letter, his joy, the invitation, the painting (2026-11-12)")]
         [Tooltip("When you arrive he holds the letter out.")] public string hintLetter = "Take the letter";
         public string hintRead = "Pull the trigger to put the letter down";
-        [Tooltip("After you've read it.")] public string lineHappy = "A boy, and they have named him Vincent! After me. I could not be happier.";
+        [Tooltip("After you've read it. Keep each sentence more than a couple of words: the headset voice (Piper) speaks one " +
+                 "sentence at a time and mumbles very short ones (\"After me.\", 17 Nov).")]
+        public string lineHappy = "A boy, and they have named him Vincent, after me! I could not be happier.";
+        /// <summary>lineHappy until layout version 11 (AS_Setup replaces it if unedited).</summary>
+        public const string LineHappyV10 = "A boy, and they have named him Vincent! After me. I could not be happier.";
         [Tooltip("Then, a few seconds later.")] public string lineInvite = "I want to paint it for his room, to hang above his cradle. Will you help me? Open the window.";
         public const string LineInviteV7 = "I want to paint something for his room, to hang above his cradle. The almond tree outside is just coming into blossom. Will you help me? Open the window.";
         [Tooltip("Said as he turns to the window and points at the tree, before lineInvite.")] public string linePoint = "Look, the almond tree outside is just coming into blossom.";
@@ -303,6 +307,17 @@ namespace InnerFrame.AlmondStudio
         [TextArea(3, 8)] public string epilogueText =
             "Vincent painted these branches of white almond blossom against a blue sky as a gift for his newborn nephew. He meant it to hang in Theo and Jo's bedroom; they gave it a place of honour above the piano in their Paris home.\n\nThe boy, Vincent Willem van Gogh, grew up to found the Van Gogh Museum in Amsterdam, where Almond Blossom hangs today.";
         public string epilogueCredit = "Vincent van Gogh, Almond Blossom, 1890. Van Gogh Museum, Amsterdam (Vincent van Gogh Foundation)";
+
+        [Header("Leaving (2026-11-17): every way out ends on the window in full bloom, fading to a canvas's cream")]
+        [Tooltip("After the epilogue card appears, you leave by yourself after this many seconds...")] public float leaveAfterEpilogue = 20f;
+        [Tooltip("...or with the trigger, once the card has been up this long.")] public float leaveTriggerAfter = 3f;
+        [Tooltip("The last look: your eyes over this spot (x, z; paintEye's, where the whole tree fits the window), facing leaveYaw.")]
+        public Vector3 leaveEye = new Vector3(0f, 0f, 3f);
+        public float leaveYaw = 0f;
+        [Tooltip("The quick dip that moves you there, seconds each way.")] public float leaveDipSeconds = 0.3f;
+        [Tooltip("Looking at the tree before the colour goes, seconds (the bloom's wave, if it wasn't done, comes first).")] public float leaveHoldSeconds = 2f;
+        [Tooltip("The colour drains and the cream comes up over this many seconds; the Gallery comes out of the same cream.")] public float leaveFadeSeconds = 4f;
+        [Tooltip("A primed canvas's white: the colour the studio fades to and the Gallery's blank canvas.")] public Color leaveCream = new Color(0.96f, 0.94f, 0.89f);
 
         public float Springing => windowTop - windowWidth / 2f;
         public Vector3 WindowCentreInner => new Vector3(0f, (windowBottom + windowTop) * 0.5f, roomDepth);

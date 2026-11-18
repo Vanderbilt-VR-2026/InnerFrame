@@ -19,7 +19,7 @@ namespace InnerFrame.ArtworkCici {
    if(!UnityEngine.XR.XRSettings.isDeviceActive)Cursor.lockState=CursorLockMode.None;
    #endif
   }
-  public void CloseDetails(){if(detailPanel) detailPanel.SetActive(false);if(EventSystem.current)EventSystem.current.SetSelectedGameObject(null);}
+  public void CloseDetails(){VG_PanelInteraction.Consume();if(detailPanel) detailPanel.SetActive(false);if(EventSystem.current)EventSystem.current.SetSelectedGameObject(null);}
   public void Enter(){
    if(!paintingEntrance || paintingEntrance.GetType().Name!="SceneChangeButton"){
     Debug.LogWarning("[Cici UI] Assign this painting's Sonya SceneChangeButton to Painting Entrance. Preview has no destination.",this);return;

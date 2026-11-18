@@ -45,7 +45,7 @@ namespace InnerFrame.StarryNight
             f.Over = () => game.State == SN_State.Done;
             f.Ask = () => { if (line == null) return false; game.voice.Say(LineId); return true; };
             f.Saying = () => game.voice.CurrentId == LineId;
-            f.MenuOpen = () => SN_Game.MenuOpen;
+            f.MenuOpen = () => PlayerMenu.ModalOpen || SceneFader.IsFading;
             f.SetOff = () => lead.Begin();
             f.Walk = dt => { lead.Step(dt); return false; };   // the gold: goldAfter s after he set off
             f.Stop = lead.Hold;
@@ -66,6 +66,7 @@ namespace InnerFrame.StarryNight
 
         void Choose()   // the beam and the trigger, as with the stars
         {
+            if (VG_PanelInteraction.ConsumingInput) return; // native UI owns its trigger, including release
             var input = game.Input;
             int pointed = -1;
             for (int h = 0; h < input.HandCount && pointed < 0; h++)

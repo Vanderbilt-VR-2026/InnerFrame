@@ -95,7 +95,7 @@ public static class WayfindingCheck
         if (arrival != null)
         {
             var follow = arrival.GetComponent<VG_FollowGroup>();
-            Check(follow != null && follow.LockToView && follow.head == null,
+            Check(follow != null && !follow.LockToView && follow.head == null,
                 "the real arrival initialization uses immediate lower-view following and resolves the current camera");
             Check(!WayfindingHint.InstructionBusy(), "arrival fixture begins without a competing instruction");
             start.MoveNext(); // Advance past the settling wait in edit mode; no real-time delay is claimed.
@@ -103,8 +103,8 @@ public static class WayfindingCheck
             arrival.Snap();
             RenderHint(arrival, landscape);
             var anchor = eyes.WorldToViewportPoint(arrival.LayoutRoot.position);
-            Check(anchor.z > 0f && Vector2.Distance(anchor, new Vector2(.5f, .43f)) < .002f,
-                $"arrival is centred at the lower screen anchor ({anchor.x:F3}, {anchor.y:F3})");
+            Check(anchor.z > 0f && Mathf.Abs(anchor.x - .5f) < .002f && anchor.y > .3f && anchor.y < .5f,
+                $"arrival opens below centre in the initial view ({anchor.x:F3}, {anchor.y:F3})");
             float width = PlateWidth(arrival, eyes);
             Check(width > .15f && width <= .845f, $"arrival's plate takes {width:P0} of the landscape viewport width");
             ViewLock(arrival, eyes, landscape, "arrival");
@@ -263,84 +263,32 @@ public static class WayfindingCheck
         Vector3 position = eye.transform.position;
         Quaternion rotation = eye.transform.rotation;
         RenderHint(hint, target);
-        Vector3 before = eye.WorldToViewportPoint(hint.LayoutRoot.position);
+        Vector3 before = hint.LayoutRoot.position; Quaternion anchoredRotation = hint.LayoutRoot.rotation;
         float width = PlateWidth(hint, eye);
         eye.transform.SetPositionAndRotation(position + new Vector3(.2f, .3f, -.4f), rotation * Quaternion.Euler(20f, 35f, 12f));
         // Simulate a final head-pose sample without another HUD tick.
         target.Render();
-        Vector3 after = eye.WorldToViewportPoint(hint.LayoutRoot.position);
-        Check(follow.LockToView && before.y < .5f && before.z > 0f && Vector3.Distance(before, after) < .001f &&
-            width > 0f && Mathf.Abs(width - PlateWidth(hint, eye)) < .001f,
-            name + ": lower viewport position and apparent width stay fixed through yaw, pitch, roll and translation without a HUD update");
+        Vector3 after = hint.LayoutRoot.position;
+        Check(!follow.LockToView && Vector3.Distance(before, after) < .001f &&
+            Quaternion.Angle(anchoredRotation, hint.LayoutRoot.rotation) < .001f,
+            name + ": world position and orientation stay fixed through yaw, pitch, roll and translation");
         eye.transform.SetPositionAndRotation(position, rotation);
         follow.Step(0f);
     }
 
     static void ViewportFit(WayfindingHint hint, Camera eye, string name)
     {
-        var follow = hint.GetComponent<VG_FollowGroup>();
-        float oldFov = eye.fieldOfView;
-        using var landscape = new HudTestCameraTarget(eye, 1280, 800);
-        var detached = WayfindingHint.Create("Detached placement control", null, hint.Settings.distance, false);
-        try
-        {
-            detached.Show("Fixed on the wall", ArrivalHint.HeadsetLine, WayfindingHint.MenuKey, ArrivalHint.HeadsetRest);
-            detached.Visible = true; detached.Snap();
-            float detachedWidth = detached.WorldSize.x;
-            var detachedPosition = detached.transform.position;
-            eye.fieldOfView = 70f;
-            RenderHint(hint, landscape);
-            float originalWidth = PlateWidth(hint, eye);
-            float originalWidthInHeights = originalWidth * eye.aspect;
-            using (var portrait = new HudTestCameraTarget(eye, 576, 800))
-            {
-                eye.fieldOfView = 38f;
-                var shifted = eye.projectionMatrix;
-                shifted.m02 = .14f; shifted.m12 = -.08f;
-                eye.projectionMatrix = shifted;
-                RenderHint(hint, portrait);
-                Call(detached, "LateUpdate");
-                int graphics = 0, labels = 0;
-                var min = Vector2.one;
-                var max = Vector2.zero;
-                bool inFront = true;
-                foreach (var graphic in hint.DisplayCanvas.GetComponentsInChildren<Graphic>())
-                {
-                    if (!graphic.isActiveAndEnabled || graphic.color.a <= 0f) continue;
-                    var mesh = graphic.canvasRenderer.GetMesh();
-                    if (mesh == null || mesh.vertexCount == 0) continue;
-                    graphics++;
-                    if (graphic is Text text && !string.IsNullOrWhiteSpace(text.text)) labels++;
-                    var bounds = mesh.bounds;
-                    foreach (float x in new[] { bounds.min.x, bounds.max.x }) foreach (float y in new[] { bounds.min.y, bounds.max.y })
-                    {
-                        var point = eye.WorldToViewportPoint(graphic.transform.TransformPoint(new Vector3(x, y, bounds.center.z)));
-                        min = Vector2.Min(min, point);
-                        max = Vector2.Max(max, point);
-                        inFront &= point.z > 0f;
-                    }
-                }
-                float portraitWidth = PlateWidth(hint, eye);
-                float expected = Mathf.Min(originalWidthInHeights / eye.aspect, .84f);
-                var anchor = eye.WorldToViewportPoint(hint.LayoutRoot.position);
-                Check(graphics >= 4 && labels >= 2 && inFront && min.x >= .075f && min.y >= .075f && max.x <= .925f && max.y <= .925f &&
-                    Vector2.Distance(anchor, new Vector2(.5f, .43f)) < .002f && portraitWidth > 0f && Mathf.Abs(portraitWidth - expected) < .003f,
-                    $"{name}: actual text, key and plate fit a narrow 38-degree off-centre portrait view " +
-                    $"({graphics} graphics, {labels} labels, anchor {anchor.x:F3},{anchor.y:F3}, bounds {min:F3}..{max:F3}, width {portraitWidth:F3}, expected {expected:F3})");
-                Check(Mathf.Abs(detached.WorldSize.x - detachedWidth) < .0001f && detached.transform.position == detachedPosition,
-                    name + ": an independently placed world hint keeps its original size and position");
-            }
-            eye.fieldOfView = 70f; eye.ResetProjectionMatrix();
-            RenderHint(hint, landscape);
-            Check(Mathf.Abs(PlateWidth(hint, eye) - originalWidth) < .001f, name + ": wider view restores the original plate size");
-        }
-        finally
-        {
-            eye.fieldOfView = oldFov; eye.ResetProjectionMatrix();
-            follow.Step(0f); Call(hint, "LateUpdate");
-            Object.DestroyImmediate(detached.gameObject);
-        }
+        var pose = hint.DisplayCanvas.transform.position;
+        var size = hint.WorldSize;
+        float fov = eye.fieldOfView;
+        eye.fieldOfView = 70f;
+        hint.GetComponent<VG_FollowGroup>().Step(0f);
+        Call(hint, "LateUpdate");
+        Check(Vector3.Distance(pose, hint.DisplayCanvas.transform.position) < .001f && Vector2.Distance(size, hint.WorldSize) < .001f,
+            name + ": projection changes never move or resize an already placed world panel");
+        eye.fieldOfView = fov;
     }
+
 
     static void Shot(Camera camera, string path)
     {

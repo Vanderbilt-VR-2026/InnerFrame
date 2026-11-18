@@ -97,14 +97,14 @@ public static class ControlsTutorialChecks
                 {
                     var camera = startup.View.Head.GetComponent<Camera>();
                     float fieldOfView = camera.fieldOfView;
-                    using (var target = new HudTestCameraTarget(camera, 432, 600))
+                    using (var target = new HudTestCameraTarget(camera, 1280, 800))
                     {
-                        camera.fieldOfView = 38f;
+                        camera.fieldOfView = 60f;
                         target.Render();
                         startup.View.Snap();
                         target.Render();
                         var corners = new Vector3[4];
-                        var actions = startup.View.DisplayCanvas.GetComponentsInChildren<Button>();
+                        var actions = startup.View.DisplayCanvas.GetComponentsInChildren<Button>().Where(b => b.name != "Dismiss").ToArray();
                         bool visible = actions.Length == 3;
                         foreach (var action in actions)
                         {
@@ -113,7 +113,7 @@ public static class ControlsTutorialChecks
                                 corners.Select(camera.WorldToViewportPoint).All(p => p.z > 0f &&
                                 p.x >= .02f && p.x <= .98f && p.y >= .02f && p.y <= .98f);
                         }
-                        Check(visible, "arrival guide Previous, Next and Continue are drawn and fit the 432×600 portrait target at 38 degrees");
+                        Check(visible, "arrival guide Previous, Next and Continue are drawn and fit the initial 1280×800 view at 60 degrees");
                     }
                     camera.fieldOfView = fieldOfView;
                     startup.View.Snap();
@@ -157,8 +157,8 @@ public static class ControlsTutorialChecks
                 guide.View.key == template.key && guide.View.settings == template.settings, scene.name + ": exact shared Vincent assets/settings");
             Check(guide.View.DisplayCanvas.GetComponentInChildren<VG_DialogueBox>(true).gameObject.activeSelf, scene.name + ": full dialogue box visible while menu is modal");
             var guideFollow = guide.View.GetComponentInChildren<VG_FollowGroup>(true);
-            Check(guide.View.LockToView && guide.View.FollowHead && guideFollow.LockToView && guideFollow.enabled,
-                scene.name + ": full Controls guide inherits the immediate lower-view follow mode");
+            Check(!guide.View.LockToView && guide.View.FollowHead && !guideFollow.LockToView && guideFollow.enabled,
+                scene.name + ": full Controls guide inherits the world-space opening anchor");
             if (scene.name == "Gallery") CheckPages(guide);
             menu.Toggle();
             Check(!EntranceControllerGuide.IsOpen && panel.gameObject.activeSelf && panel.CurrentPage == PlayerMenuPage.Audio,
@@ -215,7 +215,7 @@ public static class ControlsTutorialChecks
             Check(paging.Pages.Count == 1 && paging.Pages[0].lines <= VG_DialogueBox.MostLines, "guide " + page.Title + ": readable as one complete manual page");
             var corners = new Vector3[4];
             bool buttonsVisible = true;
-            var navigation = guide.View.DisplayCanvas.GetComponentsInChildren<Button>(true);
+            var navigation = guide.View.DisplayCanvas.GetComponentsInChildren<Button>(true).Where(b => b.name != "Dismiss").ToArray();
             Check(navigation.Length == 3 && navigation.All(b => b.gameObject.activeInHierarchy) &&
                 navigation.Select(b => b.name).OrderBy(n => n).SequenceEqual(new[] { "Close", "Next", "Previous" }),
                 "guide " + page.Title + ": all three navigation controls are present and active");
@@ -349,14 +349,16 @@ public static class ControlsTutorialChecks
         Check(manager.VisibleStep == TutorialStep.GalleryMove && manager.GetComponentsInChildren<VG_DialogueUI>().Length == 1, "two available lessons produce one dialogue");
         var eyePosition = eye.transform.position;
         var viewport = eye.WorldToViewportPoint(manager.View.LayoutRoot.position);
+        var anchoredPosition = manager.View.LayoutRoot.position;
+        var anchoredRotation = manager.View.LayoutRoot.rotation;
         var initialBounds = ViewportBounds(manager.View.LayoutRoot, eye);
         eye.transform.SetPositionAndRotation(eye.transform.position + new Vector3(.3f, .2f, -.1f), Quaternion.Euler(-48f, 90f, 27f));
         manager.Present(0f);
         var movedBounds = ViewportBounds(manager.View.LayoutRoot, eye);
-        Check(Vector3.Distance(viewport, eye.WorldToViewportPoint(manager.View.LayoutRoot.position)) < .001f &&
-            Vector2.Distance(initialBounds.center, movedBounds.center) < .001f && Vector2.Distance(initialBounds.size, movedBounds.size) < .001f &&
-            manager.View.LockToView && manager.View.GetComponentInChildren<VG_FollowGroup>().enabled,
-            "first-use hint stays fixed in view after zero-dt yaw, pitch, roll and translation");
+        Check(Vector3.Distance(anchoredPosition, manager.View.LayoutRoot.position) < .001f &&
+            Quaternion.Angle(anchoredRotation, manager.View.LayoutRoot.rotation) < .001f &&
+            !manager.View.LockToView && manager.View.GetComponentInChildren<VG_FollowGroup>().enabled,
+            "first-use hint stays fixed in the world after zero-dt yaw, pitch, roll and translation");
         eye.transform.SetPositionAndRotation(eyePosition, Quaternion.identity);
         manager.Offer(TutorialStep.GalleryMove, a, eye.transform.position, TutorialPlacement.BelowAnchor);
         manager.Present(.1f); var closePosition = manager.View.LayoutRoot.position; manager.Present(.1f);
@@ -427,11 +429,14 @@ public static class ControlsTutorialChecks
         previousView.gameObject.SetActive(true);
         previousView.Head = eye.transform;
         previousView.Snap();
-        Check(previousView.DisplayCanvas.transform.IsChildOf(eye.transform), "test removes a real camera-owned surface");
+        Check(previousView.DisplayCanvas.transform.parent == null, "test uses a detached world surface");
+        var oldSurface = previousView.DisplayCanvas.gameObject;
         Object.DestroyImmediate(eye.gameObject);
+        Check(previousView.DisplayCanvas != null, "destroying the camera does not destroy the world panel");
+        Object.DestroyImmediate(oldSurface); // Reproduce scene unload destroying the detached surface.
         Call(manager, "OnSceneLoaded", SceneManager.GetActiveScene(), LoadSceneMode.Single);
         Check(manager.View == null && manager.Session.IsComplete(TutorialStep.Companion),
-            "removing the old camera first releases the lost visual surface while preserving completed lessons");
+            "scene unload releases the lost world surface while preserving completed lessons");
         Call(manager, "OnDestroy");
     }
 
@@ -546,13 +551,14 @@ public static class ControlsTutorialChecks
             Check(box != null && box.GetComponent<CanvasGroup>().alpha > 0f && manager.View.HintVisible,
                 (portrait ? "Gallery" : "Bedroom") + ": complete dialogue and button hint are visibly active");
             var follow = manager.View.GetComponentInChildren<VG_FollowGroup>(true);
-            Check(manager.View.LockToView && manager.View.FollowHead &&
-                follow != null && follow.LockToView && follow.enabled,
+            Check(!manager.View.LockToView && manager.View.FollowHead &&
+                follow != null && !follow.LockToView && follow.enabled,
                 (portrait ? "Gallery" : "Bedroom") + ": first-use view uses immediate lower-view presentation");
             {
                 Vector3 position = eye.transform.position;
                 Quaternion rotation = eye.transform.rotation;
                 Vector3 viewport = eye.WorldToViewportPoint(root.position);
+                Vector3 anchoredPosition = root.position; Quaternion anchoredRotation = root.rotation;
                 Rect bounds = ViewportBounds(root, eye);
                 Check(viewport.z > 0f && viewport.y < .5f && bounds.width > 0f && bounds.height > 0f,
                     (portrait ? "Gallery" : "Bedroom") + ": nonempty first-use dialogue is in the lower view");
@@ -560,10 +566,9 @@ public static class ControlsTutorialChecks
                 eye.transform.SetPositionAndRotation(position + new Vector3(.3f, .2f, -.1f), rotation * Quaternion.Euler(18f, 43f, 17f));
                 manager.Present(0f); // No elapsed easing time: the new pose must apply immediately.
                 Rect movedBounds = ViewportBounds(root, eye);
-                Check(Vector3.Distance(eye.WorldToViewportPoint(root.position), viewport) < .001f &&
-                    Vector2.Distance(bounds.center, movedBounds.center) < .001f &&
-                    Vector2.Distance(bounds.size, movedBounds.size) < .001f,
-                    (portrait ? "Gallery" : "Bedroom") + ": first-use viewport position and angular size survive yaw, pitch, roll and translation without easing");
+                Check(Vector3.Distance(root.position, anchoredPosition) < .001f &&
+                    Quaternion.Angle(root.rotation, anchoredRotation) < .001f,
+                    (portrait ? "Gallery" : "Bedroom") + ": first-use world position and orientation survive yaw, pitch, roll and translation");
                 eye.transform.SetPositionAndRotation(position, rotation);
                 manager.Present(0f);
             }
@@ -573,8 +578,8 @@ public static class ControlsTutorialChecks
             caption.Hint("Hold B to ask Vincent", "B"); Call(caption, "Step", 1f);
             var ui = (VG_DialogueUI)typeof(VanGoghCaption).GetField("ui", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(caption);
             Call(ui, "OnEnable");
-            Check(ui.LockToView && ui.GetComponentInChildren<VG_FollowGroup>(true).LockToView,
-                (portrait ? "Gallery" : "Bedroom") + ": Vincent caption stays fixed in the lower view");
+            Check(!ui.LockToView && !ui.GetComponentInChildren<VG_FollowGroup>(true).LockToView,
+                (portrait ? "Gallery" : "Bedroom") + ": Vincent caption uses a world anchor");
             Check(ui.HintVisible, "idle B reminder remains available with no pending first-use request");
             manager.Offer(TutorialStep.Vincent, talker, eye.transform.position + eye.transform.forward * 1.3f);
             Call(caption, "Step", 1f); manager.Present(1f);

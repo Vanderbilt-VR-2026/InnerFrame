@@ -9,10 +9,11 @@ public class GalleryCardButton : MonoBehaviour {
  #if UNITY_EDITOR
  // Desktop uses the same physics buttons as XR, with one mouse dispatch path.
  // Avoid a second click from a UI input module on mouse-up.
- if(!UnityEngine.XR.XRSettings.isDeviceActive){var graphic=GetComponent<Button>().targetGraphic;if(graphic)graphic.raycastTarget=false;}
+ if(!UnityEngine.XR.XRSettings.isDeviceActive){var graphic=GetComponent<Button>().targetGraphic;if(graphic)graphic.raycastTarget=GetComponentInParent<GalleryDetailPlacement>(true)!=null;}
  #endif
  }
  public static bool TryPressPointer(Camera camera,Vector2 screenPoint){
+ if(camera&&VG_PanelInteraction.BlocksRay(camera.ScreenPointToRay(screenPoint)))return false;
  if(!camera||!Physics.Raycast(camera.ScreenPointToRay(screenPoint),out var hit,3f,~0,QueryTriggerInteraction.Ignore))return false;
  var target=hit.collider.GetComponent<GalleryCardButton>();
  if(!target)return false;

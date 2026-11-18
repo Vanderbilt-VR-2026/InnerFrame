@@ -316,6 +316,7 @@ namespace InnerFrame.AlmondStudio
             if (uiPrefab != null && uiSettings != null)
             {
                 ui = Instantiate(uiPrefab, world).GetComponent<VG_DialogueUI>();
+                ui.RespectSubtitlePreference = true;
                 ui.name = "AS_UI";
                 ui.settings = uiSettings;
             }

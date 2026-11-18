@@ -222,14 +222,15 @@ public class SpeechToProxy : MonoBehaviour
     void PlayPart()
     {
         var next = toPlay.Dequeue();
+        bool continuation = spokenText.Length > 0;
         voice.clip = next.Key;
         voice.Play();
         spokenText = spokenText.Length == 0 ? next.Value : spokenText + " " + next.Value;
         LastReply = spokenText;   // what he has said so far
         SetState(State.Playing);
-        if (dialogueUI != null) dialogueUI.Say("Vincent", next.Value, next.Key);   // a scene's shared box (Starry Night)
+        if (dialogueUI != null) dialogueUI.Say("Vincent", next.Value, next.Key, continuation);
         if (caption == null) return;
-        caption.Words(next.Value);
+        caption.Words(next.Value, continuation);
         if (answerHint != null) caption.Hint(answerHint);
     }
 

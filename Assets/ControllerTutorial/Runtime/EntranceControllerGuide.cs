@@ -49,12 +49,12 @@ namespace InnerFrame.Tutorial
         {
             View = Instantiate(dialoguePrefab, transform);
             View.ShowWhileMenuOpen = true;
+            View.CloseRequested = Close;
             View.Head = camera.transform;
             var canvas = View.DisplayCanvas;
             canvas.worldCamera = camera;
             canvas.sortingOrder = 200;
-            canvas.gameObject.AddComponent<GraphicRaycaster>();
-            canvas.gameObject.AddComponent<VG_CompositorRaycaster>();
+            VG_PanelInteraction.EnsureCanvas(canvas);
             previous = Button("Previous", -0.31f, () => ShowPage(PageIndex - 1));
             next = Button("Next", 0f, () => ShowPage(PageIndex + 1));
             close = Button(firstGalleryVisit ? "Continue" : "Close", 0.31f, Close);

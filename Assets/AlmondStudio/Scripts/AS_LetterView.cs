@@ -21,9 +21,11 @@ namespace InnerFrame.AlmondStudio
 
         // the flight from his hand
         Vector3 fromPos; Quaternion fromRot; float fromScale;
+        Vector3 readingPosition; Quaternion readingRotation;
+        public bool Dismissed { get; private set; }
         float flight = 1f, fade = -1f;
 
-        public bool Arrived => gameObject.activeSelf && flight >= 1f;
+        public bool Arrived => Dismissed || (gameObject.activeSelf && flight >= 1f);
 
         public static AS_LetterView Make(Transform parent, Texture paper, Font font)
         {
@@ -74,6 +76,12 @@ namespace InnerFrame.AlmondStudio
             view.text = Label(readGo.transform, "Words", font, FontStyle.Normal, new Color(0.28f, 0.17f, 0.09f), 16, 10);
             Stretch(view.text.rectTransform, 24f, 0f);
             view.text.rectTransform.offsetMax = new Vector2(-24f, -104f);
+            foreach (var graphic in go.GetComponentsInChildren<Graphic>()) graphic.raycastTarget = false;
+            VG_PanelInteraction.Attach(sheet.rectTransform, go.transform, canvas, view.Dismiss).DragStarted = () =>
+            {
+                view.flight = 1f; view.reading.alpha = 1f;
+                view.transform.localScale = Vector3.one * MmToM * view.ParentScale();
+            };
 
             go.SetActive(false);
             return view;
@@ -108,12 +116,14 @@ namespace InnerFrame.AlmondStudio
         public void Show(Transform eyes, string background, string words, Transform from)
         {
             follow = eyes;
+            Dismissed = false;
             intro.text = background ?? "";
             intro.gameObject.SetActive(!string.IsNullOrEmpty(background));
             text.text = words;
             gameObject.SetActive(true);
             all.alpha = 1f; fade = -1f;
             Target(out var pos, out var rot);
+            readingPosition = pos; readingRotation = rot;
             if (from != null)
             {
                 fromPos = from.position; fromRot = from.rotation;
@@ -141,12 +151,13 @@ namespace InnerFrame.AlmondStudio
             if (atOnce || !gameObject.activeSelf || fadeSeconds <= 0f) { gameObject.SetActive(false); follow = null; fade = -1f; return; }
             if (fade < 0f) fade = 0f;
         }
+        public void Dismiss() { Dismissed = true; Hide(true); }
 
         void LateUpdate()
         {
             if (follow == null) return;
             float dt = Time.deltaTime;
-            Target(out var pos, out var rot);
+            var pos = readingPosition; var rot = readingRotation;
             if (flight < 1f)
             {
                 flight = Mathf.Min(1f, flight + dt / Mathf.Max(0.01f, zoomSeconds));
@@ -159,11 +170,6 @@ namespace InnerFrame.AlmondStudio
             }
             else
             {
-                // reading: eases to in front of the eyes (it lags a head turn softly)
-                float k = Mathf.Clamp01(5f * dt);
-                transform.position = Vector3.Lerp(transform.position, pos, k);
-                transform.rotation = Quaternion.Slerp(transform.rotation, rot, k);
-                transform.localScale = Vector3.one * MmToM * ParentScale();
                 reading.alpha = 1f;
             }
             if (fade >= 0f)

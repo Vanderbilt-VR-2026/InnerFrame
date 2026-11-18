@@ -34,6 +34,9 @@ namespace InnerFrame.Tutorial
         }
         readonly Dictionary<int, Request> requests = new Dictionary<int, Request>();
         readonly List<int> expired = new List<int>();
+        readonly HashSet<TutorialStep> dismissed = new HashSet<TutorialStep>();
+        public bool IsDismissed(TutorialStep step) => dismissed.Contains(step);
+        public void RestoreDismissed() { dismissed.Clear(); current = null; nextScan = 0f; }
         VG_DialogueUI view;
         SpeechToProxy[] talkers = System.Array.Empty<SpeechToProxy>();
         ArrivalHint[] arrivals = System.Array.Empty<ArrivalHint>();
@@ -67,7 +70,7 @@ namespace InnerFrame.Tutorial
         void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
             if (mode != LoadSceneMode.Single) return;
-            // Scene unload may already have destroyed the previous camera and its visual child. Recreate
+            // Scene unload may already have destroyed the previous scene and its detached visual surface. Recreate
             // only a lost surface. The session and an intact hidden view can continue across scenes.
             if (view != null && view.DisplayCanvas == null)
             {
@@ -83,10 +86,10 @@ namespace InnerFrame.Tutorial
             Hide();
         }
 
-        /// <summary>Adapters retain their context/anchor contract; presentation is fixed in the view in every scene.</summary>
+        /// <summary>Adapters retain their context/anchor contract; presentation anchors once in the world in every scene.</summary>
         public void Offer(TutorialStep step, Object owner, Vector3 worldPosition, TutorialPlacement placement = TutorialPlacement.AtAnchor)
         {
-            if (owner == null || Session.IsComplete(step)) return;
+            if (owner == null || Session.IsComplete(step) || dismissed.Contains(step)) return;
             int id = owner.GetInstanceID();
             if (!requests.TryGetValue(id, out var request))
                 requests.Add(id, request = new Request { Owner = owner, Step = step, Order = order++ });
@@ -193,7 +196,7 @@ namespace InnerFrame.Tutorial
             return false;
         }
 
-        bool Available(Request request) => request.Owner != null && !Session.IsComplete(request.Step) &&
+        bool Available(Request request) => request.Owner != null && !Session.IsComplete(request.Step) && !dismissed.Contains(request.Step) &&
             (!(request.Owner is Behaviour b) || b.isActiveAndEnabled);
 
         /// <summary>Arbitration runs after ordinary UI updates, so new speech hides a tutorial in the same frame.</summary>
@@ -216,9 +219,10 @@ namespace InnerFrame.Tutorial
                 view = Instantiate(guide.dialoguePrefab, transform);
                 view.name = "First-use dialogue (shared Vincent UI)";
                 view.autoStep = false;
+                view.CloseRequested = DismissCurrent;
             }
             view.FollowHead = true;
-            view.LockToView = true;
+            view.LockToView = false;
             view.gameObject.SetActive(true);
             bool changed = current != chosen;
             if (changed)
@@ -227,11 +231,17 @@ namespace InnerFrame.Tutorial
                 view.Say(page.Title, page.Words, null);
                 view.SetHint("", page.Hint);
                 current = chosen;
+                view.Snap();
             }
             // Adapters still decide context and completion; every scene presents the instruction in the lower view.
             view.Step(deltaTime);
-            view.Snap();
             VisibleStep = chosen.Step;
+        }
+
+        public void DismissCurrent()
+        {
+            if (current != null) dismissed.Add(current.Step);
+            Hide(); current = null;
         }
 
         void Hide()

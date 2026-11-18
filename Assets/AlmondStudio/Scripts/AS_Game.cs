@@ -154,7 +154,7 @@ namespace InnerFrame.AlmondStudio
         void Update()
         {
             bool held = Input != null && Input.TriggerHeld;   // the trigger's press, once per frame
-            triggerPressed = held && !triggerWas;
+            triggerPressed = held && !triggerWas && !PlayerMenu.MenuOpen;
             triggerWas = held;
             if (triggerPressed && PointAndPress()) triggerPressed = false;   // used on what you pointed at
             float dt = Time.deltaTime;
@@ -220,7 +220,7 @@ namespace InnerFrame.AlmondStudio
             Ray aim;
             if (Input.AimsFromHead) { if (!Input.TryGetHeadAim(out aim)) return; }
             else aim = new Ray(brushTip.position, brushTip.forward);
-            bool trigger = Input.TriggerHeld;
+            bool trigger = Input.TriggerHeld && !PlayerMenu.MenuOpen;
 
             if (trigger && Active < 0) Active = PickStart(aim);
             Vector3 end = aim.GetPoint(layout.beamLength);
@@ -249,7 +249,7 @@ namespace InnerFrame.AlmondStudio
             Ray aim;
             if (Input.AimsFromHead) { if (!Input.TryGetHeadAim(out aim)) return; }
             else aim = new Ray(brushTip.position, brushTip.forward);
-            bool trigger = Input.TriggerHeld;
+            bool trigger = Input.TriggerHeld && !PlayerMenu.MenuOpen;
             guides.Beam(brushTip.position, aim.GetPoint(layout.beamLength), trigger);
             if (!trigger) return;
             int n = blossoms.Paint(aim, layout.blossomBeamDegrees, layout.blossomBeamMetres);

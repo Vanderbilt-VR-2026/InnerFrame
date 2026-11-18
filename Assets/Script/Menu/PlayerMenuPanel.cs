@@ -248,6 +248,7 @@ public class PlayerMenuPanel : MonoBehaviour
             Label(page, bindings[i], new Vector2(70, 83 - i * 39), new Vector2(300, 32), 17, TextAnchor.MiddleRight);
         }
         ButtonAt(page, "Open controller guide", "Open controller guide", new Vector2(0, -110), new Vector2(450, 46), () => ControlsRequested?.Invoke());
+        ButtonAt(page, "Show hidden panels", "Show hidden panels", new Vector2(0, -160), new Vector2(450, 38), () => { Hide(); VG_PanelInteraction.RestoreDismissed(); });
     }
 
     void BuildAudio(RectTransform page)
@@ -279,6 +280,7 @@ public class PlayerMenuPanel : MonoBehaviour
         Label(page, "Vincent subtitles", new Vector2(-100, 74), new Vector2(250, 40), 19, TextAnchor.MiddleLeft);
         var subtitles = ButtonAt(page, "Subtitles", "On", new Vector2(142, 74), new Vector2(166, 43), () => PlayerMenuPreferences.Subtitles = !PlayerMenuPreferences.Subtitles);
         subtitleLabel = subtitles.GetComponentInChildren<Text>();
+        Label(page, "Off: voice only. Instructions stay visible.", new Vector2(0, -115), new Vector2(450, 34), 15, TextAnchor.MiddleLeft);
         Label(page, "Menu size", new Vector2(-133, 9), new Vector2(184, 40), 19, TextAnchor.MiddleLeft);
         smaller = ButtonAt(page, "Smaller menu", "−", new Vector2(37, 9), new Vector2(42, 42), () => PlayerMenuPreferences.MenuScale -= .05f);
         scaleLabel = Label(page, "100%", new Vector2(121, 9), new Vector2(112, 40), 19, TextAnchor.MiddleCenter);

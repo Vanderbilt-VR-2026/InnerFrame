@@ -28,7 +28,14 @@ public class WayfindingHint : MonoBehaviour
     public Canvas DisplayCanvas => follow.DisplayCanvas;
 
     /// <summary>Shown (fading in) or hidden (fading out).</summary>
-    public bool Visible { get; set; }
+    bool requested, dismissed;
+    public bool Visible
+    {
+        get => requested && !dismissed;
+        set { if (value && !requested && !dismissed) follow.Snap(); requested = value; }
+    }
+    public void Dismiss() { dismissed = true; Snap(); }
+    public void RestoreDismissed() { dismissed = false; if (requested) follow.Snap(); }
     /// <summary>Fully faded out.</summary>
     public bool Gone => group.alpha <= 0f && !Visible;
     /// <summary>The settings it is sized with (a copy; its distance is the viewing distance).</summary>
@@ -36,12 +43,12 @@ public class WayfindingHint : MonoBehaviour
     /// <summary>The title and line last shown, for the checks.</summary>
     public string Shown { get; private set; }
 
-    /// <summary>Keep the shared hint immediately below the current view; null head follows Camera.main as it changes.</summary>
+    /// <summary>Place the shared hint below the initial gaze, then leave it anchored; null head resolves Camera.main.</summary>
     public void FollowView(Transform head = null)
     {
         follow.PlaceAutomatically = true;
         follow.head = head;
-        follow.LockToView = true;
+        follow.LockToView = false;
         follow.ViewportY = .43f; // The standalone instruction sits above the dialogue box.
         follow.Snap();
         FitView();
@@ -64,7 +71,7 @@ public class WayfindingHint : MonoBehaviour
     }
 
     /// <summary>A hint under `parent` (null: the scene root), sized to be read from `viewDistance` metres. `onTop`: drawn
-    /// over the room (nothing cuts through it), for hints that follow the head. Null without the dialogue assets.</summary>
+    /// over the room (nothing cuts through it), for world-anchored hints. Null without the dialogue assets.</summary>
     public static WayfindingHint Create(string name, Transform parent, float viewDistance, bool onTop)
     {
         var source = MenuLook.Settings;
@@ -87,8 +94,8 @@ public class WayfindingHint : MonoBehaviour
         follow.CreateLayout(Settings);
         group = DisplayCanvas.gameObject.AddComponent<CanvasGroup>();
         group.alpha = 0f;
-        group.interactable = false;
-        group.blocksRaycasts = false;
+        group.interactable = true;
+        group.blocksRaycasts = true;
 
         layout = new GameObject("Layout", typeof(RectTransform)).transform;
         layout.SetParent(LayoutRoot, false);
@@ -103,13 +110,16 @@ public class WayfindingHint : MonoBehaviour
         plate = (RectTransform)hint.transform.Find("Plate");
         key = hint.transform.Find("Key");
         letter = key != null ? key.Find("Letter")?.GetComponent<Text>() : null;
+        VG_PanelInteraction.Attach(plate, DisplayCanvas.transform, DisplayCanvas, Dismiss);
     }
 
     /// <summary>`title` (empty: none) and one line: `line`, then `buttonKey` in a circle (MenuKey or GripKey: that
     /// button's icon), then `rest`. Centred on Root.</summary>
     public void Show(string title, string line, string buttonKey = null, string rest = null)
     {
-        Shown = $"{title} | {line}{(buttonKey != null ? $" ({buttonKey}) " : "")}{rest}";
+        string next = $"{title} | {line}{(buttonKey != null ? $" ({buttonKey}) " : "")}{rest}";
+        if (next != Shown) dismissed = false;
+        Shown = next;
         bool drawn = buttonKey == MenuKey || buttonKey == GripKey;
         hint.Show(title, line, drawn ? " " : buttonKey, rest);
         if (icon != null && iconKey != buttonKey) { Kill(icon); icon = null; }
@@ -135,7 +145,7 @@ public class WayfindingHint : MonoBehaviour
     // canvas/follower transform intact. In stereo both eye projections must be able to see the same plate.
     void FitView()
     {
-        if (follow == null || !follow.PlaceAutomatically || !follow.LockToView || plate == null) return;
+        if (follow == null || !follow.PlaceAutomatically || plate == null) return;
         var camera = DisplayCanvas.worldCamera;
         if (camera == null || plate.rect.width <= 0f) return;
         float fit;
@@ -158,10 +168,11 @@ public class WayfindingHint : MonoBehaviour
     void Update()
     {
         group.alpha = Mathf.MoveTowards(group.alpha, Visible ? 1f : 0f, Time.unscaledDeltaTime / FadeSeconds);
+            group.blocksRaycasts = Visible && group.alpha > .01f;
     }
 
     /// <summary>Straight to shown or hidden, without the fade (renders, checks).</summary>
-    public void Snap() { group.alpha = Visible ? 1f : 0f; }
+    public void Snap() { group.alpha = Visible ? 1f : 0f; group.blocksRaycasts = Visible; }
 
     static void Kill(Object o) { if (Application.isPlaying) Destroy(o); else DestroyImmediate(o); }
 

@@ -20,9 +20,7 @@ when already there. Close with ×, without a Resume button.
 This controller-open menu is now implemented. The panel appears in front of
 the player, then holds its world position and orientation when the player
 turns or walks. It is not parented to the head and does not use the HUD compositor.
-The corner shortcuts and wrist tag are no longer spawned. Professor feedback
-about placing instructions on physical objects is a separate pending dialogue/
-tutorial change. The screenshot is kept in the local project deliverables:
+The corner shortcuts and wrist tag are no longer spawned. Dialogue, tutorials, wayfinding and story panels now use the same world-anchor behavior, with controller drag and an explicit dismiss cross. The screenshot is kept in the local project deliverables:
 `VR-Quick-Menu-Functions-20261117/quick-menu-functions.png`.
 
 The panel is built at runtime from
@@ -35,7 +33,7 @@ or shared XR setup needs another menu instance.
 | Entry | Behavior |
 | --- | --- |
 | Left controller Menu / Editor M | Toggle the full panel, starting with Audio; holding does not repeatedly toggle |
-| Controls | Basic binding summary; Open controller guide reopens the existing eleven-page EntranceControllerGuide in the same scene |
+| Controls | Basic binding summary; Open controller guide reopens the existing eleven-page EntranceControllerGuide in the same scene; Show hidden panels restores dismissed eligible prompts/choices |
 | Audio | Master listener volume and mute/unmute. More settings selects Settings. There are no separate music/voice/effect gains |
 | Back to Gallery | Visible but disabled in Gallery. Elsewhere, confirmation is required before SceneFader returns to Gallery |
 | Settings | Shared Vincent subtitles on/off, menu size 85–115%, read-only English language |
@@ -63,10 +61,7 @@ Master gain uses `AudioListener.volume`, retaining the existing per-source
 music crossfades and speech ducking. Mute remembers the last audible gain.
 Changes are flushed when the menu closes or the app exits.
 
-Only `VanGoghCaption` opts into `RespectSubtitlePreference`. The full guide,
-first-use tutorial words and instruction hints stay visible when Vincent
-subtitles are off. Paging and speaking priority remain unchanged. This is not
-a promise to hide other independently implemented scene text.
+`VanGoghCaption`, Starry Night's dialogue and Almond Studio's dialogue opt into `RespectSubtitlePreference`. The guide and task hints remain visible with subtitles off. The preference hides words without stopping voice, paging or speaking priority. The shared panel's × dismisses the current answer through its remaining streamed parts; a new answer can show again. First-use dismissal is separate from completion. Controls → Show hidden panels restores dismissed eligible prompts/choices.
 
 Menu size scales this panel, not every label in every scene. English is the
 only implemented language here; the menu does not offer a nonfunctional
@@ -143,6 +138,53 @@ remain applicable; no additional scene/asset ownership changed here.
 Evidence: `Logs/MenuSplit/checks.json`, `input.txt`, `Images/`,
 `Logs/Controls/checks.txt`, and `Logs/DialoguePlacement/checks.json`.
 These local generated reports are not committed.
+
+## World panels and approved close control — 2026-11-18
+
+Dialogue, first-use hints, wayfinding, exit choices, Gallery details/painting menus,
+and Almond reading panels stay at their opening world pose. Holding the trigger
+on the panel background drags it along that plane; release preserves its pose.
+The existing Menu title-bar drag remains. Turning away does not recenter or close
+panels. Menu close/reopen centres it again; menu suspension preserves a guide's
+page and dragged position. Shared canvases detach from moving Vincent owners.
+
+The user selected **02 — Outline circle**: a muted gold circle and × inset at the
+panel's top right, brightening together on hover, without a filled gold disk.
+The visible circle is 36 mm; the transparent hit target remains 55 mm. Original
+VG artwork and English text are retained. Hints reserve space for the cross.
+
+[V] Unity 6000.3.23f1 compiled with Android selected in the current checkout.
+All seven integration groups passed and restored the saved Gallery scene:
+world-panel/interaction fixtures **45/0**, Menu **117/0**, Controls **199/0**,
+Starry Night UI **11/0**, transitions **44/0**, wayfinding and scene restoration.
+The fixtures test world corners and rotation through yaw/pitch/roll/translation,
+moving Vincent parents, trigger dragging, actual close-button click dispatch,
+hover styling/hit area, session dismissal separate from completion, subtitle
+preference, real Gallery detail prefab ray hits and native Enter/Close clicks,
+and painting-menu Back. Enter's external scene load is intercepted explicitly
+in that fixture; it is not a scene-transition acceptance claim.
+
+[V] Gallery Play Mode Menu input **15/0** (simulated OpenXR Menu and keyboard M).
+[V] Gallery Play Mode audio continuity **7/0**: a generated silent local clip's
+sample position advances after dismissing a caption, across streamed parts,
+and with subtitles off/on. This checks playback state, not audible hardware.
+Reports: `Logs/WorldPanels/checks.txt`, `dialogue-world.png`, `audio-play.txt`,
+plus `Logs/DialoguePlacement/checks.json`, `Logs/MenuSplit/`, `Logs/Controls/`.
+
+[I] No new APK, physical Quest/controller, live microphone/AI response,
+fresh-Library import or clean-checkout headset acceptance was performed.
+Gallery still reports the existing missing Photon App ID/InvalidAuthentication
+startup error, so this is not a clean online multiplayer run.
+
+Review effort: three independent angles (world anchoring/lifecycle, subtitle and
+dismissal semantics, input and test evidence), followed by reproduced fixes.
+Confirmed fixes: obsolete per-frame recentering, streamed parts reopening a
+closed answer, exit choices immediately reopening, native Gallery/choice
+raycasts being disabled, scene triggers consuming UI clicks, a 3.5 m painting
+panel exceeding Gallery's 2 m ray, and stale destroyed panel registrations.
+The test fixture now deactivates only its own temporary scene's views, and
+NearFar guards respect UI enablement and the configured ray length. No scene,
+prefab, shared settings or teammates' in-progress work was saved by this change.
 
 ## Historical validation on 2026-11-13
 

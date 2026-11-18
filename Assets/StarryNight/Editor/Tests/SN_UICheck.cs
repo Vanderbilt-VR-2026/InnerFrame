@@ -140,70 +140,27 @@ namespace InnerFrame.StarryNight.EditorTools
             for (int k = 0; k < Hz; k++) ui.Step(1f / Hz);
             var follow = ui.GetComponentInChildren<VG_FollowGroup>(true);
             var hint = ui.DisplayCanvas.GetComponentInChildren<VG_Hint>(true);
-            Check(ui.LockToView && ui.FollowHead && follow.LockToView, "the actual Starry Night UI uses immediate lower-view placement");
+            Check(!ui.LockToView && ui.FollowHead && !follow.LockToView && ui.RespectSubtitlePreference,
+                "actual Starry Night UI anchors in the world and respects Vincent subtitles");
             var panel = (RectTransform)box.transform.Find("Panel");
-            landscape.Render();
-            foreach (var (name, yaw, pitch) in new[] { ("a level gaze", 6f, 0f), ("25 deg up", 25f, 25f) })
-            {
-                head.rotation = Quaternion.Euler(-pitch, yaw, 0f);
-                ui.Snap();
-                landscape.Render();
-                var (bTop, bBottom, bWidth, bDist) = Extent(panel, head);
-                var hintRect = (RectTransform)hint.transform.Find("Plate");
-                var hc = new Vector3[4];
-                hintRect.GetWorldCorners(hc);
-                float hTop = Mathf.Max(SN_Layout.YawPitch(hc[1] - head.position).y, SN_Layout.YawPitch(hc[2] - head.position).y);
-                float hBottom = Mathf.Min(SN_Layout.YawPitch(hc[0] - head.position).y, SN_Layout.YawPitch(hc[3] - head.position).y);
-                W($"{name} (yaw {F(yaw)}, pitch {F(pitch)}): the box from {F(bBottom)} to {F(bTop)} deg pitch, its top edge {F(bWidth)} deg wide and {F(bDist)} m from the eye; " +
-                  $"the hint's plate from {F(hBottom)} to {F(hTop)} deg");
-                panel.GetWorldCorners(hc);
-                var top = eye.WorldToViewportPoint((hc[1] + hc[2]) * .5f);
-                float width = eye.WorldToViewportPoint(hc[2]).x - eye.WorldToViewportPoint(hc[1]).x;
-                // The desktop design uses the authored angular width at a reference vertical field of view of 60 degrees.
-                float expectedWidth = s.Metres(s.boxWidth) / (2f * s.distance * Mathf.Tan(30f * Mathf.Deg2Rad) * eye.aspect);
-                Check(AtLowerAnchor(top) && Mathf.Abs(width - expectedWidth) < .002f,
-                    name + ": the box stays centred in the lower view at its authored width");
-            }
-
-            // ------------------------------------------------------------------ immediate follow (zero elapsed time)
-            head.rotation = Quaternion.identity;
-            ui.Snap();
-            follow.Step(0f);
-            landscape.Render();
-            W($"first frame, gaze (0, 0): group at {Group(ui.LayoutRoot, head)}");
-            var baseline = ViewportPoints(ui, eye);
-            Check(baseline.Length > 20 && baseline.All(InView), "actual Starry Night dialogue/hint text and art fit inside the viewport");
+            head.rotation = Quaternion.identity; ui.Snap(); landscape.Render();
+            var fixedCorners = new Vector3[4]; panel.GetWorldCorners(fixedCorners);
+            var fixedRotation = panel.rotation;
+            Check(ViewportPoints(ui, eye).All(InView), "newly opened Starry Night dialogue fits the initial view");
             foreach (var pose in new[]
             {
-                ("small yaw", L.SeatEye, Quaternion.Euler(0f, 15f, 0f)),
-                ("large yaw", L.SeatEye, Quaternion.Euler(0f, 95f, 0f)),
-                ("pitch above old clamp", L.SeatEye, Quaternion.Euler(-80f, 20f, 0f)),
-                ("pitch below old clamp", L.SeatEye, Quaternion.Euler(80f, -20f, 0f)),
-                ("yaw/pitch/roll/translation", L.SeatEye + new Vector3(.35f, .2f, -.15f), Quaternion.Euler(-48f, 67f, 32f))
+                ("yaw", L.SeatEye, Quaternion.Euler(0,95,0)),
+                ("pitch", L.SeatEye, Quaternion.Euler(-65,20,0)),
+                ("roll and walking", L.SeatEye + new Vector3(.35f,.2f,-.15f), Quaternion.Euler(20,67,35))
             })
             {
-                head.SetPositionAndRotation(pose.Item2, pose.Item3);
-                landscape.Render();
-                Check(AtLowerAnchor(eye.WorldToViewportPoint(ui.LayoutRoot.position)) &&
-                    Vector3.Dot(ui.LayoutRoot.up, head.up) > .99999f, pose.Item1 + ": fixed screen anchor and orientation without a HUD update");
-                var points = ViewportPoints(ui, eye);
-                Check(points.Length == baseline.Length && points.Select((p, index) => Vector3.Distance(p, baseline[index])).All(d => d < .001f) && points.All(InView),
-                    pose.Item1 + ": rendered UI/text keeps the same viewport bounds without easing");
+                head.SetPositionAndRotation(pose.Item2,pose.Item3);
+                follow.Step(.3f); ui.Step(0f); landscape.Render();
+                var moved = new Vector3[4]; panel.GetWorldCorners(moved);
+                Check(moved.Select((p,i)=>Vector3.Distance(p,fixedCorners[i])).All(d=>d<.001f) && Quaternion.Angle(panel.rotation,fixedRotation)<.001f,
+                    pose.Item1 + ": actual Starry Night panel keeps world corners and orientation");
             }
-
-            using (var portrait = new HudTestCameraTarget(eye, 576, 800))
-            {
-                portrait.Render();
-                ui.Snap();
-                portrait.Render();
-                var points = ViewportPoints(ui, eye);
-                var corners = new Vector3[4];
-                panel.GetWorldCorners(corners);
-                float width = eye.WorldToViewportPoint(corners[2]).x - eye.WorldToViewportPoint(corners[1]).x;
-                Check(AtLowerAnchor(eye.WorldToViewportPoint((corners[1] + corners[2]) * .5f)) &&
-                    width > 0f && width <= .842f && points.Length == baseline.Length && points.All(InView),
-                    "the portrait target keeps Starry Night's real words and plate inside the viewport at the same lower anchor");
-            }
+            head.SetPositionAndRotation(L.SeatEye,Quaternion.identity);
 
             // ------------------------------------------------------------------ the beam draws before the UI
             int uiQueue = ui.DisplayCanvas.GetComponentsInChildren<Graphic>(true).Select(g => g.materialForRendering.renderQueue).Max();

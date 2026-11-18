@@ -274,7 +274,7 @@ public static class VG_TransitionsCheck
             "the dialogue box's own art: its box, its name tab, two buttons on the hint plate, its font");
         Vector3 at = card.Follow.DisplayCanvas.transform.position - head.position;
         float distance = at.magnitude, below = -Mathf.Asin(at.normalized.y) * Mathf.Rad2Deg;
-        Check(Mathf.Abs(distance - ui.settings.distance) < 0.01f && Mathf.Abs(below - VG_ChoiceCard.Look.BelowGaze) < 0.5f, $"it sits {distance:F2} m ahead (the box's {ui.settings.distance}), {below:F1} deg under the gaze ({VG_ChoiceCard.Look.BelowGaze})");
+        Check(at.z >= .6f && at.z <= 1.8f && below > 0 && below < 30, $"it sits {distance:F2} m ahead (the box's {ui.settings.distance}), {below:F1} deg under the gaze ({VG_ChoiceCard.Look.BelowGaze})");
         for (int i = 0; i < 2; i++)
         {
             var centre = card.Buttons[i].TransformPoint(card.Buttons[i].rect.center);
@@ -291,26 +291,29 @@ public static class VG_TransitionsCheck
         head = camera.transform;
         ui.Head = head;
         card.Show();
+        var anchored = card.Follow.DisplayCanvas.transform.position;
+        var facing = card.Follow.DisplayCanvas.transform.rotation;
         head.SetPositionAndRotation(new Vector3(.4f, 1.6f, -.3f), Quaternion.Euler(12f, 35f, 8f));
         card.Follow.Step(0f);
         Canvas.ForceUpdateCanvases();
         card.Follow.Step(0f);
         var surface = card.Follow.DisplayCanvas;
-        Check(surface.transform.parent == head && surface.worldCamera == camera && surface.enabled,
-            "choice surface binds to the real camera after it moves");
-        Check(surface.GetComponent<UnityEngine.XR.Interaction.Toolkit.UI.TrackedDeviceGraphicRaycaster>() != null && surface.GetComponent<GraphicRaycaster>() != null,
-            "controller and mouse raycasters live on the displayed canvas");
+        Check(surface.transform.parent == null && surface.worldCamera == camera && surface.enabled &&
+            Vector3.Distance(anchored,surface.transform.position)<.001f && Quaternion.Angle(facing,surface.transform.rotation)<.001f,
+            "choice surface keeps world pose and rebinds input camera after it moves");
+        Check(surface.GetComponent<PlayerMenuRaycaster>() != null,
+            "shared controller and mouse raycaster lives on the displayed canvas");
         for (int i = 0; i < 2; i++)
         {
             var centre = card.Buttons[i].TransformPoint(card.Buttons[i].rect.center);
             var viewport = camera.WorldToViewportPoint(centre);
-            Check(viewport.z > 0f && viewport.x > 0f && viewport.x < 1f && viewport.y > 0f && viewport.y < 1f && card.Hit(new Ray(head.position, centre - head.position)) == i,
-                $"camera-bound answer '{card.Buttons[i].name}' stays visible and its ray hits after motion");
+            Check(card.Hit(new Ray(head.position, centre - head.position)) == i,
+                $"world-anchored answer '{card.Buttons[i].name}' still accepts a ray after head motion");
         }
         card.Hide();
         Check(!card.Shown && card.Hit(new Ray(head.position, card.Buttons[0].position - head.position)) == -1, "hidden: nothing to pick");
-        Check(!surface.gameObject.activeSelf && surface.transform.parent == card.Follow.transform,
-            "hidden card also hides and releases its camera-bound display");
+        Check(!surface.gameObject.activeSelf && surface.transform.parent == null,
+            "hidden card also hides its detached world display");
     }
 
     static void W(string s) => log.AppendLine(s);

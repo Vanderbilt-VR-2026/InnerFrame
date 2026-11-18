@@ -18,7 +18,7 @@ public class VG_ExitFlow : MonoBehaviour
     public VG_ChoiceCard card;
     public string next;
     public float askAfter = 3f, goldAfter = 5f, goldRise = VG_GoldLight.RiseSeconds;
-    public Func<bool> Over, Ask, Saying, MenuOpen = () => PlayerMenu.MenuOpen;
+    public Func<bool> Over, Ask, Saying, MenuOpen = () => PlayerMenu.ModalOpen || SceneFader.IsFading;
     /// <summary>Follow: he sets off (SetOff), then one step of his walk (Walk: true when the gold should begin); Stop: he
     /// stops where he is (another scene change got there first).</summary>
     public Action SetOff, Stop;
@@ -64,7 +64,8 @@ public class VG_ExitFlow : MonoBehaviour
                 break;
             case Beat.Choosing:   // the player menu covers the card and takes the trigger
                 bool menu = MenuOpen();
-                if (card.Shown == menu) { if (menu) card.Hide(); else card.Show(); }
+                if (card.Shown && menu) card.Hide();
+                else if (!card.Shown && !menu && !card.Dismissed) card.Show();
                 break;
             case Beat.Walking:
                 if (fader != null && fader.IsTransitioning) { Now = Beat.Leaving; Stop(); break; }   // the menu's Back got there first

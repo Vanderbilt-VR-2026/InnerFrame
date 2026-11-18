@@ -40,13 +40,13 @@ public static class DialoguePlacementPreview
         AssemblyReloadEvents.beforeAssemblyReload += ClearLiveSample;
         EditorApplication.playModeStateChanged += state => { if (state == PlayModeStateChange.ExitingPlayMode) ClearLiveSample(); };
     }
-    [MenuItem("InnerFrame/UI/Check locked dialogue")]
+    [MenuItem("InnerFrame/UI/Check anchored dialogue")]
     static void CheckMenu() => Queue("check");
-    [MenuItem("InnerFrame/UI/Render locked dialogue")]
+    [MenuItem("InnerFrame/UI/Render anchored dialogue")]
     static void RenderMenu() => Queue("render");
     [MenuItem("InnerFrame/UI/Check all shared dialogue callers")]
     static void AllChecksMenu() => Queue("all-checks");
-    [MenuItem("InnerFrame/UI/Live locked dialogue in PaintedBedroom")]
+    [MenuItem("InnerFrame/UI/Live anchored dialogue in PaintedBedroom")]
     static void LiveMenu() => Queue("live");
     [MenuItem("InnerFrame/UI/Clear dialogue preview sample")]
     static void ClearMenu() => Queue("stop");
@@ -120,7 +120,7 @@ public static class DialoguePlacementPreview
         liveUi.ShowWhileMenuOpen = false;
         liveUi.Head = Camera.main.transform;
         liveUi.Say("UI preview", "This is a layout preview. No dialogue request was sent.", null);
-        liveUi.SetHint("UI preview", "Look around: this stays below your gaze");
+        liveUi.SetHint("UI preview", "This panel stays where you place it");
         liveUi.Step(1f); liveUi.Snap();
         EditorApplication.ExecuteMenuItem("Window/General/Game");
         Write("Live UI preview in PaintedBedroom. Sample remains until stop request or Play Mode exit; no AI, microphone, or success event sent.");
@@ -158,11 +158,13 @@ public static class DialoguePlacementPreview
             // Preserve this detailed report before the combined summary takes its normal checks.txt/json paths.
             if (File.Exists(Path.Combine(Output, "checks.txt"))) File.Copy(Path.Combine(Output, "checks.txt"), Path.Combine(Output, "placement-checks.txt"), true);
             if (File.Exists(Path.Combine(Output, "checks.json"))) File.Copy(Path.Combine(Output, "checks.json"), Path.Combine(Output, "placement-checks.json"), true);
-            Run("GPU capture and controller ray (Logs/DialoguePlacement/compositor-checks.txt)",
-                () => VG_CompositorCaptureCheck.Run(Output));
+            Run("Menu interactions and rendered pages (Logs/MenuSplit/checks.txt)",
+                () => PlayerMenuSplitPreview.RunValidation(null));
             Run("Controls tutorial integration (Logs/Controls/checks.txt)", () => ControlsTutorialChecks.RunChecks() == 0);
             Run("Starry Night actual UI (Logs/DialoguePlacement/starry-night-checks.txt)",
                 () => InnerFrame.StarryNight.EditorTools.SN_UICheck.Run(Path.Combine(Output, "starry-night-checks.txt")) == 0);
+            Run("Transitions and native choices (Logs/DialoguePlacement/transitions-checks.txt)",
+                () => VG_TransitionsCheck.Run(Path.GetFullPath(Path.Combine(Output, "transitions-checks.txt"))) == 0);
             Run("Wayfinding actual callers (Logs/DialoguePlacement/wayfinding-checks.txt)",
                 () => WayfindingCheck.Run(Path.Combine(Output, "wayfinding-checks.txt")));
         }
@@ -187,118 +189,11 @@ public static class DialoguePlacementPreview
 
     public static bool Validate(bool render)
     {
-        if (EditorApplication.isPlayingOrWillChangePlaymode || EditorApplication.isCompiling || Dirty())
-        { Write("Checks refused: require settled Edit Mode and saved scenes"); return false; }
-        busy = true;
-        var notes = new List<string>();
-        void Check(bool ok, string what) { notes.Add((ok ? "PASS " : "FAIL ") + what); Debug.Log("[DialoguePlacement] " + notes[notes.Count - 1]); }
-        Scene original = SceneManager.GetActiveScene(), fixture = default;
-        VG_DialogueUI ui = null;
-        VG_DialogueSettings settings = null;
-        var materials = new List<Material>();
-        try
-        {
-            fixture = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
-            SceneManager.SetActiveScene(fixture);
-            var camera = new GameObject("Dialogue fixture camera").AddComponent<Camera>();
-            camera.transform.position = new Vector3(0, 1.6f, 0);
-            camera.fieldOfView = 60; camera.aspect = 1.6f; camera.nearClipPlane = .03f;
-            camera.clearFlags = CameraClearFlags.SolidColor; camera.backgroundColor = new Color(.07f, .1f, .16f);
-            camera.cullingMask = 1 << Layer;
-            var source = Resources.Load<VanGoghCaption>("VG_Caption");
-            Check(source != null && source.dialogue != null && source.dialogue.settings != null, "existing shared dialogue prefab/settings load");
-            if (source == null || source.dialogue == null || source.dialogue.settings == null) throw new InvalidOperationException("Shared UI missing");
-            ui = Object.Instantiate(source.dialogue);
-            settings = Object.Instantiate(source.dialogue.settings);
-            settings.distance = 1.3f; settings.belowGaze = 15; settings.deadZone = 20; settings.easeSeconds = .5f;
-            settings.lowestGaze = -30; settings.highestGaze = 45;
-            ui.settings = settings; ui.autoStep = false; ui.ShowWhileMenuOpen = true;
-            Check(ui.LockToView, "shared dialogue locks to the lower view by default");
-            ui.Head = camera.transform;
-            ui.RespectSubtitlePreference = false;
-            ui.Say("UI preview", "This shared dialogue stays below your gaze while you look around.", null);
-            ui.SetHint("UI preview", "Look around: the hint stays below your gaze");
-            ui.Prewarm(new[] { "UI preview", "This shared dialogue stays below your gaze while you look around.", "Look around: the hint stays below your gaze" });
-            ui.Step(1f);
-            var follow = ui.GetComponentInChildren<VG_FollowGroup>(true);
-            Check(follow != null && follow.LockToView, "UI LockToView propagates to the real follow group");
-            follow.Step(0);
-            foreach (var transform in ui.DisplayCanvas.GetComponentsInChildren<Transform>(true)) transform.gameObject.layer = Layer;
-            Check(ui.box == source.dialogue.box && ui.nameTab == source.dialogue.nameTab && ui.hintPlate == source.dialogue.hintPlate && ui.star == source.dialogue.star && ui.starRing == source.dialogue.starRing && ui.font == source.dialogue.font, "locked UI reuses all shared sprites and font");
-            var baseline = ViewPoints(ui, camera);
-            Check(baseline.Length > 20 && baseline.All(InView), "actual visible UI/text mesh bounds fit the camera view");
-            Check(baseline.Max(v => v.y) < .55f, "hint and dialogue stay in the lower view");
-            Check(ui.HintVisible && ui.IsSpeaking && ui.DisplayCanvas.GetComponentsInChildren<Text>().Any(t => !string.IsNullOrEmpty(t.text) && t.color.a > 0), "real hint and dialogue are visible during geometry checks");
-            CheckRenderedHud(ui, camera, Check, render, false);
-            CheckRenderedHud(ui, camera, Check, render, true);
-            camera.Render();
-            ui.Snap();
-            camera.Render();
-            baseline = ViewPoints(ui, camera);
-            AddWorldMarkers(materials);
-            if (render) Capture(camera, "locked-before.png");
-            var poses = new[]
-            {
-                ("yaw", new Vector3(0, 1.6f, 0), Quaternion.Euler(0, 90, 0)),
-                ("pitch above old clamp", new Vector3(0, 1.6f, 0), Quaternion.Euler(-80, 20, 0)),
-                ("pitch below old clamp", new Vector3(0, 1.6f, 0), Quaternion.Euler(80, -20, 0)),
-                ("yaw pitch roll", new Vector3(0, 1.6f, 0), Quaternion.Euler(25, 145, 37)),
-                ("translation and rotation", new Vector3(3, 2.4f, -2), Quaternion.Euler(-38, -125, -31))
-            };
-            foreach (var pose in poses)
-            {
-                camera.transform.SetPositionAndRotation(pose.Item2, pose.Item3);
-                // A tracking sample may move the camera after the final UI callback.
-                // The HUD has no opportunity to reposition itself between this pose and this measurement.
-                var anchor = camera.WorldToViewportPoint(ui.LayoutRoot.position);
-                Check(Vector3.Distance(anchor, new Vector3(.5f, .32f, settings.distance)) < .0001f &&
-                    Vector3.Dot(ui.LayoutRoot.forward, camera.transform.forward) > .99999f,
-                    "lower-centre screen anchor holds without a follow update: " + pose.Item1);
-                var points = ViewPoints(ui, camera);
-                Check(points.Length == baseline.Length && points.Select((p, i) => Vector2.Distance(p, baseline[i])).All(d => d < .0005f), "rendered UI viewport positions remain stable: " + pose.Item1);
-                Check(points.Length > 20 && points.All(InView), "actual text/shape bounds remain visible: " + pose.Item1);
-                if (render && pose.Item1 == "yaw pitch roll") Capture(camera, "locked-after-yaw-pitch-roll.png");
-            }
-            camera.transform.localScale = Vector3.one;
-            camera.transform.rotation = Quaternion.Euler(-17f, 43f, 26f);
-            Check(Vector3.Dot(ui.LayoutRoot.forward, camera.transform.forward) > .99999f &&
-                ViewPoints(ui, camera).Select((p, i) => Vector2.Distance(p, baseline[i])).All(d => d < .0005f),
-                "a newer camera pose leaves the text pinned before the next UI update");
-            Check(ui.DisplayCanvas.GetComponentsInChildren<Graphic>(true).All(g => !g.raycastTarget) &&
-                ui.DisplayCanvas.GetComponentsInChildren<CanvasGroup>(true).All(g => !g.blocksRaycasts),
-                "passive dialogue and hint groups let pointer input through");
-            camera.ResetProjectionMatrix(); camera.fieldOfView = 60f; camera.aspect = 1.6f;
-            ui.LockToView = false;
-            Check(!follow.LockToView, "explicit LockToView=false opt-out restores the legacy mode");
-            camera.transform.SetPositionAndRotation(new Vector3(0, 1.6f, 0), Quaternion.identity);
-            follow.Snap(); var first = ui.LayoutRoot.position;
-            camera.transform.rotation = Quaternion.Euler(0, 10, 0); follow.Step(0);
-            Check(Vector3.Distance(first, ui.LayoutRoot.position) < .0001f, "legacy small head turn keeps its dead zone");
-            camera.transform.rotation = Quaternion.Euler(0, 80, 0); follow.Step(0);
-            Check(Vector3.Distance(first, ui.LayoutRoot.position) < .0001f, "legacy zero-dt large turn does not jump");
-            follow.Step(.1f);
-            var exact = camera.transform.position + Quaternion.Euler(settings.belowGaze, 80, 0) * Vector3.forward * settings.distance;
-            Check(Vector3.Distance(first, ui.LayoutRoot.position) > .01f && Vector3.Distance(exact, ui.LayoutRoot.position) > .01f, "legacy large turn eases rather than locking");
-            camera.transform.rotation = Quaternion.Euler(-80, 0, 0); follow.Snap();
-            var clamped = camera.transform.position + Quaternion.Euler(-(settings.highestGaze - settings.belowGaze), 0, 0) * Vector3.forward * settings.distance;
-            Check(Vector3.Distance(ui.LayoutRoot.position, clamped) < .0001f, "legacy pitch clamp remains intact");
-            DestroyUi(ui); ui = null;
-            CheckSceneIntegration(fixture, camera, Check);
-        }
-        catch (Exception error) { Check(false, error.ToString()); }
-        finally
-        {
-            if (ui != null) DestroyUi(ui);
-            if (settings != null) Object.DestroyImmediate(settings);
-            foreach (var material in materials) if (material != null) Object.DestroyImmediate(material);
-            if (original.IsValid() && original.isLoaded) SceneManager.SetActiveScene(original);
-            if (fixture.IsValid() && fixture.isLoaded) EditorSceneManager.CloseScene(fixture, true);
-            Check(original.IsValid() && original.isLoaded && SceneManager.GetActiveScene() == original && !Dirty(), "original saved scene restored without scene writes");
-            busy = false;
-            Write(notes.Any(n => n.StartsWith("FAIL ")) ? "FAILED" : "ALL PASSED", notes);
-        }
-        return notes.All(n => !n.StartsWith("FAIL "));
+        bool passed = WorldPanelChecks.Run(render);
+        Write(passed ? "WORLD PANELS PASSED" : "WORLD PANELS FAILED", new List<string> { (passed ? "PASS " : "FAIL ") + "World anchor, drag, close and subtitle checks (Logs/WorldPanels/checks.txt)" });
+        return passed;
     }
+
 
     static void CheckSceneIntegration(Scene fixture, Camera fallback, Action<bool, string> check)
     {
@@ -326,7 +221,7 @@ public static class DialoguePlacementPreview
                 captionUi.Head = eye.transform;
                 captionUi.RespectSubtitlePreference = false; // Geometry remains visible without changing saved preferences.
                 caption.Words("Editor fixture dialogue; no request was sent.");
-                captionUi.SetHint("UI preview", "Look around: this stays below your gaze");
+                captionUi.SetHint("UI preview", "This panel stays where you place it");
                 captionUi.Step(1f); captionUi.Snap();
                 var captionFollow = captionUi.GetComponentInChildren<VG_FollowGroup>(true);
                 check(captionUi.LockToView && captionUi.FollowHead && captionFollow.LockToView && captionFollow.enabled,

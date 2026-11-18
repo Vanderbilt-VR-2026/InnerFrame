@@ -167,6 +167,7 @@ namespace InnerFrame.Entrance
             transition = veil.GetComponent<RawImage>();
             transition.raycastTarget = false;
             transition.color = Color.clear;
+            VG_PanelInteraction.Attach((RectTransform)root.Find("Top stationary gold border"), root, canvas);
         }
 
         void AddFrameBar(string label, Vector2 position, Vector2 size)

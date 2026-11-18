@@ -60,7 +60,7 @@ public class PlayerMenu : MonoBehaviour
     /// <summary>Only an open guide, panel or active exit covers ordinary dialogue and instructions.</summary>
     public static bool ModalOpen => Instance != null && (Instance.IsOpen || Instance.leaving);
     // Consume the closing click too, so it cannot also select the painting behind the panel.
-    public static bool MenuOpen => SceneFader.IsFading || ModalOpen || (Instance != null && (
+    public static bool MenuOpen => SceneFader.IsFading || ModalOpen || VG_PanelInteraction.ConsumingInput || (Instance != null && (
         (Application.isPlaying && Time.frameCount <= Instance.interactionUntilFrame)));
     public static bool OpenOnDesktop => Instance != null && Instance.desktop && MenuOpen;
 
@@ -114,7 +114,6 @@ public class PlayerMenu : MonoBehaviour
         suspendedGuide = null;
         if (guide == null || leaving || SceneFader.IsFading) return;
         guide.gameObject.SetActive(true);
-        guide.View.Snap();
     }
     public void OpenAudioQuick()
     {
@@ -197,4 +196,5 @@ public class PlayerMenu : MonoBehaviour
         xr.enableXRInput = true;
         xr.uiCamera = eyes;
     }
+    public void PreparePanelInput() { if (ResolveCamera()) EnsureXRUIEventSystem(); }
 }

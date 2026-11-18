@@ -103,6 +103,7 @@ namespace InnerFrame.Gallery
         public bool Point(Ray ray, bool press, out Vector3 end)
         {
             end = ray.origin;
+            if (VG_PanelInteraction.BlocksRay(ray)) return false;
             if (!Physics.Raycast(ray, out var hit, MaxDistance, ~0, QueryTriggerInteraction.Ignore)) return false;
             end = hit.point;
             var button = hit.collider.GetComponent<GalleryMenuButton>();

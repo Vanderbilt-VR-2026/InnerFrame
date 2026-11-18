@@ -17,7 +17,7 @@ Updated 2026-11-13 from Cici's five-page **InnerFrame controls: one button, one 
 | Left ≡ Menu | Open / close Player Menu; Controls opens the full guide in the current scene |
 | Left Ⓨ | Unassigned |
 
-From Gallery onward, Menu, Audio and Gallery stay in a vertical column in the upper right of the view. Point at a symbol to see its gold ring and name. Gallery is dimmed while already in the Gallery. A shortcut opens its panel in the centre. Hold the trigger on the title bar to drag it. Releasing pins the panel there until it closes.
+From Gallery onward, press the left controller Menu button to open the black/gold two-column menu. The persistent corner shortcuts and wrist tag are no longer shown. Hold the trigger on the title bar to drag the menu. Releasing leaves it at its world position; closing and reopening centres it in front of you.
 
 Gallery uses Cici's new arch, corridor and hanging order: Self-portrait, The Bedroom, Café Terrace, The Starry Night, Almond Blossom. The self-portrait is for Vincent's Ⓑ conversation; the other four paintings have Trigger menus. Almond Blossom now has Enter enabled and leads to the real Almond Studio scene (#202). The serialized Gallery scene, layout and artwork assets come from main, synchronized through `418dbc6` on 2026-11-18.
 
@@ -27,9 +27,11 @@ Gallery uses Cici's new arch, corridor and hanging order: Self-portrait, The Bed
 
 `Resources/EntranceControllerGuide` retains its asset GUID. Its component instantiates `Assets/Shared/UI/Prefabs/VG_DialogueUI.prefab`, with the actual Vincent font, box, name tab, star, key circle, materials and settings. Previous / Next / Close use those same assets. Start and Join in Entrance take the player straight into the story intro. When Gallery first becomes visible, the full guide opens once per play session. Continue closes it in place. Menu → Controls reopens it in the current scene.
 
-The guide, Vincent subtitles, first-use prompts and Starry Night story dialogue share the Vincent artwork. The top edge of the dialogue box is centred horizontally, 32% up from the bottom of the view. Navigation scales to fit a narrow viewport. Arrival and pedestal hints use a separate lower-view anchor and yield while dialogue or instructions are showing.
+The guide, Vincent subtitles, first-use prompts and story dialogue share the original Vincent artwork. They open in front of the player, then remain at that world position and orientation through head rotation, roll, walking and Vincent movement. They do not use a camera-attached canvas or VIEW-space compositor. Looking away can move them outside the view; this is the selected world-anchored design.
 
-Desktop draws the HUD on a screen-space canvas. On Quest, the same UI is drawn to a transparent texture and submitted in the OpenXR headset's VIEW space. The controller ray targets the corresponding interactive surface. The camera-attached canvas remains visible while the headset layer initializes or if it becomes unavailable. World objects, including painting detail cards, retain their own placement. Scene triggers, gaze eligibility and completion still come from the scene adapters.
+Hold the trigger on a panel's background to move it along its opening plane, then release to leave it there. Menu uses its title bar. Gallery detail and painting menus, wayfinding, exit choices, and Almond letter/epilogue panels use the same anchor/drag behavior. The intro's physical canvas remains in place and can be dragged by its top gold border.
+
+The approved close design (option 02, 2026-11-18) is a small inset gold outline circle and ×. Both brighten on hover; the visible circle is smaller than its 55 mm transparent click target. Closing captions hides only the current spoken answer, including later streamed parts, while speech continues. A new answer can display again. Closing a first-use prompt suppresses it for this session without recording completion. Controls → Show hidden panels restores dismissed eligible prompts and choices. Settings → Vincent subtitles → Off hides spoken captions in Bedroom/Gallery, Starry Night and Almond Studio; instructions remain visible. No sound source is stopped by either close or the subtitle preference.
 
 ## First-use rules (PDF page 5)
 
@@ -61,7 +63,7 @@ Run these batch entry points in separate Unity invocations:
 
 | Entry point | What it verifies |
 | --- | --- |
-| `ControlsTutorialChecks.RunBatch` | All five build scenes, modal Controls and scene-preserving close, eleven-page fit, 2 m threshold, arbitration, real Gallery ray/menu fixtures, Vincent asset placement/idle reminder, simulated XRI/answer contracts and session reset |
+| `ControlsTutorialChecks.RunBatch` | All six build scenes, modal Controls and scene-preserving close, eleven-page fit, 2 m threshold, arbitration, real Gallery ray/menu fixtures, Vincent asset placement/idle reminder, simulated XRI/answer contracts and session reset |
 | `ControlsTutorialPlayChecks.RunBatch` | Real Play Mode bootstrap, synthetic A input with a positive control, actual Single scene transition and completion persistence, Controls after transition; temporary fixture scenes are created/deleted through Unity |
 | `ControlsTutorialChecks.RenderBatch` | Full guide, Player Menu and first-use screenshots (run with graphics enabled; adapter views use fixture requests) |
 | `PlayerMenuCheck.RunBatch` | Existing Player Menu regression checks |
@@ -77,7 +79,7 @@ Reports go to `Logs/Controls/`; renders to `Logs/Controls/Images/`. These are lo
 4. In a new session, move 2 m in Gallery. The hint ends and stays completed after leaving and returning. Head rotation alone must not complete it.
 5. Point at and pick up a Bedroom object. Confirm the grip hint ends. Dragging the menu title bar must not complete object pickup.
 6. Look at Vincent within 3 m, ask once successfully, then leave and return. Confirm the B lesson stays complete. Repeat with a failed/empty request: it must remain unfinished.
-7. Start Vincent's speech and mirror instructions while a first-use hint is pending. Confirm there is no overlap. In Gallery and each painting, turn, look up/down and tilt the headset: captions and hints must retain the same lower-view position without sliding after the movement. Review readability/occlusion and repeat after a scene change.
+7. Start Vincent's speech and mirror instructions while a first-use hint is pending. Confirm there is no overlap. In Gallery and each painting, turn, look up/down and tilt the headset: captions and hints must retain their world position and orientation, then remain at the released position after a trigger drag. Review readability/occlusion and repeat after a scene change.
 8. Point at each rearranged Gallery painting, pull the trigger, then try Back / Enter. The first-use hint completes when the menu actually opens and does not repeat. Almond Blossom's Enter must open Almond Studio. Walk through the new arch and corridor.
 
 See `VERIFICATION.md` for the results actually obtained on this branch. Synthetic input and Editor checks do not establish physical Quest behavior, live microphone/AI success, multiplayer voice, or frame rate.

@@ -106,6 +106,10 @@ public static class PlayerAvatarBuilder
         rig.eyeHeight = headBone.position.y - go.transform.position.y + 0.08f;
         rig.eyeForward = 0.09f;
 
+        // a long skirt (Skirt_* bones, the Girl): keep it clear of the legs
+        bool skirt = go.GetComponentsInChildren<Transform>(true).Any(t => t.name == "Skirt_Front_1");
+        if (skirt && !go.TryGetComponent(out PlayerAvatarSkirt _)) go.AddComponent<PlayerAvatarSkirt>();
+
         string prefabPath = $"{OutDir}/{name}.prefab";
         PrefabUtility.SaveAsPrefabAsset(go, prefabPath);
         Object.DestroyImmediate(go);

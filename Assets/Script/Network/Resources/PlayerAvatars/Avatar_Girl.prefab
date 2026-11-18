@@ -43,6 +43,7 @@ GameObject:
   - component: {fileID: 2427282650249925149}
   - component: {fileID: 5177463594114118949}
   - component: {fileID: 5098220868877220705}
+  - component: {fileID: 5855840486711936737}
   m_Layer: 0
   m_Name: Avatar_Girl
   m_TagString: Untagged
@@ -114,6 +115,21 @@ MonoBehaviour:
   head: {fileID: 0}
   leftHand: {fileID: 0}
   rightHand: {fileID: 0}
+--- !u!114 &5855840486711936737
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1478123314551207868}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 10a8b8bd3452d4a1bb37957afcb5fda1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerAvatarSkirt
+  share: {x: 0.75, y: -0.3, z: -0.15}
+  clearance: 8
+  maxSwing: 105
 --- !u!1 &1661116070937457773
 GameObject:
   m_ObjectHideFlags: 0

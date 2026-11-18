@@ -11,7 +11,7 @@ Code: `Assets/Script/Network/`.
 | `NetworkSession` | Creates itself on startup. When a scene with an XR Origin loads (in the Editor without a headset: a desktop camera), joins room `InnerFrame_<SceneName>` (max 8 players) and spawns your avatar. `SceneFader` makes it leave the room before a scene change. |
 | `DesktopTestRig` | Editor only. Without a headset, replaces a scene's XR Origin with a W A S D + mouse player, so the Editor can walk around and count as a player (see "Testing with one headset"). |
 | `NetworkPlayer` | A player in the room: head and hands as three tracked points with no shapes, and `AvatarChoice`, the body they chose in the Entrance (sent to everyone). Copies your headset and controllers onto the points. Adds `PlayerAvatarBody` when it spawns. |
-| `PlayerAvatarBody`, `PlayerAvatarRig` | The full body the others see, placed under the head and posed by Unity's Humanoid IK (see "Player bodies"). |
+| `PlayerAvatarBody`, `PlayerAvatarRig`, `PlayerAvatarSkirt` | The full body the others see, placed under the head and posed by Unity's Humanoid IK; the Girl's skirt kept clear of her legs (see "Player bodies"). |
 | `Editor/PlayerAvatarBuilder` | Builds `Resources/PlayerAvatars/Avatar_BoyWorker.prefab` and `Avatar_Girl.prefab`, with their materials and Animator, from the FBXs in `Avatars/`. Menu: **InnerFrame → Multiplayer → Build Player Avatars**. |
 | `NetworkGrabbable` | Makes a grab object shared (see below). |
 | `StarryNightLink` | On each avatar: shares The Starry Night's progress and its lantern, sketchbook and page (`docs/starry-night/README.md` → Two players). |
@@ -32,9 +32,11 @@ stays hidden, and it doesn't animate either.
 | Boy | `Avatar_BoyWorker` | a boy in a worker's cap and jacket, 1.70 m; Tripo, rigged in Mixamo |
 | Girl | `Avatar_Girl` | a girl in a red Victorian dress and bonnet, 1.60 m; Tripo, rigged with Rigify in Blender (`Art/Source/Avatars/Girl/`), with 4 × 3 skirt bones (`Skirt_Front/Back/Left/Right_1-3`) under the hips. Body bones only, no fingers |
 
-The skirt bones follow the hips; the skirt's front and sides also follow the thighs a little (in the weights), so
-walking doesn't push the legs through it. Nothing animates the skirt bones in Unity yet: a deep crouch can show a knee
-through the front.
+The skirt's front and sides follow the thighs a little (in the weights), and `PlayerAvatarSkirt` (added by **Build
+Player Avatars** to any body with `Skirt_*` bones) swings each skirt chain out of the way of the legs every frame,
+after the IK: the front lifts as the knees come forward in a crouch or a step, the back for a leg behind, the sides for
+a leg out, with the lower bones turning back so the hem drapes over the knee. Standing still it leaves the skirt as
+modelled (a 6° dead zone).
 
 - **Size:** scaled to the player's *standing* eye height (0.6 to 1.25 times the model). Crouching or sitting doesn't
   shrink it; the hips drop and the knees bend instead, up to 35% of eye height, then the back leans.

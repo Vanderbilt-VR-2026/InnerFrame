@@ -40,6 +40,12 @@ namespace InnerFrame.Gallery
         [TextArea(2, 4)] public string blankHint = "This canvas is still waiting.\nStep into Window in the Studio\nto find out what belongs here.";
         [TextArea(2, 4)] public string blankQuote = "\u201cThere is nothing more truly artistic than to love people.\u201d\n\u2014 Vincent to Theo, Arles, 1888";
         [Tooltip("The wall label's tab while it's blank, after the number (\"4 · To discover\").")] public string blankTab = "To discover";
+        [Tooltip("Written on the blank canvas itself, as if in paint (Serena, 2026-11-17): the way in, big enough to read from across the room. " +
+                 "ASCII only: the brush font's atlas has nothing else.")]
+        [TextArea(2, 4)] public string canvasWords = "This canvas is still waiting...\nStep into Window in the Studio\nto find out what belongs here.";
+        [Tooltip("The words' paint: a warm brown on the cream.")] public Color canvasInk = new Color(0.38f, 0.25f, 0.15f);
+        [Tooltip("A TMP font asset in Resources: the Entrance's Caveat Brush (SIL OFL). Missing: the wall label's font.")] public string canvasFont = "Entrance/BrushFontHD";
+        [Tooltip("The share of the canvas the words may fill (width, height).")] public Vector2 canvasWordsArea = new Vector2(0.78f, 0.6f);
 
         static readonly Color RimColor = new Color(1f, 0.93f, 0.7f);   // #178's (PaintedBedroomHoverHighlight): warm candle cream
         const float RimWidth = 4f;                                      // pixels of the eye buffer, as #178's
@@ -160,6 +166,7 @@ namespace InnerFrame.Gallery
         Texture2D washMask;
         Color32[] washPixels;
         GameObject wash;
+        TMPro.TextMeshPro words;
         string paintedTitle, paintedCaption;
         readonly List<(TMPro.TMP_Text text, string painted, string blank)> cardTexts = new List<(TMPro.TMP_Text, string, string)>();
         UnityEngine.UI.RawImage cardPicture;
@@ -209,6 +216,7 @@ namespace InnerFrame.Gallery
             caption = blankCaption;
             foreach (var c in cardTexts) c.text.text = c.blank;
             if (cardPicture != null) cardPicture.enabled = false;
+            MakeWords();
             if (lit)
             {
                 blankMaterial = new Material(paintedMaterial) { mainTexture = Texture2D.whiteTexture, color = blankCream };
@@ -226,6 +234,7 @@ namespace InnerFrame.Gallery
             caption = paintedCaption;
             foreach (var c in cardTexts) c.text.text = c.painted;
             if (cardPicture != null) cardPicture.enabled = true;
+            if (words != null) Destroy(words.gameObject);
             if (entrance == null)
                 foreach (var other in FindObjectsByType<GalleryPainting>(FindObjectsSortMode.None))
                     if (other != this && other.entrance != null && other.entrance.targetScene == PaintingNames.AlmondStudio) { entrance = other.entrance; break; }
@@ -237,6 +246,9 @@ namespace InnerFrame.Gallery
         {
             while (SceneFader.IsFading || !LookedAt()) yield return null;
             for (float t = 0f; t < revealDelay; t += Time.deltaTime) yield return null;
+            // the words go first, then the painting comes through
+            for (float t = 0f; words != null && t < 1.2f; t += Time.deltaTime) { words.alpha = 1f - t / 1.2f; yield return null; }
+            if (words != null) Destroy(words.gameObject);
             var aspect = new Vector2(washMask.width, washMask.height).normalized;
             float far = 0f;
             foreach (var corner in new[] { Vector2.zero, Vector2.right, Vector2.up, Vector2.one })
@@ -272,7 +284,7 @@ namespace InnerFrame.Gallery
             for (int i = 0; i < washPixels.Length; i++) washPixels[i] = new Color32(255, 255, 255, 255);
             washMask.SetPixels32(washPixels);
             washMask.Apply(false);
-            washMaterial = new Material(Shader.Find("Sprites/Default")) { mainTexture = washMask, color = blankCream };
+            washMaterial = new Material(Shader.Find("Sprites/Default")) { mainTexture = washMask, color = blankCream, renderQueue = 2990 };   // under the words
             wash = GameObject.CreatePrimitive(PrimitiveType.Quad);
             Destroy(wash.GetComponent<Collider>());   // the pointer's ray goes on to the canvas
             wash.name = "Blank frame veil";
@@ -285,6 +297,35 @@ namespace InnerFrame.Gallery
             wash.transform.localScale = new Vector3(width, b.size.y, 1f);
             var r = wash.GetComponent<Renderer>();
             r.sharedMaterial = washMaterial;
+            r.shadowCastingMode = ShadowCastingMode.Off;
+            r.receiveShadows = false;
+        }
+
+        /// <summary>The way in, written on the canvas in the brush font, centred, sized to fit canvasWordsArea; just in
+        /// front of the canvas and of the veil, so it reads the same on the lit cream and on the veil.</summary>
+        void MakeWords()
+        {
+            if (words != null || string.IsNullOrWhiteSpace(canvasWords)) return;
+            var font = Resources.Load<TMPro.TMP_FontAsset>(canvasFont);
+            if (font == null && cardTexts.Count > 0) font = cardTexts[0].text.font;
+            var go = new GameObject("Blank frame words");
+            go.transform.SetParent(transform, true);
+            var b = canvas.bounds;
+            var right = transform.right;
+            float width = Mathf.Abs(right.x) * b.size.x + Mathf.Abs(right.z) * b.size.z;
+            // TMP's 3D text reads from its -z side, like a quad: face it away from the viewer
+            go.transform.SetPositionAndRotation(b.center + transform.forward * 0.008f, Quaternion.LookRotation(-transform.forward, Vector3.up));
+            words = go.AddComponent<TMPro.TextMeshPro>();
+            if (font != null) words.font = font;
+            words.text = canvasWords;
+            words.color = canvasInk;
+            words.alignment = TMPro.TextAlignmentOptions.Center;
+            words.rectTransform.sizeDelta = new Vector2(width * canvasWordsArea.x, b.size.y * canvasWordsArea.y);
+            words.enableAutoSizing = true;
+            words.fontSizeMin = 0.05f;
+            words.fontSizeMax = 4f;
+            words.lineSpacing = -10f;
+            var r = words.GetComponent<Renderer>();
             r.shadowCastingMode = ShadowCastingMode.Off;
             r.receiveShadows = false;
         }

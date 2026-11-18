@@ -76,6 +76,9 @@ artworks" (`CafeGallerySetup`) now hand the placing to Build Layout.
   nothing more truly artistic than to love people.", to Theo, Arles, 18 Sept 1888, Jo van Gogh-Bonger's translation)
   and the way in: "This canvas is still waiting. Step into Window in the Studio to find out what belongs here." Its
   menu: "?", "Find it in Window in the Studio", and "Not painted yet" in place of Enter.
+- The way in is also written on the canvas itself, big, in the Entrance's Caveat Brush (`BrushFontHD`, warm brown):
+  "This canvas is still waiting... Step into Window in the Studio to find out what belongs here." (`canvasWords`,
+  ASCII only: the font's atlas has nothing else). The words fade first when the painting comes through.
 - Every way out of Almond Studio (the end of the story, or Back to Gallery at any moment) ends on the window in full
   bloom, then the colour drains into cream (`AS_Game`, "Leaving"). The Gallery comes out of the same cream with you
   2.3 m in front of the blank frame, so the window becomes the frame. The first time, Almond Blossom comes through the

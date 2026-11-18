@@ -43,13 +43,13 @@ public class VG_FollowGroup : MonoBehaviour
         if (DisplayCanvas != null) DisplayCanvas.gameObject.SetActive(true);
     }
 
-    // The visuals always remain owned by their scene/dialogue, even while attached to a persistent XR rig.
+    // Hide immediately. OnDestroy cleans up a surface attached to a persistent XR rig.
+    // Reparenting here is unsafe while Unity is deactivating the camera hierarchy during a scene change.
     void OnDisable()
     {
         if (DisplayCanvas == null) return;
         VG_CompositorCanvas.Unregister(DisplayCanvas);
         DisplayCanvas.gameObject.SetActive(false);
-        if (DisplayCanvas.transform.parent != transform) DisplayCanvas.transform.SetParent(transform, false);
     }
 
     void OnDestroy()

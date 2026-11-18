@@ -186,9 +186,14 @@ namespace InnerFrame.StarryNight.EditorTools
                     {
                         interruptAt = now;
                         PlayerMenu.Instance.Toggle();
-                        var back = Object.FindAnyObjectByType<PlayerMenuPanel>().GetComponentsInChildren<UnityEngine.UI.Button>(true).First(b => b.name.StartsWith("Back"));
+                        var panel = Object.FindAnyObjectByType<PlayerMenuPanel>();
+                        var buttons = panel.GetComponentsInChildren<UnityEngine.UI.Button>(true);
+                        var back = buttons.First(b => b.name == "Nav Gallery");
                         back.onClick.Invoke();
-                        W($"  0.5 s into his walk: the player menu's Back to Gallery");
+                        Check(panel.IsConfirmationPage && panel.CurrentPage == PlayerMenuPage.Gallery && !SceneFader.IsFading,
+                            "the two-column menu asks before leaving the scene");
+                        buttons.First(b => b.name == "Confirm Gallery").onClick.Invoke();
+                        W($"  0.5 s into his walk: confirmed the player menu's Back to Gallery");
                     }
                     if (interruptAt > 0 && scene == PaintingNames.Gallery && fader.LastCompletedScene == PaintingNames.Gallery && now - interruptAt > 4.0)
                     {

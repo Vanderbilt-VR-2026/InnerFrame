@@ -43,21 +43,22 @@ public class VG_ChoiceCard : MonoBehaviour
     {
         var go = new GameObject("VG_ChoiceCard", typeof(RectTransform));
         go.transform.SetParent(parent, false);
-        go.AddComponent<Canvas>().renderMode = RenderMode.WorldSpace;
-        go.AddComponent<TrackedDeviceGraphicRaycaster>();   // controller rays, as on the player menu
-        go.AddComponent<GraphicRaycaster>();                // the mouse, in the Editor
-        go.transform.localScale = Vector3.one / (VG_UI.UnitsPerMetre * (parent != null ? parent.lossyScale.x : 1f));
         var card = go.AddComponent<VG_ChoiceCard>();
         card.ui = ui;
         var settings = Instantiate(ui.settings);
         settings.belowGaze = Look.BelowGaze;
         card.Follow = new GameObject("Follow", typeof(RectTransform)).AddComponent<VG_FollowGroup>();
         card.Follow.transform.SetParent(go.transform, false);
-        card.Follow.transform.localScale = Vector3.one * settings.Scale;
-        card.Follow.settings = settings;
+        card.Follow.CreateLayout(settings);
+        card.Follow.ViewportY = .5f - .5f * Mathf.Tan(Look.BelowGaze * Mathf.Deg2Rad) / Mathf.Tan(30f * Mathf.Deg2Rad);
+        // Follow owns the display surface, which can move under the active camera.
+        // Both controller and mouse hits must use that same surface.
+        card.Follow.DisplayCanvas.gameObject.AddComponent<TrackedDeviceGraphicRaycaster>();
+        card.Follow.DisplayCanvas.gameObject.AddComponent<GraphicRaycaster>();
         var onTop = new Material(Canvas.GetDefaultCanvasMaterial());
         onTop.SetInt("unity_GUIZTestMode", (int)UnityEngine.Rendering.CompareFunction.Always);   // as the dialogue box: nothing cuts through it
-        var box = VG_DialogueBox.Make(card.Follow.transform, settings, ui.font, ui.box, ui.nameTab, ui.starRing, ui.star, onTop);
+        var box = VG_DialogueBox.Make(card.Follow.Layout, settings, ui.font, ui.box, ui.nameTab, ui.starRing, ui.star, onTop);
+        card.Follow.DialogueBox = box;
         box.Speaker(speaker);
         box.Labels[0].text = question;
         var layout = new TextGenerator();
@@ -106,15 +107,22 @@ public class VG_ChoiceCard : MonoBehaviour
             events.AddComponent<EventSystem>();
             events.AddComponent<XRUIInputModule>();
         }
-        gameObject.SetActive(true); Follow.head = ui.Head; Follow.Snap(); Point(-1);   // the dialogue box's head (a test's, or the camera)
+        gameObject.SetActive(true);
+        Follow.DisplayCanvas.gameObject.SetActive(true);
+        Follow.head = ui.Head; Follow.Snap(); Point(-1);   // the dialogue box's head (a test's, or the camera)
     }
-    public void Hide() => gameObject.SetActive(false);
+    public void Hide()
+    {
+        Follow.ReleaseView();
+        Follow.DisplayCanvas.gameObject.SetActive(false);
+        gameObject.SetActive(false);
+    }
 
     /// <summary>The answer this ray points at, or -1.</summary>
     public int Hit(Ray ray)
     {
         if (!Shown) return -1;
-        var plane = new Plane(Follow.transform.forward, Follow.transform.position);
+        var plane = new Plane(Buttons[0].forward, Buttons[0].position);
         if (!plane.Raycast(ray, out float distance)) return -1;
         Vector3 p = ray.GetPoint(distance);
         for (int i = 0; i < Buttons.Length; i++)

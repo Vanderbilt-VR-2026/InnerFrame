@@ -491,10 +491,21 @@ public static class ControlsTutorialChecks
         Check(manager.Session.IsComplete(TutorialStep.GalleryPainting), "matching visible menu completes lesson even after pointer leaves canvas");
         menu.Close(); hovered.Add(bedroom); Call(adapter, "Update"); manager.Present(1f);
         Check(manager.VisibleStep == null, "completed painting lesson does not repeat in the same session");
-        var almond = paintings.Single(p => !p.CanEnter);
+        var almond = paintings.Single(p => p.entrance != null && p.entrance.targetScene == PaintingNames.AlmondStudio);
         menu.Open(almond, eye.transform.position);
-        Check(menu.IsOpen && !menu.EnterButton.Interactable && menu.Painting == almond, "Almond Blossom opens Coming soon without inventing a scene");
+        Check(menu.IsOpen && menu.EnterButton.Interactable && menu.Painting == almond,
+            "Almond Blossom now offers Enter for the real Almond Studio scene");
         menu.Close();
+        // Keep the unavailable-destination guard covered without treating a shipped scene as unfinished.
+        var almondEntrance = almond.entrance;
+        try
+        {
+            almond.entrance = null;
+            menu.Open(almond, eye.transform.position);
+            Check(menu.IsOpen && !menu.EnterButton.Interactable && menu.Painting == almond,
+                "a painting without an entrance still shows Coming soon and cannot enter");
+        }
+        finally { menu.Close(); almond.entrance = almondEntrance; }
         Call(manager, "OnDestroy"); Object.DestroyImmediate(manager.gameObject);
         Call(menu, "OnDestroy");
     }
@@ -517,8 +528,11 @@ public static class ControlsTutorialChecks
             var manager = new GameObject("Vincent regression fixture").AddComponent<TutorialManager>(); Call(manager, "Awake");
             eye.transform.position = adapter.GazePoint + vincent.transform.forward * 2f;
             eye.transform.rotation = Quaternion.LookRotation(adapter.GazePoint - eye.transform.position);
-            Check(Vector3.Distance(adapter.GazePoint, portrait ? vincent.transform.position : vincent.transform.TransformPoint(talker.labelOffset)) < .001f,
-                (portrait ? "Gallery portrait" : "Bedroom Vincent") + ": gaze targets the portrait/head rather than the easel");
+            var animator = vincent.GetComponentInChildren<Animator>();
+            var head = animator != null && animator.isHuman ? animator.GetBoneTransform(HumanBodyBones.Head) : null;
+            Check(portrait ? Vector3.Distance(adapter.GazePoint, vincent.transform.position) < .001f
+                    : head != null && Vector3.Distance(adapter.GazePoint, head.position) < .001f,
+                (portrait ? "Gallery portrait" : "Bedroom Vincent v2") + ": gaze targets the portrait/head rather than the easel");
             Call(adapter, "Update"); manager.Present(1f);
             Check(manager.VisibleStep == TutorialStep.Vincent, (portrait ? "Gallery" : "Bedroom") + ": looking at the real Vincent asset within 3 m offers B");
             var root = manager.View.LayoutRoot;

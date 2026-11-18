@@ -5,6 +5,25 @@ column keeps Controls, Audio, Back to Gallery, Settings, Restart and Leave
 session in place. The right column changes when a category is selected.
 There is no Resume button; the top-right × closes the panel.
 
+## Design reference confirmed on 2026-11-18
+
+Keep the approved English-only quick-menu mockup: the shared black/night-blue
+and gold artwork, Libre Baskerville, and the original Gallery temple icon.
+The full menu has categories on the left and their content on the right:
+Controls, Audio, Back to Gallery, Settings, Restart, and Leave session.
+Audio provides master volume and mute. Settings provides Vincent subtitles
+and menu size (85–115%); English is a read-only language label. Back to
+Gallery, Restart, and Leave session require confirmation; Gallery is disabled
+when already there. Close with ×, without a Resume button.
+
+The latest reference opens this panel with the left controller Menu button
+(≡). Professor feedback is to place instructions on an object/body in the
+scene and reduce text. A wrist menu remains conditional on the team confirming
+visible player hands. This records the intended design direction; synchronizing
+main does not implement the proposed physical instruction placement or remove
+the existing shortcuts. The screenshot is kept in the local project deliverables:
+`VR-Quick-Menu-Functions-20261117/quick-menu-functions.png`.
+
 The panel and the three circular shortcuts are built at runtime from
 `Assets/Shared/UI` through `Resources/VG_Caption`: the original box, name tab,
 star/ring, button-circle sprites and Libre Baskerville font. No scene, prefab
@@ -116,8 +135,52 @@ binding; the menu does not replace that interaction.
 
 ## Headset acceptance still required
 
-Check all five scenes with a physical Quest: circular hit targets and tooltips,
+Check all six enabled scenes, including Almond Studio, with a physical Quest: circular hit targets and tooltips,
 no trigger click-through, panel readability at each size, title-bar dragging,
 full guide close-in-place, Gallery disabled at home, cancellation and confirmed
 scene transitions, mute restoration, Vincent subtitles versus tutorial words,
 network leave, and actual standalone exit. Editor success is not a Quest pass.
+
+## Main synchronization on 2026-11-18
+
+Merged main through `418dbc6` into `rowling/controls-first-use-tutorial` locally.
+This includes Almond Studio and its Gallery entry (#202), controller fixes
+(#203), music (#208), Vincent speech (#209), the Gallery Bedroom-frame hover
+fix (#204), mobile image settings (#201), and Vincent's Bedroom/Starry Night
+departure routes (#210). All LFS assets were downloaded. Existing local Unity
+settings and build backup folders were retained separately from this change.
+
+The #210 choice card now uses `VG_FollowGroup.CreateLayout`, puts its raycasters
+on the displayed canvas, and tests hits against the displayed button plane.
+Its explicit Hide releases that canvas. Shared dialogue deactivation no longer
+reparents a canvas while Unity deactivates its camera hierarchy; the Starry
+Night Play check reproduced this error before the fix and records zero errors
+afterwards. Destruction still cleans up detached surfaces, and TutorialManager
+still rebuilds a surface lost with an old camera.
+
+Regression fixtures now recognize Almond Studio's real entrance, Vincent v2's
+head bone, and the two-column menu's Gallery confirmation. No scene or prefab
+was authored during this integration.
+
+Unity 6000.3.23f1, Android target, existing working checkout:
+
+| Check | Result |
+| --- | --- |
+| Script compilation | Passed |
+| Menu interactions and rendered icons | 175 passed, 0 failed |
+| Controls, all enabled scenes, simulated tutorial events | 186 passed, 0 failed |
+| Shared transitions and choice card | 44 passed, 0 failed |
+| Shared placement, GPU/controller-ray, Starry UI, wayfinding, scene restoration | All six integration groups passed |
+| Starry Night Play: Back, interrupt Follow with confirmed Back, Follow to Almond Studio | 18 passed, 0 failed; 0 logged errors |
+| Bedroom Play: Back, Follow through Door_Left into Café Terrace | 25 passed, 0 failed; 0 logged errors |
+
+Local evidence is in `Logs/MainUpdate20261118/`, `Logs/MenuSplit/`,
+`Logs/Controls/` and `Logs/DialoguePlacement/`. Play checks use scripted input;
+the Bedroom door check uses one local Fusion peer. No new APK, physical Quest,
+microphone/AI exchange, online multiplayer, or fresh-Library import was tested.
+
+Unmerged work was inspected but not incorporated: #226's Gallery studio/blank
+frame conflicts with this branch in `SceneFader.cs` and `docs/gallery/README.md`;
+#205's player avatars conflict in `docs/ASSETS.md`. Landing order/resolution
+needs coordination before either is combined. #189 and #191 merge cleanly in
+memory as of this check. No coordination message was sent by this local sync.

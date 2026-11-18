@@ -19,7 +19,7 @@ Updated 2026-11-13 from Cici's five-page **InnerFrame controls: one button, one 
 
 From Gallery onward, Menu, Audio and Gallery stay in a vertical column in the upper right of the view. Point at a symbol to see its gold ring and name. Gallery is dimmed while already in the Gallery. A shortcut opens its panel in the centre. Hold the trigger on the title bar to drag it. Releasing pins the panel there until it closes.
 
-Gallery uses Cici's new arch, corridor and hanging order: Self-portrait, The Bedroom, Café Terrace, The Starry Night, Almond Blossom. The self-portrait is for Vincent's Ⓑ conversation; the other four paintings have Trigger menus. Almond Blossom shows Coming soon with Enter disabled. The serialized Gallery scene, layout and artwork assets are taken unchanged from #199.
+Gallery uses Cici's new arch, corridor and hanging order: Self-portrait, The Bedroom, Café Terrace, The Starry Night, Almond Blossom. The self-portrait is for Vincent's Ⓑ conversation; the other four paintings have Trigger menus. Almond Blossom now has Enter enabled and leads to the real Almond Studio scene (#202). The serialized Gallery scene, layout and artwork assets come from main, synchronized through `418dbc6` on 2026-11-18.
 
 `ControlsCatalog` supplies the full guide and first-use wording. Update this table, the catalog, and other affected hints in the same PR as any binding change. Headset pages contain Quest controls only. In Unity, `{B}`, `{X}`, `{A}` and `{Y}` render using the shared key-circle sprite; the menu bars are drawn inside that same circle. This avoids missing Unicode circled-letter glyphs in the font.
 
@@ -78,6 +78,6 @@ Reports go to `Logs/Controls/`; renders to `Logs/Controls/Images/`. These are lo
 5. Point at and pick up a Bedroom object. Confirm the grip hint ends. Dragging the menu title bar must not complete object pickup.
 6. Look at Vincent within 3 m, ask once successfully, then leave and return. Confirm the B lesson stays complete. Repeat with a failed/empty request: it must remain unfinished.
 7. Start Vincent's speech and mirror instructions while a first-use hint is pending. Confirm there is no overlap. In Gallery and each painting, turn, look up/down and tilt the headset: captions and hints must retain the same lower-view position without sliding after the movement. Review readability/occlusion and repeat after a scene change.
-8. Point at each rearranged Gallery painting, pull the trigger, then try Back / Enter. The first-use hint completes when the menu actually opens and does not repeat. Almond Blossom must keep Enter disabled. Walk through the new arch and corridor.
+8. Point at each rearranged Gallery painting, pull the trigger, then try Back / Enter. The first-use hint completes when the menu actually opens and does not repeat. Almond Blossom's Enter must open Almond Studio. Walk through the new arch and corridor.
 
 See `VERIFICATION.md` for the results actually obtained on this branch. Synthetic input and Editor checks do not establish physical Quest behavior, live microphone/AI success, multiplayer voice, or frame rate.

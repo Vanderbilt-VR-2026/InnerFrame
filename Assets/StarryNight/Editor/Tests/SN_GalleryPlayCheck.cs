@@ -46,8 +46,9 @@ namespace InnerFrame.StarryNight.EditorTools
     ///     as when opened directly (so the edit-mode playthrough and Vincent checks hold for the scene loaded this way); at
     ///     9 s still no runner (nothing rejoins). The way back from anywhere: the menu's "Back to Gallery" -> the Gallery's start (0, 0, 6),
     ///     yaw 180, one rig, one listener, the portrait once, NetworkSession starting the Gallery's join (stopped here before
-    ///     it connects). In again; at Done (SN_Game's own Done, entered here) the menu stays shut for 9 s, then opens by
-    ///     itself with "Back to Gallery"; Back -> the same landing. Controls that must fail: StarryNight loaded additively
+    ///     it connects). In again; at Done (SN_Game's own Done, entered here) no menu opens by itself (since 2026-11-17 Vincent's
+    ///     question and its card are the way on, SN_Exit): 13.5 s later the menu is still shut and the card is up; the
+    ///     player menu opened by hand -> "Back to Gallery" -> the same landing. Controls that must fail: StarryNight loaded additively
     ///     over the Gallery (two rigs, two listeners), and Back with the menu's home set to PaintedBedroom.
     /// Batch: -executeMethod InnerFrame.StarryNight.EditorTools.SN_GalleryPlayCheck.RunBatch [-snLog &lt;file&gt;] (without -quit);
     /// or from SN_Checks.RunAll. Entering Play mode reloads the domain, so the state lives in SessionState and the log file.
@@ -239,31 +240,28 @@ namespace InnerFrame.StarryNight.EditorTools
                     break;
                 case 7:
                     if (inScene < 2.0) { step--; waitUntil = sceneSince + 2.0; break; }
-                    var ret = Object.FindAnyObjectByType<SN_GalleryReturn>();
-                    var layout = AssetDatabase.LoadAssetAtPath<SN_Layout>(SN_Setup.LayoutPath);
-                    float expected = layout.morningStarFadeSeconds + 2f;
-                    Check(ret != null && Mathf.Abs(ret.openAfterSeconds - expected) < 1e-4f && !MenuOpen(),
-                        $"SN_GalleryReturn is on, waiting {(ret != null ? ret.openAfterSeconds : -1):F1} s after Done (the morning star's {layout.morningStarFadeSeconds:F0} s + 2); the menu is shut");
                     var game = Object.FindAnyObjectByType<SN_Game>();
                     typeof(SN_Game).GetMethod("Enter", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(game, new object[] { SN_State.Done });
                     doneAt = now;
                     Check(game.State == SN_State.Done && game.ui.HintLine == SN_Game.HintFor(SN_State.Done), $"Done entered (SN_Game's own Enter): hint '{game.ui.HintLine}'");
-                    waitUntil = doneAt + expected - 1.0;
+                    waitUntil = doneAt + 13.5;   // past the old pop-up's 10 s (+1.5)
                     break;
                 case 8:
-                    Check(!MenuOpen() && !Object.FindAnyObjectByType<SN_GalleryReturn>().Opened, $"{now - doneAt:F1} s after Done the menu is still shut");
-                    waitUntil = doneAt + Object.FindAnyObjectByType<SN_GalleryReturn>().openAfterSeconds + 1.5;
+                    Check(!MenuOpen(), $"{now - doneAt:F1} s after Done no menu has opened by itself");
+                    var exit = Object.FindAnyObjectByType<SN_Exit>();
+                    Check(exit != null && exit.CardOpen && exit.flow.card.Shown, $"Vincent's question is over and its card is up ({(exit != null ? exit.flow.Now.ToString() : "no exit")})");
+                    waitUntil = now + 0.5;
                     break;
                 case 9:
+                    PlayerMenu.Instance.Toggle();   // the player menu, opened by hand: its Back to Gallery still works
                     var label = BackLabel();
-                    Check(MenuOpen() && Object.FindAnyObjectByType<SN_GalleryReturn>().Opened && label == "Back to Gallery",
-                        $"{now - doneAt:F1} s after Done the menu has opened by itself, its button '{label}'");
+                    Check(MenuOpen() && label == "Back to Gallery", $"the player menu opened by hand at Done, its button '{label}'");
                     MenuBack(toggle: false);
                     waitScene = "Gallery";
                     break;
                 case 10:
                     if (inScene < 2.0) { step--; waitUntil = sceneSince + 2.0; break; }
-                    Landing("back at Done (the menu that opened by itself)");
+                    Landing("back at Done (the player menu, opened by hand)");
                     Errors("session 2 so far");
                     W("# controls (these must fail)");
                     additive = SceneManager.LoadSceneAsync("StarryNight", LoadSceneMode.Additive);

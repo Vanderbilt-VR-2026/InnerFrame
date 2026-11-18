@@ -34,11 +34,9 @@ public static class VanGoghSpawner
     static readonly Vector3 VincentAt = new Vector3(-1.45f, 0f, 0.65f);
     static readonly Vector3 ArrivalAt = new Vector3(0.2f, 0f, -0.45f);   // keep equal to Marker_Spawn in the room data
     static readonly float VincentTurn = Mathf.Atan2(ArrivalAt.x - VincentAt.x, ArrivalAt.z - VincentAt.z) * Mathf.Rad2Deg;   // about 124
-    // His eyes are level with the player's, so the two of you look at each other while you talk. The XR rig is
-    // scaled 0.8 here (PaintedBedroomPhysicsTable.rigScale), so a standing visitor's eyes, about 1.60 m, are at
-    // 1.28 m in the room; his are 1.55 m up the 1.70 m model (measured on the mesh). Follow the rig scale if it
-    // changes. Sizing him from the door on his wall (2.32 m) ignored the rig scale and made him tower over you.
-    const float VincentScale = 1.60f * 0.8f / 1.55f;   // 0.826: 1.40 m in the room, 1.75 m as it feels
+    // 1.70 m in the room, as in The Starry Night (Cici, 2026-11-17; the model is 1.70 m at scale 1). It was 0.826 (1.40 m),
+    // his eyes level with a standing visitor's at the room's 0.8 rig (1.28 m); now his eyes are at 1.55 m.
+    const float VincentScale = 1f;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     static void Bootstrap() => SceneManager.sceneLoaded += OnSceneLoaded;
@@ -58,6 +56,7 @@ public static class VanGoghSpawner
         vincent.name = "VG_Vincent";
         vincent.transform.localScale = Vector3.one * VincentScale;
         SceneManager.MoveGameObjectToScene(vincent, scene);
+        VG_BedroomExit.Build(vincent);   // the way on: his question, the card, the door and the stairs (2026-11-17)
         Debug.Log($"[VanGogh] Vincent at {at:F2}, turned {VincentTurn} deg, scale {VincentScale}");
         return vincent;
     }

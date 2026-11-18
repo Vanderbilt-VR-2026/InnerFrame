@@ -25,6 +25,15 @@ namespace InnerFrame.Gallery
         static Material rimMaterial;
         Renderer rim;
         bool hovered;
+        // A frame inside Gallery.fbx (The Bedroom's) is static, so Unity merges it into the room's one static-batch mesh:
+        // its MeshFilter then holds the WHOLE ROOM, and a copy of that lit a rim round the room (a cream wash over the
+        // walls). Such a frame's rim draws only the frame's own sub-meshes of the merged mesh, every frame while lit.
+        Mesh batchedMesh;
+        int batchedFirst, batchedCount;
+        RenderParams batchedParams;
+
+        /// <summary>The rim round its frame is showing (for the checks).</summary>
+        public bool RimLit => hovered && (rim != null ? rim.enabled : batchedMesh != null);
 
         // The canvas's and the frame's colliders -> their painting (The Bedroom's frame is Gallery.fbx's, not a child).
         static readonly Dictionary<Collider, GalleryPainting> byCollider = new Dictionary<Collider, GalleryPainting>();
@@ -57,8 +66,17 @@ namespace InnerFrame.Gallery
         {
             if (on == hovered) return;
             hovered = on;
-            if (on && rim == null) BuildRim();
+            if (on && rim == null && batchedMesh == null) BuildRim();
             if (rim != null) rim.enabled = on;
+        }
+
+        // Update, not LateUpdate: a draw queued here is in every camera that renders this frame, a Camera.Render() from a
+        // coroutine included (they run between Update and LateUpdate)
+        void Update()
+        {
+            if (!hovered || batchedMesh == null) return;
+            // the scene's static batch has no root: the merged mesh's vertices are already in world space
+            for (int i = 0; i < batchedCount; i++) Graphics.RenderMesh(batchedParams, batchedMesh, batchedFirst + i, Matrix4x4.identity);
         }
 
         void BuildRim()
@@ -67,6 +85,28 @@ namespace InnerFrame.Gallery
             if (rimMaterial == null) rimMaterial = Resources.Load<Material>("HeldOutline");
             var mesh = frame.GetComponent<MeshFilter>();
             if (rimMaterial == null || mesh == null || mesh.sharedMesh == null) { Debug.LogWarning("[Gallery] no hover rim (Resources/HeldOutline.mat or the frame's mesh is missing)", this); return; }
+            var block = new MaterialPropertyBlock();
+            block.SetColor("_Color", RimColor);
+            block.SetFloat("_Width", RimWidth);
+            block.SetFloat("_Pulse", 0f);
+
+            if (frame.isPartOfStaticBatch && frame is MeshRenderer batched)
+            {
+                batchedMesh = mesh.sharedMesh;
+                batchedFirst = batched.subMeshStartIndex;
+                batchedCount = Mathf.Max(1, frame.sharedMaterials.Length);
+                batchedParams = new RenderParams(rimMaterial)
+                {
+                    layer = frame.gameObject.layer,
+                    shadowCastingMode = ShadowCastingMode.Off,
+                    receiveShadows = false,
+                    lightProbeUsage = LightProbeUsage.Off,
+                    reflectionProbeUsage = ReflectionProbeUsage.Off,
+                    matProps = block,
+                };
+                return;
+            }
+
             var go = new GameObject("Hover Outline");
             go.layer = frame.gameObject.layer;
             go.transform.SetParent(frame.transform, false);
@@ -79,10 +119,6 @@ namespace InnerFrame.Gallery
             rim.receiveShadows = false;
             rim.lightProbeUsage = LightProbeUsage.Off;
             rim.reflectionProbeUsage = ReflectionProbeUsage.Off;
-            var block = new MaterialPropertyBlock();
-            block.SetColor("_Color", RimColor);
-            block.SetFloat("_Width", RimWidth);
-            block.SetFloat("_Pulse", 0f);
             rim.SetPropertyBlock(block);
             rim.enabled = false;
         }

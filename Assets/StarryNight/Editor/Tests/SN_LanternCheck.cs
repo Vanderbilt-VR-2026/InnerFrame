@@ -50,7 +50,7 @@ namespace InnerFrame.StarryNight.EditorTools
             (SN_State.Done, "A Night with Vincent", "The night is painted"),
         };
         /// <summary>Dawn's title and line once the page is there.</summary>
-        public const string DawnPageTitle = "Take his page", DawnPageLine = "Take the page";
+        public const string DawnPageTitle = "Take his page", DawnPageLine = "Point at his page and pull the trigger,\nor reach out and squeeze the grip\nwith your middle finger.";
         static readonly CultureInfo C = CultureInfo.InvariantCulture;
         static StringBuilder log;
         static int passes, failures;

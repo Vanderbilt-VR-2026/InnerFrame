@@ -25,7 +25,7 @@ namespace InnerFrame.Gallery.EditorTools.Tests
     /// DesktopTestRig, which switches the XR Origin off without a headset, is removed after each Gallery load.
     /// For each painting with a menu, from 2 m, from 5 m and from the other side of the room: point (the frame's rim lights,
     /// the long ray shows, no menu) -> picture "before" -> trigger -> the menu (picture "after"), still open a second later
-    /// and the same size to the eye -> point at Enter, trigger -> its scene loads (Almond Blossom: Coming soon, Enter does
+    /// and the same size to the eye -> point at Enter, trigger -> its scene loads (a painting with no scene: Coming soon, Enter does
     /// nothing, Back closes it). Then the menu closes when you walk 2 m away, when you turn your back on it, and moves when
     /// you open another painting; the music plays from one source in every scene.
     /// Batch: -executeMethod InnerFrame.Gallery.EditorTools.Tests.GalleryLayoutPlayCheck.RunBatch -gpOut &lt;dir&gt; (no -quit).
@@ -139,8 +139,11 @@ namespace InnerFrame.Gallery.EditorTools.Tests
                 yield return Aim(gp.Centre);
                 Check(pointer.Hovered.Contains(gp), $"{gp.title} {label}: pointed at, it is hovered");
                 Check(pointer.RayShown, $"{gp.title} {label}: the long ray shows");
+                Check(gp.RimLit, $"{gp.title} {label}: its frame's rim is lit");
+                // a rim copied from a static-batched frame is the whole room's merged mesh: a cream wash over the walls
                 var rim = gp.frame.transform.Find("Hover Outline")?.GetComponent<Renderer>();
-                Check(rim != null && rim.enabled, $"{gp.title} {label}: its frame's rim is lit");
+                Check(rim == null || rim.bounds.size.magnitude < gp.frame.bounds.size.magnitude * 1.5f + 0.5f,
+                    $"{gp.title} {label}: its rim is the size of its frame ({(rim != null ? rim.bounds.size.magnitude : 0f):F1} m across, the frame {gp.frame.bounds.size.magnitude:F1} m)");
                 Check(!menu.IsOpen, $"{gp.title} {label}: no menu before the trigger");
                 Shot($"play-{key}-{label}-1-before");
                 yield return Trigger();

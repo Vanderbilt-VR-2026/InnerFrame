@@ -6,6 +6,8 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.Controls;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using UnityEngine.XR.Interaction.Toolkit.UI;
@@ -49,14 +51,16 @@ public static class PlayerMenuSplitPreview
     static void LiveMenu() => Queue("live");
     [MenuItem("InnerFrame/Menu/Open quick audio in Gallery Play Mode")]
     static void LiveAudio() => Queue("live-audio");
+    [MenuItem("InnerFrame/Menu/Check controller Menu input in Gallery")]
+    static void InputMenu() => Queue("check-input");
 
     public static void Queue(string command)
     {
         if (command == "status") { WriteStatus("Status requested"); return; }
-        if (command != "check" && command != "render" && command != "preview" && command != "live" && command != "live-audio")
+        if (command != "check" && command != "render" && command != "preview" && command != "live" && command != "live-audio" && command != "check-input")
         { WriteStatus("Rejected unknown request: " + command); return; }
         SessionState.SetString(PendingKey, command);
-        if (command == "live" || command == "live-audio") SessionState.SetFloat(LiveDeadlineKey, (float)EditorApplication.timeSinceStartup + 60f);
+        if (command == "live" || command == "live-audio" || command == "check-input") SessionState.SetFloat(LiveDeadlineKey, (float)EditorApplication.timeSinceStartup + 60f);
     }
     static void Poll()
     {
@@ -69,7 +73,7 @@ public static class PlayerMenuSplitPreview
         }
         string pending = SessionState.GetString(PendingKey, "");
         if (pending.Length == 0 || EditorApplication.isCompiling || EditorApplication.isUpdating) return;
-        if (pending == "live" || pending == "live-audio") { OpenLiveMenu(pending == "live-audio"); return; }
+        if (pending == "live" || pending == "live-audio" || pending == "check-input") { OpenLiveMenu(pending == "live-audio", pending == "check-input"); return; }
         if (EditorApplication.isPlayingOrWillChangePlaymode)
         {
             WriteStatus("Leaving Play Mode before " + pending);
@@ -80,7 +84,7 @@ public static class PlayerMenuSplitPreview
         bool passed = RunValidation(pending == "check" ? null : Path.Combine(Output, "Images"));
         if (pending == "preview" && passed) PlayerMenuSplitPreviewWindow.Open(Path.Combine(Output, "Images"));
     }
-    static void OpenLiveMenu(bool quickAudio)
+    static void OpenLiveMenu(bool quickAudio, bool checkInput = false)
     {
         if (EditorApplication.timeSinceStartup > SessionState.GetFloat(LiveDeadlineKey, 0))
         { SessionState.EraseString(PendingKey); WriteStatus("Live preview timed out; no scene was saved or changed"); return; }
@@ -96,11 +100,96 @@ public static class PlayerMenuSplitPreview
             return;
         }
         if (PlayerMenu.Instance == null || Camera.main == null) return;
+        if (SceneFader.IsFading || (checkInput && Time.timeSinceLevelLoad < 2f)) return;
         SessionState.EraseString(PendingKey);
+        if (checkInput)
+        {
+            bool passed = CheckControllerInput();
+            EditorApplication.isPlaying = false;
+            WriteStatus(passed ? "Controller menu input checks passed" : "Controller menu input checks failed");
+            return;
+        }
         if (quickAudio) PlayerMenu.Instance.OpenAudioQuick();
         else PlayerMenu.Instance.OpenPage(PlayerMenuPage.Audio);
         EditorApplication.ExecuteMenuItem("Window/General/Game");
         WriteStatus("Live Gallery preview: " + (quickAudio ? "compact Audio popup" : "two-column Audio page") + " opened; no AI or microphone action requested");
+    }
+
+    static bool CheckControllerInput()
+    {
+        var assertions = new List<string>();
+        var failures = new List<string>();
+        void Check(bool ok, string text) { assertions.Add((ok ? "PASS " : "FAIL ") + text); if (!ok) failures.Add(text); }
+        var settings = InputSystem.settings;
+        var background = settings.backgroundBehavior;
+        var editorInput = settings.editorInputBehaviorInPlayMode;
+        var devices = new List<InputDevice>();
+        try
+        {
+            settings.backgroundBehavior = InputSettings.BackgroundBehavior.IgnoreFocus;
+            settings.editorInputBehaviorInPlayMode = InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
+            var left = InputSystem.AddDevice<UnityEngine.XR.OpenXR.Features.Interactions.OculusTouchControllerProfile.OculusTouchController>();
+            devices.Add(left); InputSystem.SetDeviceUsage(left, CommonUsages.LeftHand);
+            var right = InputSystem.AddDevice<UnityEngine.XR.OpenXR.Features.Interactions.OculusTouchControllerProfile.OculusTouchController>();
+            devices.Add(right); InputSystem.SetDeviceUsage(right, CommonUsages.RightHand);
+            var keyboard = InputSystem.AddDevice<Keyboard>(); devices.Add(keyboard);
+            var update = typeof(InputSystem).GetMethod("Update", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic,
+                null, new[] { typeof(UnityEngine.InputSystem.LowLevel.InputUpdateType) }, null);
+            void Push(ButtonControl control, float value)
+            {
+                using (UnityEngine.InputSystem.LowLevel.StateEvent.From(control.device, out var stateEvent))
+                {
+                    control.WriteValueIntoEvent(value, stateEvent);
+                    InputSystem.QueueEvent(stateEvent);
+                }
+                update.Invoke(null, new object[] { UnityEngine.InputSystem.LowLevel.InputUpdateType.Dynamic });
+            }
+            void Click(ButtonControl control) { Push(control, 1f); Push(control, 0f); }
+            PlayerMenuPanel Panel() => Object.FindAnyObjectByType<PlayerMenuPanel>();
+            bool Open() => Panel() != null && Panel().gameObject.activeInHierarchy;
+            Check(Application.isPlaying && SceneManager.GetActiveScene().name == "Gallery", "real Gallery Play Mode");
+            Check(Object.FindObjectsByType<PlayerMenuQuickActions>(FindObjectsInactive.Include, FindObjectsSortMode.None).Length == 0,
+                "Gallery does not spawn persistent corner shortcuts");
+            Check(Object.FindObjectsByType<MenuWristTag>(FindObjectsInactive.Include, FindObjectsSortMode.None).Length == 0,
+                "Gallery does not spawn a wrist menu");
+            if (Open()) Panel().Hide();
+            var guide = InnerFrame.Tutorial.EntranceControllerGuide.Current;
+            int page = guide != null ? guide.PageIndex : -1;
+            Click(left.menu);
+            Check(Open() && Panel().CurrentPage == PlayerMenuPage.Audio && !Panel().IsQuickAudio,
+                "left OpenXR Menu button opens the full two-column Audio page");
+            Check(PlayerMenu.ModalOpen && PlayerMenu.MenuOpen, "opened menu blocks scene interaction");
+            if (guide != null)
+                Check(!guide.gameObject.activeInHierarchy && guide.PageIndex == page, "Menu preserves the active tutorial page while suspended");
+            NamedButton(Panel(), "Close").onClick.Invoke();
+            Check(!Open(), "close cross closes the real menu");
+            if (guide != null)
+                Check(guide.gameObject.activeInHierarchy && guide.PageIndex == page, "close cross restores the same tutorial page");
+            Click(left.menu);
+            Check(Open(), "Menu can reopen after the close cross");
+            Click(left.menu);
+            Check(!Open(), "a second Menu press closes the panel");
+            if (guide != null) guide.Close();
+            Click(right.menu);
+            Check(!Open(), "right system/menu control is not used as the game's Menu binding");
+            Push(keyboard.mKey, 1f);
+            Check(Open() && Panel().CurrentPage == PlayerMenuPage.Audio, "Editor M opens the same Audio menu");
+            Push(keyboard.mKey, 1f);
+            Check(Open(), "holding the button does not repeatedly toggle the panel");
+            Push(keyboard.mKey, 0f); Click(keyboard.mKey);
+            Check(!Open(), "Editor M closes on the next press");
+            Check(SceneManager.GetActiveScene().name == "Gallery" && !SceneFader.IsFading, "menu operations stay in Gallery");
+        }
+        catch (Exception error) { failures.Add(error.ToString()); assertions.Add("FAIL " + error.Message); }
+        finally
+        {
+            foreach (var device in devices) InputSystem.RemoveDevice(device);
+            settings.backgroundBehavior = background;
+            settings.editorInputBehaviorInPlayMode = editorInput;
+        }
+        Directory.CreateDirectory(Output);
+        File.WriteAllLines(Path.Combine(Output, "input.txt"), assertions.Concat(new[] { $"RESULT: {assertions.Count(a => a.StartsWith("PASS "))} passed, {failures.Count} failed. Simulated OpenXR/keyboard input; no physical headset test." }));
+        return failures.Count == 0;
     }
     static void WriteStatus(string result)
     {
@@ -160,6 +249,9 @@ public static class PlayerMenuSplitPreview
             foreach (var sound in panel.GetComponentsInChildren<InnerFrame.Entrance.EntranceButtonSound>(true))
                 Object.DestroyImmediate(sound);
             panel.ShowInFrontOf(camera.transform, PaintingNames.Gallery);
+            Check(panel.CurrentPage == PlayerMenuPage.Audio && !panel.IsQuickAudio, "Menu opens the full Audio page by default");
+            Check(panel.transform.parent == null && panel.GetComponentInChildren<VG_CompositorCanvas>() == null,
+                "menu is a world-space object without a head-locked compositor");
             Check(panel.GalleryAvailable && panel.ShownBackLabel == PlayerMenuPanel.BackLabel, "painting context offers Back to Gallery");
             Check(Vector3.Distance(panel.transform.position, camera.transform.position) < 2f, "panel opens inside the 2 m controller ray");
             Check(panel.GetComponentInChildren<PlayerMenuTitleDrag>().GetComponent<Image>().raycastTarget, "title bar accepts UI trigger drags");
@@ -221,28 +313,30 @@ public static class PlayerMenuSplitPreview
             var eventObject = new GameObject("Title drag fixture", typeof(EventSystem));
             var pointer = new TrackedDeviceEventData(eventObject.GetComponent<EventSystem>()) { pointerId = 17 };
             Vector3 initialPosition = camera.transform.position;
+            Vector3 panelPosition = panel.transform.position;
+            Quaternion panelRotation = panel.transform.rotation;
             var target = camera.transform.InverseTransformPoint(drag.transform.position);
             void Aim(Vector3 delta) => pointer.rayPoints = new List<Vector3> { camera.transform.position,
                 camera.transform.TransformPoint(2f * (target + delta)) };
-            Check(((Vector2)panel.transform.localPosition).sqrMagnitude < .00001f, "Audio opens at view centre");
+            Check(((Vector2)camera.transform.InverseTransformPoint(panel.transform.position)).sqrMagnitude < .00001f, "Audio opens at view centre");
             Aim(Vector3.zero);
             drag.OnPointerDown(pointer);
             drag.OnBeginDrag(pointer);
             Aim(new Vector3(-.18f, .1f, 0f));
             drag.OnDrag(pointer);
             drag.OnPointerUp(pointer);
-            var released = panel.transform.localPosition;
-            Check(Vector2.Distance(released, new Vector2(-.18f, .1f)) < .001f, "real title drag updates the view-plane offset");
+            var released = panel.transform.position;
+            Check(Vector3.Distance(released, panelPosition + new Vector3(-.18f, .1f, 0f)) < .001f, "real title drag moves the panel on its world plane");
             for (int i = 1; i <= 16; i++)
                 camera.transform.SetPositionAndRotation(initialPosition + Vector3.right * (.04f * i),
                     Quaternion.Euler(i * 1.5f, i * 3f, i));
             Aim(Vector3.right * .3f);
             drag.OnDrag(pointer);
-            Check(Vector3.Distance(camera.transform.InverseTransformPoint(panel.transform.position), released) < .0001f,
-                "released panel ignores later pointer and head motion");
+            Check(Vector3.Distance(panel.transform.position, released) < .0001f && Quaternion.Angle(panel.transform.rotation, panelRotation) < .001f,
+                "released panel keeps its world position and orientation through head movement");
             panel.Hide();
             panel.ShowInFrontOf(camera.transform, PaintingNames.Gallery);
-            Check(((Vector2)panel.transform.localPosition).sqrMagnitude < .00001f, "reopening restores the menu to centre");
+            Check(((Vector2)camera.transform.InverseTransformPoint(panel.transform.position)).sqrMagnitude < .00001f, "reopening restores the menu to the new view centre");
             camera.transform.SetPositionAndRotation(initialPosition, Quaternion.identity);
             Object.DestroyImmediate(eventObject);
             panel.ShowInFrontOf(camera.transform, PaintingNames.Gallery, true);
@@ -263,62 +357,15 @@ public static class PlayerMenuSplitPreview
                 close.onClick.Invoke();
                 Check(!panel.gameObject.activeSelf && SceneManager.GetActiveScene() == fixture, "close hides panel without scene change");
             }
-            var shortcuts = PlayerMenuQuickActions.Create(camera, null, true);
-            shortcuts.SetContext(camera, true, false);
-            var quickButtons = shortcuts.GetComponentsInChildren<Button>(true);
-            Check(quickButtons.Length == 3 && new[] { "Quick Menu", "Quick Audio", "Quick Gallery" }.All(n => quickButtons.Any(b => b.name == n)), "three named circular shortcuts are present");
-            Check(quickButtons.All(b => b.GetComponent<Image>().color.a == 0 &&
-                ((RectTransform)b.transform).rect.size == new Vector2(54f, 54f)), "idle shortcuts keep their original 54 by 54 targets");
-            Check(quickButtons.Select(b => b.GetComponentInChildren<PlayerMenuShortcutIcon>().Kind)
-                .SequenceEqual(new[] { PlayerMenuShortcutIcon.Symbol.Menu, PlayerMenuShortcutIcon.Symbol.Audio, PlayerMenuShortcutIcon.Symbol.Gallery }),
-                "top-to-bottom shortcuts reuse Menu, Audio and the original Gallery symbol");
-            var firstHand = new PointerEventData(EventSystem.current) { pointerId = 21 };
-            var secondHand = new PointerEventData(EventSystem.current) { pointerId = 22 };
-            foreach (var button in quickButtons)
-            {
-                var ring = button.transform.Find("Focus Ring").gameObject;
-                var label = button.GetComponentInChildren<Text>(true);
-                Check(!ring.activeSelf && !label.gameObject.activeInHierarchy, button.name + ": idle glyph has no ring or name");
-                ExecuteEvents.Execute(button.gameObject, firstHand, ExecuteEvents.pointerEnterHandler);
-                ExecuteEvents.Execute(button.gameObject, secondHand, ExecuteEvents.pointerEnterHandler);
-                ExecuteEvents.Execute(button.gameObject, firstHand, ExecuteEvents.pointerExitHandler);
-                Check(ring.activeSelf && label.gameObject.activeInHierarchy && label.text == button.name.Substring(6) &&
-                    label.transform.parent.localPosition.x < 0, button.name + ": a remaining pointer keeps the ring and name visible on the left");
-                ExecuteEvents.Execute(button.gameObject, secondHand, ExecuteEvents.pointerExitHandler);
-                Check(!ring.activeSelf && !label.gameObject.activeInHierarchy, button.name + ": final exit clears the highlight");
-            }
-            Check(shortcuts.GetComponentInChildren<TrackedDeviceGraphicRaycaster>() != null, "shortcuts accept tracked UI rays");
-            Check(shortcuts.GetComponentsInChildren<Graphic>(true).Count(g => g.raycastTarget) == 3, "only shortcut buttons consume UI rays");
-            Check(shortcuts.GetComponentsInChildren<Text>(true).All(t => t.font == MenuLook.Font), "shortcut labels use the shared font");
-            var quickGallery = quickButtons.FirstOrDefault(b => b.name == "Quick Gallery");
-            Check(quickGallery != null && !quickGallery.interactable, "Gallery shortcut is disabled at home");
-            shortcuts.SetContext(camera, true, true);
-            Check(quickGallery != null && quickGallery.interactable, "Gallery shortcut is enabled in a painting context");
-            SetLayer(shortcuts.transform, FixtureLayer);
-            CheckShortcutTargets(shortcuts, camera, Check);
-            Canvas.ForceUpdateCanvases();
-            DiagnoseIcons(shortcuts, assertions);
-            if (shots != null)
-            {
-                panel.ShowAudioQuick(camera.transform, null, true);
-                shortcuts.SetContext(camera, true, false);
-                SetLayer(panel.transform, FixtureLayer);
-                Shot(camera, Path.Combine(shots, "compact-audio.png"));
-                panel.Hide();
-                shortcuts.SetContext(camera, true, true);
-                Shot(camera, Path.Combine(shots, "quick-actions.png"));
-                Shot(camera, Path.Combine(shots, "shortcuts.png"));
-                CheckRenderedIcons(shortcuts, camera, Check);
-            }
-            shortcuts.gameObject.SetActive(false);
-            Check(MenuLook.PlateSprite != null && MenuLook.KeySprite != null, "wrist tag shares dialogue plate and circle sprites");
-            var tag = new GameObject("Menu Wrist Tag").AddComponent<MenuWristTag>().Preview(camera);
-            tag.transform.SetPositionAndRotation(camera.transform.position + Vector3.forward * .25f, Quaternion.identity);
-            Check(tag.GetComponentInChildren<Text>() != null && tag.GetComponentInChildren<Text>().text == "Menu", "wrist tag reads Menu");
-            Check(tag.transform.Find("Key Menu") != null, "wrist tag shows controller menu icon");
-            if (shots != null) { SetLayer(tag.transform, FixtureLayer); Shot(camera, Path.Combine(shots, "wrist-tag.png")); }
-            tag.SetActive(false);
-            Check(MenuLook.GripSprite != null && MenuLook.GripSprite.texture.width == 64, "shared grip icon exists");
+            panel.ShowInFrontOf(camera.transform, PaintingNames.Gallery, true);
+            SetLayer(panel.transform, FixtureLayer);
+            var galleryIcon = NamedButton(panel, "Nav Gallery").GetComponentInChildren<PlayerMenuShortcutIcon>();
+            Check(galleryIcon != null && galleryIcon.Kind == PlayerMenuShortcutIcon.Symbol.Gallery && !galleryIcon.raycastTarget,
+                "Back to Gallery reuses the original temple glyph without stealing clicks");
+            CheckPanelTargets(panel, camera, Check);
+            CheckRenderedIcons(panel, camera, Check);
+            if (shots != null) Shot(camera, Path.Combine(shots, "controller-menu.png"));
+            panel.Hide();
             CheckSubtitlePreference(camera, Check);
         }
         catch (Exception error)
@@ -347,125 +394,68 @@ public static class PlayerMenuSplitPreview
     static void SetLayer(Transform root, int layer)
     { foreach (var child in root.GetComponentsInChildren<Transform>(true)) child.gameObject.layer = layer; }
 
-    static void CheckShortcutTargets(PlayerMenuQuickActions shortcuts, Camera camera, Action<bool, string> check)
+    static void CheckPanelTargets(PlayerMenuPanel panel, Camera camera, Action<bool, string> check)
     {
-        var system = EventSystem.current != null ? EventSystem.current : new GameObject("Shortcut test events").AddComponent<EventSystem>();
-        var mouseRaycaster = shortcuts.GetComponentInChildren<GraphicRaycaster>();
-        var handRaycaster = shortcuts.GetComponentInChildren<TrackedDeviceGraphicRaycaster>();
-        var buttons = shortcuts.GetComponentsInChildren<Button>();
-        var corners = new Vector3[4];
-        var hits = new List<RaycastResult>();
-        var canvas = shortcuts.GetComponentInChildren<Canvas>();
-        float aspect = camera.aspect;
-        float fov = camera.fieldOfView;
+        var system = new GameObject("Menu ray test", typeof(EventSystem)).GetComponent<EventSystem>();
+        var mouse = panel.GetComponentInChildren<PlayerMenuRaycaster>();
+        var tracked = panel.GetComponentInChildren<TrackedDeviceGraphicRaycaster>();
+        var target = RenderTexture.GetTemporary(960, 640, 24);
+        var originalTarget = camera.targetTexture;
         var position = camera.transform.position;
         var rotation = camera.transform.rotation;
-        Rect viewport = camera.rect;
-        var originalTarget = camera.targetTexture;
+        float aspect = camera.aspect;
+        var hits = new List<RaycastResult>();
+        var fixedPosition = panel.transform.position;
+        var fixedRotation = panel.transform.rotation;
         try
         {
-            foreach (var size in new[] { new Vector2Int(960, 540), new Vector2Int(432, 600) })
+            camera.targetTexture = target; camera.ResetAspect();
+            foreach (bool moved in new[] { false, true })
             {
-                var target = RenderTexture.GetTemporary(size.x, size.y, 24);
-                try
+                if (moved) camera.transform.SetPositionAndRotation(position + new Vector3(.08f, .03f, -.05f), Quaternion.Euler(5f, 12f, 15f));
+                Canvas.ForceUpdateCanvases(); camera.Render();
+                check(Vector3.Distance(panel.transform.position, fixedPosition) < .0001f && Quaternion.Angle(panel.transform.rotation, fixedRotation) < .001f,
+                    "menu remains at its world anchor, head moved=" + moved);
+                foreach (var button in panel.GetComponentsInChildren<Button>())
                 {
-                    camera.targetTexture = target;
-                    camera.rect = new Rect(.07f, .05f, .86f, .89f);
-                    camera.ResetAspect();
-                    camera.fieldOfView = size.x > size.y ? 60f : 38f;
-                    foreach (bool desktop in new[] { true, false })
+                    var centre = button.transform.position;
+                    mouse.Raycast(new PointerEventData(system) { position = camera.WorldToScreenPoint(centre) }, hits);
+                    bool mouseHit = hits.Any(h => h.gameObject == button.gameObject); hits.Clear();
+                    var hand = camera.transform.TransformPoint(new Vector3(.15f, -.12f, .12f));
+                    tracked.Raycast(new TrackedDeviceEventData(system)
                     {
-                        camera.transform.SetPositionAndRotation(position, Quaternion.Euler(15f, 65f, 9f));
-                        shortcuts.SetContext(camera, desktop, true);
-                        string mode = desktop ? "desktop" : "tracked";
-                        string label = mode + " at " + size;
-                        check(canvas.renderMode == (desktop ? RenderMode.ScreenSpaceCamera : RenderMode.WorldSpace) &&
-                            canvas.transform.IsChildOf(camera.transform), label + ": active HUD is attached to the drawing camera");
-
-                        Canvas.ForceUpdateCanvases();
-                        camera.Render(); // Raycasters ignore graphics until their canvas has drawn.
-                        var before = buttons.Select(b => camera.WorldToViewportPoint(b.transform.position)).ToArray();
-                        // A late tracking sample can arrive after every UI callback. Do not step the HUD.
-                        camera.transform.SetPositionAndRotation(position + new Vector3(.28f, .16f, -.12f), Quaternion.Euler(-42f, -57f, 21f));
-                        for (int i = 0; i < buttons.Length; i++)
-                        {
-                            var button = buttons[i];
-                            var center = button.transform.position;
-                            var image = button.GetComponent<Image>();
-                            string name = button.name + " (" + label + ")";
-                            check(image.depth >= 0 && !image.canvasRenderer.cull, name + ": was drawn and is raycastable");
-                            check(Vector3.Distance(camera.WorldToViewportPoint(center), before[i]) < .001f,
-                                name + ": stays at the same viewport coordinate immediately after late camera motion");
-                            ((RectTransform)button.transform).GetWorldCorners(corners);
-                            check(corners.Select(camera.WorldToViewportPoint).All(v =>
-                                v.z > 0f && v.x >= .50f && v.x <= .985f && v.y >= .50f && v.y <= .96f),
-                                name + ": all corners visible in the upper right");
-
-                            if (i > 0)
-                                check(Mathf.Abs(before[i].x - before[0].x) < .001f && before[i].y < before[i - 1].y,
-                                    name + ": sits directly below the preceding shortcut");
-
-                            bool Hits(Vector3 point)
-                            {
-                                hits.Clear();
-                                if (desktop)
-                                    mouseRaycaster.Raycast(new PointerEventData(system) { position = camera.WorldToScreenPoint(point) }, hits);
-                                else
-                                {
-                                    Vector3 hand = camera.transform.TransformPoint(new Vector3(.15f, -.12f, .12f));
-                                    handRaycaster.Raycast(new TrackedDeviceEventData(system)
-                                    {
-                                        rayPoints = new List<Vector3> { hand, hand + (point - hand).normalized * 2f },
-                                        layerMask = 1 << FixtureLayer
-                                    }, hits);
-                                }
-                                return hits.Count == 1 && hits[0].gameObject == button.gameObject;
-                            }
-                            check(Hits(center) && corners.All(c => Hits(Vector3.Lerp(center, c, .95f))),
-                                name + ": centre and all four outer corners hit the intended button after the late pose change");
-                        }
-                    }
+                        rayPoints = new List<Vector3> { hand, hand + (centre - hand).normalized * 2f },
+                        layerMask = 1 << FixtureLayer
+                    }, hits);
+                    bool trackedHit = hits.Any(h => h.gameObject == button.gameObject);
+                    check(mouseHit && trackedHit, button.name + ": mouse and controller rays hit, head moved=" + moved +
+                        ((!mouseHit || !trackedHit) ? $" (mouse={mouseHit}, tracked={trackedHit}, viewport={camera.WorldToViewportPoint(centre)}, depth={button.image.depth}, culled={button.image.canvasRenderer.cull})" : ""));
+                    hits.Clear();
                 }
-                finally
+                var slider = panel.GetComponentInChildren<Slider>();
+                var sliderPoint = slider.transform.position;
+                tracked.Raycast(new TrackedDeviceEventData(system)
                 {
-                    camera.targetTexture = originalTarget;
-                    RenderTexture.ReleaseTemporary(target);
-                }
+                    rayPoints = new List<Vector3> { camera.transform.position, camera.transform.position + (sliderPoint - camera.transform.position).normalized * 2f },
+                    layerMask = 1 << FixtureLayer
+                }, hits);
+                check(hits.Any(h => h.gameObject.GetComponentInParent<Slider>() == slider), "volume slider accepts controller ray, head moved=" + moved);
+                hits.Clear();
             }
         }
         finally
         {
-            camera.rect = viewport; camera.aspect = aspect; camera.fieldOfView = fov;
+            camera.targetTexture = originalTarget; camera.aspect = aspect;
             camera.transform.SetPositionAndRotation(position, rotation);
-            shortcuts.SetContext(camera, true, true);
+            RenderTexture.ReleaseTemporary(target); Object.DestroyImmediate(system.gameObject);
         }
     }
     static bool TextFits(Text text) => text.preferredHeight <= text.rectTransform.rect.height + 3f &&
         (text.horizontalOverflow == HorizontalWrapMode.Wrap || text.preferredWidth <= text.rectTransform.rect.width + 3f);
-    static void DiagnoseIcons(PlayerMenuQuickActions shortcuts, List<string> assertions)
+    static void CheckRenderedIcons(PlayerMenuPanel panel, Camera camera, Action<bool, string> check)
     {
-        foreach (var icon in shortcuts.GetComponentsInChildren<PlayerMenuShortcutIcon>(true))
-        {
-            if (icon.canvasRenderer == null)
-            {
-                string missing = "ICON " + icon.name + ": missing CanvasRenderer";
-                assertions.Add(missing); Debug.Log("[MenuSplit] " + missing);
-                continue;
-            }
-            // Unity 6 returns the renderer-owned mesh; diagnostics must not destroy it.
-            var mesh = icon.canvasRenderer.GetMesh();
-            string info = "ICON " + icon.name + ": active=" + icon.gameObject.activeInHierarchy + ", enabled=" + icon.enabled +
-                ", color=" + icon.color + ", texture=" + (icon.mainTexture != null ? icon.mainTexture.name : "null") +
-                ", shader=" + (icon.materialForRendering != null ? icon.materialForRendering.shader.name : "null") +
-                ", depth=" + icon.canvasRenderer.absoluteDepth + ", culled=" + icon.canvasRenderer.cull +
-                ", vertices=" + (mesh != null ? mesh.vertexCount : 0) + ", bounds=" + (mesh != null ? mesh.bounds.ToString() : "null");
-            assertions.Add(info); Debug.Log("[MenuSplit] " + info);
-        }
-    }
-    static void CheckRenderedIcons(PlayerMenuQuickActions shortcuts, Camera camera, Action<bool, string> check)
-    {
-        var icons = shortcuts.GetComponentsInChildren<PlayerMenuShortcutIcon>();
-        check(icons.Length == 3, "three shortcut symbols participate in rendered-pixel checks");
+        var icons = panel.GetComponentsInChildren<PlayerMenuShortcutIcon>();
+        check(icons.Length == 1, "the original Gallery symbol participates in a rendered-pixel check");
         Texture2D shown = null, hidden = null;
         try
         {

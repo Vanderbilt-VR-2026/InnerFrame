@@ -2,13 +2,14 @@ using System;
 using System.Collections.Generic;
 using InnerFrame.Tutorial;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using UnityEngine.XR.Interaction.Toolkit.UI;
 
 public enum PlayerMenuPage { Controls, Audio, Gallery, Settings, Restart, Leave }
 
 /// <summary>Shared two-column menu. Navigation stays in place; only the right-hand content changes.
-/// Built from the existing Vincent UI sprites/font, with a draggable title bar in the view plane.</summary>
+/// Built from the existing Vincent UI sprites/font. Opens in front, then stays in the world until moved.</summary>
 public class PlayerMenuPanel : MonoBehaviour
 {
     public const string BackLabel = "Back to Gallery";
@@ -27,6 +28,11 @@ public class PlayerMenuPanel : MonoBehaviour
     string backScene;
     PlayerMenuPage cancelPage;
     bool built;
+    Material overlayMaterial;
+    Vector3 openingPosition;
+    Quaternion openingRotation;
+    float openingDepth;
+    public Vector2 DragOffset { get; private set; }
     public bool IsQuickAudio { get; private set; }
 
     public PlayerMenuPage CurrentPage { get; private set; }
@@ -52,16 +58,21 @@ public class PlayerMenuPanel : MonoBehaviour
         cam = eyes;
         var camera = eyes.GetComponent<Camera>();
         canvas.worldCamera = camera;
-        transform.SetParent(eyes, false);
-        transform.SetLocalPositionAndRotation(Vector3.forward * (desktop ? DesktopDistance : SpawnDistance), Quaternion.identity);
+        transform.SetParent(null, false);
+        openingDepth = desktop ? DesktopDistance : SpawnDistance;
+        openingPosition = eyes.position + eyes.forward * openingDepth;
+        Vector3 up = Vector3.ProjectOnPlane(Vector3.up, eyes.forward);
+        if (up.sqrMagnitude < .001f) up = Vector3.ProjectOnPlane(eyes.up, eyes.forward);
+        openingRotation = Quaternion.LookRotation(eyes.forward, up.normalized);
+        DragOffset = Vector2.zero;
+        transform.SetPositionAndRotation(openingPosition, openingRotation);
         transform.localScale = Vector3.one;
-        if (camera != null) VG_CompositorCanvas.Register(canvas, camera, transform.localPosition.z, PopupFrame());
         backScene = back;
         navigation[PlayerMenuPage.Gallery].interactable = GalleryAvailable;
         moveHint.text = desktop ? "M to close" : ControlsCatalog.MoveMenu;
         credit.text = InnerFrame.Entrance.EntranceAudioDirector.MusicCredit(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name) ?? "";
         gameObject.SetActive(true);
-        SelectPage(PlayerMenuPage.Controls);
+        SelectPage(PlayerMenuPage.Audio);
         RefreshPreferences();
     }
 
@@ -74,26 +85,24 @@ public class PlayerMenuPanel : MonoBehaviour
         Place(Vector2.zero);
     }
 
-    Rect PopupFrame()
+    public bool TryDragPoint(Ray ray, out Vector2 point, out float distance)
     {
-        // Reserve the full panel, including the external title tab. Move this rectangle with the drag.
-        float depth = transform.localPosition.z;
-        var center = (Vector2)transform.localPosition / depth;
-        var halfSize = Vector2.Scale(canvasRect.rect.size * .5f + new Vector2(4f, 30f),
-            canvasRect.localScale) / depth;
-        return new Rect(center - halfSize, halfSize * 2f);
+        point = default;
+        if (!new Plane(openingRotation * Vector3.forward, openingPosition).Raycast(ray, out distance)) return false;
+        point = Quaternion.Inverse(openingRotation) * (ray.GetPoint(distance) - openingPosition);
+        return true;
     }
 
     public void Place(Vector2 offset)
     {
-        float depth = transform.localPosition.z;
         var camera = canvas.worldCamera;
-        if (camera == null || depth <= 0f) return;
+        if (camera == null || openingDepth <= 0f) return;
         float halfHeight = VG_CompositorCanvas.UsesViewPlane(camera) ? .62f : Mathf.Tan(camera.fieldOfView * Mathf.Deg2Rad * .5f);
         float halfWidth = VG_CompositorCanvas.UsesViewPlane(camera) ? .80f : halfHeight * camera.aspect;
-        Vector2 room = Vector2.Max(Vector2.zero, new Vector2(halfWidth, halfHeight) - PopupFrame().size * .5f) * depth;
-        transform.localPosition = new Vector3(Mathf.Clamp(offset.x, -room.x, room.x), Mathf.Clamp(offset.y, -room.y, room.y), depth);
-        VG_CompositorCanvas.Register(canvas, camera, depth, PopupFrame());
+        var halfSize = Vector2.Scale(canvasRect.rect.size * .5f + new Vector2(4f, 30f), canvasRect.localScale);
+        Vector2 room = Vector2.Max(Vector2.zero, new Vector2(halfWidth, halfHeight) * openingDepth - halfSize);
+        DragOffset = new Vector2(Mathf.Clamp(offset.x, -room.x, room.x), Mathf.Clamp(offset.y, -room.y, room.y));
+        transform.SetPositionAndRotation(openingPosition + openingRotation * (Vector3)DragOffset, openingRotation);
     }
 
     void SetQuickAudio(bool compact)
@@ -128,7 +137,9 @@ public class PlayerMenuPanel : MonoBehaviour
         {
             var label = pair.Value.GetComponentInChildren<Text>();
             label.color = pair.Key == page ? MenuLook.Star : pair.Value.interactable ? MenuLook.Text : MenuLook.Muted;
-            pair.Value.transform.Find("Selected").gameObject.SetActive(pair.Key == page);
+            pair.Value.transform.Find("Selected").gameObject.SetActive(pair.Key == page && pair.Key != PlayerMenuPage.Gallery);
+            var icon = pair.Value.GetComponentInChildren<PlayerMenuShortcutIcon>();
+            if (icon != null) icon.color = label.color;
         }
         RefreshPreferences();
     }
@@ -136,7 +147,14 @@ public class PlayerMenuPanel : MonoBehaviour
     public void Hide() { PlayerMenuPreferences.Save(); gameObject.SetActive(false); Closed?.Invoke(); }
     void OnEnable() { PlayerMenuPreferences.Changed += RefreshPreferences; if (built) RefreshPreferences(); }
     void OnDisable() { PlayerMenuPreferences.Changed -= RefreshPreferences; }
-    void OnDestroy() { PlayerMenuPreferences.Changed -= RefreshPreferences; }
+    void OnDestroy()
+    {
+        PlayerMenuPreferences.Changed -= RefreshPreferences;
+        if (overlayMaterial != null)
+        {
+            if (Application.isPlaying) Destroy(overlayMaterial); else DestroyImmediate(overlayMaterial);
+        }
+    }
 
     void LateUpdate()
     {
@@ -147,7 +165,7 @@ public class PlayerMenuPanel : MonoBehaviour
     {
         if (!built) return;
         canvasRect.localScale = Vector3.one * MetresPerPixel * PlayerMenuPreferences.MenuScale;
-        if (cam != null && transform.parent == cam) Place(transform.localPosition);
+        if (cam != null) Place(DragOffset);
         volume.SetValueWithoutNotify(PlayerMenuPreferences.MasterVolume);
         volumeLabel.text = Mathf.RoundToInt(PlayerMenuPreferences.MasterVolume * 100) + "%";
         muteLabel.text = PlayerMenuPreferences.Muted ? "Unmute" : "Mute";
@@ -166,16 +184,18 @@ public class PlayerMenuPanel : MonoBehaviour
         canvas.renderMode = RenderMode.WorldSpace;
         canvas.worldCamera = camera;
         canvasRect.localScale = Vector3.one * MetresPerPixel;
-        var raycaster = canvasRect.gameObject.AddComponent<VG_CompositorRaycaster>();
+        var raycaster = canvasRect.gameObject.AddComponent<PlayerMenuRaycaster>();
         raycaster.checkFor2DOcclusion = raycaster.checkFor3DOcclusion = false;
-        canvasRect.gameObject.AddComponent<GraphicRaycaster>();
         Picture(canvasRect, "Gallery Frame", MenuLook.BoxSprite, Vector2.zero, new Vector2(W, H));
         var title = Picture(canvasRect, "Title Bar (grab to move)", MenuLook.NameTabSprite, new Vector2(-284, H / 2), new Vector2(190, 44));
         Picture(title, "Title Star Ring", MenuLook.StarRingSprite, new Vector2(-67, 0), new Vector2(34, 34));
         Label(title, "Menu", new Vector2(12, 0), new Vector2(125, 36), 24, TextAnchor.MiddleCenter);
         title.GetComponent<Image>().raycastTarget = true;
         title.gameObject.AddComponent<PlayerMenuTitleDrag>().Panel = this;
-        ButtonAt(canvasRect, "Close", "×", new Vector2(375, 190), new Vector2(36, 36), Hide);
+        var close = ButtonAt(canvasRect, "Close", "×", new Vector2(375, 190), new Vector2(36, 36), Hide);
+        close.image.sprite = MenuLook.FocusRing;
+        close.image.type = Image.Type.Simple;
+        close.image.color = MenuLook.Star;
         var divider = Rect(canvasRect, "Column Divider", new Vector2(-116, -3), new Vector2(1, 320));
         var dividerImage = divider.gameObject.AddComponent<Image>(); dividerImage.color = new Color(1, .83f, .35f, .35f); dividerImage.raycastTarget = false;
 
@@ -184,6 +204,15 @@ public class PlayerMenuPanel : MonoBehaviour
             var page = (PlayerMenuPage)i;
             var button = ButtonAt(canvasRect, "Nav " + page, Labels[i], new Vector2(-264, 137 - i * 52), new Vector2(235, 44), () => SelectPage(page));
             navigation.Add(page, button);
+            if (page == PlayerMenuPage.Gallery)
+            {
+                var icon = Rect(button.transform, "Original Gallery Icon", new Vector2(-99, 0), new Vector2(22, 22))
+                    .gameObject.AddComponent<PlayerMenuShortcutIcon>();
+                icon.Kind = PlayerMenuShortcutIcon.Symbol.Gallery;
+                var label = button.GetComponentInChildren<Text>();
+                label.rectTransform.anchoredPosition = new Vector2(12, 0);
+                label.rectTransform.sizeDelta = new Vector2(190, 40);
+            }
             var selected = Picture(button.transform, "Selected", MenuLook.StarSprite, new Vector2(-100, 0), new Vector2(14, 14));
             selected.gameObject.SetActive(false);
             var root = Rect(canvasRect, "Page " + page, new Vector2(143, -4), new Vector2(450, 332));
@@ -202,6 +231,9 @@ public class PlayerMenuPanel : MonoBehaviour
         credit = Label(canvasRect, "", new Vector2(-20, -213), new Vector2(730, 24), 10, TextAnchor.MiddleCenter);
         credit.color = MenuLook.Muted;
         Picture(canvasRect, "Corner Star", MenuLook.StarSprite, new Vector2(375, -194), new Vector2(24, 24));
+        overlayMaterial = new Material(Canvas.GetDefaultCanvasMaterial()) { name = "Player menu overlay" };
+        overlayMaterial.SetInt("unity_GUIZTestMode", (int)UnityEngine.Rendering.CompareFunction.Always);
+        foreach (var graphic in canvasRect.GetComponentsInChildren<Graphic>(true)) graphic.material = overlayMaterial;
         built = true;
         SelectPage(PlayerMenuPage.Controls);
     }
@@ -302,5 +334,35 @@ public class PlayerMenuPanel : MonoBehaviour
         Label(rect, text, Vector2.zero, size - new Vector2(size.x < 60 ? 6 : 28, 4), 19, TextAnchor.MiddleCenter);
         button.onClick.AddListener(clicked); InnerFrame.Entrance.EntranceButtonSound.Bind(button);
         return button;
+    }
+}
+
+/// <summary>Uses the same world-plane hit test for controller and desktop pointers.</summary>
+public sealed class PlayerMenuRaycaster : TrackedDeviceGraphicRaycaster
+{
+    TrackedDeviceEventData mouseRay;
+    readonly List<Vector3> mousePoints = new List<Vector3>(2) { Vector3.zero, Vector3.zero };
+
+    public override void Raycast(PointerEventData data, List<RaycastResult> results)
+    {
+        if (data is TrackedDeviceEventData) { base.Raycast(data, results); return; }
+        var camera = eventCamera;
+        if (camera == null || data.displayIndex != camera.targetDisplay) return;
+        var view = camera.ScreenToViewportPoint(data.position);
+        if (view.x < 0 || view.x > 1 || view.y < 0 || view.y > 1) return;
+        // Unity's screen-rectangle test can reject the small close button after a
+        // camera rotation even at its projected centre. XRI tests the actual plane.
+        var ray = camera.ScreenPointToRay(data.position);
+        mousePoints[0] = ray.origin;
+        mousePoints[1] = ray.GetPoint(camera.farClipPlane);
+        if (mouseRay == null)
+        {
+            var system = EventSystem.current != null ? EventSystem.current : FindAnyObjectByType<EventSystem>();
+            if (system == null) return;
+            mouseRay = new TrackedDeviceEventData(system);
+        }
+        mouseRay.rayPoints = mousePoints;
+        mouseRay.layerMask = camera.cullingMask;
+        base.Raycast(mouseRay, results);
     }
 }

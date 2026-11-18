@@ -161,8 +161,14 @@ public static class ControlsTutorialChecks
                 scene.name + ": full Controls guide inherits the immediate lower-view follow mode");
             if (scene.name == "Gallery") CheckPages(guide);
             menu.Toggle();
-            Check(!EntranceControllerGuide.IsOpen && !PlayerMenu.MenuOpen && SceneManager.GetActiveScene().handle == scene.handle,
-                scene.name + ": Menu closes Controls without changing scene");
+            Check(!EntranceControllerGuide.IsOpen && panel.gameObject.activeSelf && panel.CurrentPage == PlayerMenuPage.Audio,
+                scene.name + ": Menu opens the full Audio page while preserving Controls");
+            menu.Toggle();
+            Check(EntranceControllerGuide.IsOpen && EntranceControllerGuide.Current == guide,
+                scene.name + ": closing the menu restores the suspended guide");
+            guide.Close();
+            Check(!PlayerMenu.MenuOpen && SceneManager.GetActiveScene().handle == scene.handle,
+                scene.name + ": closing Controls stays in the same scene");
             menu.OpenControls();
             guide = EntranceControllerGuide.Current;
             guide.View.DisplayCanvas.GetComponentsInChildren<Button>().Single(b => b.name == "Close").onClick.Invoke();

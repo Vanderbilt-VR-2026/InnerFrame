@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.XR.Interaction.Toolkit.UI;
 
-/// <summary>Moves the panel in the view plane only while this pointer holds the title.</summary>
+/// <summary>Moves the panel on its opening plane only while the pointer holds the title.</summary>
 public sealed class PlayerMenuTitleDrag : MonoBehaviour, IPointerDownHandler, IPointerUpHandler,
     IInitializePotentialDragHandler, IBeginDragHandler, IDragHandler, IEndDragHandler
 {
@@ -17,7 +17,7 @@ public sealed class PlayerMenuTitleDrag : MonoBehaviour, IPointerDownHandler, IP
     {
         if (pointer.HasValue || data.button != PointerEventData.InputButton.Left || !TryPoint(data, out var point)) return;
         pointer = data.pointerId;
-        grabOffset = (Vector2)Panel.transform.localPosition - point;
+        grabOffset = Panel.DragOffset - point;
     }
 
     public void OnDrag(PointerEventData data)
@@ -32,29 +32,22 @@ public sealed class PlayerMenuTitleDrag : MonoBehaviour, IPointerDownHandler, IP
     bool TryPoint(PointerEventData data, out Vector2 point)
     {
         point = default;
-        if (Panel == null || Panel.transform.parent == null) return false;
-        var eye = Panel.transform.parent;
-        float depth = Panel.transform.localPosition.z;
+        if (Panel == null) return false;
         if (data is TrackedDeviceEventData tracked)
         {
             var points = tracked.rayPoints;
             if (points == null) return false;
             for (int i = 1; i < points.Count; ++i)
             {
-                var a = eye.InverseTransformPoint(points[i - 1]);
-                var b = eye.InverseTransformPoint(points[i]);
-                if (a.z > depth || b.z <= a.z || b.z < depth) continue;
-                point = Vector3.LerpUnclamped(a, b, (depth - a.z) / (b.z - a.z));
-                return true;
+                var direction = points[i] - points[i - 1];
+                float length = direction.magnitude;
+                if (length > .0001f && Panel.TryDragPoint(new Ray(points[i - 1], direction / length), out point, out float distance)
+                    && distance <= length) return true;
             }
             return false;
         }
-        var camera = eye.GetComponent<Camera>();
+        var camera = Panel.GetComponentInChildren<Canvas>().worldCamera;
         if (camera == null) return false;
-        var ray = camera.ScreenPointToRay(data.position);
-        var plane = new Plane(eye.forward, Panel.transform.position);
-        if (!plane.Raycast(ray, out float t)) return false;
-        point = eye.InverseTransformPoint(ray.GetPoint(t));
-        return true;
+        return Panel.TryDragPoint(camera.ScreenPointToRay(data.position), out point, out _);
     }
 }

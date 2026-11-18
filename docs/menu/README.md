@@ -3,7 +3,8 @@
 The selected design is **classification + content in two columns**. The left
 column keeps Controls, Audio, Back to Gallery, Settings, Restart and Leave
 session in place. The right column changes when a category is selected.
-There is no Resume button; the top-right × closes the panel.
+The left controller Menu button (≡), or M in the Editor, opens the Audio page.
+There is no Resume button; the top-right × or another Menu press closes the panel.
 
 ## Design reference confirmed on 2026-11-18
 
@@ -16,15 +17,15 @@ and menu size (85–115%); English is a read-only language label. Back to
 Gallery, Restart, and Leave session require confirmation; Gallery is disabled
 when already there. Close with ×, without a Resume button.
 
-The latest reference opens this panel with the left controller Menu button
-(≡). Professor feedback is to place instructions on an object/body in the
-scene and reduce text. A wrist menu remains conditional on the team confirming
-visible player hands. This records the intended design direction; synchronizing
-main does not implement the proposed physical instruction placement or remove
-the existing shortcuts. The screenshot is kept in the local project deliverables:
+This controller-open menu is now implemented. The panel appears in front of
+the player, then holds its world position and orientation when the player
+turns or walks. It is not parented to the head and does not use the HUD compositor.
+The corner shortcuts and wrist tag are no longer spawned. Professor feedback
+about placing instructions on physical objects is a separate pending dialogue/
+tutorial change. The screenshot is kept in the local project deliverables:
 `VR-Quick-Menu-Functions-20261117/quick-menu-functions.png`.
 
-The panel and the three circular shortcuts are built at runtime from
+The panel is built at runtime from
 `Assets/Shared/UI` through `Resources/VG_Caption`: the original box, name tab,
 star/ring, button-circle sprites and Libre Baskerville font. No scene, prefab
 or shared XR setup needs another menu instance.
@@ -33,8 +34,7 @@ or shared XR setup needs another menu instance.
 
 | Entry | Behavior |
 | --- | --- |
-| Left controller Menu / Editor M | Toggle the panel in front of the current camera |
-| Circular Menu / Audio / Gallery | Menu opens the two-column panel; Audio opens only a compact volume/mute popup; Gallery requests confirmation |
+| Left controller Menu / Editor M | Toggle the full panel, starting with Audio; holding does not repeatedly toggle |
 | Controls | Basic binding summary; Open controller guide reopens the existing eleven-page EntranceControllerGuide in the same scene |
 | Audio | Master listener volume and mute/unmute. More settings selects Settings. There are no separate music/voice/effect gains |
 | Back to Gallery | Visible but disabled in Gallery. Elsewhere, confirmation is required before SceneFader returns to Gallery |
@@ -43,20 +43,18 @@ or shared XR setup needs another menu instance.
 | Leave session | Confirmation before leaving the network room and quitting the player; in Editor, stops Play Mode |
 | Cancel | Returns to the previously selected non-confirmation category without executing the action |
 | × | Hides the panel without changing scenes |
-| Grip on title bar | Moves the world-space panel; it stays upright and faces the camera while dragged |
+| Hold trigger on title bar | Drag along the opening plane; releasing keeps the panel at its world position |
 
 The panel opens 1.05 m ahead in VR (1.1 m on desktop), within the existing
-2 m controller UI ray. The three shortcuts sit in the lower-right corner
-of the Gallery and paintings, including while Vincent speaks or the full
-guide is open. Opening a shortcut from the guide preserves the current page.
-Closing its panel restores that page. Gallery is dimmed at home. Hovering a
-shortcut shows its label and keeps the pointer from selecting artwork behind it.
-Desktop anchors all three buttons to the lower-right edge of the screen. Quest displays them in a headset VIEW layer and uses the corresponding tracked-ray targets for selection. The Entrance and scene fades hide the shortcuts.
+2 m controller UI ray. It opens upright even if the player tilts their head.
+Closing and reopening resets it to the new view centre. Opening it from the
+guide suspends and preserves the current page; closing it restores that page.
+Back to Gallery keeps the original temple glyph and is dimmed in Gallery.
+An open panel consumes scene input, including the closing click's frame.
 
-In Editor Play Mode, click a shortcut with a free mouse. While using mouse
-look, hold Tab to point and click. Releasing Tab returns control to the
-previous mouse mode after any opened panel closes. M opens the full menu.
-VR uses the tracked controller rays and the title-bar grip handle.
+In Editor Play Mode, press M, then use the free mouse to click or drag.
+Closing restores the previous mouse mode. VR uses tracked controller rays
+and the trigger on the title bar. No visible virtual hands are required.
 
 ## Preferences and limits
 
@@ -80,10 +78,10 @@ language selector. Leaving does not promise automatic progress saving.
   after scene changes or camera replacement. Keeps SceneFader/network cleanup.
 - `PlayerMenuPanel`: two columns, shared sprites, real volume slider, opt-in
   subtitle preference, confirmations and title-bar grab.
-- `PlayerMenuQuickActions`, `PlayerMenuShortcutPointer`, `PlayerMenuShortcutIcon`:
-  circular entries, line symbols and pointer protection for desktop and XRI.
+- `PlayerMenuShortcutIcon`: reuses the original Gallery symbol in the navigation.
+- `PlayerMenuQuickActions`, `PlayerMenuShortcutPointer`, `MenuWristTag`: legacy
+  components remain for historical fixtures; PlayerMenu does not create them.
 - `MenuLook`: original shared assets, colors, font and controller glyphs.
-- `MenuWristTag`: existing left-controller hint, retained.
 
 The current Gallery painting-entry flow is documented in
 `docs/controls/README.md`. Existing arrival/wayfinding hints remain separate
@@ -99,14 +97,54 @@ binding; the menu does not replace that interaction.
 - Batch compatibility: `-executeMethod PlayerMenuCheck.RunBatch
   [-menuShots <folder>]`. The entry point exits with its result.
 - Explicit automation: `Temp/SplitMenuPreview.request` accepts `status`,
-  `check`, `render`, `preview`, `live`, and `live-audio`. `live` starts the existing clean
+  `check`, `render`, `preview`, `check-input`, `live`, and `live-audio`. `live` starts the existing clean
   Gallery in Play Mode and opens the two-column Audio page; `live-audio` opens the compact volume popup. Both refuse a different/dirty scene.
-- Results: `Logs/MenuSplit/status.json`, `checks.json`, `checks.txt`, `Images/`.
+- `check-input` enters Gallery Play Mode, tests simulated OpenXR Menu and Editor
+  M through the real bindings, then returns to Edit Mode.
+- Results: `Logs/MenuSplit/status.json`, `checks.json`, `checks.txt`, `input.txt`, `Images/`.
   These generated files are not committed.
-- The render check compares each shortcut with its symbol enabled and disabled.
+- The render check compares the original Gallery glyph enabled and disabled.
   A blank circle fails even if its Image component and sprite reference exist.
 
-## Validation on 2026-11-13
+## Controller-open menu validation on 2026-11-18
+
+This update changes existing menu scripts only; no scene, prefab, XR settings,
+shared render settings, or artwork asset was authored. Local generated font and
+project settings edits remain outside the menu commit.
+
+- [V] Unity 6000.3.23f1 compiled the scripts with Android selected.
+- [V] Menu fixtures: **117 passed, 0 failed**, including all six categories,
+  confirmations/cancel, shared artwork and original Gallery glyph pixels,
+  mouse and controller rays before/after camera movement, world position and
+  orientation after release, and recentering only when reopened.
+- [V] Gallery Play Mode simulated OpenXR left Menu and keyboard M checks:
+  **15 passed, 0 failed**. They exercise real InputActions, held-button behavior,
+  close cross, tutorial page preservation, and absence of corner/wrist UI.
+- [V] Controls regression: **198 passed, 0 failed** across enabled scenes.
+  All **six** shared UI integration groups passed and restored the saved Gallery.
+- [V] Gallery Play logged existing Fusion startup errors (`Empty application id` /
+  `InvalidAuthentication`). The menu checks still pass, but this is not a clean
+  multiplayer run; no credentials or network configuration were changed.
+- [I] No physical Quest/controller, new APK, microphone/AI conversation,
+  online multiplayer, fresh-Library import, or standalone exit acceptance was
+  performed for this menu change. Existing transition results above belong to
+  the earlier main integration, not this change.
+
+Review effort: focused self-review of runtime/input and verification evidence
+for the existing menu scripts. The earlier main integration's PR-overlap checks
+remain applicable; no additional scene/asset ownership changed here.
+
+| Finding | Verdict and evidence | Resolution |
+| --- | --- | --- |
+| Close cross missed desktop clicks after a camera rotation | Confirmed: the old native screen-rectangle check rejected its projected centre while the tracked world ray hit it; the initial fixture reported 116 passed / 1 failed | Menu mouse events now use the same XRI world-plane ray test as controllers; the final 117 assertions include that pose |
+| Initial OpenXR test used a delta event on a bitfield button | Confirmed by Input System exception before a Menu action was sent | Test queues full device state with the button value, then verifies actual menu behavior; 15 input assertions pass |
+| A guide page might be lost when Menu is opened | Refuted by Play checks plus Controls checks: the same guide instance/page resumes after × or Menu closes the panel | Keep the existing suspension/resume path |
+
+Evidence: `Logs/MenuSplit/checks.json`, `input.txt`, `Images/`,
+`Logs/Controls/checks.txt`, and `Logs/DialoguePlacement/checks.json`.
+These local generated reports are not committed.
+
+## Historical validation on 2026-11-13
 
 - [V] Unity 6000.3.23f1 recompiled the changed scripts with Android selected.
   The existing Gallery checkout was used; this was not a new clean import.
@@ -135,7 +173,7 @@ binding; the menu does not replace that interaction.
 
 ## Headset acceptance still required
 
-Check all six enabled scenes, including Almond Studio, with a physical Quest: circular hit targets and tooltips,
+Check all six enabled scenes, including Almond Studio, with a physical Quest: left Menu opens/closes, no persistent corner/wrist UI, world-anchored panel,
 no trigger click-through, panel readability at each size, title-bar dragging,
 full guide close-in-place, Gallery disabled at home, cancellation and confirmed
 scene transitions, mute restoration, Vincent subtitles versus tutorial words,

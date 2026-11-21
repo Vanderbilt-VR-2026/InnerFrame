@@ -90,6 +90,9 @@ center aiming were corrected, and the rerun passed naturally.
 multiplayer transport test. Remote pose APIs were tested locally; this is not a two-headset network test.
 [I] This is the current working copy, not a clean-checkout or release-build validation. Repository CI checks committed
 refs, so the Unity results above are separate from the subsequent pre-push CI check.
+[I] The working-copy Unity runs included local generated font-atlas, mobile shader-prefilter and preloaded-asset
+serialization changes that were excluded from publication. A clean checkout of the published commit still needs
+its own Unity and device validation. Draft PR #198 was updated on 2026-11-21; main was not changed.
 [V] All four other open PR heads were checked with `git merge-tree --write-tree --name-only` before coding.
 Existing branch conflicts remain with #226 (`GalleryPaintingMenu.cs`, `SceneFader.cs`, `docs/gallery/README.md`)
 and #205 (`docs/ASSETS.md`); #189/#191 merged without conflicts. This iteration does not resolve or publish those

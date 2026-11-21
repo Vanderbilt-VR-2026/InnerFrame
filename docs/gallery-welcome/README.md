@@ -16,7 +16,7 @@ Owner/integration: Rowling's Controls feature; Gallery layout and the shared in-
 
 The global mode choice relates to #162 (Sonya/Rowling), and the physical shared signs to #164 (Cici). Current source has completion adapters only for Bedroom and Starry Night. Café (#217/#206) and Almond have no completion adapter here. The itinerary therefore must not be described as a complete four-scene guided tour. A pending Café completion must not be inferred from reaching its door or entering the scene. Route destinations come from story-order scene IDs, so #226's changing visible Act 4 painting title is not hardcoded.
 
-Existing branch overlap with open PR #226: GalleryPaintingMenu.cs, SceneFader.cs, docs/gallery/README.md. Existing docs/ASSETS.md overlap with #205. This change does not edit those scene/transition files; merge coordination remains necessary for the pre-existing branch changes. No push or merge performed.
+Existing branch overlap with open PR #226: GalleryPaintingMenu.cs, SceneFader.cs, docs/gallery/README.md. Existing docs/ASSETS.md overlap with #205. This change does not edit those scene/transition files; merge coordination remains necessary for the pre-existing branch changes. Published to draft PR #198 on 21 November; not merged into main.
 
 ## Build / inspect
 

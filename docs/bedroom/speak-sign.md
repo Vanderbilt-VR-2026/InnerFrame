@@ -13,7 +13,7 @@ Only the duplicate Bedroom idle B reminder and that Vincent's first-use talk ins
 - `Tools > InnerFrame > Bedroom Speak > Rebuild sign`: reimports the new face and rebuilds only the new prefab/material. Does not save the Bedroom or Vincent prefab.
 - Texture: 2048 × 1024 imported, mipmaps/trilinear, Android ASTC 4×4. No new realtime lights.
 
-The new prop uses the 2D-plaque route plus a shallow Unity primitive backing; existing character/furniture assets stay intact. Generated-image terms are recorded as not re-verified before push in `docs/ASSETS.md`.
+The new prop uses the 2D-plaque route plus a shallow Unity primitive backing; existing character/furniture assets stay intact. Generated-image terms were checked on 2026-11-21 and are recorded in `docs/ASSETS.md`.
 
 ## Local verification
 
@@ -25,4 +25,4 @@ The new prop uses the 2D-plaque route plus a shallow Unity primitive backing; ex
 
 ## Integration notes
 
-Open PRs were read and merge-tree checked on 19 November. No other owner's PR touches the three existing source files edited for the Speak behavior. Existing branch-wide conflicts with #226 (Gallery/transition/docs) and #205 (`docs/ASSETS.md`) were observed before this change; no merge, commit or push was performed for this local feature.
+Open PRs were read and merge-tree checked on 19 November. No other owner's PR touches the three existing source files edited for the Speak behavior. Existing branch-wide conflicts with #226 (Gallery/transition/docs) and #205 (`docs/ASSETS.md`) were observed before this change. The feature was published to draft PR #198 on 21 November; it has not been merged into main.

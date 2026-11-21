@@ -22,6 +22,13 @@ namespace InnerFrame.StarryNight
         public bool IsWoken { get; private set; }
         public bool IsVisible => visible * dawn > 0.5f;
         public float Hover { get; set; }
+        /// <summary>Brief instruction cue, independent of ray hover. Never wakes a star.</summary>
+        float cue;
+        public float Cue
+        {
+            get => cue;
+            set { cue = Mathf.Clamp01(value); Apply(); }
+        }
 
         float visible, visibleTarget, fadeInSpeed = 1f, wake, dawn = 1f, dawnTarget = 1f, dawnSpeed = 1f;
         float coreSize, haloSize;
@@ -61,14 +68,14 @@ namespace InnerFrame.StarryNight
             float a = visible * dawn;
             if (core != null)
             {
-                core.transform.localScale = Vector3.one * coreSize * (1f + k) * (1f + 0.25f * Hover);
+                core.transform.localScale = Vector3.one * coreSize * (1f + k) * (1f + 0.25f * Mathf.Max(Hover, Cue));
                 block.SetColor(ColourId, new Color(CoreColour.r, CoreColour.g, CoreColour.b, a * 0.95f));
                 core.SetPropertyBlock(block);
                 core.enabled = a > 0.002f;
             }
             if (halo != null)
             {
-                float h = Mathf.Max(k, 0.35f * Hover * (IsWoken ? 0f : 1f)) * a;
+                float h = Mathf.Max(k, Mathf.Max(0.35f * Hover, 0.65f * Cue) * (IsWoken ? 0f : 1f)) * a;
                 halo.transform.localScale = Vector3.one * haloSize * (0.6f + 0.4f * k);
                 block.SetColor(ColourId, new Color(HaloColour.r, HaloColour.g, HaloColour.b, h));
                 halo.SetPropertyBlock(block);

@@ -51,6 +51,33 @@ from its pedestal; the player menu brings you back. Since 2026-11-17 the night e
 with him, and a card to answer: follow him into Almond Blossom, or go back to the Gallery (see "The exit"). The scene is in
 the build list now, after the existing scenes; the Gallery still starts the game.
 
+## Physical instructions (2026-11-20, local review)
+
+Rowling's approved guidance design is integrated without rebuilding Cici's scene, layout or original models:
+
+- Vincent's existing story queue gives short spoken Trigger instructions (L02, L04–L07). The five clips use the same
+  pinned Piper/Norman voice; no second speaker competes with hold-B conversation.
+- His named star briefly brightens as its line starts. A completed target cannot be cued; opening Menu or talking
+  hides the cue. The existing lantern pulse and next wind-dot highlight are reused.
+- A cream instruction leaf is clipped to the existing sketchbook's raised page. One action appears at a time. Its
+  controller illustration reuses the original Controls artwork. The original sketch and hidden-letter side event remain.
+- Grip brings the book closer and lets the player turn it. On release it stays at that world pose, independent of
+  the head. A small painted B/speech mark belongs to the existing rock, with no floating signboard.
+- Activity hint boxes and the duplicate idle B reminder yield to these physical instructions. Optional Vincent
+  subtitles, recording/thinking/error status, the subtitle preference and the existing exit choice card remain.
+  If the instruction leaf is unavailable, the old activity hint returns.
+
+The book's colliders use the existing `BedroomLoose` physics layer, already excluded from the shared rig's ground
+spherecast. This prevents a book left at reading height from becoming a false floor. At runtime, this scene adds that
+layer to its near/far grab casters and restores their previous masks on destruction. No layer, XR prefab, teleport,
+package or project setting is changed. The lantern still returns to its hook; the final page retains its own behavior.
+
+To update only the lines asset after regenerating narration, use **Tools > InnerFrame > Starry Night > Refresh
+instruction voice lines**. This avoids rebuilding the scene or replacing a teammate's layout.
+
+Verification and local screenshots are recorded in `physical-guidance-verification.md`. Headset readability,
+physical microphone/audio routing and multiplayer transport require separate device checks.
+
 ## Open and play
 
 - Scene: `Assets/StarryNight/Scenes/StarryNight.unity`. It holds only the player rig (the Starter Assets

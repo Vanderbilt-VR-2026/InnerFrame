@@ -7,6 +7,8 @@ namespace InnerFrame.Tutorial
     {
         SpeechToProxy talker;
         Transform head;
+        BedroomSpeakSign speakSign;
+        InnerFrame.StarryNight.SN_Conversation starryConversation;
         public Vector3 GazePoint => head != null ? head.position : talker.labelOffset.y >= 0f
             ? transform.TransformPoint(talker.labelOffset) : transform.position;
         public Vector3 HintAnchor => transform.TransformPoint(talker.labelOffset);
@@ -14,6 +16,8 @@ namespace InnerFrame.Tutorial
         void OnEnable()
         {
             talker = GetComponent<SpeechToProxy>();
+            speakSign = GetComponentInChildren<BedroomSpeakSign>(true);
+            starryConversation = GetComponent<InnerFrame.StarryNight.SN_Conversation>();
             talker.Answered += Answered;
             var animator = GetComponentInChildren<Animator>();
             if (animator != null && animator.isHuman) head = animator.GetBoneTransform(HumanBodyBones.Head);
@@ -24,6 +28,7 @@ namespace InnerFrame.Tutorial
             var manager = TutorialManager.Instance;
             var camera = Camera.main;
             if (manager == null || camera == null) return;
+            if ((speakSign != null && speakSign.IsPresent) || (starryConversation != null && starryConversation.PhysicalInstructions)) { manager.Withdraw(this); return; }
             Vector3 at = GazePoint;
             Vector3 off = at - camera.transform.position;
             bool looking = off.sqrMagnitude <= 9f && off.sqrMagnitude > 0.001f &&

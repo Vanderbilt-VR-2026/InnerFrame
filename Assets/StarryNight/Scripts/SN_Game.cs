@@ -91,6 +91,24 @@ namespace InnerFrame.StarryNight
         [Tooltip("The shared dialogue box and hint (VG_DialogueUI, the StarryNight settings); stepped here, not by itself.")]
         public VG_DialogueUI ui;
         public SN_Beam beam;
+        public SN_NotebookGuide notebook;
+        public SN_PhysicalGuidance guidance;
+        public bool PhysicalInstructions => notebook != null && notebook.IsPresent;
+        bool physicalInstructionsShown;
+
+        /// <summary>Activity instructions live on the sketchbook. Recording/errors and optional subtitles remain separate.</summary>
+        public void SetActivityHint(string title, string line)
+        {
+            physicalInstructionsShown = PhysicalInstructions;
+            if (ui != null) ui.SetHint(title, physicalInstructionsShown ? null : line);
+            notebook?.Refresh();
+        }
+
+        public void RefreshActivityHint()
+        {
+            bool pageReady = State == SN_State.Dawn && PageShown;
+            SetActivityHint(pageReady ? PageTitle : TitleFor(State), pageReady ? TakeThePage : HintFor(State));
+        }
 
         public SN_IInput Input { get; set; }
         public Transform HeadOverride { get; set; }
@@ -173,6 +191,7 @@ namespace InnerFrame.StarryNight
             // Free conversation pauses the story clock and prop progression, keeping its place.
             if (voice != null && voice.ConversationPaused)
             {
+                guidance?.Step(dt);
                 if (ui != null) ui.Step(dt);
                 if (exit != null) exit.Hold();   // his walk waits too
                 if (vincentDriver != null) vincentDriver.Step(dt, Head);
@@ -182,6 +201,7 @@ namespace InnerFrame.StarryNight
             Input?.Tick();
             var head = Head;
             if (head == null || Input == null) return;
+            if (physicalInstructionsShown != PhysicalInstructions) RefreshActivityHint();
             Vector3 hp = head.position;
             ApplyRoom();
 
@@ -283,7 +303,7 @@ namespace InnerFrame.StarryNight
                     }
                     voice.Say("L09");
                     morningStarArmed = true;
-                    if (ui != null) ui.SetHint(PageTitle, TakeThePage);
+                    SetActivityHint(PageTitle, TakeThePage);
                 }
             }
             if (morningStarArmed && !voice.Busy)
@@ -310,6 +330,8 @@ namespace InnerFrame.StarryNight
             else idle = 0f;
 
             StepBeam(head, menu);
+            guidance?.Step(dt);
+            notebook?.Refresh();
             sky.Step(dt, hp, layout.starBloomSeconds);
             if (beam != null) beam.Step(dt);
             voice.Step(dt);
@@ -539,7 +561,7 @@ namespace InnerFrame.StarryNight
         {
             State = s;
             Raise(s);
-            if (ui != null) ui.SetHint(TitleFor(s), HintFor(s));
+            SetActivityHint(TitleFor(s), HintFor(s));
         }
 
         void Raise(SN_State s)

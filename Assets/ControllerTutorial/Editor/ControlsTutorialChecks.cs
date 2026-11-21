@@ -65,10 +65,9 @@ public static class ControlsTutorialChecks
     {
         typeof(EntranceControllerGuide).GetMethod("ResetStatic", BindingFlags.Static | BindingFlags.NonPublic).Invoke(null, null);
         Check(AssetDatabase.LoadAssetAtPath<GameObject>(ControlsTutorialAssets.LegacyPath) == null, "unused legacy prefab removed");
-        var guidePrefab = Resources.Load<EntranceControllerGuide>("EntranceControllerGuide");
-        var template = AssetDatabase.LoadAssetAtPath<VG_DialogueUI>(ControlsTutorialAssets.DialoguePath);
-        Check(guidePrefab != null && template != null && guidePrefab.dialoguePrefab == template,
-            "Gallery's controller guide opens the shared Vincent dialogue prefab");
+        var prefab = Resources.Load<EntranceControllerGuide>("EntranceControllerGuide");
+        Check(prefab != null && prefab.dialoguePrefab != null && ControllerDiagram.Texture != null,
+            "manual overview and shared contextual-dialogue resource are available");
         foreach (var entry in EditorBuildSettings.scenes.Where(s => s.enabled))
         {
             var scene = EditorSceneManager.OpenScene(entry.path);
@@ -76,168 +75,39 @@ public static class ControlsTutorialChecks
             var origins = roots.SelectMany(r => r.GetComponentsInChildren<XROrigin>(true)).ToArray();
             var jumps = roots.SelectMany(r => r.GetComponentsInChildren<JumpProvider>(true)).ToArray();
             Check(origins.Length == 1, scene.name + ": one XR Origin");
-            Check(jumps.Length == 1 && jumps.All(j => !j.enabled), scene.name + ": shared JumpProvider disabled, including prefab overrides");
-            int missing = roots.SelectMany(r => r.GetComponentsInChildren<Transform>(true)).Sum(t => GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(t.gameObject));
-            Check(missing == 0, scene.name + ": no missing scripts");
-            var menu = new GameObject("Menu fixture").AddComponent<PlayerMenu>();
-            Call(menu, "Awake");
-            var manager = new GameObject("First Gallery guide check").AddComponent<TutorialManager>();
+            Check(jumps.Length == 1 && jumps.All(j => !j.enabled), scene.name + ": Jump remains disabled");
+            Check(roots.SelectMany(r => r.GetComponentsInChildren<Transform>(true)).Sum(t => GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(t.gameObject)) == 0,
+                scene.name + ": no missing scripts");
+            var menu = new GameObject("Menu fixture").AddComponent<PlayerMenu>(); Call(menu, "Awake");
+            var manager = new GameObject("Arrival fixture").AddComponent<TutorialManager>(); Call(manager, "Awake");
+            Call(manager, "LateUpdate");
+            Check(!EntranceControllerGuide.IsOpen && !menu.OpenFirstGalleryGuide(), scene.name + ": no automatic controller overview");
             if (scene.name == PaintingNames.Gallery)
-            {
-                menu.OpenPage(PlayerMenuPage.Audio);
-                Call(manager, "TryOpenFirstGalleryGuide");
-                Check(!EntranceControllerGuide.IsOpen && !EntranceControllerGuide.ShownInGalleryThisSession,
-                    "first Gallery guide waits for an open player menu to close");
-                menu.Toggle();
-                Call(manager, "TryOpenFirstGalleryGuide");
-                var startup = EntranceControllerGuide.Current;
-                Check(startup != null && startup.PageIndex == 0 && EntranceControllerGuide.ShownInGalleryThisSession,
-                    "first unobstructed Gallery visit opens the full guide on its first page");
-                if (startup != null)
-                {
-                    var camera = startup.View.Head.GetComponent<Camera>();
-                    float fieldOfView = camera.fieldOfView;
-                    using (var target = new HudTestCameraTarget(camera, 1280, 800))
-                    {
-                        camera.fieldOfView = 60f;
-                        target.Render();
-                        startup.View.Snap();
-                        target.Render();
-                        var corners = new Vector3[4];
-                        var actions = startup.View.DisplayCanvas.GetComponentsInChildren<Button>().Where(b => b.name != "Dismiss").ToArray();
-                        bool visible = actions.Length == 3;
-                        foreach (var action in actions)
-                        {
-                            ((RectTransform)action.transform).GetWorldCorners(corners);
-                            visible &= action.image.depth >= 0 && !action.image.canvasRenderer.cull &&
-                                corners.Select(camera.WorldToViewportPoint).All(p => p.z > 0f &&
-                                p.x >= .02f && p.x <= .98f && p.y >= .02f && p.y <= .98f);
-                        }
-                        Check(visible, "arrival guide Previous, Next and Continue are drawn and fit the initial 1280×800 view at 60 degrees");
-                    }
-                    camera.fieldOfView = fieldOfView;
-                    startup.View.Snap();
-                    startup.ShowPage(1);
-                    menu.OpenAudioQuick();
-                    var shortcutPanel = Object.FindAnyObjectByType<PlayerMenuPanel>();
-                    Check(!EntranceControllerGuide.IsOpen && shortcutPanel != null && shortcutPanel.IsQuickAudio && PlayerMenu.ModalOpen,
-                        "Audio suspends the first Gallery guide and opens the compact volume panel");
-                    menu.Toggle();
-                    Check(EntranceControllerGuide.IsOpen && EntranceControllerGuide.Current == startup && startup.PageIndex == 1,
-                        "closing compact Audio restores the same Gallery guide and page");
-                    menu.OpenPage(PlayerMenuPage.Controls);
-                    Check(!EntranceControllerGuide.IsOpen && shortcutPanel != null && !shortcutPanel.IsQuickAudio &&
-                        shortcutPanel.CurrentPage == PlayerMenuPage.Controls,
-                        "Menu from inside the Gallery guide opens the full two-column Controls page");
-                    menu.OpenControls();
-                    Check(EntranceControllerGuide.IsOpen && EntranceControllerGuide.Current == startup && startup.PageIndex == 1,
-                        "reopening Controls from the panel resumes the suspended page");
-                    var finish = startup.View.DisplayCanvas.GetComponentsInChildren<Button>().Single(b => b.name == "Continue");
-                    finish.onClick.Invoke();
-                }
-                Call(manager, "TryOpenFirstGalleryGuide");
-                Check(!EntranceControllerGuide.IsOpen && SceneManager.GetActiveScene() == scene,
-                    "finishing the arrival guide stays in Gallery and subsequent updates do not reopen it");
-            }
-            else
-            {
-                Call(manager, "TryOpenFirstGalleryGuide");
-                Check(!EntranceControllerGuide.IsOpen, scene.name + ": no automatic Gallery guide before or outside Gallery");
-            }
-            Object.DestroyImmediate(manager.gameObject);
-            menu.Toggle();
+                Check(manager.VisibleStep != TutorialStep.GalleryMove, "Gallery arrival does not show a Move tutorial");
+            Call(manager, "OnDestroy"); Object.DestroyImmediate(manager.gameObject);
+            menu.OpenPage(PlayerMenuPage.Controls);
             var panel = Object.FindAnyObjectByType<PlayerMenuPanel>();
-            var controls = panel.GetComponentsInChildren<Button>().Single(b => b.GetComponentInChildren<Text>().text == "Controls");
-            controls.onClick.Invoke();
-            Check(panel.CurrentPage == PlayerMenuPage.Controls, scene.name + ": Controls navigation selects the right-hand page");
             panel.GetComponentsInChildren<Button>().Single(b => b.name == "Open controller guide").onClick.Invoke();
             var guide = EntranceControllerGuide.Current;
-            Check(guide != null && PlayerMenu.MenuOpen && !panel.gameObject.activeSelf, scene.name + ": Controls replaces menu and remains modal");
-            Check(guide.View.box == template.box && guide.View.nameTab == template.nameTab && guide.View.font == template.font &&
-                guide.View.key == template.key && guide.View.settings == template.settings, scene.name + ": exact shared Vincent assets/settings");
-            Check(guide.View.DisplayCanvas.GetComponentInChildren<VG_DialogueBox>(true).gameObject.activeSelf, scene.name + ": full dialogue box visible while menu is modal");
-            var guideFollow = guide.View.GetComponentInChildren<VG_FollowGroup>(true);
-            Check(!guide.View.LockToView && guide.View.FollowHead && !guideFollow.LockToView && guideFollow.enabled,
-                scene.name + ": full Controls guide inherits the world-space opening anchor");
-            if (scene.name == "Gallery") CheckPages(guide);
-            menu.Toggle();
-            Check(!EntranceControllerGuide.IsOpen && panel.gameObject.activeSelf && panel.CurrentPage == PlayerMenuPage.Audio,
-                scene.name + ": Menu opens the full Audio page while preserving Controls");
-            menu.Toggle();
-            Check(EntranceControllerGuide.IsOpen && EntranceControllerGuide.Current == guide,
-                scene.name + ": closing the menu restores the suspended guide");
-            guide.Close();
-            Check(!PlayerMenu.MenuOpen && SceneManager.GetActiveScene().handle == scene.handle,
-                scene.name + ": closing Controls stays in the same scene");
-            menu.OpenControls();
-            guide = EntranceControllerGuide.Current;
-            guide.View.DisplayCanvas.GetComponentsInChildren<Button>().Single(b => b.name == "Close").onClick.Invoke();
-            Check(!EntranceControllerGuide.IsOpen && SceneManager.GetActiveScene().handle == scene.handle,
-                scene.name + ": Close button stays in scene");
-            if (scene.name == "PaintedBedroom")
-            {
-                var tutorials = new GameObject("Pickup binding fixture").AddComponent<TutorialManager>();
-                Call(tutorials, "Awake");
-                panel.gameObject.SetActive(true);
-                tutorials.RefreshSceneBindings();
-                Check(panel.GetComponent<XRGrabInteractable>() == null && panel.GetComponentInChildren<PlayerMenuTitleDrag>() != null,
-                    "the menu title uses UI trigger drag independently of object grab");
-                Check(panel.GetComponent<FirstUseGrabAdapter>() == null && !tutorials.Session.IsComplete(TutorialStep.BedroomGrip),
-                    "dragging a menu title bar does not complete the Bedroom object pickup lesson");
-                Call(tutorials, "OnDestroy");
-                Object.DestroyImmediate(tutorials.gameObject);
-            }
-            Call(menu, "OnDestroy");
-            Object.DestroyImmediate(menu.gameObject);
+            Check(guide != null && PlayerMenu.MenuOpen && !panel.gameObject.activeSelf,
+                scene.name + ": Controls opens complete diagram and hides menu");
+            Check(guide.Diagram.texture == ControllerDiagram.Texture && guide.DisplayCanvas.renderMode == RenderMode.WorldSpace,
+                scene.name + ": shared complete artwork on a world-space canvas");
+            Check(guide.DisplayCanvas.GetComponentsInChildren<Button>().Select(b => b.name).SequenceEqual(new[] { "Close" }),
+                scene.name + ": only Close, with no tutorial navigation or page counter");
+            var eye = Camera.main; var pose = new Pose(eye.transform.position, eye.transform.rotation);
+            var position = guide.transform.position; var rotation = guide.transform.rotation;
+            eye.transform.SetPositionAndRotation(pose.position + Vector3.right, Quaternion.Euler(20, 80, 30));
+            Canvas.ForceUpdateCanvases();
+            Check(Vector3.Distance(position, guide.transform.position) < .0001f && Quaternion.Angle(rotation, guide.transform.rotation) < .001f,
+                scene.name + ": head movement leaves the overview in place");
+            eye.transform.SetPositionAndRotation(pose.position, pose.rotation);
+            menu.Toggle(); Check(!EntranceControllerGuide.IsOpen && panel.gameObject.activeSelf, scene.name + ": Menu suspends diagram");
+            menu.Toggle(); Check(EntranceControllerGuide.IsOpen && EntranceControllerGuide.Current == guide, scene.name + ": closing Menu restores diagram");
+            guide.DisplayCanvas.GetComponentInChildren<Button>().onClick.Invoke();
+            Check(!EntranceControllerGuide.IsOpen && SceneManager.GetActiveScene() == scene, scene.name + ": close stays in original scene");
+            Call(menu, "OnDestroy"); Object.DestroyImmediate(menu.gameObject);
         }
-        var returned = EditorSceneManager.OpenScene("Assets/Scenes/Gallery.unity");
-        var returningMenu = new GameObject("Returning player menu").AddComponent<PlayerMenu>(); Call(returningMenu, "Awake");
-        var returningManager = new GameObject("Returning Gallery visitor").AddComponent<TutorialManager>();
-        Call(returningManager, "TryOpenFirstGalleryGuide");
-        Check(EntranceControllerGuide.ShownInGalleryThisSession && !EntranceControllerGuide.IsOpen && SceneManager.GetActiveScene() == returned,
-            "loading the Gallery scene again in the same session does not open a second arrival guide");
-        Call(returningMenu, "OnDestroy"); Object.DestroyImmediate(returningMenu.gameObject);
-        Object.DestroyImmediate(returningManager.gameObject);
-    }
-
-    static void CheckPages(EntranceControllerGuide guide)
-    {
-        var camera = Camera.main;
-        float fieldOfView = camera.fieldOfView;
-        camera.fieldOfView = 60f;
-        var pagingField = typeof(VG_DialogueUI).GetField("paging", BindingFlags.NonPublic | BindingFlags.Instance);
-        foreach (int i in Enumerable.Range(0, ControlsCatalog.Guide.Length))
-        {
-            guide.ShowPage(i);
-            guide.View.Step(0.3f);
-            var page = ControlsCatalog.Guide[i];
-            var paging = (VG_Paging)pagingField.GetValue(guide.View);
-            Check(paging.Pages.Count == 1 && paging.Pages[0].lines <= VG_DialogueBox.MostLines, "guide " + page.Title + ": readable as one complete manual page");
-            var corners = new Vector3[4];
-            bool buttonsVisible = true;
-            var navigation = guide.View.DisplayCanvas.GetComponentsInChildren<Button>(true).Where(b => b.name != "Dismiss").ToArray();
-            Check(navigation.Length == 3 && navigation.All(b => b.gameObject.activeInHierarchy) &&
-                navigation.Select(b => b.name).OrderBy(n => n).SequenceEqual(new[] { "Close", "Next", "Previous" }),
-                "guide " + page.Title + ": all three navigation controls are present and active");
-            foreach (var button in navigation)
-            {
-                ((RectTransform)button.transform).GetWorldCorners(corners);
-                foreach (var corner in corners)
-                {
-                    var point = camera.WorldToViewportPoint(corner);
-                    buttonsVisible &= point.z > 0f && point.x >= 0f && point.x <= 1f && point.y >= 0f && point.y <= 1f;
-                }
-            }
-            Check(buttonsVisible, "guide " + page.Title + ": navigation buttons fit a 60-degree camera view");
-            if (page.Hint != null)
-            {
-                var hint = guide.View.DisplayCanvas.GetComponentInChildren<VG_Hint>(true);
-                Check(hint.transform.Find("Key").gameObject.activeSelf, "guide " + page.Title + ": button drawn in shared circle");
-            }
-        }
-        camera.fieldOfView = fieldOfView;
-        Check(EntranceControllerGuide.Open(camera) == guide && guide.PageIndex == ControlsCatalog.Guide.Length - 1,
-            "opening Controls while already visible preserves the same guide and current page");
     }
 
     public static bool RunInputInPlayMode()
@@ -292,11 +162,7 @@ public static class ControlsTutorialChecks
         eye.backgroundColor = new Color(.15f, .15f, .15f);
         eye.fieldOfView = 65f;
         var guide = EntranceControllerGuide.Open(eye);
-        for (int i = 0; i < ControlsCatalog.Guide.Length; i++)
-        {
-            guide.ShowPage(i); guide.View.Step(1f); guide.View.Snap();
-            Shot(eye, "guide-" + i);
-        }
+        Shot(eye, "controller-overview");
         guide.Close();
         var panel = PlayerMenuPanel.Create(eye);
         panel.ShowInFrontOf(eye.transform, PaintingNames.Gallery);

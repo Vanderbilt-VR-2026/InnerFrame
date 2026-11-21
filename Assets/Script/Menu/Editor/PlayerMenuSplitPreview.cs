@@ -154,17 +154,17 @@ public static class PlayerMenuSplitPreview
                 "Gallery does not spawn a wrist menu");
             if (Open()) Panel().Hide();
             var guide = InnerFrame.Tutorial.EntranceControllerGuide.Current;
-            int page = guide != null ? guide.PageIndex : -1;
+            var artwork = guide != null ? guide.Diagram.texture : null;
             Click(left.menu);
             Check(Open() && Panel().CurrentPage == PlayerMenuPage.Audio && !Panel().IsQuickAudio,
                 "left OpenXR Menu button opens the full two-column Audio page");
             Check(PlayerMenu.ModalOpen && PlayerMenu.MenuOpen, "opened menu blocks scene interaction");
             if (guide != null)
-                Check(!guide.gameObject.activeInHierarchy && guide.PageIndex == page, "Menu preserves the active tutorial page while suspended");
+                Check(!guide.gameObject.activeInHierarchy && guide.Diagram.texture == artwork, "Menu preserves the complete controller diagram while suspended");
             NamedButton(Panel(), "Close").onClick.Invoke();
             Check(!Open(), "close cross closes the real menu");
             if (guide != null)
-                Check(guide.gameObject.activeInHierarchy && guide.PageIndex == page, "close cross restores the same tutorial page");
+                Check(guide.gameObject.activeInHierarchy && guide.Diagram.texture == artwork, "close cross restores the same controller diagram");
             Click(left.menu);
             Check(Open(), "Menu can reopen after the close cross");
             Click(left.menu);

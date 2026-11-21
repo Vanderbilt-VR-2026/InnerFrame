@@ -114,17 +114,7 @@ namespace InnerFrame.Tutorial
                 nextScan = Time.unscaledTime + 0.5f;
             }
             ObserveGalleryMovement();
-            TryOpenFirstGalleryGuide();
             Present(Time.unscaledDeltaTime);
-        }
-
-        // The first loaded scene may be Gallery (direct launch), or the scene fade may still cover the camera.
-        // Let scene setup and visible conversation/menu UI finish before presenting the full guide.
-        void TryOpenFirstGalleryGuide()
-        {
-            if (EntranceControllerGuide.ShownInGalleryThisSession || SceneManager.GetActiveScene().name != PaintingNames.Gallery ||
-                Camera.main == null || PlayerMenu.Instance == null || Blocked()) return;
-            PlayerMenu.Instance.OpenFirstGalleryGuide();
         }
 
         /// <summary>Also used by checks; never edits or saves a scene.</summary>
@@ -174,7 +164,7 @@ namespace InnerFrame.Tutorial
             float distance = Vector3.Distance(lastPosition, position);
             // Accumulate horizontal travel in 5 cm steps; headset jitter and looking up/down do not finish the lesson.
             if (distance >= 0.05f) { Session.AddGalleryTravel(distance); lastPosition = position; }
-            Offer(TutorialStep.GalleryMove, this, eye.transform.position);
+            // The entrance sign provides Controls on demand; arrival does not open a Move popup.
         }
 
         bool Blocked()

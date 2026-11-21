@@ -176,6 +176,8 @@ public sealed class VG_PanelInteraction : MonoBehaviour, IPointerEnterHandler, I
     public void OnPointerDown(PointerEventData data)
     {
         if (!Ready || pointer.HasValue || data.button != PointerEventData.InputButton.Left) return;
+        // A physical instruction sign consumes input but cannot be dragged off its stand.
+        if (movable == null) { Consume(); return; }
         plane = new Plane(movable.forward, movable.position);
         if (!Point(data, out var at)) return;
         pointer = data.pointerId; offset = movable.position - at; DragStarted?.Invoke(); Consume();

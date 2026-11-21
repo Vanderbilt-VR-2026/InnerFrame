@@ -98,7 +98,8 @@ public class PlayerMenu : MonoBehaviour
         if (suspendedGuide != null && panel != null && panel.gameObject.activeSelf) { panel.Hide(); return; }
         OpenGuide(false);
     }
-    public bool OpenFirstGalleryGuide() => !IsOpen && OpenGuide(true);
+    // Arrival controls now live on the physical Gallery sign.
+    public bool OpenFirstGalleryGuide() => false;
     bool OpenGuide(bool firstGalleryVisit)
     {
         if (SceneFader.IsFading || leaving || !ResolveCamera()) return false;

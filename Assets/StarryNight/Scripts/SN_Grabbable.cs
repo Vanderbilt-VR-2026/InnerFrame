@@ -24,6 +24,9 @@ namespace InnerFrame.StarryNight
         [Tooltip("Where the Editor fallback holds it, in the camera's space (metres).")]
         public Vector3 fallbackHoldOffset = new Vector3(0.16f, -0.2f, 0.42f);
 
+        [Tooltip("Only the reading notebook: keep the released world pose, rather than falling or following the head.")]
+        public bool stayWhereReleased;
+
         XRGrabInteractable grab;
         Rigidbody body;
         Collider[] own;
@@ -144,7 +147,16 @@ namespace InnerFrame.StarryNight
                 foreach (var c in Own) if (c != null) c.isTrigger = trigger;
                 ignoredActive = -1;
             }
+            if (stayWhereReleased && !held && !following && !returning && (!Body.isKinematic || Body.useGravity)) PinAtRest();
             ApplyIgnores();
+        }
+
+        void PinAtRest()
+        {
+            if (!Body.isKinematic) { Body.linearVelocity = Vector3.zero; Body.angularVelocity = Vector3.zero; }
+            Body.useGravity = false;
+            Body.isKinematic = true;
+            Place(transform.position, transform.rotation);
         }
 
         // Physics.IgnoreCollision needs both colliders active, and a collider switched off and on (the XR Origin is, in the
@@ -188,6 +200,7 @@ namespace InnerFrame.StarryNight
             Body.isKinematic = false;
             Body.useGravity = true;
             fallbackHeld = false;
+            if (stayWhereReleased) PinAtRest();
             if (grabLocked && Grab != null) Grab.enabled = true;
             grabLocked = false;
         }
@@ -225,6 +238,7 @@ namespace InnerFrame.StarryNight
             if (hasHome && (position - home.position).magnitude < 0.02f) { position = home.position; rotation = home.rotation; }
             Place(position, rotation);
             Body.isKinematic = kinematicBefore;
+            if (stayWhereReleased) PinAtRest();
             if (Grab != null) Grab.enabled = true;
         }
 

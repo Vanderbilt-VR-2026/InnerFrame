@@ -59,6 +59,7 @@ public class VanGoghCaption : MonoBehaviour
     // Box style
     VG_DialogueUI ui;
     MirrorScene mirror;
+    BedroomSpeakSign speakSign;
     string stateHint, idleHint, idleKey;
 
     /// <summary>Adds a caption to `owner`. Above the anchor (owner space) it stands on it, as over Vincent's head;
@@ -108,6 +109,7 @@ public class VanGoghCaption : MonoBehaviour
     void Build()
     {
         var talker = GetComponentInParent<SpeechToProxy>();
+        speakSign = talker != null ? talker.GetComponentInChildren<BedroomSpeakSign>(true) : null;
         voice = talker != null ? talker.voice : null;
         if (style == VG_CaptionStyle.Box)
         {
@@ -187,7 +189,8 @@ public class VanGoghCaption : MonoBehaviour
         var eye = Camera.main;
         bool near = eye != null && Vector3.Distance(eye.transform.position, transform.parent.position) <= HintWithin;
         string line = stateHint ?? MirrorHint(mirror != null ? mirror.Now : VG_MirrorStep.None)
-                      ?? (InnerFrame.Tutorial.TutorialManager.Instance != null && InnerFrame.Tutorial.TutorialManager.Instance.HasAvailablePrompt
+                      ?? ((speakSign != null && speakSign.IsPresent) ||
+                          (InnerFrame.Tutorial.TutorialManager.Instance != null && InnerFrame.Tutorial.TutorialManager.Instance.HasAvailablePrompt)
                           ? null : idleHint?.Replace($" {idleKey} ", $" {{{idleKey}}} "));
         ui.SetHint(gameObject.scene.name == HintScene ? null : "", near ? line : null);
     }

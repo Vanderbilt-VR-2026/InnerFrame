@@ -30,8 +30,9 @@ namespace InnerFrame.StarryNight.EditorTools
             public SN_InputScripted input;
             public Transform head;
             public SN_Layout L;
-            /// <summary>Every title the hint showed in each state, sampled after every step (2026-11-10).</summary>
+            /// <summary>Every activity title, from the physical notebook when present or the fallback hint otherwise.</summary>
             public readonly Dictionary<SN_State, HashSet<string>> titles = new Dictionary<SN_State, HashSet<string>>();
+            public bool floatingHintSeen;
         }
 
         [MenuItem("Tools/InnerFrame/Starry Night/Run Playthrough Test")]
@@ -132,10 +133,13 @@ namespace InnerFrame.StarryNight.EditorTools
             Step(w, L.sketchHoldSeconds + 0.3f);
             Check(w.game.LetterFound, "sketchbook held up toward the valley for 1.5 s -> letter found (L10)");
             w.game.sketchbook.ReleaseFallback();
-            // the letter is a side event: once L10 is over, the Stars hint is still shown and the idle repeat still fires
+            // The letter is a side event: the activity stays Stars and the idle repeat still fires.
             for (int guard = 0; w.game.voice.Busy && guard < 600; guard++) Step(w, Dt);
-            Check(w.game.State == SN_State.Stars && w.game.ui.HintLine == SN_Game.HintFor(SN_State.Stars),
-                $"letter during Stars: after L10 the hint is the Stars hint (\"{w.game.ui.HintLine}\")");
+            bool starsInstruction = w.game.PhysicalInstructions
+                ? w.game.notebook.Title == "Wake the stars" && !w.game.ui.HintVisible
+                : w.game.ui.HintLine == SN_Game.HintFor(SN_State.Stars);
+            Check(w.game.State == SN_State.Stars && starsInstruction,
+                "letter during Stars: after L10 the current activity instruction remains Stars");
             var repeated = new List<string>();
             Action<string, float> onRepeat = (id, d) => repeated.Add(id);
             w.game.voice.LineStarted += onRepeat;
@@ -201,12 +205,13 @@ namespace InnerFrame.StarryNight.EditorTools
             Check(SameStates(w, SN_State.Arrive, SN_State.Sit, SN_State.Lantern, SN_State.Stars, SN_State.Sketchbook, SN_State.Wind, SN_State.Dawn, SN_State.Done),
                 "transitions: Arrive, Sit, Lantern, Stars, Sketchbook, Wind, Dawn, Done");
             W($"  dialogue box: {w.game.ui.BoxHeight:F3} m tall on its last page; speaking {w.game.ui.IsSpeaking}; title: \"{ShownTitle(w.game.ui)}\"; hint: \"{w.game.ui.HintLine}\"");
-            W("  the hint's title in each state, as drawn after every step:");
-            Check(TitlesRule(w, false), "in each state the hint's title is that state's title (Cici's table, 2026-11-10)");
-            // positive control: a wrong title shown during Done -> the same rule fails
-            w.game.ui.SetHint(SN_Game.TitleFor(SN_State.Stars), SN_Game.HintFor(SN_State.Done));
-            Tick(w);
-            Check(!TitlesRule(w, true), "positive control: \"Wake the stars\" shown during Done -> FAIL");
+            W("  the activity title in each state, sampled after every step:");
+            Check(TitlesRule(w, false), "each state shows its own activity on the notebook, or its fallback hint");
+            if (w.game.PhysicalInstructions)
+                Check(!w.floatingHintSeen, "physical instructions: no floating activity hint throughout the whole story");
+            // Inject a wrong sampled display title: the same rule must reject it.
+            w.titles[SN_State.Done].Add("Wake the stars");
+            Check(!TitlesRule(w, true), "positive control: a Stars title sampled during Done -> FAIL");
         }
 
         static void AimedAway()
@@ -390,7 +395,8 @@ namespace InnerFrame.StarryNight.EditorTools
             w.game.Step(Dt);
             if (w.game.ui == null) return;
             if (!w.titles.TryGetValue(w.game.State, out var seen)) w.titles[w.game.State] = seen = new HashSet<string>();
-            seen.Add(ShownTitle(w.game.ui));
+            seen.Add(w.game.PhysicalInstructions ? w.game.notebook.Title : ShownTitle(w.game.ui));
+            w.floatingHintSeen |= w.game.PhysicalInstructions && w.game.ui.HintVisible;
         }
 
         /// <summary>The hint's title as drawn (VG_Hint's Title label; empty when its row is hidden).</summary>
@@ -407,7 +413,14 @@ namespace InnerFrame.StarryNight.EditorTools
             foreach (var (state, title, _) in SN_LanternCheck.Table)
             {
                 // Dawn: its own title while the sky pales, then the page's (Cici, 2026-11-10)
-                var want = state == SN_State.Dawn ? new HashSet<string> { title, SN_LanternCheck.DawnPageTitle } : new HashSet<string> { title };
+                string activity = title;
+                if (w.game.PhysicalInstructions)
+                {
+                    if (state == SN_State.Arrive || state == SN_State.Sit) activity = "Read when needed";
+                    else if (state == SN_State.Dawn) activity = "Watch the dawn";
+                    else if (state == SN_State.Done) activity = "The night is painted";
+                }
+                var want = state == SN_State.Dawn ? new HashSet<string> { activity, SN_LanternCheck.DawnPageTitle } : new HashSet<string> { activity };
                 bool seen = w.titles.TryGetValue(state, out var set);
                 bool good = seen && set.SetEquals(want);
                 ok &= good;

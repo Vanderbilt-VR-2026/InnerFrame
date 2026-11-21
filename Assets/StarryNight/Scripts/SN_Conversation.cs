@@ -7,8 +7,7 @@ namespace InnerFrame.StarryNight
     {
         SN_Game game;
         SpeechToProxy talker;
-        string previousHint;
-        string previousTitle;
+        public bool PhysicalInstructions => game != null && game.PhysicalInstructions;
 
         public void Connect(SN_Game story)
         {
@@ -23,15 +22,13 @@ namespace InnerFrame.StarryNight
         {
             if (active)
             {
-                previousTitle = game.ui.HintTitle;
-                previousHint = game.ui.HintLine;
                 game.voice.PauseForConversation(true);
                 game.ui.Voice = talker.voice;
             }
             else
             {
                 game.voice.PauseForConversation(false);
-                game.ui.SetHint(previousTitle, previousHint);
+                game.RefreshActivityHint();
             }
         }
 
@@ -40,7 +37,7 @@ namespace InnerFrame.StarryNight
             if (talker == null || game == null) return;
             talker.SceneContext = "Inside The Starry Night, on the hill with Vincent. Current activity: " + game.State;
             // Keep the current action instruction; conversation is an additional choice.
-            if (!talker.ConversationActive && !game.voice.Busy && !PlayerMenu.MenuOpen)
+            if (!PhysicalInstructions && !talker.ConversationActive && !game.voice.Busy && !PlayerMenu.MenuOpen)
             {
                 string line = game.ui.HintLine;
                 if (!string.IsNullOrEmpty(line) && !line.Contains("{B}"))

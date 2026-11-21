@@ -1,0 +1,7 @@
+{
+  "tool": "Built-in image_gen",
+  "date": "2026-11-18",
+  "purpose": "User-approved gold-rim wooden buttons for Home and Experience Mode",
+  "file": "Assets/GalleryWelcome/Art/WelcomeWoodButton.png",
+  "prompt": "Use case: precise-object-edit, game UI sprite extraction.\nReference is an approved wooden-button design for InnerFrame. Create a SINGLE BLANK REUSABLE BUTTON BACKGROUND matching the two approved buttons exactly in painting style and palette. Transparent background outside its silhouette.\nOne square button, centered, fills 96 percent of square image with only a small uniform transparent margin. Front-on, orthographic, symmetric layout, gently rounded irregular corners. Honey PALE YELLOW wood-grain painted interior. A clear thick hand-painted GOLD / OCHRE DOUBLE BORDER, irregular oil brush edges, subtle light ivory upper-left painted bevel and umber lower-right painted bevel so it reads as a pressable wooden button. Texture is expressive oil brushwork matching the reference, not plastic, metal or photoreal wood.\nCRITICAL: Blank interior: remove ALL icons, words, symbols, engravings. No sign, no outer sign frame, no room, no ground shadow outside the button, no labels, no text. The pale yellow interior must remain OPAQUE while the space outside the outer border is transparent. Straight central stretches of all four border sides for 9-slice use in Unity; corners confined to outer 15 percent of the image. One button only. Preserve the approved design's clearly visible gold rim and creamy wooden center."
+}

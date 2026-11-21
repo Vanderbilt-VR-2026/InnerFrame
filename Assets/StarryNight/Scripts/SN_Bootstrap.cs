@@ -33,6 +33,7 @@ namespace InnerFrame.StarryNight
 
         SN_InputXR xrInput;
         SN_Grabbable heldInEditor;
+        readonly System.Collections.Generic.List<System.Action> restoreNotebookMasks = new System.Collections.Generic.List<System.Action>();
 
         void Awake()
         {
@@ -45,6 +46,7 @@ namespace InnerFrame.StarryNight
         void Start()
         {
             CheckRigs();
+            AllowNotebookSelection();
             // the props never lift the rig: it climbs anything up to about 0.55 m (measured 2026-11-09: its CharacterController's
             // step offset, 0.5, is not scaled with the 0.8 rig); also the Editor's desktop rig
             var controllers = FindObjectsByType<CharacterController>(FindObjectsInactive.Include, FindObjectsSortMode.None);
@@ -54,7 +56,7 @@ namespace InnerFrame.StarryNight
             else
 #endif
                 Game.Input = xrInput = new SN_InputXR(FindAnyObjectByType<XROrigin>());
-            Game.ui.Snap();   // in place at once; it follows the main camera from here
+            Game.ui.Snap();   // initial world placement; never follows the camera
             if (layout.colourGrading) GradeCamera(Camera.main);
             // the way back: the player menu's Back to Gallery any time; at Done, Vincent's question and its card (SN_Exit)
             Game.Begin();
@@ -62,7 +64,34 @@ namespace InnerFrame.StarryNight
             conversation.Connect(Game);
         }
 
-        void OnDestroy() => xrInput?.Dispose();
+        void OnDestroy()
+        {
+            xrInput?.Dispose();
+            foreach (var restore in restoreNotebookMasks) restore();
+            restoreNotebookMasks.Clear();
+        }
+
+        void AllowNotebookSelection()
+        {
+            if (Game == null || !Game.PhysicalInstructions) return;
+            int loose = LayerMask.NameToLayer("BedroomLoose");
+            var origin = FindAnyObjectByType<XROrigin>(FindObjectsInactive.Include);
+            if (loose < 0 || origin == null) return;
+            int bit = 1 << loose;
+            // Only this scene's grab casters accept its loose book. Grounding and teleport masks remain unchanged.
+            foreach (var caster in origin.GetComponentsInChildren<UnityEngine.XR.Interaction.Toolkit.Interactors.Casters.CurveInteractionCaster>(true))
+            {
+                int before = caster.raycastMask;
+                caster.raycastMask = before | bit;
+                restoreNotebookMasks.Add(() => { if (caster != null) caster.raycastMask = before; });
+            }
+            foreach (var caster in origin.GetComponentsInChildren<UnityEngine.XR.Interaction.Toolkit.Interactors.Casters.SphereInteractionCaster>(true))
+            {
+                int before = caster.physicsLayerMask;
+                caster.physicsLayerMask = before | bit;
+                restoreNotebookMasks.Add(() => { if (caster != null) caster.physicsLayerMask = before; });
+            }
+        }
 
         void Update()
         {
@@ -230,6 +259,24 @@ namespace InnerFrame.StarryNight
             game.voice = voice;
             game.ui = ui;
             game.beam = beam;
+            game.notebook = SN_NotebookGuide.Attach(game);
+            if (game.notebook != null && game.notebook.IsPresent)
+            {
+                game.sketchbook.stayWhereReleased = true;
+                // Existing loose-prop layer: selectable by XRI, excluded from the rig's ground spherecast (mask 51).
+                // A book left at reading height must never become a false floor under the player's head.
+                int loose = LayerMask.NameToLayer("BedroomLoose");
+                if (loose >= 0)
+                    foreach (var collider in game.sketchbook.GetComponentsInChildren<Collider>()) collider.gameObject.layer = loose;
+                else
+                {
+                    game.sketchbook.stayWhereReleased = false;
+                    Debug.LogWarning("[SN] Loose-prop layer unavailable; notebook uses ordinary set-down physics.");
+                }
+                var bookGrab = game.sketchbook.GetComponent<UnityEngine.XR.Interaction.Toolkit.Interactables.XRGrabInteractable>();
+                if (bookGrab != null) bookGrab.throwOnDetach = false;
+                game.guidance = SN_PhysicalGuidance.Attach(game, rock.transform);
+            }
             game.exit = SN_Exit.Build(game, layout);   // after Done: Vincent asks, the card, the walk into the gold
             Game = game;
             return game;

@@ -51,6 +51,8 @@ public class VG_ExitFlow : MonoBehaviour
         {
             case Beat.Waiting:
                 if (!Over()) { OverAt = -1f; return; }   // askAfter of it without a break (a line starting counts as one)
+                InnerFrame.Gallery.GalleryExperience.ReportStoryComplete(gameObject.scene.name);
+                if (!InnerFrame.Gallery.GalleryExperience.OffersGuidedExit) return;
                 if (OverAt < 0f) OverAt = Clock;
                 if (Clock - OverAt < askAfter) return;
                 Now = Beat.Asking;

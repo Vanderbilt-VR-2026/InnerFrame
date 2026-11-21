@@ -208,7 +208,10 @@ public static class VG_TransitionsCheck
         ev.Clear();
         g = Gold(true, 0.2f, ev, out _);
         for (int i = 0; i < 20; i++) { GoldClock(Dt); g.Step(Dt); }   // rising...
-        g.ActiveScene = () => "Gallery";   // ...another scene change took the player away (the menu's Back)
+        // This fixture can itself run from Gallery. Pick a genuinely different scene;
+        // otherwise the supposed interruption is still the starting scene and must load.
+        string otherScene = g.ActiveScene() == "Gallery" ? "PaintedBedroom" : "Gallery";
+        g.ActiveScene = () => otherScene;   // ...another scene change took the player away (the menu's Back)
         StepUntilGone(g, 10f, null);
         Check(!ev.Any(e => e.StartsWith("load")) && ev.Count(e => e.StartsWith("failed")) == 1 && VG_GoldLight.Active == null,
             $"the player taken to another scene before it loads: it doesn't load, it clears and reports once ({string.Join(", ", ev)})");

@@ -73,7 +73,6 @@ namespace InnerFrame.Entrance
                     yield return SceneManager.LoadSceneAsync("Assets/Entrance/Scenes/Entrance.unity");
                 menu = null;
                 yield return Ready();
-                bool firstGalleryVisit = !Tutorial.EntranceControllerGuide.ShownInGalleryThisSession;
                 foreach (string button in new[] { "Begin sign", "Boy portrait", "Enter the Story sign" })
                     yield return Click(button);
                 // Cover both normal room entry points, with and without skipping the opening film.
@@ -113,24 +112,11 @@ namespace InnerFrame.Entrance
                 }
                 Check(!fader.IsTransitioning && fader.LastFailure == null && fader.Coverage <= .001f &&
                     SceneManager.GetActiveScene().name == "Gallery", route + ": reveal finishes in the actual Gallery");
-                if (firstGalleryVisit)
-                {
-                    limit = Time.realtimeSinceStartup + 12f;
-                    while (!Tutorial.EntranceControllerGuide.IsOpen && Time.realtimeSinceStartup < limit) yield return null;
-                    Check(Tutorial.EntranceControllerGuide.IsOpen && Tutorial.EntranceControllerGuide.Current.PageIndex == 0,
-                        "first Gallery arrival shows the full controller tutorial at page one");
-                    var finish = Tutorial.EntranceControllerGuide.Current.View.DisplayCanvas.GetComponentsInChildren<Button>()
-                        .Single(b => b.name == "Continue");
-                    finish.onClick.Invoke();
-                    Check(!Tutorial.EntranceControllerGuide.IsOpen && SceneManager.GetActiveScene().name == "Gallery",
-                        "closing the first Gallery tutorial leaves the player in Gallery");
-                }
-                else
-                {
-                    yield return null;
-                    Check(!Tutorial.EntranceControllerGuide.IsOpen,
-                        "returning to Gallery this session leaves the completed arrival guide closed");
-                }
+                yield return null;
+                Check(!Tutorial.EntranceControllerGuide.IsOpen,
+                    "Gallery arrival leaves the manual controller diagram closed");
+                Check(InnerFrame.Gallery.GalleryWelcomeSign.Current != null,
+                    "Gallery arrival provides the fixed physical instruction sign");
             }
             Finish(true, "Both Entrance routes rendered opaque gold in front and reverse views, then revealed Gallery.");
         }

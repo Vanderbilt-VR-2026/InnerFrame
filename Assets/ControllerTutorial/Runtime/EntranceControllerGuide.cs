@@ -1,108 +1,94 @@
 using System;
+using InnerFrame.Gallery;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
-using UnityEngine.XR.Interaction.Toolkit.UI;
 
 namespace InnerFrame.Tutorial
 {
-    /// <summary>The complete guide for the first Gallery visit and Menu > Controls.</summary>
+    /// <summary>One complete controller diagram, opened only on request. The resource keeps
+    /// its shared dialogue reference for contextual instructions in the painting scenes.</summary>
     public sealed class EntranceControllerGuide : MonoBehaviour
     {
         public VG_DialogueUI dialoguePrefab;
         public static EntranceControllerGuide Current { get; private set; }
         public static bool IsOpen => Current != null && Current.gameObject.activeInHierarchy;
         public static bool ShownInGalleryThisSession { get; private set; }
-        public VG_DialogueUI View { get; private set; }
-        public int PageIndex { get; private set; }
+        public Canvas DisplayCanvas { get; private set; }
+        public RawImage Diagram { get; private set; }
         Action closed;
-        Button previous, next, close;
-        Text counter;
+        Material overlay;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        static void ResetStatic()
-        {
-            Current = null;
-            ShownInGalleryThisSession = false;
-        }
+        static void ResetStatic() { Current = null; ShownInGalleryThisSession = false; }
 
         public static EntranceControllerGuide Open(Camera camera, Action onClose = null, bool firstGalleryVisit = false)
         {
-            if (IsOpen)
-                return Current;
+            if (IsOpen) return Current;
             var prefab = Resources.Load<EntranceControllerGuide>("EntranceControllerGuide");
-            if (camera == null || prefab == null || prefab.dialoguePrefab == null)
+            if (camera == null || prefab == null || ControllerDiagram.Texture == null)
             {
-                Debug.LogError("[Controls] EntranceControllerGuide or its shared dialogue prefab is missing.");
+                Debug.LogError("[Controls] Controller guide resource or overview image is missing.");
                 return null;
             }
             var guide = Instantiate(prefab);
-            Current = guide;
-            guide.closed = onClose;
-            guide.Build(camera, firstGalleryVisit);
-            if (SceneManager.GetActiveScene().name == PaintingNames.Gallery)
-                ShownInGalleryThisSession = true;
+            Current = guide; guide.closed = onClose; guide.Build(camera);
+            if (SceneManager.GetActiveScene().name == PaintingNames.Gallery) ShownInGalleryThisSession = true;
             return guide;
         }
-
-        void Build(Camera camera, bool firstGalleryVisit)
+        void Build(Camera camera)
         {
-            View = Instantiate(dialoguePrefab, transform);
-            View.ShowWhileMenuOpen = true;
-            View.CloseRequested = Close;
-            View.Head = camera.transform;
-            var canvas = View.DisplayCanvas;
-            canvas.worldCamera = camera;
-            canvas.sortingOrder = 200;
-            VG_PanelInteraction.EnsureCanvas(canvas);
-            previous = Button("Previous", -0.31f, () => ShowPage(PageIndex - 1));
-            next = Button("Next", 0f, () => ShowPage(PageIndex + 1));
-            close = Button(firstGalleryVisit ? "Continue" : "Close", 0.31f, Close);
-            counter = VG_UI.Label("Page", View.LayoutRoot, View.font, View.settings.Cap(View.settings.nameCap),
-                View.settings.wordsColour, new Vector2(0.5f, 0.5f), TextAnchor.MiddleCenter, View.OverlayMaterial);
-            ShowPage(0);
-            View.Step(1f);
-            View.Snap();
+            var rect = GalleryWelcomeSign.Rect(transform, "Controller overview", Vector2.zero, new Vector2(1200, 800));
+            rect.localScale = Vector3.one * .001f;
+            DisplayCanvas = rect.gameObject.AddComponent<Canvas>();
+            DisplayCanvas.renderMode = RenderMode.WorldSpace; DisplayCanvas.worldCamera = camera;
+            DisplayCanvas.sortingOrder = 200;
+            Diagram = ControllerDiagram.Build(rect, rect.sizeDelta, Close);
+            VG_PanelInteraction.Attach(rect, transform, DisplayCanvas);
+            // Match the shared menu: approaching the wooden sign must not make the
+            // enlarged manual disappear behind its solid board or nearby scene geometry.
+            overlay = new Material(Canvas.GetDefaultCanvasMaterial()) { name = "Controller overview overlay" };
+            overlay.SetInt("unity_GUIZTestMode", (int)UnityEngine.Rendering.CompareFunction.Always);
+            foreach (var graphic in rect.GetComponentsInChildren<Graphic>(true)) graphic.material = overlay;
+            // Anchor once. Subsequent head motion never changes the panel's world pose.
+            Vector3 forward = camera.transform.forward;
+            Vector3 up = Vector3.ProjectOnPlane(Vector3.up, forward);
+            if (up.sqrMagnitude < .001f) up = camera.transform.up;
+            transform.SetPositionAndRotation(camera.transform.position + forward * 1.3f,
+                Quaternion.LookRotation(forward, up));
         }
-
-        Button Button(string text, float x, UnityEngine.Events.UnityAction action)
-        {
-            var image = VG_UI.Picture(text, View.LayoutRoot, View.box, new Vector2(0.5f, 0.5f),
-                new Vector2(x, -0.30f), new Vector2(0.25f, 0.08f), 0.025f, View.OverlayMaterial);
-            image.raycastTarget = true;
-            var button = image.gameObject.AddComponent<Button>();
-            button.targetGraphic = image;
-            button.onClick.AddListener(action);
-            Entrance.EntranceButtonSound.Bind(button);
-            var label = VG_UI.Label("Label", image.transform, View.font, View.settings.Cap(View.settings.nameCap),
-                View.settings.wordsColour, new Vector2(0.5f, 0.5f), TextAnchor.MiddleCenter, View.OverlayMaterial);
-            label.text = text;
-            VG_UI.Fit(label, Vector2.zero);
-            return button;
-        }
-
-        public void ShowPage(int index)
-        {
-            PageIndex = Mathf.Clamp(index, 0, ControlsCatalog.Guide.Length - 1);
-            var page = ControlsCatalog.Guide[PageIndex];
-            View.Say(page.Title, page.Words, null);
-            View.SetHint("", page.Hint);
-            previous.interactable = PageIndex > 0;
-            next.interactable = PageIndex < ControlsCatalog.Guide.Length - 1;
-            counter.text = $"{PageIndex + 1} / {ControlsCatalog.Guide.Length}";
-            VG_UI.Fit(counter, new Vector2(0.37f, 0.07f));
-        }
-
         public void Close()
         {
-            var callback = closed;
-            closed = null;
+            VG_PanelInteraction.Consume();
+            var callback = closed; closed = null;
             if (Current == this) Current = null;
             gameObject.SetActive(false);
             if (Application.isPlaying) Destroy(gameObject); else DestroyImmediate(gameObject);
             callback?.Invoke();
         }
+        void OnDestroy()
+        {
+            if (Current == this) Current = null;
+            if (overlay != null) { if (Application.isPlaying) Destroy(overlay); else DestroyImmediate(overlay); }
+        }
+    }
 
-        void OnDestroy() { if (Current == this) Current = null; }
+    /// <summary>The same enlarged artwork opened from the physical sign or Menu > Controls. The painted
+    /// close mark has a real, generously sized button; no Next/Previous/Continue sequence.</summary>
+    public static class ControllerDiagram
+    {
+        public static Texture2D Texture => Resources.Load<Texture2D>("ControllerOverview");
+        public static RawImage Build(RectTransform parent, Vector2 size, Action close)
+        {
+            var image = GalleryWelcomeSign.Rect(parent, "Complete controller diagram", Vector2.zero, size).gameObject.AddComponent<RawImage>();
+            image.texture = Texture; image.raycastTarget = false;
+            var hit = GalleryWelcomeSign.Rect(parent, "Close", new Vector2(size.x * .459f, size.y * .408f), Vector2.one * (size.x * .065f));
+            var graphic = hit.gameObject.AddComponent<Image>(); graphic.color = Color.clear;
+            var button = hit.gameObject.AddComponent<Button>(); button.targetGraphic = graphic;
+            button.navigation = new Navigation { mode = Navigation.Mode.None };
+            button.onClick.AddListener(() => { VG_PanelInteraction.Consume(); close(); });
+            InnerFrame.Entrance.EntranceButtonSound.Bind(button);
+            return image;
+        }
     }
 }

@@ -218,7 +218,7 @@ namespace InnerFrame.StarryNight.EditorTools
             var tr = Rect_(eye, gaze, Corners(target));
             float Share(string group)
             {
-                var root = w.game.ui.GetComponentsInChildren<RectTransform>(true).FirstOrDefault(t => t.name == group);
+                var root = w.game.ui.DisplayCanvas.GetComponentsInChildren<RectTransform>(true).FirstOrDefault(t => t.name == group);
                 if (root == null) return 0f;
                 var imgs = root.GetComponentsInChildren<Graphic>(false).Where(x => x.enabled && x.color.a > 0.01f).ToList();
                 if (imgs.Count == 0) return 0f;

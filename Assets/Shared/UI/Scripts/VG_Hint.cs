@@ -17,6 +17,7 @@ public class VG_Hint : MonoBehaviour
     Text title, instruction, before, after, letter;
     float titleCap, lineCap;
     string shown;
+    GameObject menuGlyph;
 
     public static VG_Hint Make(Transform parent, Vector2 bottomLeft, VG_DialogueSettings settings, Font font, Sprite plateSprite, Sprite starSprite, Sprite keySprite, Material material)
     {
@@ -56,6 +57,14 @@ public class VG_Hint : MonoBehaviour
         instruction.text = extra;
         title.text = titleText; before.text = split >= 0 ? line.Substring(split + 1) : line;
         letter.text = buttonKey; after.text = rest;
+        bool menu = buttonKey == "≡";
+        if (menu && menuGlyph == null)
+        {
+            menuGlyph = MenuLook.DrawIcon(key, MenuLook.Icon.Menu, Vector2.zero, KeySize * 0.82f, KeyLetter);
+            foreach (var image in menuGlyph.GetComponentsInChildren<Image>()) image.material = letter.material;
+        }
+        if (menuGlyph != null) menuGlyph.SetActive(menu);
+        letter.enabled = !menu;
         float lineHeight = VG_UI.LineHeight(lineCap) / VG_UI.UnitsPerMetre;
         float lineMiddle = Pad + lineHeight / 2f;
         float titleMiddle = lineMiddle + extraRows * lineHeight + (VG_UI.LineHeight(lineCap) + VG_UI.LineHeight(titleCap)) / VG_UI.UnitsPerMetre / 2f;
@@ -70,7 +79,11 @@ public class VG_Hint : MonoBehaviour
             width = Mathf.Max(width, VG_UI.Fit(instruction, new Vector2(x, lineMiddle + lineHeight * (extraRows + 1) / 2f)));
             instruction.rectTransform.sizeDelta = new Vector2(instruction.rectTransform.sizeDelta.x, VG_UI.U(lineHeight * extraRows));
         }
-        if (hasTitle) width = Mathf.Max(width, VG_UI.Fit(title, new Vector2(x, titleMiddle)));
+        // Only the top row needs a close-control lane; long lower instructions
+        // keep their original width and font size.
+        float closeSpace = plate.GetComponent<VG_PanelInteraction>() != null ? .055f : 0f;
+        if (hasTitle) width = Mathf.Max(width, VG_UI.Fit(title, new Vector2(x, titleMiddle)) + closeSpace);
+        else width += closeSpace;
         float top = (hasTitle ? titleMiddle + VG_UI.LineHeight(titleCap) / VG_UI.UnitsPerMetre / 2f : 2f * lineMiddle - Pad + extraRows * lineHeight) + Pad;
         star.anchoredPosition = new Vector2(VG_UI.U(Pad + StarSize / 2f), VG_UI.U(hasTitle ? titleMiddle : lineMiddle + extraRows * lineHeight));
         plate.sizeDelta = new Vector2(VG_UI.U(x + width + Pad), VG_UI.U(top));

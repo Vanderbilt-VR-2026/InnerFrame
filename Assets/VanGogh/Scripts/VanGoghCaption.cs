@@ -59,6 +59,7 @@ public class VanGoghCaption : MonoBehaviour
     // Box style
     VG_DialogueUI ui;
     MirrorScene mirror;
+    BedroomSpeakSign speakSign;
     string stateHint, idleHint, idleKey;
 
     /// <summary>Adds a caption to `owner`. Above the anchor (owner space) it stands on it, as over Vincent's head;
@@ -72,11 +73,12 @@ public class VanGoghCaption : MonoBehaviour
         return caption;
     }
 
-    /// <summary>His words, a sentence per page in time with his voice, until `null`: then they stay a second and fade.</summary>
-    public void Words(string text)
+    /// <summary>His words, a sentence per page in time with his voice. Null ends speech; the shared box retains its
+    /// last subtitle for the reader, while the legacy sign keeps its original short fade.</summary>
+    public void Words(string text, bool continuePresentation = false)
     {
         var clip = voice != null ? voice.clip : null;
-        if (ui != null) { if (string.IsNullOrEmpty(text)) ui.Clear(); else ui.Say(Speaker, text, clip); return; }
+        if (ui != null) { if (string.IsNullOrEmpty(text)) ui.EndSpeech(); else ui.Say(Speaker, text, clip, continuePresentation); return; }
         if (string.IsNullOrEmpty(text)) { paging.End(); return; }
         // the largest size, down to the minimum, that keeps it to two lines; then a third line at the size that fits the panel
         paging.Show(text, clip != null ? clip.length : 0f, Size(CapHeight), Size(MinCapHeight), MaxLines,
@@ -108,10 +110,12 @@ public class VanGoghCaption : MonoBehaviour
     void Build()
     {
         var talker = GetComponentInParent<SpeechToProxy>();
+        speakSign = talker != null ? talker.GetComponentInChildren<BedroomSpeakSign>(true) : null;
         voice = talker != null ? talker.voice : null;
         if (style == VG_CaptionStyle.Box)
         {
             ui = Instantiate(dialogue, transform);
+            ui.RespectSubtitlePreference = true;
             ui.Voice = voice;
             ui.autoStep = false;   // this caption keeps its clock (Step)
             mirror = GetComponentInParent<MirrorScene>();
@@ -186,7 +190,9 @@ public class VanGoghCaption : MonoBehaviour
         var eye = Camera.main;
         bool near = eye != null && Vector3.Distance(eye.transform.position, transform.parent.position) <= HintWithin;
         string line = stateHint ?? MirrorHint(mirror != null ? mirror.Now : VG_MirrorStep.None)
-                      ?? idleHint?.Replace($" {idleKey} ", $" {{{idleKey}}} ");
+                      ?? ((speakSign != null && speakSign.IsPresent) ||
+                          (InnerFrame.Tutorial.TutorialManager.Instance != null && InnerFrame.Tutorial.TutorialManager.Instance.HasAvailablePrompt)
+                          ? null : idleHint?.Replace($" {idleKey} ", $" {{{idleKey}}} "));
         ui.SetHint(gameObject.scene.name == HintScene ? null : "", near ? line : null);
     }
 

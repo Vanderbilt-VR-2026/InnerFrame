@@ -95,7 +95,8 @@ namespace InnerFrame.StarryNight
             float now = game.Clock;
             l10Playing = game.voice != null && game.voice.CurrentId == "L10";
 
-            // talking (with the hold) and standing at dawn
+            // Talking follows the active utterance, not whether its last subtitle remains open for reading.
+            // VG_DialogueUI.EndSpeech ends IsSpeaking even when the reader has not dismissed the retained words.
             bool speaking = game.ui != null && game.ui.IsSpeaking;
             talkHold = speaking ? layout.vincentTalkHoldSeconds : Mathf.Max(0f, talkHold - dt);
             Talking = speaking || talkHold > 0f;

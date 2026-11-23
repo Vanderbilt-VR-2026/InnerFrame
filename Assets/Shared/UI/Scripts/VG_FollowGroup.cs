@@ -1,50 +1,88 @@
 using UnityEngine;
 
-/// <summary>
-/// Keeps its object low in the player's view (Cici's concepts V1-V3): the settings' distance ahead of the eye and
-/// belowGaze under the gaze, upright and facing the eye. It follows the gaze's yaw and pitch lazily: it stays put until
-/// the gaze is deadZone away, then eases there. When it's switched on, it starts in place. Sizes are world units; the
-/// angle is what matters.
-/// </summary>
+/// <summary>Owns a world-space reading surface. The historical name is kept for prefab compatibility.</summary>
+[DefaultExecutionOrder(10000)]
 public class VG_FollowGroup : MonoBehaviour
 {
-    const float Settled = 1f;   // degrees: once following, it stops within this
-
     public VG_DialogueSettings settings;
-    /// <summary>The head to follow; null: the main camera.</summary>
     public Transform head;
+    // Kept for callers from older branches. All shared panels now stay in the world.
+    public bool LockToView { get; set; }
+    public float ViewportY { get; set; } = .32f;
+    public bool FitDialogueLayout { get; set; }
+    public bool PlaceAutomatically { get; set; } = true;
+    public RectTransform Layout { get; private set; }
+    public Vector2 ViewSize { get; private set; }
+    public Canvas DisplayCanvas { get; private set; }
+    public VG_DialogueBox DialogueBox { private get; set; }
+    public bool Placed { get; private set; }
 
-    float yaw, pitch;
-    bool placed, moving;
-
-    void OnEnable() => placed = false;
-
-    void LateUpdate() => Step(Time.deltaTime);
-
-    /// <summary>Straight into place (tests, renders, a teleport).</summary>
-    public void Snap() { placed = false; Step(0f); }
-
-    /// <summary>One frame, so tests can drive it.</summary>
-    public void Step(float dt)
+    public void CreateLayout(VG_DialogueSettings style)
     {
-        var eye = head != null ? head : Camera.main != null ? Camera.main.transform : null;
-        if (eye == null || settings == null) return;
-        var gaze = eye.forward;
-        float wantYaw = Mathf.Atan2(gaze.x, gaze.z) * Mathf.Rad2Deg;
-        float wantPitch = Mathf.Clamp(Mathf.Asin(Mathf.Clamp(gaze.y, -1f, 1f)) * Mathf.Rad2Deg, settings.lowestGaze, settings.highestGaze) - settings.belowGaze;
-        if (!placed) { yaw = wantYaw; pitch = wantPitch; placed = true; }
-        float off = Vector3.Angle(Direction(yaw, pitch), Direction(wantYaw, wantPitch));
-        if (off > settings.deadZone) moving = true;
-        if (moving)
-        {
-            float ease = 1f - Mathf.Exp(-4f * dt / settings.easeSeconds);
-            yaw = Mathf.LerpAngle(yaw, wantYaw, ease);
-            pitch = Mathf.LerpAngle(pitch, wantPitch, ease);
-            moving = off > Settled;
-        }
-        var at = eye.position + Direction(yaw, pitch) * settings.distance;
-        transform.SetPositionAndRotation(at, Quaternion.LookRotation(at - eye.position, Vector3.up));
+        settings = style;
+        var surface = new GameObject("World Panel Canvas", typeof(RectTransform), typeof(Canvas));
+        surface.transform.SetParent(transform, false);
+        surface.layer = gameObject.layer;
+        DisplayCanvas = surface.GetComponent<Canvas>();
+        DisplayCanvas.renderMode = RenderMode.WorldSpace;
+        Layout = new GameObject("Layout", typeof(RectTransform)).GetComponent<RectTransform>();
+        Layout.SetParent(surface.transform, false);
+        Layout.sizeDelta = Vector2.zero;
+        SetWorldScale(surface.transform, 1f / VG_UI.UnitsPerMetre);
+        Layout.localScale = Vector3.one * style.Scale;
     }
 
-    static Vector3 Direction(float yaw, float pitch) => Quaternion.Euler(-pitch, yaw, 0f) * Vector3.forward;
+    void OnEnable() { if (DisplayCanvas != null) DisplayCanvas.gameObject.SetActive(true); }
+    void OnDisable() { if (DisplayCanvas != null) DisplayCanvas.gameObject.SetActive(false); }
+    void OnDestroy()
+    {
+        if (DisplayCanvas == null || DisplayCanvas.transform.parent == transform) return;
+        if (Application.isPlaying) Destroy(DisplayCanvas.gameObject); else DestroyImmediate(DisplayCanvas.gameObject);
+    }
+    void LateUpdate()
+    {
+        if (DisplayCanvas != null && DisplayCanvas.gameObject.activeSelf) Step(Time.deltaTime);
+    }
+
+    /// <summary>Explicitly place a newly opened panel. Never call this every frame.</summary>
+    public void Snap() { Placed = false; Step(0f); }
+
+    public void Step(float dt)
+    {
+        if (settings == null || DisplayCanvas == null) return;
+        var camera = head != null ? head.GetComponent<Camera>() : Camera.main;
+        if (camera != null) DisplayCanvas.worldCamera = camera;
+        if (Placed) return;
+        if (!PlaceAutomatically) { ReleaseView(); Placed = true; return; }
+        var eye = head != null ? head : camera != null ? camera.transform : null;
+        if (eye == null) { DisplayCanvas.enabled = false; return; }
+        DisplayCanvas.enabled = true;
+        ReleaseView();
+        float depth = Mathf.Clamp(settings.distance, .6f, 1.8f);
+        var forward = eye.forward;
+        var up = Vector3.ProjectOnPlane(Vector3.up, forward);
+        if (up.sqrMagnitude < .001f) up = Vector3.ProjectOnPlane(eye.up, forward);
+        var rotation = Quaternion.LookRotation(forward, up.normalized);
+        float drop = (ViewportY - .5f) * 2f * depth * Mathf.Tan(30f * Mathf.Deg2Rad);
+        var position = eye.position + forward * depth + rotation * Vector3.up * drop;
+        DisplayCanvas.transform.SetPositionAndRotation(position, rotation);
+        Placed = true;
+    }
+
+    /// <summary>Detach from any camera, actor, or moving owner without changing the displayed world pose.</summary>
+    public void ReleaseView()
+    {
+        if (DisplayCanvas == null) return;
+        VG_CompositorCanvas.Unregister(DisplayCanvas);
+        DisplayCanvas.renderMode = RenderMode.WorldSpace;
+        DisplayCanvas.transform.SetParent(null, true);
+        SetWorldScale(DisplayCanvas.transform, 1f / VG_UI.UnitsPerMetre);
+        Layout.localScale = Vector3.one * settings.Scale;
+    }
+
+    static void SetWorldScale(Transform target, float size)
+    {
+        var scale = target.parent != null ? target.parent.lossyScale : Vector3.one;
+        target.localScale = new Vector3(size / scale.x, size / scale.y, size / scale.z);
+    }
 }

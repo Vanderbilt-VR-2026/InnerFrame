@@ -12,8 +12,7 @@ namespace InnerFrame.Gallery
     /// It keeps one size to the eye: Width x Height at RefDistance, scaled with its distance from you. Within MaxBeside it
     /// hangs beside the frame (on the side away from the wall label), parallel to the wall, its lower edge no lower than
     /// lowestEdge (clear of the wainscot's rail); farther away it floats MaxBeside in front of you, toward that place.
-    /// It closes on Back, after Enter, when you walk LeaveDistance from where you opened it, or when you turn your back
-    /// on it. A painting with no scene yet shows "Coming soon" in place of Enter, and that button does nothing.
+    /// It stays at its opening or dragged world pose until Back, ×, Enter, or another painting is opened. A painting with no scene yet shows "Coming soon" in place of Enter, and that button does nothing.
     /// </summary>
     public class GalleryPaintingMenu : MonoBehaviour
     {
@@ -21,7 +20,7 @@ namespace InnerFrame.Gallery
         [Tooltip("Set by GalleryLayoutSetup.")] public Sprite box, pill;
         [Tooltip("Metres: the menu's lower edge stays at least this high beside a painting (GalleryLayout: the rail's top + 0.10 m).")] public float lowestEdge = 1.13f;
 
-        public const float Width = 0.62f, Height = 0.34f, RefDistance = 2f, MaxBeside = 3.5f, LeaveDistance = 2f, BackTurned = 100f;
+        public const float Width = 0.62f, Height = 0.34f, RefDistance = 2f, MaxBeside = 1.6f, LeaveDistance = 2f, BackTurned = 100f;
         const float Slice = 0.026f, PillW = 0.24f, PillH = 0.076f, Side = 0.2f, OffWall = 0.12f;
         static readonly Color Words = new Color32(0xEC, 0xE6, 0xD2, 0xFF);    // VG_DialogueSettings.wordsColour
         static readonly Color Ground = new Color32(17, 29, 64, 255);          // as the cards' opaque reading background
@@ -61,17 +60,6 @@ namespace InnerFrame.Gallery
             if (root != null) root.gameObject.SetActive(false);
         }
 
-        void Update()
-        {
-            if (!IsOpen) return;
-            var head = Camera.main;
-            if (head == null) return;
-            var eye = head.transform.position;
-            var moved = eye - openedAt; moved.y = 0f;
-            var look = head.transform.forward; look.y = 0f;
-            var to = root.position - eye; to.y = 0f;
-            if (moved.magnitude > LeaveDistance || (look.sqrMagnitude > 1e-6f && to.sqrMagnitude > 1e-6f && Vector3.Angle(look, to) > BackTurned)) Close();
-        }
 
         void Place(GalleryPainting painting, Vector3 eye)
         {
@@ -129,6 +117,7 @@ namespace InnerFrame.Gallery
             EnterButton = Button("Enter", new Vector2(-PillW / 2f - 0.025f, by), () => { var p = Painting; Close(); p?.Enter(); });
             BackButton = Button("Back", new Vector2(PillW / 2f + 0.025f, by), Close);
             BackButton.Set("Back", true);
+            VG_PanelInteraction.Attach((RectTransform)root.Find("Panel"), root, root.GetComponent<Canvas>(), Close);
             root.gameObject.SetActive(false);
         }
 
@@ -141,6 +130,9 @@ namespace InnerFrame.Gallery
             collider.size = new Vector3(PillW, PillH, 0.02f) * VG_UI.UnitsPerMetre;
             var button = image.gameObject.AddComponent<GalleryMenuButton>();
             button.Init(image, label, press);
+            image.raycastTarget = true;
+            var native = image.gameObject.AddComponent<Button>();
+            native.onClick.AddListener(() => { VG_PanelInteraction.Consume(); button.Press(); });
             return button;
         }
     }
@@ -156,7 +148,7 @@ namespace InnerFrame.Gallery
         public string Text => label != null ? label.text : null;
 
         public void Init(Image i, Text l, System.Action p) { image = i; label = l; press = p; }
-        public void Set(string text, bool on) { label.text = text; Interactable = on; Paint(); }
+        public void Set(string text, bool on) { label.text = text; Interactable = on; var native = GetComponent<Button>(); if (native != null) native.interactable = on; Paint(); }
         public void Hover(bool on) { hovered = on; Paint(); }
         public void Press() { if (Interactable) press?.Invoke(); }
 

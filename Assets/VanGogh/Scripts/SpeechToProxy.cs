@@ -222,14 +222,15 @@ public class SpeechToProxy : MonoBehaviour
     void PlayPart()
     {
         var next = toPlay.Dequeue();
+        bool continuation = spokenText.Length > 0;
         voice.clip = next.Key;
         voice.Play();
         spokenText = spokenText.Length == 0 ? next.Value : spokenText + " " + next.Value;
         LastReply = spokenText;   // what he has said so far
         SetState(State.Playing);
-        if (dialogueUI != null) dialogueUI.Say("Vincent", next.Value, next.Key);   // a scene's shared box (Starry Night)
+        if (dialogueUI != null) dialogueUI.Say("Vincent", next.Value, next.Key, continuation);
         if (caption == null) return;
-        caption.Words(next.Value);
+        caption.Words(next.Value, continuation);
         if (answerHint != null) caption.Hint(answerHint);
     }
 
@@ -261,7 +262,7 @@ public class SpeechToProxy : MonoBehaviour
     void Awake()
     {
         talk = new InputAction("Ask Vincent", InputActionType.Button);
-        talk.AddBinding("<XRController>{RightHand}/secondaryButton");   // B: A is XRI's Jump
+        talk.AddBinding("<XRController>{RightHand}/secondaryButton");   // B; A remains unassigned
         talk.AddBinding("<Keyboard>/b");
         talk.AddBinding("<Keyboard>/t"); // Compatibility for earlier desktop walkthroughs.
         talk.performed += _ => OnPress();
@@ -839,15 +840,22 @@ public class SpeechToProxy : MonoBehaviour
     void SetState(State next)
     {
         bool wasActive = ConversationActive;
+        bool endedOwnSpeech = state == State.Playing && next != State.Playing;
         state = next;
+        // End this utterance before notifying the story: its callback may immediately resume another line in this
+        // same view. Idle hint refreshes (Start/BlockedBy) do not own a scene narrator's active utterance.
+        if (dialogueUI != null)
+        {
+            if (endedOwnSpeech) dialogueUI.EndSpeech();
+            if (next == State.Idle && wasActive) dialogueUI.SetHint(null, null);
+        }
         if (wasActive != ConversationActive) ConversationChanged?.Invoke(ConversationActive);
         if (dialogueUI != null && next != State.Idle)
         {
-            string hint = next == State.Recording ? "Listening… Release B to send" :
+            string hint = next == State.Recording ? "Listening… Release {B} to send" :
                 next == State.Waiting ? "Vincent is thinking…" :
                 next == State.Error ? "Vincent can't hear you right now" : null;
             dialogueUI.SetHint("Talk to Vincent", hint);
-            if (next != State.Playing) dialogueUI.Clear();
         }
         Debug.Log($"[VanGogh Talk] {name}: {next} (hold B / release to send)");
         if (next == State.Error) errorUntil = Time.time + ErrorSeconds;
@@ -863,7 +871,7 @@ public class SpeechToProxy : MonoBehaviour
             case State.Error: caption.Hint("Vincent can't hear you right now"); break;
             default: caption.Hint(null); break;   // speaking: his words show instead
         }
-        if (next != State.Playing) caption.Words(null);   // they fade a second after his voice stops
+        if (endedOwnSpeech) caption.Words(null);   // the shared box keeps the last subtitle until closed/replaced
     }
 
     /// <summary>16-bit PCM WAV, mono.</summary>

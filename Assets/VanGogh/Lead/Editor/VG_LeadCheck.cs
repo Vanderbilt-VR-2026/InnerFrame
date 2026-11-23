@@ -41,7 +41,7 @@ public static class VG_LeadCheck
     {
         log = new StringBuilder();
         passes = failures = 0;
-        try { Walk(); TurnFirst(); End(); Descent(); }
+        try { Walk(); TurnFirst(); End(); Descent(); VisitorPacing(); }
         catch (Exception e) { failures++; W("EXCEPTION: " + e); }
         W($"RESULT: {passes} passed, {failures} failed");
         Directory.CreateDirectory(Path.GetDirectoryName(logPath));
@@ -155,6 +155,56 @@ public static class VG_LeadCheck
             if (max > 0f) Check(steepest <= max + 0.1f && steepest >= max - 0.5f && below < 1e-4f, $"maxDescentDeg {max}: down at {steepest:F2} deg at the steepest over a 45 deg drop, never under the ground; {lead.body.position.y:F2} m at the end (the ground {lead.GroundHeight(0f, 4f):F2})");
             else Check(steepest > 40f, $"control, maxDescentDeg 0: he follows the drop ({steepest:F1} deg)");
         }
+    }
+
+    static void VisitorPacing()
+    {
+        W("== 5. A visitor who stops, catches up, changes height, or teleports ahead");
+        var lead = World(new[] { Vector3.forward * 12f }, out _);
+        var visitor = new GameObject("Visitor head").transform;
+        visitor.position = new Vector3(0f, 1.7f, -1f);
+        lead.Visitor = () => visitor;
+        lead.Begin();
+        float fastest = 0f, slowestNearLimit = 1f;
+        for (int i = 0; i < 600 && !lead.WaitingForVisitor; i++)
+        {
+            lead.Step(Dt);
+            fastest = Mathf.Max(fastest, lead.CurrentSpeed);
+            if (lead.VisitorDistance > 2.5f && !lead.WaitingForVisitor)
+                slowestNearLimit = Mathf.Min(slowestNearLimit, lead.CurrentSpeed);
+        }
+        Check(fastest > 0.5f && fastest <= VG_Lead.VisitorSpeedLimit + 0.001f && slowestNearLimit < 0.4f,
+            $"visitor pacing caps at {fastest:F3} m/s and slows to {slowestNearLimit:F3} m/s before waiting");
+        var stopped = lead.body.position;
+        for (int i = 0; i < 400; i++) lead.Step(Dt);
+        Check(lead.WaitingForVisitor && lead.State == VG_LeadState.Walking && Flat(lead.body.position - stopped) < 0.0001f,
+            "stationary visitor: he waits in place for 20 s, without inventing arrival");
+        Check(Flat(stopped - visitor.position) <= VG_Lead.WaitDistance + 0.04f,
+            "he stops within one frame of the 3 m gap");
+        visitor.position = stopped - Vector3.forward * 2.5f + Vector3.up * 1.7f;
+        lead.Step(Dt);
+        Check(lead.WaitingForVisitor && lead.body.position == stopped, "inside 3 m but still beyond 2 m: no start/stop flicker");
+        visitor.position = stopped - Vector3.forward * 1.8f + Vector3.up * 9f;
+        lead.Step(Dt);
+        Check(!lead.WaitingForVisitor && Flat(lead.body.position - stopped) > 0f && lead.VisitorDistance < 2f,
+            "catching up resumes him; a large vertical difference does not count as distance behind");
+        lead.Visitor = () => null;
+        stopped = lead.body.position;
+        lead.Step(Dt);
+        Check(lead.WaitingForVisitor && lead.body.position == stopped && lead.CurrentSpeed == 0f,
+            "missing tracked head: stop, instead of leaving the visitor behind");
+        visitor.position = lead.body.position + Vector3.forward * 5f + Vector3.up * 1.7f;
+        lead.Visitor = () => visitor;
+        for (int i = 0; i < 20; i++) lead.Step(Dt);
+        Check(!lead.WaitingForVisitor && Flat(lead.body.position - stopped) > 0.1f,
+            "visitor teleports ahead: he may approach along his safe path");
+        for (int i = 0; i < 600 && lead.State == VG_LeadState.Walking; i++)
+        {
+            visitor.position = lead.body.position - Vector3.forward + Vector3.up * 1.7f;
+            lead.Step(Dt);
+        }
+        Check(lead.State == VG_LeadState.Arrived && lead.Remaining == 0f,
+            "visitor follows: the original path still reaches its real final waypoint");
     }
 
     static float Flat(Vector3 v) => new Vector2(v.x, v.z).magnitude;

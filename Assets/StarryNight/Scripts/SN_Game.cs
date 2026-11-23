@@ -91,6 +91,25 @@ namespace InnerFrame.StarryNight
         [Tooltip("The shared dialogue box and hint (VG_DialogueUI, the StarryNight settings); stepped here, not by itself.")]
         public VG_DialogueUI ui;
         public SN_Beam beam;
+        public SN_NotebookGuide notebook;
+        public SN_Soundscape soundscape;
+        public SN_PhysicalGuidance guidance;
+        public bool PhysicalInstructions => notebook != null && notebook.IsPresent;
+        bool physicalInstructionsShown;
+
+        /// <summary>Activity instructions live on the sketchbook. Recording/errors and optional subtitles remain separate.</summary>
+        public void SetActivityHint(string title, string line)
+        {
+            physicalInstructionsShown = PhysicalInstructions;
+            if (ui != null) ui.SetHint(title, physicalInstructionsShown ? null : line);
+            notebook?.Refresh();
+        }
+
+        public void RefreshActivityHint()
+        {
+            bool pageReady = State == SN_State.Dawn && PageShown;
+            SetActivityHint(pageReady ? PageTitle : TitleFor(State), pageReady ? TakeThePage : HintFor(State));
+        }
 
         public SN_IInput Input { get; set; }
         public Transform HeadOverride { get; set; }
@@ -153,7 +172,20 @@ namespace InnerFrame.StarryNight
 
         /// <summary>Whether a menu is open, so the scene takes no input (Step). The player menu (Assets/Script/Menu: Back to
         /// Gallery, and the way back at Done) is this scene's only menu; a new one goes here too.</summary>
-        public static bool MenuOpen => PlayerMenu.MenuOpen;
+        public static bool MenuOpen => PlayerMenu.BlocksSceneInput;
+
+        int notebookInputHands;
+        bool HandUsesFloatingPanel(int hand) => Input.TryGetAim(hand, out var ray) && VG_PanelInteraction.BlocksHand(Input.Hand(hand), ray);
+        bool HandUsesPanel(int hand) => (hand >= 0 && hand < 31 && (notebookInputHands & (1 << hand)) != 0) || HandUsesFloatingPanel(hand);
+
+        void ReadNotebookInput()
+        {
+            notebookInputHands = 0;
+            if (Input == null || notebook == null) return;
+            for (int h = 0; h < Input.HandCount && h < 31; h++)
+                if (notebook.TryHandlePageInput(h, Input, !MenuOpen && !HandUsesFloatingPanel(h)))
+                    notebookInputHands |= 1 << h;
+        }
 
         public void Begin()
         {
@@ -170,18 +202,23 @@ namespace InnerFrame.StarryNight
 
         public void Step(float dt)
         {
+            Input?.Tick();
+            // Reading does not advance the story. Keep page-trigger capture/release alive even during conversation,
+            // and consume that hand before lantern, stars, wind or the final page can see the same press.
+            ReadNotebookInput();
             // Free conversation pauses the story clock and prop progression, keeping its place.
             if (voice != null && voice.ConversationPaused)
             {
+                guidance?.Step(dt);
                 if (ui != null) ui.Step(dt);
                 if (exit != null) exit.Hold();   // his walk waits too
                 if (vincentDriver != null) vincentDriver.Step(dt, Head);
                 return;
             }
             Clock += dt;
-            Input?.Tick();
             var head = Head;
             if (head == null || Input == null) return;
+            if (physicalInstructionsShown != PhysicalInstructions) RefreshActivityHint();
             Vector3 hp = head.position;
             ApplyRoom();
 
@@ -190,14 +227,14 @@ namespace InnerFrame.StarryNight
             // follow the hand either. The story, the voice and the sky go on.
             bool menu = MenuOpen;
             int down = -1;
-            if (!menu) for (int h = 0; h < Input.HandCount; h++) if (Input.TriggerDown(h)) { down = h; break; }
+            if (!menu) for (int h = 0; h < Input.HandCount; h++) if (!HandUsesPanel(h) && Input.TriggerDown(h)) { down = h; break; }
             if (down >= 0) aimHand = down;
 
             // the lantern (2026-11-09): the trigger turns it down when that hand holds it, points at it or touches it (or, held,
             // either hand's trigger); until then it calls (a slow pulse), and a ray or a hand on it brightens it and buzzes once
             bool calling = !lanternDown && !lantern.IsDown && !lantern.Dimming;
             int targets = 0;
-            if (calling && !menu) for (int h = 0; h < Input.HandCount && h < 31; h++) if (LanternTargeted(h)) targets |= 1 << h;
+            if (calling && !menu) for (int h = 0; h < Input.HandCount && h < 31; h++) if (!HandUsesPanel(h) && LanternTargeted(h)) targets |= 1 << h;
             for (int h = 0; h < Input.HandCount && h < 31; h++)
                 if ((targets & (1 << h)) != 0 && (lanternTargets & (1 << h)) == 0) Input.Haptic(h, layout.lanternHapticAmplitude, layout.lanternHapticSeconds);
             lanternTargets = targets;
@@ -217,7 +254,7 @@ namespace InnerFrame.StarryNight
             // it too (SN_Grabbable: its XRGrabInteractable)
             bool pageOpen = PageOpen;
             int pTargets = 0;
-            if (pageOpen && !menu) for (int h = 0; h < Input.HandCount && h < 31; h++) if (PageTargeted(h)) pTargets |= 1 << h;
+            if (pageOpen && !menu) for (int h = 0; h < Input.HandCount && h < 31; h++) if (!HandUsesPanel(h) && PageTargeted(h)) pTargets |= 1 << h;
             for (int h = 0; h < Input.HandCount && h < 31; h++)
                 if ((pTargets & (1 << h)) != 0 && (pageTargets & (1 << h)) == 0) Input.Haptic(h, layout.lanternHapticAmplitude, layout.lanternHapticSeconds);
             pageTargets = pTargets;
@@ -283,7 +320,7 @@ namespace InnerFrame.StarryNight
                     }
                     voice.Say("L09");
                     morningStarArmed = true;
-                    if (ui != null) ui.SetHint(PageTitle, TakeThePage);
+                    SetActivityHint(PageTitle, TakeThePage);
                 }
             }
             if (morningStarArmed && !voice.Busy)
@@ -310,6 +347,8 @@ namespace InnerFrame.StarryNight
             else idle = 0f;
 
             StepBeam(head, menu);
+            guidance?.Step(dt);
+            notebook?.Refresh();
             sky.Step(dt, hp, layout.starBloomSeconds);
             if (beam != null) beam.Step(dt);
             voice.Step(dt);
@@ -417,6 +456,7 @@ namespace InnerFrame.StarryNight
             var star = sky.FindStar(aim, layout.aimAssistDeg);
             if (star == null || star.IsWoken) return;
             WakeStar(star);
+            soundscape?.OnLocalStarWoken(star);
         }
 
         void WakeStar(SN_Star star)
@@ -452,7 +492,8 @@ namespace InnerFrame.StarryNight
         void UpdateHover(bool menu)
         {
             SN_Star hover = null;
-            if (!menu && State >= SN_State.Arrive && State <= SN_State.Wind && Input.TryGetAim(aimHand >= 0 ? aimHand : Input.HandCount - 1, out var aim))
+            int hand = aimHand >= 0 ? aimHand : Input.HandCount - 1;
+            if (!menu && !HandUsesPanel(hand) && State >= SN_State.Arrive && State <= SN_State.Wind && Input.TryGetAim(hand, out var aim))
                 hover = sky.FindStar(aim, layout.aimAssistDeg);
             foreach (var s in sky.Stars) s.Hover = s == hover ? 1f : 0f;
         }
@@ -462,7 +503,7 @@ namespace InnerFrame.StarryNight
             Vector3 next = sky.PathPoint(windPassed);
             for (int h = 0; h < Input.HandCount; h++)
             {
-                if (!Input.TriggerHeld(h) || !Input.TryGetAim(h, out var aim)) continue;
+                if (HandUsesPanel(h) || !Input.TriggerHeld(h) || !Input.TryGetAim(h, out var aim)) continue;
                 if (Vector3.Angle(aim.direction, next - aim.origin) > layout.windToleranceDeg) continue;
                 windPassed++;
                 idle = 0f;
@@ -510,7 +551,7 @@ namespace InnerFrame.StarryNight
             if (beam == null) return;
             bool aiming = !menu && (State == SN_State.Stars || State == SN_State.Wind || PageOpen || (exit != null && exit.CardOpen));
             int h = aimHand >= 0 ? aimHand : Input.HandCount - 1;
-            if (!aiming || !Input.TryGetAim(h, out var aim)) { beam.Hide(); return; }
+            if (!aiming || HandUsesPanel(h) || !Input.TryGetAim(h, out var aim)) { beam.Hide(); return; }
             Vector3 from = aim.origin, dir = aim.direction;
             if (Input.AimsFromHead)   // the mouse aims from the eye: start the beam a little below and to the right
             {
@@ -539,7 +580,7 @@ namespace InnerFrame.StarryNight
         {
             State = s;
             Raise(s);
-            if (ui != null) ui.SetHint(TitleFor(s), HintFor(s));
+            SetActivityHint(TitleFor(s), HintFor(s));
         }
 
         void Raise(SN_State s)

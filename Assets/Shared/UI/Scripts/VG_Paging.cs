@@ -8,8 +8,8 @@ using UnityEngine.UI;
 /// A speaker's line as pages on two labels that cross-fade (VG_DialogueUI's box, VanGoghCaption's sign). A page is a
 /// sentence, cut after . ! ? or … and a space; a piece under ShortPage words joins the next. Each page is fitted to the
 /// labels' width within the caller's limits and lasts its share of the clip by characters (without a clip, 0.06 s a
-/// character and at least 2 s); the voice's own time turns the pages while it plays. The words show until End(), then
-/// a second more.
+/// character and at least 2 s); the voice's own time turns the pages while it plays. End normally leaves a second
+/// more; spoken-caption callers can instead retain the final page for manual dismissal or replacement.
 /// </summary>
 public class VG_Paging
 {
@@ -23,7 +23,7 @@ public class VG_Paging
 
     public readonly List<Page> Pages = new List<Page>();
     public int Current { get; private set; } = -1;
-    /// <summary>His words are up: from Show until a second after End.</summary>
+    /// <summary>The words remain available to render, including a retained final caption after speech has ended.</summary>
     public bool Showing => left > 0f;
     /// <summary>Called with the lines to make room for: when a page turns (the page fading out too) and when it's in.</summary>
     public Action<int> Resize;
@@ -38,12 +38,18 @@ public class VG_Paging
     public VG_Paging(Text[] labels, float width, Color colour) { this.labels = labels; this.width = width; this.colour = colour; }
 
     /// <summary>Pages `text` at font size `size`, shrinking by 2 down to `least` to keep each page to `most` lines;
-    /// then, with `third` above 0, on three lines at size `third`; then split at the comma (or space) nearest its middle.</summary>
-    public void Show(string text, float clipSeconds, int size, int least, int most, int third)
+    /// then, with `third` above 0, on three lines at size `third`; then split at the comma (or space) nearest its middle.
+    /// Spoken captions may keep a whole short line together only if it fits at the requested size and line limit.</summary>
+    public void Show(string text, float clipSeconds, int size, int least, int most, int third, bool combineIfFits = false)
     {
         left = float.PositiveInfinity;
         Pages.Clear();
-        foreach (var sentence in Sentences(text)) Fit(sentence, size, least, most, third);
+        string whole = text.Trim();
+        int wholeLines = combineIfFits ? Lines(size, whole) : most + 1;
+        if (combineIfFits && wholeLines <= most)
+            Pages.Add(new Page { text = whole, size = size, lines = wholeLines });
+        else
+            foreach (var sentence in Sentences(whole)) Fit(sentence, size, least, most, third);
         float chars = 0f, at = 0f;
         foreach (var p in Pages) chars += p.text.Length;
         for (int i = 0; i < Pages.Count; i++)
@@ -60,7 +66,12 @@ public class VG_Paging
         labels[1 - front].gameObject.SetActive(false);
     }
 
-    public void End() => left = Mathf.Min(left, Linger);
+    /// <summary>Ends the caller's speech. Spoken captions may keep their last page for the reader; other presenters
+    /// retain the usual short fade. Showing is visual state, not a signal that audio is still playing.</summary>
+    public void End(bool keepLastPage = false)
+    {
+        if (!keepLastPage) left = Mathf.Min(left, Linger);
+    }
 
     /// <summary>How long a line shows without a clip, for a caller that ends its lines itself (pages split by Fit add
     /// their 2 s minimum on top).</summary>

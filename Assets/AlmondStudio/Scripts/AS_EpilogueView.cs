@@ -57,6 +57,8 @@ namespace InnerFrame.AlmondStudio
             view.credit = Label(go.transform, "Credit", font, FontStyle.Italic, 11, 8, new Color(0.45f, 0.36f, 0.27f));
             Band(view.credit.rectTransform, CardH - 36f, 24f);
             view.credit.alignment = TextAnchor.MiddleCenter;
+            foreach (var graphic in go.GetComponentsInChildren<Graphic>()) graphic.raycastTarget = false;
+            VG_PanelInteraction.Attach(paper.rectTransform, go.transform, canvas, view.Hide);
             go.SetActive(false);
             return view;
         }
@@ -104,10 +106,6 @@ namespace InnerFrame.AlmondStudio
         {
             if (follow == null) return;
             group.alpha = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((Time.time - shown) / fadeSeconds));
-            Target(out var pos, out var rot);
-            float k = Mathf.Clamp01(3f * Time.deltaTime);
-            transform.position = Vector3.Lerp(transform.position, pos, k);
-            transform.rotation = Quaternion.Slerp(transform.rotation, rot, k);
         }
 
         float ParentScale() => transform.parent != null && transform.parent.lossyScale.x > 1e-6f ? 1f / transform.parent.lossyScale.x : 1f;

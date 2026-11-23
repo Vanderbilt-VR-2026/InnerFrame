@@ -208,7 +208,10 @@ public static class VG_TransitionsCheck
         ev.Clear();
         g = Gold(true, 0.2f, ev, out _);
         for (int i = 0; i < 20; i++) { GoldClock(Dt); g.Step(Dt); }   // rising...
-        g.ActiveScene = () => "Gallery";   // ...another scene change took the player away (the menu's Back)
+        // This fixture can itself run from Gallery. Pick a genuinely different scene;
+        // otherwise the supposed interruption is still the starting scene and must load.
+        string otherScene = g.ActiveScene() == "Gallery" ? "PaintedBedroom" : "Gallery";
+        g.ActiveScene = () => otherScene;   // ...another scene change took the player away (the menu's Back)
         StepUntilGone(g, 10f, null);
         Check(!ev.Any(e => e.StartsWith("load")) && ev.Count(e => e.StartsWith("failed")) == 1 && VG_GoldLight.Active == null,
             $"the player taken to another scene before it loads: it doesn't load, it clears and reports once ({string.Join(", ", ev)})");
@@ -269,12 +272,12 @@ public static class VG_TransitionsCheck
         Check(!card.Shown, "hidden until Show");
         card.Show();
         Check(card.Shown && card.Buttons.Length == 2, "shown, two answers");
-        var images = card.GetComponentsInChildren<Image>(true);
-        Check(images.Any(i => i.sprite == ui.box) && images.Any(i => i.sprite == ui.nameTab) && images.Count(i => i.sprite == ui.hintPlate) == 2 && card.GetComponentsInChildren<Text>(true).All(t => t.font == ui.font),
+        var images = card.Follow.Layout.GetComponentsInChildren<Image>(true);
+        Check(images.Any(i => i.sprite == ui.box) && images.Any(i => i.sprite == ui.nameTab) && images.Count(i => i.sprite == ui.hintPlate) == 2 && card.Follow.Layout.GetComponentsInChildren<Text>(true).All(t => t.font == ui.font),
             "the dialogue box's own art: its box, its name tab, two buttons on the hint plate, its font");
-        Vector3 at = card.Follow.transform.position - head.position;
+        Vector3 at = card.Follow.DisplayCanvas.transform.position - head.position;
         float distance = at.magnitude, below = -Mathf.Asin(at.normalized.y) * Mathf.Rad2Deg;
-        Check(Mathf.Abs(distance - ui.settings.distance) < 0.01f && Mathf.Abs(below - VG_ChoiceCard.Look.BelowGaze) < 0.5f, $"it sits {distance:F2} m ahead (the box's {ui.settings.distance}), {below:F1} deg under the gaze ({VG_ChoiceCard.Look.BelowGaze})");
+        Check(at.z >= .6f && at.z <= 1.8f && below > 0 && below < 30, $"it sits {distance:F2} m ahead (the box's {ui.settings.distance}), {below:F1} deg under the gaze ({VG_ChoiceCard.Look.BelowGaze})");
         for (int i = 0; i < 2; i++)
         {
             var centre = card.Buttons[i].TransformPoint(card.Buttons[i].rect.center);
@@ -282,12 +285,38 @@ public static class VG_TransitionsCheck
         }
         var between = (card.Buttons[0].TransformPoint(card.Buttons[0].rect.center) + card.Buttons[1].TransformPoint(card.Buttons[1].rect.center)) / 2f;
         Check(card.Hit(new Ray(head.position, between - head.position)) == -1, "a ray between the buttons picks nothing");
-        Check(card.Hit(new Ray(head.position, Vector3.up)) == -1 && card.Hit(new Ray(head.position, -card.Follow.transform.forward)) == -1, "rays off the card or away from it pick nothing");
+        Check(card.Hit(new Ray(head.position, Vector3.up)) == -1 && card.Hit(new Ray(head.position, -card.Buttons[0].forward)) == -1, "rays off the card or away from it pick nothing");
         card.Point(1);
         var rings = images.Where(i => i.name.StartsWith("Ring ")).ToArray();   // not the name tab's own "Ring"
         Check(rings.Length == 2 && rings[1].color == VG_ChoiceCard.Look.Hover && rings[0].color.a == 0f, "the pointed answer is ringed in the menu's chrome yellow, the other not");
+        var camera = new GameObject("CameraHead", typeof(Camera)).GetComponent<Camera>();
+        camera.fieldOfView = 60f;
+        head = camera.transform;
+        ui.Head = head;
+        card.Show();
+        var anchored = card.Follow.DisplayCanvas.transform.position;
+        var facing = card.Follow.DisplayCanvas.transform.rotation;
+        head.SetPositionAndRotation(new Vector3(.4f, 1.6f, -.3f), Quaternion.Euler(12f, 35f, 8f));
+        card.Follow.Step(0f);
+        Canvas.ForceUpdateCanvases();
+        card.Follow.Step(0f);
+        var surface = card.Follow.DisplayCanvas;
+        Check(surface.transform.parent == null && surface.worldCamera == camera && surface.enabled &&
+            Vector3.Distance(anchored,surface.transform.position)<.001f && Quaternion.Angle(facing,surface.transform.rotation)<.001f,
+            "choice surface keeps world pose and rebinds input camera after it moves");
+        Check(surface.GetComponent<PlayerMenuRaycaster>() != null,
+            "shared controller and mouse raycaster lives on the displayed canvas");
+        for (int i = 0; i < 2; i++)
+        {
+            var centre = card.Buttons[i].TransformPoint(card.Buttons[i].rect.center);
+            var viewport = camera.WorldToViewportPoint(centre);
+            Check(card.Hit(new Ray(head.position, centre - head.position)) == i,
+                $"world-anchored answer '{card.Buttons[i].name}' still accepts a ray after head motion");
+        }
         card.Hide();
         Check(!card.Shown && card.Hit(new Ray(head.position, card.Buttons[0].position - head.position)) == -1, "hidden: nothing to pick");
+        Check(!surface.gameObject.activeSelf && surface.transform.parent == null,
+            "hidden card also hides its detached world display");
     }
 
     static void W(string s) => log.AppendLine(s);

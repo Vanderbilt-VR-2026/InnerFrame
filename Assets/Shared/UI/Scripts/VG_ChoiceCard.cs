@@ -6,7 +6,7 @@ using UnityEngine.XR.Interaction.Toolkit.UI;
 
 /// <summary>
 /// A question and its answers, in the dialogue box's look: the box itself (VG_DialogueBox: the name tab, the words)
-/// with a row of buttons in it. It follows the view as the box does (VG_FollowGroup), a little higher, and stays until
+/// with a row of buttons in it. It opens in front of the player, remains anchored in the world, and stays until
 /// the scene hides it. Two ways to pick, whichever the scene uses: its own pointing (Hit and Point, then the scene's
 /// trigger: The Starry Night's beam), or XRI's controller rays on its buttons, as on the player menu (Picked: The
 /// Bedroom). Made from a VG_DialogueUI's art and font, so there is no second copy. Restyle it in Look only.
@@ -29,6 +29,9 @@ public class VG_ChoiceCard : MonoBehaviour
     }
 
     public VG_FollowGroup Follow { get; private set; }
+    public bool Dismissed { get; private set; }
+    public void Dismiss() { Dismissed = true; Hide(); }
+    public void RestoreDismissed() { if (Dismissed) { Dismissed = false; Follow.Snap(); } }
     public RectTransform[] Buttons { get; private set; }
     public int Hovered { get; private set; } = -1;
     public bool Shown => gameObject.activeSelf;
@@ -43,21 +46,20 @@ public class VG_ChoiceCard : MonoBehaviour
     {
         var go = new GameObject("VG_ChoiceCard", typeof(RectTransform));
         go.transform.SetParent(parent, false);
-        go.AddComponent<Canvas>().renderMode = RenderMode.WorldSpace;
-        go.AddComponent<TrackedDeviceGraphicRaycaster>();   // controller rays, as on the player menu
-        go.AddComponent<GraphicRaycaster>();                // the mouse, in the Editor
-        go.transform.localScale = Vector3.one / (VG_UI.UnitsPerMetre * (parent != null ? parent.lossyScale.x : 1f));
         var card = go.AddComponent<VG_ChoiceCard>();
         card.ui = ui;
         var settings = Instantiate(ui.settings);
         settings.belowGaze = Look.BelowGaze;
         card.Follow = new GameObject("Follow", typeof(RectTransform)).AddComponent<VG_FollowGroup>();
         card.Follow.transform.SetParent(go.transform, false);
-        card.Follow.transform.localScale = Vector3.one * settings.Scale;
-        card.Follow.settings = settings;
-        var onTop = new Material(Canvas.GetDefaultCanvasMaterial());
-        onTop.SetInt("unity_GUIZTestMode", (int)UnityEngine.Rendering.CompareFunction.Always);   // as the dialogue box: nothing cuts through it
-        var box = VG_DialogueBox.Make(card.Follow.transform, settings, ui.font, ui.box, ui.nameTab, ui.starRing, ui.star, onTop);
+        card.Follow.CreateLayout(settings);
+        card.Follow.ViewportY = .5f - .5f * Mathf.Tan(Look.BelowGaze * Mathf.Deg2Rad) / Mathf.Tan(30f * Mathf.Deg2Rad);
+        // Follow owns the display surface, which can move under the active camera.
+        // Both controller and mouse hits must use that same surface.
+        VG_PanelInteraction.EnsureCanvas(card.Follow.DisplayCanvas);
+        var onTop = VG_UI.NewOverlayMaterial("Vincent choice overlay");
+        var box = VG_DialogueBox.Make(card.Follow.Layout, settings, ui.font, ui.box, ui.nameTab, ui.starRing, ui.star, onTop);
+        card.Follow.DialogueBox = box;
         box.Speaker(speaker);
         box.Labels[0].text = question;
         var layout = new TextGenerator();
@@ -65,6 +67,8 @@ public class VG_ChoiceCard : MonoBehaviour
         int lines = Mathf.Max(1, layout.lineCount);   // wrapped as the label wraps it
         box.Lines(lines);
         var panel = box.Labels[0].rectTransform.parent as RectTransform;
+        VG_PanelInteraction.Attach(panel, card.Follow.DisplayCanvas.transform, card.Follow.DisplayCanvas, card.Dismiss)
+            .WithWholeFaceGrip((RectTransform)box.transform.Find("NameTab"));
         panel.sizeDelta += new Vector2(0f, VG_UI.U(Look.ButtonHeight + Look.Margin));
         float y = -panel.sizeDelta.y / VG_UI.UnitsPerMetre + Look.Margin + Look.ButtonHeight / 2f;
         float x0 = -(answers.Length * Look.ButtonWidth + (answers.Length - 1) * Look.ButtonGap) / 2f + Look.ButtonWidth / 2f;
@@ -78,6 +82,7 @@ public class VG_ChoiceCard : MonoBehaviour
             card.rings[i].color = Look.Idle;
             var button = VG_UI.Picture(answers[i], box.transform, Look.ButtonSprite(ui), new Vector2(0.5f, 0.5f), at, size, Look.Slice, onTop);
             button.color = settings.plateTint;
+            button.raycastTarget = true;
             var label = VG_UI.Label("Label", button.transform, ui.font, settings.Cap(settings.lineCap), settings.lineColour, new Vector2(0.5f, 0.5f), TextAnchor.MiddleCenter, onTop);
             label.text = answers[i];
             label.raycastTarget = false;
@@ -106,15 +111,26 @@ public class VG_ChoiceCard : MonoBehaviour
             events.AddComponent<EventSystem>();
             events.AddComponent<XRUIInputModule>();
         }
-        gameObject.SetActive(true); Follow.head = ui.Head; Follow.Snap(); Point(-1);   // the dialogue box's head (a test's, or the camera)
+        gameObject.SetActive(true);
+        Follow.DisplayCanvas.gameObject.SetActive(true);
+        Follow.head = ui.Head;
+        if (!Follow.Placed) Follow.Snap();
+        Point(-1);
     }
-    public void Hide() => gameObject.SetActive(false);
+    public void Hide()
+    {
+        Follow.ReleaseView();
+        Follow.DisplayCanvas.gameObject.SetActive(false);
+        gameObject.SetActive(false);
+    }
 
     /// <summary>The answer this ray points at, or -1.</summary>
     public int Hit(Ray ray)
     {
         if (!Shown) return -1;
-        var plane = new Plane(Follow.transform.forward, Follow.transform.position);
+        // The rear has no answers. A scene's custom ray path must match the native UI front-face rule.
+        if (Vector3.Dot(Buttons[0].forward, ray.direction) <= 0f) return -1;
+        var plane = new Plane(Buttons[0].forward, Buttons[0].position);
         if (!plane.Raycast(ray, out float distance)) return -1;
         Vector3 p = ray.GetPoint(distance);
         for (int i = 0; i < Buttons.Length; i++)

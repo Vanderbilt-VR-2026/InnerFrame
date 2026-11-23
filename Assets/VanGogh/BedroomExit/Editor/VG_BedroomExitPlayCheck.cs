@@ -36,6 +36,7 @@ public static class VG_BedroomExitPlayCheck
     static float alphaOnFirstFrame = -1f;
     static string lastScene, nextScene, cafeFromGallery, cafeFromBedroom;
     static Fusion.NetworkRunner solo;
+    static Transform visitor;
     static System.Threading.Tasks.Task<Fusion.StartGameResult> soloStart;
     static readonly List<string> lines = new List<string>(), errors = new List<string>(), warnings = new List<string>();
 
@@ -74,6 +75,9 @@ public static class VG_BedroomExitPlayCheck
     {
         var exit = Object.FindAnyObjectByType<VG_BedroomExit>();
         if (exit == null) return null;
+        visitor = new GameObject("Bedroom exit test visitor").transform;
+        visitor.position = Camera.main != null ? Camera.main.transform.position : exit.lead.body.position + Vector3.up * 1.6f;
+        exit.lead.Visitor = () => visitor; // simulated pacing input only; the gold still uses the real scene camera
         var ms = exit.mirror;
         ms.Resume(23.7f, true);
         var park = ms.ParkPose();
@@ -104,6 +108,9 @@ public static class VG_BedroomExitPlayCheck
         string scene = SceneManager.GetActiveScene().name;
         if (scene != lastScene) { lastScene = scene; StopJoin(); }
         var exit = Object.FindAnyObjectByType<VG_BedroomExit>();
+        if (exit != null && visitor != null &&
+            (exit.flow.Now == VG_ExitFlow.Beat.Walking || exit.flow.Now == VG_ExitFlow.Beat.Gold))
+            visitor.position = exit.lead.body.position - exit.lead.body.forward * 1.2f + Vector3.up * 1.6f;
         var fader = SceneFader.Instance;
         if (pickedAt > 0 && clearAt < 0)   // from the Follow pick until the gold is gone: every frame
         {

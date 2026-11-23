@@ -3,6 +3,7 @@ using System.Linq;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.UI;
 
 /// <summary>
 /// End-to-end check of Vincent through Convai's web API, no headset or microphone: plays the Gallery, sends a recorded
@@ -95,9 +96,11 @@ public static class ConvaiDirectTest
                 WatchClips();
                 if (string.IsNullOrEmpty(talker.LastReply) || !talker.voice.isPlaying || talker.voice.clip == null) return;
                 if (EditorApplication.timeSinceStartup - stepStarted < .25) return;
+                if (!VisibleReply(talker)) return; // actual reply text must reach an enabled, visible subtitle panel
                 var music = InnerFrame.Entrance.EntranceAudioDirector.Ensure();
                 if (music.VoiceMusicGain < .24f || music.VoiceMusicGain > .26f) { Finish(false, "Vincent replied but BGM was not retained at 25 percent"); return; }
                 Debug.Log("[ConvaiDirectTest] Voice priority PASS: BGM at " + music.VoiceMusicGain.ToString("F2") + " gain");
+                Debug.Log("[ConvaiDirectTest] Subtitle PASS: live reply text is visible in the shared dialogue canvas");
                 string clipName = talker.voice.clip.name;
                 bool voiced = clipName == "Convai reply" || clipName == VincentVoice.ClipName;
                 string whose = clipName == VincentVoice.ClipName ? "his headset voice" : "his Convai voice";
@@ -134,5 +137,21 @@ public static class ConvaiDirectTest
         bool exit = SessionState.GetBool(KeyExit, false);
         EditorApplication.isPlaying = false;
         if (exit) EditorApplication.delayCall += () => EditorApplication.Exit(passed ? 0 : 3);
+    }
+
+    static bool VisibleReply(SpeechToProxy speaker)
+    {
+        foreach (var ui in Object.FindObjectsByType<VG_DialogueUI>(FindObjectsSortMode.None))
+        {
+            if (ui.Voice != speaker.voice || ui.WordsDismissed || !ui.DisplayCanvas.gameObject.activeInHierarchy) continue;
+            foreach (var label in ui.DisplayCanvas.GetComponentsInChildren<Text>())
+            {
+                if (!label.enabled || label.text.Length < 8 || !speaker.LastReply.Contains(label.text)) continue;
+                float alpha = label.color.a;
+                foreach (var group in label.GetComponentsInParent<CanvasGroup>()) alpha *= group.alpha;
+                if (alpha > .5f) return true;
+            }
+        }
+        return false;
     }
 }

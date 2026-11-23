@@ -44,7 +44,7 @@ public static class ConversationDeliveryCheck
         // The B reminder must not replace trigger instructions or grow each frame.
         while (w.game.voice.Busy) w.game.voice.Step(100f);
         var lateUpdate = typeof(SN_Conversation).GetMethod("LateUpdate", BindingFlags.NonPublic | BindingFlags.Instance);
-        var hintUi = w.game.ui.GetComponentInChildren<VG_Hint>(true);
+        var hintUi = w.game.ui.DisplayCanvas.GetComponentInChildren<VG_Hint>(true);
         var hintPlate = (RectTransform)hintUi.transform.Find("Plate");
         var instructionLabel = hintUi.transform.Find("Instruction").GetComponent<UnityEngine.UI.Text>();
         var buttonLine = (RectTransform)hintUi.transform.Find("Line");

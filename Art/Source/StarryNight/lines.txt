@@ -2,12 +2,12 @@
 # Placeholders from the step-2 prompt (2026-11-04); the persona owner may rewrite them. After a change, run
 # make_lines.sh, then Tools > InnerFrame > Starry Night > Build (it reads this file into SN_Lines.asset).
 L01 Ah, a visitor. Sit with me. The night is just beginning.
-L02 Too much light. Let the stars come.
+L02 Too much light. Point at the lantern and pull the trigger.
 L03 There. Now they can find us.
-L04 Wake that one for me, above the hills.
-L05 Now the one over the church.
-L06 And the brightest, just right of the cypress. Do you see it?
-L07 Do you feel the wind? Follow it across the sky.
+L04 Point at the star above the hills and pull the trigger.
+L05 Now the one over the church. Pull the trigger.
+L06 And the brightest, just right of the cypress. Pull the trigger.
+L07 Trace the wind. Hold the trigger and follow the dots.
 L08 Yes. That is how it moves, when you look long enough.
 L09 The morning star is always the last to go. This page is for you.
 L10 You found my sketch. The hills are right. The sky is not, yet.

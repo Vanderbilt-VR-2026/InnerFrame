@@ -14,6 +14,19 @@ public static class VG_UI
     public static int FontSize(float capHeight) => Mathf.RoundToInt(capHeight / CapPerEm * UnitsPerMetre);
     public static float LineHeight(float capHeight) => FontSize(capHeight) * LinePerEm;
 
+    /// <summary>Readable world panels keep their world pose, but scene geometry cannot erase their text.
+    /// The resource explicitly includes XRI's fixed-ZTest shader in the player build; a per-instance copy is owned by its caller.</summary>
+    public static Material NewOverlayMaterial(string name)
+    {
+        var source = Resources.Load<Material>("VG_WorldPanelOverlay");
+        if (source == null)
+        {
+            Debug.LogError("[UI] Missing VG_WorldPanelOverlay resource material.");
+            return new Material(Canvas.GetDefaultCanvasMaterial()) { name = name };
+        }
+        return new Material(source) { name = name };
+    }
+
     /// <summary>An empty rectangle whose `pivot` sits at `at` (metres) from its parent's centre.</summary>
     public static RectTransform Rect(string name, Transform parent, Vector2 pivot, Vector2 at)
     {

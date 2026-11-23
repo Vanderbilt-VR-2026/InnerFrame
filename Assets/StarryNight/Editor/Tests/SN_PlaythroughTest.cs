@@ -30,8 +30,12 @@ namespace InnerFrame.StarryNight.EditorTools
             public SN_InputScripted input;
             public Transform head;
             public SN_Layout L;
-            /// <summary>Every title the hint showed in each state, sampled after every step (2026-11-10).</summary>
+            /// <summary>Fallback hint title/text, or the manual book's current-task marker, sampled after every step.</summary>
             public readonly Dictionary<SN_State, HashSet<string>> titles = new Dictionary<SN_State, HashSet<string>>();
+            public readonly Dictionary<SN_State, HashSet<string>> hintLines = new Dictionary<SN_State, HashSet<string>>();
+            public readonly Dictionary<SN_State, HashSet<int>> taskPages = new Dictionary<SN_State, HashSet<int>>();
+            public bool incorrectTaskMarker;
+            public bool floatingHintSeen;
         }
 
         [MenuItem("Tools/InnerFrame/Starry Night/Run Playthrough Test")]
@@ -127,15 +131,20 @@ namespace InnerFrame.StarryNight.EditorTools
             Check(w.game.NamedProgress == 1, "N1 woken -> Vincent names N2 (L05)");
             Step(w, 4f);
             // the letter: hold the sketchbook up against the view toward the valley
+            int readingPage = w.game.notebook != null ? w.game.notebook.CurrentPage : -1;
             LookAt(w, w.head.position + SN_Layout.Dir(0f, -5f));
             w.game.sketchbook.HoldFallback(w.head);
             Step(w, L.sketchHoldSeconds + 0.3f);
             Check(w.game.LetterFound, "sketchbook held up toward the valley for 1.5 s -> letter found (L10)");
             w.game.sketchbook.ReleaseFallback();
-            // the letter is a side event: once L10 is over, the Stars hint is still shown and the idle repeat still fires
+            // The letter is a side event: the activity stays Stars and the idle repeat still fires.
             for (int guard = 0; w.game.voice.Busy && guard < 600; guard++) Step(w, Dt);
-            Check(w.game.State == SN_State.Stars && w.game.ui.HintLine == SN_Game.HintFor(SN_State.Stars),
-                $"letter during Stars: after L10 the hint is the Stars hint (\"{w.game.ui.HintLine}\")");
+            bool starsInstruction = w.game.PhysicalInstructions
+                ? w.game.notebook.CurrentTaskPage == 1 && w.game.notebook.CurrentPage == readingPage &&
+                    w.game.notebook.IsCurrentTaskPage == (readingPage == 1) && !w.game.ui.HintVisible
+                : ShownTitle(w.game.ui) == SN_Game.TitleFor(SN_State.Stars) && w.game.ui.HintLine == SN_Game.HintFor(SN_State.Stars);
+            Check(w.game.State == SN_State.Stars && starsInstruction,
+                "letter during Stars: after L10 the task remains Stars and the manual reading page is preserved (or Stars fallback hint)");
             var repeated = new List<string>();
             Action<string, float> onRepeat = (id, d) => repeated.Add(id);
             w.game.voice.LineStarted += onRepeat;
@@ -201,12 +210,14 @@ namespace InnerFrame.StarryNight.EditorTools
             Check(SameStates(w, SN_State.Arrive, SN_State.Sit, SN_State.Lantern, SN_State.Stars, SN_State.Sketchbook, SN_State.Wind, SN_State.Dawn, SN_State.Done),
                 "transitions: Arrive, Sit, Lantern, Stars, Sketchbook, Wind, Dawn, Done");
             W($"  dialogue box: {w.game.ui.BoxHeight:F3} m tall on its last page; speaking {w.game.ui.IsSpeaking}; title: \"{ShownTitle(w.game.ui)}\"; hint: \"{w.game.ui.HintLine}\"");
-            W("  the hint's title in each state, as drawn after every step:");
-            Check(TitlesRule(w, false), "in each state the hint's title is that state's title (Cici's table, 2026-11-10)");
-            // positive control: a wrong title shown during Done -> the same rule fails
-            w.game.ui.SetHint(SN_Game.TitleFor(SN_State.Stars), SN_Game.HintFor(SN_State.Done));
-            Tick(w);
-            Check(!TitlesRule(w, true), "positive control: \"Wake the stars\" shown during Done -> FAIL");
+            W("  the task marker or fallback instruction in each state, sampled after every step:");
+            Check(InstructionRule(w, false), "each state has its correct Current task marker, or its exact fallback title and text");
+            if (w.game.PhysicalInstructions)
+                Check(!w.floatingHintSeen, "physical instructions: no floating activity hint throughout the whole story");
+            // Inject a wrong-state sample into the same data and rule, not a separate weaker check.
+            if (w.game.PhysicalInstructions) w.taskPages[SN_State.Done].Add(1);
+            else w.titles[SN_State.Done].Add("Wake the stars");
+            Check(!InstructionRule(w, true), "positive control: a Stars task marker (or fallback title) sampled during Done -> FAIL");
         }
 
         static void AimedAway()
@@ -384,32 +395,58 @@ namespace InnerFrame.StarryNight.EditorTools
             Check(w.game.State == SN_State.Stars, "set-up: in Stars");
         }
 
-        /// <summary>One step of the game, then the hint's title as the player sees it, for the state it is in.</summary>
+        /// <summary>One step, then the manual task marker or fallback hint. Printed page selection is independent of story progress.</summary>
         static void Tick(World w)
         {
             w.game.Step(Dt);
             if (w.game.ui == null) return;
-            if (!w.titles.TryGetValue(w.game.State, out var seen)) w.titles[w.game.State] = seen = new HashSet<string>();
-            seen.Add(ShownTitle(w.game.ui));
+            if (w.game.PhysicalInstructions)
+            {
+                if (!w.taskPages.TryGetValue(w.game.State, out var pages)) w.taskPages[w.game.State] = pages = new HashSet<int>();
+                var book = w.game.notebook;
+                pages.Add(book.CurrentTaskPage);
+                int expected = w.game.State == SN_State.Lantern ? 0 : w.game.State == SN_State.Stars ? 1 :
+                    w.game.State == SN_State.Wind ? 2 : w.game.State == SN_State.Dawn && w.game.PageShown ? 3 : -1;
+                w.incorrectTaskMarker |= book.CurrentTaskPage != expected || book.IsCurrentTaskPage != (book.CurrentPage == expected);
+            }
+            else
+            {
+                if (!w.titles.TryGetValue(w.game.State, out var seen)) w.titles[w.game.State] = seen = new HashSet<string>();
+                if (!w.hintLines.TryGetValue(w.game.State, out var lines)) w.hintLines[w.game.State] = lines = new HashSet<string>();
+                seen.Add(ShownTitle(w.game.ui)); lines.Add(w.game.ui.HintLine);
+            }
+            w.floatingHintSeen |= w.game.PhysicalInstructions && w.game.ui.HintVisible;
         }
 
         /// <summary>The hint's title as drawn (VG_Hint's Title label; empty when its row is hidden).</summary>
         static string ShownTitle(VG_DialogueUI ui)
         {
-            var t = ui.GetComponentsInChildren<UnityEngine.UI.Text>(true).FirstOrDefault(x => x.name == "Title");
+            var t = ui.DisplayCanvas.GetComponentsInChildren<UnityEngine.UI.Text>(true).FirstOrDefault(x => x.name == "Title");
             return t != null && t.gameObject.activeSelf ? t.text : "";
         }
 
-        /// <summary>Each state's title, sampled after every step, is exactly the table's (SN_LanternCheck.Table), and only it.</summary>
-        static bool TitlesRule(World w, bool quiet)
+        /// <summary>The manual marker follows real task progress; fallback title/text follow the original scene table.</summary>
+        static bool InstructionRule(World w, bool quiet)
         {
-            bool ok = true;
-            foreach (var (state, title, _) in SN_LanternCheck.Table)
+            bool ok = !w.incorrectTaskMarker;
+            foreach (var (state, title, line) in SN_LanternCheck.Table)
             {
-                // Dawn: its own title while the sky pales, then the page's (Cici, 2026-11-10)
+                if (w.game.PhysicalInstructions)
+                {
+                    int task = state == SN_State.Lantern ? 0 : state == SN_State.Stars ? 1 : state == SN_State.Wind ? 2 : -1;
+                    var wantPages = state == SN_State.Dawn ? new HashSet<int> { -1, 3 } : new HashSet<int> { task };
+                    bool sampled = w.taskPages.TryGetValue(state, out var pages);
+                    bool correct = sampled && pages.SetEquals(wantPages);
+                    ok &= correct;
+                    if (!quiet || !correct) W($"    {state}: task pages {(sampled ? string.Join(" / ", pages) : "(never in it)")}; expected {string.Join(" / ", wantPages)} (-1: no active task)");
+                    continue;
+                }
+                // Dawn has a waiting instruction, then the real page-offer instruction.
                 var want = state == SN_State.Dawn ? new HashSet<string> { title, SN_LanternCheck.DawnPageTitle } : new HashSet<string> { title };
+                var wantLines = state == SN_State.Dawn ? new HashSet<string> { line, SN_LanternCheck.DawnPageLine } : new HashSet<string> { line };
                 bool seen = w.titles.TryGetValue(state, out var set);
-                bool good = seen && set.SetEquals(want);
+                bool linesSeen = w.hintLines.TryGetValue(state, out var lines);
+                bool good = seen && set.SetEquals(want) && linesSeen && lines.SetEquals(wantLines);
                 ok &= good;
                 if (!quiet || !good) W($"    {state}: shown {(seen ? string.Join(" / ", set.Select(x => $"\"{x}\"")) : "(never in it)")}; the table: {string.Join(" / ", want.Select(x => $"\"{x}\""))}");
             }

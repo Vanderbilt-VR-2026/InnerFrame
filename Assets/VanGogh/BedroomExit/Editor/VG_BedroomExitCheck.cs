@@ -67,7 +67,7 @@ public static class VG_BedroomExitCheck
             if ((type == LogType.Error || type == LogType.Exception) && !msg.StartsWith("Instantiating material due to calling renderer.material during edit mode")) errors.Add($"{type}: {msg.Split('\n')[0]}");
         };
         Application.logMessageReceived += onLog;
-        try { Follow(); Back(); FoundOpen(45f); FoundOpen(VG_BedroomExit.OpenDeg); }
+        try { Follow(); Back(); FoundOpen(45f); FoundOpen(VG_BedroomExit.OpenDeg); SlowVisitorAndDoorWait(); }
         catch (Exception e) { failures++; W("EXCEPTION: " + e); }
         finally { Application.logMessageReceived -= onLog; renderDir = null; if (VG_GoldLight.Active != null) VG_GoldLight.Active.End(); }
         W($"Errors logged during the run: {errors.Count}"); foreach (var e in errors) W("  " + e);
@@ -84,6 +84,7 @@ public static class VG_BedroomExitCheck
     {
         public GameObject vincent; public VG_BedroomExit exit; public VG_ExitFlow flow; public MirrorScene mirror; public SpeechToProxy talker;
         public Animator anim; public Transform head; public Camera cam; public List<string> loads = new List<string>(); public int backs; public float lineSeconds;
+        public float visitorGap = 1.2f;
     }
 
     /// <summary>The room with Vincent as he spawns in Play; his voice's state set by hand; the scene changes only counted.</summary>
@@ -116,6 +117,9 @@ public static class VG_BedroomExitCheck
 
     static void Tick(World w)
     {
+        // This route/door check follows him; VG_LeadCheck and SN_ExitCheck also exercise a visitor who stops.
+        if (w.flow.Now == VG_ExitFlow.Beat.Walking || w.flow.Now == VG_ExitFlow.Beat.Gold)
+            w.head.position = w.exit.lead.body.position - w.exit.lead.body.forward * w.visitorGap + Vector3.up * 1.28f;
         w.flow.Step(Dt);
         w.anim.Update(Dt);
         if (VG_GoldLight.Active != null) VG_GoldLight.Active.Step(Dt);
@@ -155,8 +159,9 @@ public static class VG_BedroomExitCheck
         f.Saying = () => f.Clock - asked < w.lineSeconds;
         for (float t = 0f; t < 10f && !f.CardOpen; t += Dt) { Tick(w); early |= f.card != null && f.card.Shown && f.Saying(); }
         Check(!early && f.CardOpen && Mathf.Abs(f.CardAt - asked - w.lineSeconds) <= 2f * Dt, $"the card only after his line ({w.lineSeconds:F2} s): {f.CardAt - asked:F2} s after he asked; never while he speaks");
-        Check(f.card.GetComponent<UnityEngine.XR.Interaction.Toolkit.UI.TrackedDeviceGraphicRaycaster>() != null && f.card.Buttons.All(b => b.GetComponent<UnityEngine.UI.Button>() != null),
-            "the card's buttons take XRI's controller rays (a TrackedDeviceGraphicRaycaster, as on the player menu)");
+        Check(f.card.Follow.DisplayCanvas.GetComponent<UnityEngine.XR.Interaction.Toolkit.UI.TrackedDeviceGraphicRaycaster>() != null &&
+            f.card.Buttons.All(b => b.GetComponent<UnityEngine.UI.Button>() != null && b.GetComponentInParent<Canvas>() == f.card.Follow.DisplayCanvas),
+            "the card's buttons share the actual display canvas and its TrackedDeviceGraphicRaycaster");
         Run(w, 2f, () => false);
         Check(f.CardOpen && f.Now == VG_ExitFlow.Beat.Choosing && w.exit.Phase == 0 && !w.exit.lead.Moving, "the card stays until the player chooses (2 s more)");
         if (renderDir != null) Picture(w, "bedroom-1-card.png", w.mirror.Head + Vector3.down * 0.2f);
@@ -246,7 +251,7 @@ public static class VG_BedroomExitCheck
                 }
                 foreach (var c in Physics.OverlapSphere(p, 0.01f, ~0, QueryTriggerInteraction.Ignore))
                     if (!own.Contains(c) && c.bounds.max.y > 0.01f && c.name != except && !furnitureColliders.Contains(c) && (only == null || c.transform.IsChildOf(only)) && !(upToTheDoor && c.transform.IsChildOf(door)))   // floors (the room's, the niche's) are walked on
-                        return $"his {boneOf[i].name.Replace("mixamorig:", "")}: {c.name} at ({p.x:F2}, {p.y:F2}, {p.z:F2}), him at ({lead.body.position.x:F2}, {lead.body.position.z:F2}) facing {lead.body.eulerAngles.y:F0}";
+                        return $"his {boneOf[i].name.Replace("mixamorig:", "")}: {c.name} at ({p.x:F2}, {p.y:F2}, {p.z:F2}), him at ({lead.body.position.x:F2}, {lead.body.position.z:F2}) facing {lead.body.eulerAngles.y:F0}; surface clearance {Vector3.Distance(p, c.ClosestPoint(p)) * 1000f:F2} mm";
                 string piece = null;
                 bool nearPiece = only == null && cellOwner.TryGetValue(Cell(p), out piece), nearEasel = only == null && easelCells.Contains(Cell(p));
                 if (nearPiece || nearEasel)
@@ -273,7 +278,7 @@ public static class VG_BedroomExitCheck
         Check(blocked.Count == 0, $"his way round Chair_Front to the door ({path:F2} m) is clear from his first step: no vertex of his skin within about 1 cm of the walls, the doors and their frames (their colliders), none in the furniture or in his easel (their meshes: their colliders are boxes round them); what hasn't moved from where he stood by his easel is that pose, not his way; the palette not within about 1 cm of any{(blocked.Count > 0 ? ": " + string.Join("; ", blocked.Take(6)) : "")}");
         W($"  grazes on his way (a vertex of his skin within about 1 cm of the furniture's or his easel's surface, outside it): {grazes.Count} (vertex, frame){(grazes.Count > 0 ? ": " + string.Join("; ", grazes.Distinct().Take(8)) : "")}");
         Check(intoDoor <= 0.01f, $"walking up to the shut door (left out above: he is about to open it, and his last stride reaches it) no part of him goes more than 1 cm past its face: {intoDoor * 100f:F1} cm at most");
-        Check(maxSpeed <= lead.speed * 1.01f && offFloor < 0.001f && walking, $"he walks at {maxSpeed:F2} m/s at most (his speed {lead.speed:F2}: the clip's stride at his size), on the floor, in the Walking state");
+        Check(maxSpeed <= VG_Lead.VisitorSpeedLimit * 1.01f && offFloor < 0.001f && walking, $"he walks at {maxSpeed:F2} m/s at most (paced limit {VG_Lead.VisitorSpeedLimit:F2}; clip stride {lead.speed:F2}), on the floor, in the Walking state");
         Check(w.exit.Phase == 1 && lead.State == VG_LeadState.Arrived && hands.carry >= 1f, $"he arrives at his place before the door ({new Vector2(lead.body.position.x, lead.body.position.z):F2}; the room at scale {door.lossyScale.x:F3}), the palette upright against his chest");
         Run(w, VG_BedroomExit.ReachSeconds - 2f * Dt, () => w.exit.Phase != 1);
         if (renderDir != null) Picture(w, "bedroom-3-at-the-door.png", door.TransformPoint(0.1f, 1.0f, -0.25f), eye: new Vector3(-0.75f, 1.28f, 1.05f));
@@ -303,12 +308,16 @@ public static class VG_BedroomExitCheck
             if (renderDir != null) Picture(w, "bedroom-5-gold-starts.png", w.exit.InStairs(1.2f, 1.0f, 0f), eye: DoorwayEye);
         }
         var chair = GameObject.Find("Chair_Front").GetComponent<Collider>().bounds;
+        var inHits = new HashSet<string>();
         skin.BakeMesh(skinMesh, true);   // him as he stands at the door: his skin's box
         var him = new Bounds(skin.transform.TransformPoint(skinMesh.vertices[0]), Vector3.zero);
         foreach (var v in skinMesh.vertices) him.Encapsulate(skin.transform.TransformPoint(v));
         for (float t = 0f; t < VG_BedroomExit.SwingSeconds + 0.1f; t += Dt)
         {
             Tick(w); Watch();
+            // Check the room during the swing and his preparatory turn as well as afterwards, so timing changes
+            // cannot create a gap in clearance coverage before the separate stairs loop begins.
+            if ((w.exit.Phase >= 3 || (w.exit.Phase == 2 && hands.weight <= 0.01f)) && SkinHit(VG_BedroomExit.NicheBack) is string insideHit) inHits.Add(insideHit);
             int doors = UnityEngine.Object.FindObjectsByType<MeshRenderer>(FindObjectsSortMode.None).Where(r => r.enabled && r.bounds.Intersects(doorway) && r.name.StartsWith("Door_") && !r.name.StartsWith("Door_Frames"))
                 .Select(r => r.transform.parent.name).Distinct().Count();
             worstDoors = Mathf.Max(worstDoors, doors + UnityEngine.Object.FindObjectsByType<Transform>(FindObjectsSortMode.None).Count(x => x.name.Contains("copy") || (x.name == VG_BedroomExit.DoorName && x != door)));
@@ -343,7 +352,7 @@ public static class VG_BedroomExitCheck
             back.GetComponent<Renderer>().enabled = false; stairs.gameObject.SetActive(true); if (gold != null) gold.enabled = true; foreach (var r in vis) r.enabled = true;
         }
         StairsFromTheRoom(w, stairs, closed, door.lossyScale.x);
-        var inHits = new HashSet<string>(); float headRoom = 99f; bool firstStepShot = false;
+        float headRoom = 99f; bool firstStepShot = false;
         float doorTop = closed.position.y + door.lossyScale.y * door.Find("Door_Left_03").GetComponent<MeshFilter>().sharedMesh.bounds.max.y;   // the doorway's top (the doorGap)
         float stairsTop = closed.position.y + door.lossyScale.y * VG_BedroomExit.Ceiling;
         for (float t = 0f; t < 6f && !(f.Gold != null && f.Gold.FullAfter >= 0f); t += Dt)
@@ -383,6 +392,35 @@ public static class VG_BedroomExitCheck
         UnityEngine.Object.DestroyImmediate(w.cam.gameObject);
         if (VG_GoldLight.Active != null) VG_GoldLight.Active.End();
         solids.Dispose();
+    }
+
+    static void SlowVisitorAndDoorWait()
+    {
+        W(""); W("== 6. A slow visitor and a delayed door never become an invented arrival");
+        var w = New();
+        ToCard(w);
+        w.visitorGap = 2.95f;   // just inside the wait threshold: he must keep a much slower walking pace
+        System.Action granted = null;
+        w.exit.AskForDoor = callback => granted = callback;
+        w.flow.card.Buttons[0].GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
+        bool earlyGold = false;
+        float fastest = 0f;
+        for (float t = 0f; t < 45f; t += Dt)
+        {
+            Tick(w);
+            fastest = Mathf.Max(fastest, w.exit.lead.CurrentSpeed);
+            earlyGold |= w.flow.Gold != null || w.loads.Count > 0;
+        }
+        Check(fastest > 0.05f && fastest < 0.25f, $"visitor 2.95 m behind: his fastest travel is {fastest:F3} m/s");
+        Check(!earlyGold && w.flow.Now == VG_ExitFlow.Beat.Walking && w.exit.Phase == 2 && !w.exit.Owned && granted != null,
+            "45 s after Follow, still waiting at the actual shut door; no gold and no load when authority has not arrived");
+        granted?.Invoke();
+        w.visitorGap = 1.2f;
+        Run(w, 8f, () => w.flow.Gold != null && w.flow.Gold.FullAfter >= 0f);
+        Check(w.exit.Owned && w.exit.Phase == 3 && w.flow.Gold != null && w.flow.Gold.FullAfter >= 0f,
+            "door authority arrives and the visitor catches up: the door opens and actual stair progress starts the gold");
+        UnityEngine.Object.DestroyImmediate(w.cam.gameObject);
+        if (VG_GoldLight.Active != null) VG_GoldLight.Active.End();
     }
 
     /// <summary>Meshes as temporary (non-convex) mesh colliders on an unused layer, to tell whether a point is inside one:

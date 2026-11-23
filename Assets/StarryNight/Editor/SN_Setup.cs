@@ -272,6 +272,15 @@ namespace InnerFrame.StarryNight.EditorTools
 
         static string V(params float[] f) => "(" + string.Join(", ", f.Select(x => x.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture))) + ")";
 
+        [MenuItem("Tools/InnerFrame/Starry Night/Refresh instruction voice lines")]
+        public static void RefreshInstructionLines()
+        {
+            AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
+            var asset = BuildLines();
+            AssetDatabase.SaveAssetIfDirty(asset);
+            Debug.Log("[SN] Refreshed instruction text and voice references; no scene or layout rebuild.");
+        }
+
         static SN_Lines BuildLines()
         {
             var lines = AssetDatabase.LoadAssetAtPath<SN_Lines>(LinesPath);

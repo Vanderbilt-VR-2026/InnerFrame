@@ -1,15 +1,14 @@
 using UnityEngine;
 namespace InnerFrame.ArtworkCici {
 public class GalleryDetailPlacement : MonoBehaviour {
- Vector3 lastForward; Camera eyes;
+ Camera eyes;
  void OnEnable(){if(Application.isPlaying)Place();}
- void LateUpdate(){
- #if UNITY_EDITOR
- if(!UnityEngine.XR.XRSettings.isDeviceActive&&Cursor.lockState==CursorLockMode.None)return;
- #endif
- if(!eyes)eyes=Camera.main;if(eyes&&Vector3.Angle(lastForward,eyes.transform.forward)>25f)Place();}
- public void Place(){
- eyes=Camera.main;if(!eyes)return;
+ public void Place()=>Place(Camera.main);
+ public void Place(Camera camera){
+ eyes=camera;if(!eyes)return;
+ var display=GetComponentInParent<Canvas>();
+ var handle=GetComponent<RectTransform>();
+ if(display&&handle)VG_PanelInteraction.Attach(handle,transform,display);
  var forward=Vector3.ProjectOnPlane(eyes.transform.forward,Vector3.up).normalized;
  if(forward.sqrMagnitude<.1f)forward=Vector3.forward;
  float distance=1.15f;
@@ -27,7 +26,7 @@ public class GalleryDetailPlacement : MonoBehaviour {
  transform.SetPositionAndRotation(eyes.transform.position+forward*distance-Vector3.up*(.10f*distance/1.15f),Quaternion.LookRotation(forward,Vector3.up));
  Physics.SyncTransforms();
  float clearDistance=ClearDistance(eyes.transform.position,forward,distance);
- if(clearDistance>=distance-.001f){lastForward=eyes.transform.forward;return;}
+ if(clearDistance>=distance-.001f)return;
  distance=clearDistance;
  }
  // Do not leave a visible but unreachable action if the visitor is inside geometry.

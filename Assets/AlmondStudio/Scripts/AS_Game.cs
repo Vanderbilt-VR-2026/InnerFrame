@@ -151,10 +151,14 @@ namespace InnerFrame.AlmondStudio
             }
         }
 
+        // Native input already filters the controller owning a panel. The one-pointer desktop fallback keeps
+        // its existing hover guard; modal menus/fades still block both hands in every input mode.
+        bool SceneInputBlocked => Input != null && Input.AimsFromHead ? PlayerMenu.MenuOpen : PlayerMenu.BlocksSceneInput;
+
         void Update()
         {
             bool held = Input != null && Input.TriggerHeld;   // the trigger's press, once per frame
-            triggerPressed = held && !triggerWas;
+            triggerPressed = held && !triggerWas && !SceneInputBlocked;
             triggerWas = held;
             if (triggerPressed && PointAndPress()) triggerPressed = false;   // used on what you pointed at
             float dt = Time.deltaTime;
@@ -197,8 +201,8 @@ namespace InnerFrame.AlmondStudio
                     if (BrushHeld) Enter(AS_State.Paint);
                     break;
                 case AS_State.Paint:
-                    // his "Slowly..." goes after a while; never his answer to your question, or a line he is still saying
-                    if (stateTime > 4f && ui != null && ui.IsSpeaking && lineNow == null && (talker == null || !talker.IsBusy)) ui.Clear();
+                    // End a text-only utterance without removing its readable caption; never end an active answer.
+                    if (stateTime > 4f && ui != null && ui.IsSpeaking && lineNow == null && (talker == null || !talker.IsBusy)) ui.EndSpeech();
                     if (blossoms != null) SweepStep(); else PaintStep(dt);
                     break;
                 case AS_State.Done:
@@ -220,7 +224,7 @@ namespace InnerFrame.AlmondStudio
             Ray aim;
             if (Input.AimsFromHead) { if (!Input.TryGetHeadAim(out aim)) return; }
             else aim = new Ray(brushTip.position, brushTip.forward);
-            bool trigger = Input.TriggerHeld;
+            bool trigger = Input.TriggerHeld && !SceneInputBlocked;
 
             if (trigger && Active < 0) Active = PickStart(aim);
             Vector3 end = aim.GetPoint(layout.beamLength);
@@ -249,7 +253,7 @@ namespace InnerFrame.AlmondStudio
             Ray aim;
             if (Input.AimsFromHead) { if (!Input.TryGetHeadAim(out aim)) return; }
             else aim = new Ray(brushTip.position, brushTip.forward);
-            bool trigger = Input.TriggerHeld;
+            bool trigger = Input.TriggerHeld && !SceneInputBlocked;
             guides.Beam(brushTip.position, aim.GetPoint(layout.beamLength), trigger);
             if (!trigger) return;
             int n = blossoms.Paint(aim, layout.blossomBeamDegrees, layout.blossomBeamMetres);
@@ -535,6 +539,7 @@ namespace InnerFrame.AlmondStudio
             {
                 // B cut his line short (SpeechToProxy stops his voice): he says it again after your conversation
                 if (lineNow != null && lineQueue.Count == 0 && Time.time < lineEndsAt - 0.5f) lineQueue.Add(lineNow);
+                if (lineNow != null && ui != null) ui.EndSpeech();
                 lineNow = null;
             }
             else ShowHint();   // the story's hint again, in place of "Listening..."
@@ -568,6 +573,7 @@ namespace InnerFrame.AlmondStudio
             {
                 if ((talker.voice != null && talker.voice.isPlaying) || Time.time < lineEndsAt) return;
                 lineNow = null;
+                if (ui != null) ui.EndSpeech();
             }
             if (lineQueue.Count == 0 || lineLoading || talker.IsBusy || talker.ConversationActive) return;
             string line = lineQueue[0];

@@ -19,7 +19,9 @@ public class VG_Hands : MonoBehaviour
     static readonly Vector3 CarryGrip = new Vector3(-0.09f, 1.12f, 0.24f);   // carried: upright, its paint outward, its grip on his left
     static readonly Quaternion CarryTurn = Quaternion.Euler(90f, 0f, 0f) * Quaternion.Euler(0f, 180f, 0f);
     static readonly Vector3 WristFromGrip = new Vector3(-0.02f, -0.02f, -0.06f), RightFromGrip = new Vector3(0.29f, -0.06f, -0.05f);
-    static readonly Vector3 LeftElbow = new Vector3(-0.25f, 1.00f, -0.05f), RightElbow = new Vector3(0.25f, 1.00f, -0.05f);   // carried: his elbows in, through the doorway
+    // Carried only (hint weight k below): bring the palette-side elbow in so its forearm clears the door casing
+    // throughout the slower walk. The painting pose has k = 0 and keeps its existing hand/arm placement.
+    static readonly Vector3 LeftElbow = new Vector3(-0.21f, 1.00f, -0.05f), RightElbow = new Vector3(0.25f, 1.00f, -0.05f);
 
     public Transform palette;
     [Range(0f, 1f)] public float carry;

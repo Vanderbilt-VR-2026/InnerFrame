@@ -57,8 +57,7 @@ public class VG_ChoiceCard : MonoBehaviour
         // Follow owns the display surface, which can move under the active camera.
         // Both controller and mouse hits must use that same surface.
         VG_PanelInteraction.EnsureCanvas(card.Follow.DisplayCanvas);
-        var onTop = new Material(Canvas.GetDefaultCanvasMaterial());
-        onTop.SetInt("unity_GUIZTestMode", (int)UnityEngine.Rendering.CompareFunction.Always);   // as the dialogue box: nothing cuts through it
+        var onTop = VG_UI.NewOverlayMaterial("Vincent choice overlay");
         var box = VG_DialogueBox.Make(card.Follow.Layout, settings, ui.font, ui.box, ui.nameTab, ui.starRing, ui.star, onTop);
         card.Follow.DialogueBox = box;
         box.Speaker(speaker);
@@ -68,7 +67,8 @@ public class VG_ChoiceCard : MonoBehaviour
         int lines = Mathf.Max(1, layout.lineCount);   // wrapped as the label wraps it
         box.Lines(lines);
         var panel = box.Labels[0].rectTransform.parent as RectTransform;
-        VG_PanelInteraction.Attach(panel, card.Follow.DisplayCanvas.transform, card.Follow.DisplayCanvas, card.Dismiss);
+        VG_PanelInteraction.Attach(panel, card.Follow.DisplayCanvas.transform, card.Follow.DisplayCanvas, card.Dismiss)
+            .WithWholeFaceGrip((RectTransform)box.transform.Find("NameTab"));
         panel.sizeDelta += new Vector2(0f, VG_UI.U(Look.ButtonHeight + Look.Margin));
         float y = -panel.sizeDelta.y / VG_UI.UnitsPerMetre + Look.Margin + Look.ButtonHeight / 2f;
         float x0 = -(answers.Length * Look.ButtonWidth + (answers.Length - 1) * Look.ButtonGap) / 2f + Look.ButtonWidth / 2f;
@@ -128,6 +128,8 @@ public class VG_ChoiceCard : MonoBehaviour
     public int Hit(Ray ray)
     {
         if (!Shown) return -1;
+        // The rear has no answers. A scene's custom ray path must match the native UI front-face rule.
+        if (Vector3.Dot(Buttons[0].forward, ray.direction) <= 0f) return -1;
         var plane = new Plane(Buttons[0].forward, Buttons[0].position);
         if (!plane.Raycast(ray, out float distance)) return -1;
         Vector3 p = ray.GetPoint(distance);

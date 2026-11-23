@@ -8,7 +8,7 @@ namespace InnerFrame.Tutorial
         public const string Grip = "Hold grip to pick it up";
         public const string Vincent = "Hold {B} to ask Vincent";
         public const string Companion = "Hold {X} to talk to the other player";
-        public const string MoveMenu = "Hold the trigger on the title bar and drag";
+        public const string MoveMenu = "Hold Grip on the title bar to move";
 
         public readonly struct Page
         {
@@ -21,7 +21,7 @@ namespace InnerFrame.Tutorial
             new Page("Move", "Move with the left stick"),
             new Page("Smooth Turn", "Push the right stick left or right to turn smoothly"),
             new Page("Teleport", "Where available, push the right stick forward, aim at a valid floor target and release"),
-            new Page("Select", "Pull the trigger to select or hold it on a title bar to drag"),
+            new Page("Select", "Pull the trigger to select; hold Grip anywhere on a dialogue box to move it"),
             new Page("Enter a painting", "In the Gallery, point at a painting and pull the trigger; choose Enter or Back"),
             new Page("Grip", "Hold grip to pick up an object"),
             new Page("Vincent", "Release to send your question; press again while Vincent speaks to interrupt him", Vincent),

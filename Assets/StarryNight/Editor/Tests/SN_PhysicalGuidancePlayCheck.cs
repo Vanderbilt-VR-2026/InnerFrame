@@ -87,12 +87,14 @@ namespace InnerFrame.StarryNight.EditorTools
             SN_Game game;
             SN_InputXR testInput;
             SN_IInput oldInput;
+            Vector3 rockCaptureTarget;
             NearFarInteractor hand;
             XRGrabInteractable grab;
             InputAction observedSelect;
             Vector3 eyeLocal, handLocal, readingEye;
             Quaternion eyeRotation = Quaternion.identity, handRotation = Quaternion.identity, readingLook;
             float grip, trigger, began;
+            Vector2 leftMoveAxis;
             bool menu, finished, push, desktopWasActive, originWasActive;
             int passes, failures;
             int originalFrameRate;
@@ -188,7 +190,11 @@ namespace InnerFrame.StarryNight.EditorTools
                 yield return Settle(.5f);
                 yield return WaitForState(() => !game.voice.Busy && !game.ui.IsSpeaking, 25f);
                 yield return Settle(.3f);
-                Check(!game.voice.Busy && !game.ui.IsSpeaking, "Arrival voice and subtitle finish before measuring prop input");
+                Check(!game.voice.Busy && !game.ui.IsSpeaking, "Arrival speech finishes before measuring prop input; retained subtitles do not keep it busy");
+                Check(game.notebook.PickupReminderVisible && !game.notebook.HasBeenPickedUp,
+                    "Pickup reminder survives arrival speech and task changes until actual XRI Grip");
+                var rockRest = PoseOf(game.sketchbook.transform);
+                rockCaptureTarget = rockRest.position + Vector3.up * .08f;
                 Shot("01-world-before-pickup");
                 yield return Aim(BookTarget());
                 yield return WaitForState(() => !hand.selectInput.ReadIsPerformed() && !grab.isSelected, 2f);
@@ -207,7 +213,12 @@ namespace InnerFrame.StarryNight.EditorTools
                     yield return Settle(.5f);
                 }
                 Check(grab.isSelected && !game.sketchbook.HeldByFallback, "Notebook is held by XRI for motion measurements");
+                Check(grab.movementType == XRBaseInteractable.MovementType.VelocityTracking &&
+                    !game.sketchbook.GetComponent<Rigidbody>().isKinematic && game.sketchbook.GetComponentsInChildren<Collider>().All(c => !c.isTrigger),
+                    "Actual far Grip uses a dynamic VelocityTracking body with both notebook covers solid");
                 if (!grab.isSelected) { W("ABORT: even explicit XRI selection failed; motion checks did not run."); Finish(); yield break; }
+                Check(game.notebook.HasBeenPickedUp && !game.notebook.PickupReminderVisible && !game.notebook.DiscoveryCueVisible,
+                    "Actual local XRI pickup permanently removes the discovery cue and pickup reminder");
 
                 yield return AlignForReading();
                 var leaf = game.notebook.PageRoot;
@@ -240,12 +251,43 @@ namespace InnerFrame.StarryNight.EditorTools
                 Check(Vector3.Distance(held.position, game.sketchbook.transform.position) > .08f && Quaternion.Angle(held.rotation, game.sketchbook.transform.rotation) > 5f,
                     "Moving only the controller changes the notebook's position and angle");
 
+                yield return AlignForReading();
+                grip = 0f;
+                yield return WaitForState(() => !grab.isSelected && !hand.selectInput.ReadIsPerformed(), 2f);
+                var pinned = PoseOf(game.sketchbook.transform);
+                maxMove = maxTurn = 0f;
+                for (int i = 0; i < 45; i++)
+                {
+                    SetEye(readingEye + Vector3.right * (.002f * i), Quaternion.Euler(8, i, i * .4f));
+                    SetHand(fixedHand + Vector3.right * .4f, fixedRotation);
+                    yield return null;
+                    maxMove = Mathf.Max(maxMove, Vector3.Distance(pinned.position, game.sketchbook.transform.position));
+                    maxTurn = Mathf.Max(maxTurn, Quaternion.Angle(pinned.rotation, game.sketchbook.transform.rotation));
+                }
+                Check(!grab.isSelected && game.sketchbook.PinnedForReading && game.sketchbook.GetComponent<Rigidbody>().isKinematic &&
+                    !game.sketchbook.GetComponent<Rigidbody>().useGravity && maxMove < .001f && maxTurn < .1f,
+                    $"Native reading release pins its world pose while head and hand move: {maxMove:F4} m, {maxTurn:F2} degrees");
+                SetEye(readingEye, readingLook);
+                yield return SN_NotebookNativePageProbe.CheckPinnedBook(game, Aim, value => trigger = value, Check);
+                yield return Aim(BookTarget());
+                grip = 1f;
+                yield return WaitForState(() => grab.isSelected && hand.selectInput.ReadIsPerformed(), 2f);
+                Check(grab.isSelected && !game.sketchbook.PinnedForReading && !game.sketchbook.GetComponent<Rigidbody>().isKinematic &&
+                    game.sketchbook.GetComponentsInChildren<Collider>().All(c => !c.isTrigger),
+                    "Regrabbing the pinned reading book restores dynamic solid VelocityTracking before rock set-down");
+                if (!grab.isSelected) { W("ABORT: pinned reading regrab failed; remaining rock set-down checks did not run."); Finish(); yield break; }
+
+                yield return HeldRockContact(rockRest);
+                yield return AlignForSetDown(new Pose(rockRest.position + Vector3.up * .18f, rockRest.rotation));
+                Check(Vector3.Distance(game.sketchbook.transform.position, rockRest.position + Vector3.up * .18f) < .025f,
+                    "Actual XRI controller places the held book above its real rock surface before release");
+                ShotBook("03-notebook-above-rock");
                 grip = 0f;
                 yield return WaitForState(() => !grab.isSelected && !hand.selectInput.ReadIsPerformed(), 2f);
                 bool releasedByGrip = !grab.isSelected && !game.sketchbook.IsHeld;
                 Check(releasedByGrip, "Releasing simulated Grip releases the XRI notebook");
                 if (!releasedByGrip)
-                { LogGripTarget("failed first release"); W("ABORT: release failed; stationary release and re-grab checks did not run."); Finish(); yield break; }
+                { LogGripTarget("failed first release"); W("ABORT: release failed; rock landing and re-grab checks did not run."); Finish(); yield break; }
                 var released = PoseOf(game.sketchbook.transform);
                 maxMove = maxTurn = 0f;
                 for (int i = 0; i < 45; i++)
@@ -256,19 +298,30 @@ namespace InnerFrame.StarryNight.EditorTools
                     maxMove = Mathf.Max(maxMove, Vector3.Distance(released.position, game.sketchbook.transform.position));
                     maxTurn = Mathf.Max(maxTurn, Quaternion.Angle(released.rotation, game.sketchbook.transform.rotation));
                 }
-                Check(game.sketchbook.GetComponent<Rigidbody>().isKinematic && maxMove < .001f && maxTurn < .1f,
-                    $"Released notebook stays at its world pose for 45 frames: max {maxMove:F4} m, {maxTurn:F2} degrees");
+                yield return Settle(2f);
+                var bookBody = game.sketchbook.GetComponent<Rigidbody>();
+                Check(!bookBody.isKinematic && bookBody.useGravity && !game.sketchbook.PinnedForReading && game.sketchbook.transform.position.y < released.position.y - .04f,
+                    $"Released notebook falls under gravity while the head/hand move (travel {maxMove:F4} m)");
+                CheckRockLanding("First real Grip release");
+                ShotBook("04-notebook-resting-on-rock");
                 SetEye(readingEye, readingLook);
                 yield return Aim(BookTarget());
                 LogGripTarget("before second Grip");
                 grip = 1f; yield return WaitForState(() => grab.isSelected && hand.selectInput.ReadIsPerformed(), 2f);
                 Check(grab.isSelected && game.sketchbook.IsHeld && !game.sketchbook.HeldByFallback, "Simulated Grip can pick the notebook up again");
                 if (!grab.isSelected) LogGripTarget("failed second Grip");
-                else yield return AlignForReading();
+                else yield return AlignForSetDown(new Pose(rockRest.position + Vector3.up * .12f, Quaternion.Euler(10f, 0, 0) * rockRest.rotation));
                 grip = 0f; yield return WaitForState(() => !grab.isSelected && !hand.selectInput.ReadIsPerformed(), 2f);
-                Check(!grab.isSelected && !game.sketchbook.IsHeld, "Second Grip release leaves the readable page at a fixed world pose");
+                Check(!grab.isSelected && !game.sketchbook.IsHeld, "Second Grip release returns the readable book to gravity");
+                yield return Settle(3f);
+                CheckRockLanding("Second real Grip release, tilted book");
                 Check(!game.ui.HintVisible, "Physical instruction mode has no duplicate floating activity hint");
 
+                // The completed line now intentionally stays until dismissed. Close it explicitly in this fixture
+                // before isolating the menu's Trigger guard; aiming through retained UI must not count as a clear ray.
+                // The actual controller-operated caption close has its own native GalleryWelcomeChecks coverage.
+                game.ui.DismissWords(); yield return Settle(.3f);
+                Check(game.ui.WordsDismissed, "Fixture dismisses retained speech before isolating menu/lantern input");
                 // Existing menu binding receives a simulated left Menu press; a scene Trigger must not also dim the lantern.
                 SetEye(readingEye, Quaternion.Euler(0, -70f, 0));
                 menu = true; yield return Settle(.15f); menu = false;
@@ -280,13 +333,16 @@ namespace InnerFrame.StarryNight.EditorTools
                 Check(!game.lantern.IsDown && !game.lantern.Dimming,
                     "Open menu suppresses a Trigger aimed at the lantern");
                 if (PlayerMenu.Instance != null && PlayerMenu.MenuOpen) PlayerMenu.Instance.Toggle();
-                yield return WaitForState(() => !PlayerMenu.MenuOpen, 2f);
-                Check(!PlayerMenu.MenuOpen, "Player menu and its closing-input guard have actually cleared before the positive control");
+                yield return WaitForState(() => !PlayerMenu.BlocksSceneInput, 2f);
+                Check(!PlayerMenu.BlocksSceneInput, "Player menu and its closing-input guard have actually cleared before the positive control");
+                Check(game.Input.TryGetAim(1, out var clearAim) && !VG_PanelInteraction.BlocksHand(game.Input.Hand(1), clearAim),
+                    "Positive control's actual right-hand ray is clear of retained panels");
                 W($"Before positive Trigger: MenuOpen={PlayerMenu.MenuOpen}, ModalOpen={PlayerMenu.ModalOpen}, panel consumption={VG_PanelInteraction.ConsumingInput}, voice paused={game.voice.ConversationPaused}, right trigger={right.trigger.ReadValue():F2}");
                 trigger = 1f; yield return Settle(.15f); trigger = 0f;
                 yield return WaitForState(() => game.lantern.IsDown || game.lantern.Dimming, 2f);
                 Check(game.lantern.IsDown || game.lantern.Dimming,
                     "Positive control: with the menu closed the same aimed Trigger dims the lantern");
+                yield return SN_NativeAudioProbe.Run(game, origin, Aim, value => trigger = value, value => leftMoveAxis = value, Check);
                 SetEye(readingEye, readingLook);
                 Shot("03-notebook-world-anchored");
                 Finish();
@@ -322,6 +378,65 @@ namespace InnerFrame.StarryNight.EditorTools
                     SetHand(currentHand + desiredPage - page.position, correction * currentRotation);
                     yield return Settle(.25f);
                 }
+            }
+
+            IEnumerator AlignForSetDown(Pose desired)
+            {
+                // Move the simulated tracked controller, never the book directly, while XRI owns the grab.
+                for (int i = 0; i < 6; i++)
+                {
+                    var book = game.sketchbook.transform;
+                    var correction = desired.rotation * Quaternion.Inverse(book.rotation);
+                    SetHand(offset.TransformPoint(handLocal) + desired.position - book.position,
+                        correction * offset.rotation * handRotation);
+                    yield return Settle(.2f);
+                }
+            }
+
+            IEnumerator HeldRockContact(Pose rest)
+            {
+                yield return AlignForSetDown(new Pose(rest.position + Vector3.up * .12f, rest.rotation));
+                var startHand = offset.TransformPoint(handLocal);
+                var rotation = offset.rotation * handRotation;
+                var rock = game.transform.Find("SN_Rock").GetComponent<Collider>();
+                var covers = game.sketchbook.GetComponentsInChildren<BoxCollider>();
+                float deepest = 0f, lowest = float.PositiveInfinity;
+                for (int i = 0; i < 90; i++)
+                {
+                    // Deliberately lower the real tracked hand 10 cm past the resting pose; the physical book
+                    // should meet the rock while still selected instead of obeying that impossible target pose.
+                    SetHand(startHand - Vector3.up * (.22f * i / 89f), rotation);
+                    yield return null;
+                    lowest = Mathf.Min(lowest, game.sketchbook.transform.position.y);
+                    foreach (var cover in covers)
+                        if (Physics.ComputePenetration(cover, cover.transform.position, cover.transform.rotation,
+                            rock, rock.transform.position, rock.transform.rotation, out _, out float depth)) deepest = Mathf.Max(deepest, depth);
+                }
+                Check(grab.isSelected && deepest <= .003f && lowest >= rest.position.y - .01f,
+                    $"Held controller lowering meets the rock before release (deepest cover contact {deepest * 1000f:F2} mm; lowest root vs rest {(lowest - rest.position.y) * 1000f:F2} mm)");
+                ShotBook("03-notebook-held-against-rock");
+            }
+
+            void CheckRockLanding(string label)
+            {
+                var rock = game.transform.Find("SN_Rock").GetComponent<Collider>();
+                var body = game.sketchbook.GetComponent<Rigidbody>();
+                float penetration = 0f, gap = float.PositiveInfinity;
+                foreach (var cover in game.sketchbook.GetComponentsInChildren<BoxCollider>())
+                {
+                    if (Physics.ComputePenetration(cover, cover.transform.position, cover.transform.rotation,
+                        rock, rock.transform.position, rock.transform.rotation, out _, out float depth))
+                        penetration = Mathf.Max(penetration, depth);
+                    for (int x = -1; x <= 1; x += 2)
+                    for (int y = -1; y <= 1; y += 2)
+                    for (int z = -1; z <= 1; z += 2)
+                    {
+                        var p = cover.transform.TransformPoint(cover.center + Vector3.Scale(cover.size * .5f, new Vector3(x, y, z)));
+                        if (rock.Raycast(new Ray(p + Vector3.up * 2f, Vector3.down), out var hit, 3f)) gap = Mathf.Min(gap, p.y - hit.point.y);
+                    }
+                }
+                Check(penetration <= .002f && gap >= -.003f && gap <= .02f && body.linearVelocity.magnitude < .03f,
+                    $"{label}: settles on the rock (penetration {penetration * 1000f:F2} mm, support gap {gap * 1000f:F2} mm, speed {body.linearVelocity.magnitude:F4} m/s)");
             }
 
             Vector3 BookTarget()
@@ -383,13 +498,30 @@ namespace InnerFrame.StarryNight.EditorTools
                 if (grip > .5f) state = state.WithButton(ControllerButton.GripButton);
                 if (trigger > .5f) state = state.WithButton(ControllerButton.TriggerButton);
                 InputSystem.QueueStateEvent(right, state);
-                var other = new XRSimulatedControllerState { devicePosition = eyeLocal + new Vector3(-.3f, -.5f, 0), deviceRotation = Quaternion.Euler(70, 0, 0), isTracked = true, trackingState = 3 };
+                var other = new XRSimulatedControllerState { primary2DAxis = leftMoveAxis, devicePosition = eyeLocal + new Vector3(-.3f, -.5f, 0), deviceRotation = Quaternion.Euler(70, 0, 0), isTracked = true, trackingState = 3 };
                 InputSystem.QueueStateEvent(left, menu ? other.WithButton(ControllerButton.MenuButton) : other);
             }
 
-            void Shot(string name)
+            void ShotBook(string name)
             {
-                var cam = origin != null ? origin.Camera : Camera.main;
+                var source = origin != null ? origin.Camera : Camera.main;
+                var capture = new GameObject("Notebook contact inspection camera (test only)").AddComponent<Camera>();
+                try
+                {
+                    capture.CopyFrom(source);
+                    capture.enabled = false;
+                    capture.fieldOfView = 50f;
+                    capture.nearClipPlane = .01f;
+                    capture.transform.position = rockCaptureTarget + new Vector3(-.34f, .27f, -.48f);
+                    capture.transform.rotation = Quaternion.LookRotation(rockCaptureTarget - capture.transform.position, Vector3.up);
+                    Shot(name, capture);
+                }
+                finally { Destroy(capture.gameObject); }
+            }
+
+            void Shot(string name, Camera inspection = null)
+            {
+                var cam = inspection != null ? inspection : origin != null ? origin.Camera : Camera.main;
                 if (cam == null) { Check(false, "No actual camera for " + name); return; }
                 var previous = cam.targetTexture;
                 var previousActive = RenderTexture.active;
@@ -400,7 +532,7 @@ namespace InnerFrame.StarryNight.EditorTools
                     cam.targetTexture = target; cam.Render(); RenderTexture.active = target;
                     texture.ReadPixels(new Rect(0, 0, 1600, 1000), 0, 0); texture.Apply();
                     File.WriteAllBytes(Path.Combine(outDir, name + ".png"), texture.EncodeToPNG());
-                    W("Actual camera capture: " + name + ".png");
+                    W((inspection != null ? "Actual Play physics, fixed inspection camera: " : "Actual game camera capture: ") + name + ".png");
                 }
                 finally { cam.targetTexture = previous; RenderTexture.active = previousActive; Destroy(texture); Destroy(target); }
             }

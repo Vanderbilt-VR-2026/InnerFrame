@@ -57,6 +57,7 @@ namespace InnerFrame.StarryNight
 #endif
                 Game.Input = xrInput = new SN_InputXR(FindAnyObjectByType<XROrigin>());
             Game.ui.Snap();   // initial world placement; never follows the camera
+            Game.soundscape = SN_Soundscape.Attach(Game);
             if (layout.colourGrading) GradeCamera(Camera.main);
             // the way back: the player menu's Back to Gallery any time; at Done, Vincent's question and its card (SN_Exit)
             Game.Begin();
@@ -262,19 +263,31 @@ namespace InnerFrame.StarryNight
             game.notebook = SN_NotebookGuide.Attach(game);
             if (game.notebook != null && game.notebook.IsPresent)
             {
-                game.sketchbook.stayWhereReleased = true;
+                game.sketchbook.stayWhereReleased = false;
+                game.sketchbook.SetDownOn(rock.GetComponent<Collider>(), pinAwayFromSurface: true);
+                // A real book settles onto the rock under gravity. Keep collision detection active for its thin
+                // covers while falling and while XRI moves its dynamic body with the controller's velocity.
+                var bookBody = game.sketchbook.GetComponent<Rigidbody>();
+                bookBody.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
                 // Existing loose-prop layer: selectable by XRI, excluded from the rig's ground spherecast (mask 51).
-                // A book left at reading height must never become a false floor under the player's head.
+                // A held or falling book must never become a false floor under the player's head.
                 int loose = LayerMask.NameToLayer("BedroomLoose");
                 if (loose >= 0)
-                    foreach (var collider in game.sketchbook.GetComponentsInChildren<Collider>()) collider.gameObject.layer = loose;
+                    foreach (var collider in game.sketchbook.GetComponentsInChildren<Collider>())
+                    {
+                        collider.gameObject.layer = loose;
+                        collider.contactOffset = .001f;
+                    }
                 else
                 {
-                    game.sketchbook.stayWhereReleased = false;
                     Debug.LogWarning("[SN] Loose-prop layer unavailable; notebook uses ordinary set-down physics.");
                 }
                 var bookGrab = game.sketchbook.GetComponent<UnityEngine.XR.Interaction.Toolkit.Interactables.XRGrabInteractable>();
-                if (bookGrab != null) bookGrab.throwOnDetach = false;
+                if (bookGrab != null)
+                {
+                    bookGrab.throwOnDetach = false;
+                    bookGrab.movementType = UnityEngine.XR.Interaction.Toolkit.Interactables.XRBaseInteractable.MovementType.VelocityTracking;
+                }
                 game.guidance = SN_PhysicalGuidance.Attach(game, rock.transform);
             }
             game.exit = SN_Exit.Build(game, layout);   // after Done: Vincent asks, the card, the walk into the gold

@@ -1,0 +1,16 @@
+STARRY NIGHT INTERACTION SOUNDS
+
+Grass footsteps: Kenney, Impact Sounds 1.0 (2019-12-19).
+Official source: https://kenney.nl/assets/impact-sounds
+Official archive: https://kenney.nl/media/pages/assets/impact-sounds/87b4ddecda-1677589768/kenney_impact-sounds.zip
+Source/license verified and downloaded 2026-11-21.
+Archive SHA-256: 029d734af1582474edf3a694d1b0cebc97c1c152f2f39fa34d4c2bafc5de77f8
+License: CC0 1.0, https://creativecommons.org/publicdomain/zero/1.0/
+See the unmodified pack license in Kenney-Impact-Sounds-LICENSE.txt.
+Five footstep_grass_000 through 004 OGG files are unedited originals.
+Unity imports them as mono, preloaded effects; playback uses quiet variable gain/pitch.
+
+SN_StarChime.wav: original InnerFrame additive-synthesis cue, 2026-11-21.
+No sampled recording, soundfont, or third-party melody. Generated deterministically
+by SN_SoundscapeSetup.MakeChime (440/660/880 Hz, short raised-cosine attack and exponential decay).
+The generator and resulting sound belong to this project.

@@ -33,26 +33,26 @@ or shared XR setup needs another menu instance.
 | Entry | Behavior |
 | --- | --- |
 | Left controller Menu / Editor M | Toggle the full panel, starting with Audio; holding does not repeatedly toggle |
-| Controls | Basic binding summary; Open controller guide reopens the existing eleven-page EntranceControllerGuide in the same scene; Show hidden panels restores dismissed eligible prompts/choices |
-| Audio | Master listener volume and mute/unmute. More settings selects Settings. There are no separate music/voice/effect gains |
+| Controls | Basic binding summary; Open controller guide opens the complete painted controller diagram in the same scene; Bring dialogue here recalls the current scene’s latest spoken caption; Show hidden panels restores dismissed eligible prompts/choices |
+| Audio | Master listener volume and mute/unmute. More settings selects Settings; Back to volume returns to the same slider without changing its value. There are no separate music/voice/effect gains |
 | Back to Gallery | Visible but disabled in Gallery. Elsewhere, confirmation is required before SceneFader returns to Gallery |
 | Settings | Shared Vincent subtitles on/off, menu size 85–115%, read-only English language |
 | Restart | Confirmation before SceneFader reloads the current scene. This does not clear app-session first-use completion |
 | Leave session | Confirmation before leaving the network room and quitting the player; in Editor, stops Play Mode |
 | Cancel | Returns to the previously selected non-confirmation category without executing the action |
 | × | Hides the panel without changing scenes |
-| Hold trigger on title bar | Drag along the opening plane; releasing keeps the panel at its world position |
+| Hold Grip on the title bar / top gold grip mark | Move closer, farther, or rotate with the controller; releasing keeps its world pose |
 
 The panel opens 1.05 m ahead in VR (1.1 m on desktop), within the existing
 2 m controller UI ray. It opens upright even if the player tilts their head.
 Closing and reopening resets it to the new view centre. Opening it from the
-guide suspends and preserves the current page; closing it restores that page.
+guide closes the diagram and returns to Controls. Closing Menu then resumes play; it does not revive a hidden guide. The diagram’s × returns to Controls when opened from Menu, or to the scene when opened from the Gallery sign.
 Back to Gallery keeps the original temple glyph and is dimmed in Gallery.
 An open panel consumes scene input, including the closing click's frame.
 
 In Editor Play Mode, press M, then use the free mouse to click or drag.
 Closing restores the previous mouse mode. VR uses tracked controller rays
-and the trigger on the title bar. No visible virtual hands are required.
+and Grip on the title bar. Buttons still use the trigger. No visible virtual hands are required.
 
 ## Preferences and limits
 
@@ -61,7 +61,7 @@ Master gain uses `AudioListener.volume`, retaining the existing per-source
 music crossfades and speech ducking. Mute remembers the last audible gain.
 Changes are flushed when the menu closes or the app exits.
 
-`VanGoghCaption`, Starry Night's dialogue and Almond Studio's dialogue opt into `RespectSubtitlePreference`. The guide and task hints remain visible with subtitles off. The preference hides words without stopping voice, paging or speaking priority. The shared panel's × dismisses the current answer through its remaining streamed parts; a new answer can show again. First-use dismissal is separate from completion. Controls → Show hidden panels restores dismissed eligible prompts/choices.
+`VanGoghCaption`, Starry Night's dialogue and Almond Studio's dialogue opt into `RespectSubtitlePreference`. The guide and task hints remain visible with subtitles off. The preference hides words without stopping voice, paging or speaking priority. Spoken captions remain after their audio ends until × is selected or another line replaces them. Short lines that fit are kept together at the existing text size. The shared panel's × dismisses the current answer through its remaining streamed parts; a new answer can show again. First-use dismissal is separate from completion. Controls → Show hidden panels restores dismissed eligible prompts/choices.
 
 Menu size scales this panel, not every label in every scene. English is the
 only implemented language here; the menu does not offer a nonfunctional
@@ -142,11 +142,11 @@ These local generated reports are not committed.
 ## World panels and approved close control — 2026-11-18
 
 Dialogue, first-use hints, wayfinding, exit choices, Gallery details/painting menus,
-and Almond reading panels stay at their opening world pose. Holding the trigger
-on the panel background drags it along that plane; release preserves its pose.
-The existing Menu title-bar drag remains. Turning away does not recenter or close
-panels. Menu close/reopen centres it again; menu suspension preserves a guide's
-page and dragged position. Shared canvases detach from moving Vincent owners.
+and Almond reading panels stay at their opening world pose. The 2026-11-22
+update uses Grip on the top gold mark/title bar for full controller-relative
+movement, including depth and rotation; release preserves its pose. Mouse
+drag remains available for desktop testing. Turning away does not recenter or close
+panels. Menu close/reopen centres it again. Menu pressed inside the controller diagram returns to Controls; closing Menu leaves no suspended diagram. Shared canvases detach from moving Vincent owners.
 
 The user selected **02 — Outline circle**: a muted gold circle and × inset at the
 panel's top right, brightening together on hover, without a filled gold disk.
@@ -264,3 +264,69 @@ frame conflicts with this branch in `SceneFader.cs` and `docs/gallery/README.md`
 #205's player avatars conflict in `docs/ASSETS.md`. Landing order/resolution
 needs coordination before either is combined. #189 and #191 merge cleanly in
 memory as of this check. No coordination message was sent by this local sync.
+
+## Quest feedback fixes — 2026-11-21
+
+The previous guide-suspension behavior documented in historical checks below is superseded.
+The complete diagram now has an explicit return destination. A modal Menu/Controls view
+blocks both hands; in Starry Night an ordinary world-caption hover blocks only its own
+hand, so resting the other pointer on a caption cannot disable the lantern. UI closing
+clicks remain consumed to avoid activating objects behind panels.
+
+The shared panel drag handler no longer takes button presses away when the controller
+moves slightly. Transparent close hit targets keep their raycast geometry. These changes
+apply to the existing quiet gold × and painted Controls close mark, without redesigning them.
+
+Local validation reports are under `deliverables/quest-feedback-2026-11-21` beside the
+checkout. Editor simulation, build packaging and physical headset observations are
+recorded separately; earlier historical pass counts do not describe this iteration.
+
+Shared dialogue, choice cards, the Menu, controller guide and on-top wayfinding prompts
+use `Resources/VG_WorldPanelOverlay`, a Unity-generated material referencing the existing
+XRI `UI/NoZTest` shader at queue 4000. This preserves their world pose while preventing
+Vincent or foreground geometry from erasing their text. Physical welcome-sign materials
+retain normal scene depth. The actual Starry scene reproduced the old caption occlusion;
+rendered text/gold pixels survive with the resource-backed material. The frame/compositor
+implementation is unchanged and is not re-enabled by this material fix.
+
+## Grip movement and dialogue recall — 2026-11-22
+
+Aim anywhere on a dialogue/hint box or Vincent’s name tab and hold Grip. Menu
+uses its title bar; other panels retain their top-edge handles. On pickup the panel turns to face
+the player once; moving/rotating that controller then moves/rotates the panel,
+including closer/farther movement. Releasing leaves it in the world. Turning
+or walking never repositions it. The rear has the same plain physical backing,
+without mirrored text or active front buttons. The same dialogue/hint face remains grabbable
+from behind so the player can turn the panel back toward themselves.
+
+Menu > Controls > **Bring dialogue here** places one spoken caption 1 m in
+front of the current view, 0.15 m below eye level, upright. It preserves the
+current sentence, page and voice playback and closes Menu. Active speech takes
+priority, otherwise the latest retained caption in the current scene is used.
+It can restore a dismissed answer, but never revives cleared text, another
+scene's caption, tutorials, hints, choices or an inactive presenter. It is
+unavailable while subtitles are off or there is no eligible spoken caption.
+
+One hand owns each dragged panel. Existing held objects keep their Grip;
+tracking loss, hidden panels, transitions and ordinary Menu opening cancel the
+panel move at its last pose. The Controls guide and Menu itself remain movable
+while open. The same native controller interaction is shared by captions,
+hints, story choices, reading panels, Gallery detail cards and the guide.
+Physical scene signs and the notebook retain their own object interactions.
+
+`DialogueRecallChecks.RunBatch`, `DialogueSurfaceChecks.RunBatch`, and
+`GalleryWelcomeChecks.RunNativeGripBatch` cover content preservation, actual
+front/back pixels (including a two-sided negative control and TMP text),
+and simulated tracked-device interaction. Headset acceptance is separate.
+
+### Whole dialogue face correction
+
+The first Quest trial revealed a real usability gap: the old Grip region was
+only the upper 65 mm. Aiming at the central text or the top of the visible name
+tab did not capture the panel even though the automated tests aimed precisely
+at the strip. Shared dialogue, hints and choice cards now explicitly opt in to
+the entire body plus the actual name-tab rectangle. Empty space around the tab
+is not added. Trigger still operates × and choice buttons; Grip moves the face.
+Physical signs, existing held props, and other menu hit regions keep their own
+ownership. Pickup/release logs contain only hand/surface/movement distance,
+so the next headset test can verify real capture without recording dialogue.

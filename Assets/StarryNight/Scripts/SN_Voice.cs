@@ -10,8 +10,8 @@ namespace InnerFrame.StarryNight
 
     /// <summary>Vincent's voice: plays his lines one after another (a line already playing finishes; one already playing
     /// or queued isn't queued again) and shows each in the shared dialogue box (VG_DialogueUI.Say, speaker "Vincent"),
-    /// clearing it when the line ends. A line lasts its clip, or VG_Paging's estimate. The queue is the game's; the box
-    /// only shows the line it is given.</summary>
+    /// ending speech priority when the line ends while the subtitle remains available to read. A line lasts its clip,
+    /// or VG_Paging's estimate. The queue is the game's; keeping a caption never delays the next line or task.</summary>
     public class SN_Voice : MonoBehaviour
     {
         const float PauseAfterLine = 0.4f;
@@ -49,13 +49,18 @@ namespace InnerFrame.StarryNight
         {
             if (ConversationPaused == paused) return;
             ConversationPaused = paused;
-            if (paused) { if (source != null) source.Pause(); return; }
+            if (paused)
+            {
+                if (source != null) source.Pause();
+                if (current != null && ui != null) ui.EndSpeech();
+                return;
+            }
             if (source != null) source.UnPause();
             if (ui != null)
             {
                 ui.Voice = source;
                 if (current != null) ui.Say(Speaker, current.text, current.clip);
-                else ui.Clear();
+                else ui.EndSpeech();
             }
         }
 
@@ -68,7 +73,7 @@ namespace InnerFrame.StarryNight
                 if (t >= duration)
                 {
                     current = null;
-                    if (ui != null) ui.Clear();   // the words stay a second more, then fade
+                    if (ui != null) ui.EndSpeech();   // end speech, retaining the spoken caption for the reader
                 }
                 return;
             }

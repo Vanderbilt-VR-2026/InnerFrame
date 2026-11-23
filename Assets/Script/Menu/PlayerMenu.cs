@@ -16,9 +16,8 @@ public class PlayerMenu : MonoBehaviour
     public static PlayerMenu Instance { get; private set; }
     InputAction toggle;
     PlayerMenuPanel panel;
-    EntranceControllerGuide suspendedGuide;
     Camera eyes;
-    bool desktop, wasOpenOnDesktop, leaving;
+    bool desktop, wasOpenOnDesktop, leaving, returnToMenuAfterGuide;
     CursorLockMode lockBeforeMenu;
     bool visibleBeforeMenu;
     int interactionUntilFrame = -1;
@@ -51,7 +50,7 @@ public class PlayerMenu : MonoBehaviour
         if (mode != LoadSceneMode.Single) return;
         // These views belong to the loaded scene. Never retain its old camera or canvas.
         if (panel != null) Destroy(panel.gameObject);
-        panel = null; eyes = null; suspendedGuide = null; leaving = false; nextCameraCheck = 0;
+        panel = null; eyes = null; returnToMenuAfterGuide = false; leaving = false; nextCameraCheck = 0;
         ProtectInteraction();
     }
     public string BackScene => BackFrom(SceneManager.GetActiveScene().name, homeScene);
@@ -59,9 +58,11 @@ public class PlayerMenu : MonoBehaviour
     bool IsOpen => EntranceControllerGuide.IsOpen || (panel != null && panel.gameObject.activeSelf);
     /// <summary>Only an open guide, panel or active exit covers ordinary dialogue and instructions.</summary>
     public static bool ModalOpen => Instance != null && (Instance.IsOpen || Instance.leaving);
-    // Consume the closing click too, so it cannot also select the painting behind the panel.
-    public static bool MenuOpen => SceneFader.IsFading || ModalOpen || VG_PanelInteraction.ConsumingInput || (Instance != null && (
-        (Application.isPlaying && Time.frameCount <= Instance.interactionUntilFrame)));
+    // A modal or its closing click blocks both hands. Hovering an ordinary world
+    // caption is pointer-specific; scenes with two independent hands gate it separately.
+    public static bool BlocksSceneInput => SceneFader.IsFading || ModalOpen || VG_PanelInteraction.ClickConsumed || (Instance != null && (
+        Application.isPlaying && Time.frameCount <= Instance.interactionUntilFrame));
+    public static bool MenuOpen => BlocksSceneInput || VG_PanelInteraction.ConsumingInput;
     public static bool OpenOnDesktop => Instance != null && Instance.desktop && MenuOpen;
 
     public void Toggle()
@@ -69,6 +70,15 @@ public class PlayerMenu : MonoBehaviour
         if (SceneFader.IsFading || leaving) return;
         ProtectInteraction();
         if (panel != null && panel.gameObject.activeSelf) { panel.Hide(); return; }
+        if (EntranceControllerGuide.IsOpen)
+        {
+            // Menu backs out of Controls. Never suspend a hidden guide which could
+            // reappear after closing Menu and keep captions/gameplay modal.
+            returnToMenuAfterGuide = false;
+            EntranceControllerGuide.Current.Close();
+            OpenPage(PlayerMenuPage.Controls);
+            return;
+        }
         OpenPage(PlayerMenuPage.Audio);
     }
     public void OpenPage(PlayerMenuPage page)
@@ -81,22 +91,32 @@ public class PlayerMenu : MonoBehaviour
         {
             panel = PlayerMenuPanel.Create(eyes);
             panel.ControlsRequested += OpenControls;
+            panel.DialogueRecallRequested += () => BringDialogueHere();
             panel.ConfirmRequested += Confirm;
             panel.Closed += OnPanelClosed;
         }
-        // Keep the visitor's place in the guide while using the menu.
-        if (EntranceControllerGuide.IsOpen)
+        if (EntranceControllerGuide.Current != null)
         {
-            suspendedGuide = EntranceControllerGuide.Current;
-            suspendedGuide.gameObject.SetActive(false);
+            returnToMenuAfterGuide = false;
+            EntranceControllerGuide.Current.Close();
         }
         panel.ShowInFrontOf(eyes.transform, BackScene, desktop);
         panel.SelectPage(page);
     }
     public void OpenControls()
     {
-        if (suspendedGuide != null && panel != null && panel.gameObject.activeSelf) { panel.Hide(); return; }
+        if (EntranceControllerGuide.IsOpen) return;
         OpenGuide(false);
+    }
+    /// <summary>Closes Menu, then recalls the current scene's spoken caption without replaying it.</summary>
+    public int BringDialogueHere()
+    {
+        if (SceneFader.IsFading || leaving || !ResolveCamera() || !VG_DialogueUI.CanRecallCurrentScene) return 0;
+        ProtectInteraction();
+        returnToMenuAfterGuide = false;
+        if (EntranceControllerGuide.Current != null) EntranceControllerGuide.Current.Close();
+        if (panel != null && panel.gameObject.activeSelf) panel.Hide();
+        return VG_DialogueUI.RecallCurrentScene(eyes.transform);
     }
     // Arrival controls now live on the physical Gallery sign.
     public bool OpenFirstGalleryGuide() => false;
@@ -104,17 +124,22 @@ public class PlayerMenu : MonoBehaviour
     {
         if (SceneFader.IsFading || leaving || !ResolveCamera()) return false;
         ProtectInteraction(); EnsureXRUIEventSystem();
-        if (EntranceControllerGuide.Open(eyes, ProtectInteraction, firstGalleryVisit) == null) return false;
+        bool fromMenu = panel != null && panel.gameObject.activeSelf;
+        if (EntranceControllerGuide.Open(eyes, OnGuideClosed, firstGalleryVisit) == null) return false;
+        returnToMenuAfterGuide = fromMenu;
         if (panel != null && panel.gameObject.activeSelf) panel.Hide();
         return true;
     }
     void OnPanelClosed()
     {
         ProtectInteraction();
-        var guide = suspendedGuide;
-        suspendedGuide = null;
-        if (guide == null || leaving || SceneFader.IsFading) return;
-        guide.gameObject.SetActive(true);
+    }
+    void OnGuideClosed()
+    {
+        ProtectInteraction();
+        bool backToMenu = returnToMenuAfterGuide;
+        returnToMenuAfterGuide = false;
+        if (backToMenu && !leaving && !SceneFader.IsFading) OpenPage(PlayerMenuPage.Controls);
     }
     public void OpenAudioQuick()
     {

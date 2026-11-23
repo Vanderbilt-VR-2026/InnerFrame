@@ -32,6 +32,7 @@ namespace InnerFrame.AlmondStudio
         readonly InputAction[] triggers = new InputAction[2];
         readonly Transform[] hands = new Transform[2];
         readonly HapticImpulsePlayer[] haptics = new HapticImpulsePlayer[2];
+        readonly bool[] panelTrigger = new bool[2], usableTrigger = new bool[2];
 
         public AS_InputXR(XROrigin origin)
         {
@@ -47,18 +48,36 @@ namespace InnerFrame.AlmondStudio
             if (hands[0] == null && hands[1] == null) Debug.LogWarning("[AS] No 'Left Controller' / 'Right Controller' under the XR Origin: pointing with the trigger won't work (XRI's grip still does).");
         }
 
-        public bool TriggerHeld => triggers[0].IsPressed() || triggers[1].IsPressed();
+        public bool TriggerHeld
+        {
+            get { ReadSceneTriggers(); return usableTrigger[0] || usableTrigger[1]; }
+        }
+
+        void ReadSceneTriggers()
+        {
+            for (int i = 0; i < 2; i++)
+            {
+                if (!triggers[i].IsPressed()) { panelTrigger[i] = usableTrigger[i] = false; continue; }
+                var hand = hands[i];
+                if (hand == null || !hand.gameObject.activeInHierarchy) { usableTrigger[i] = false; continue; }
+                // Ownership survives a ray leaving a Grip-held panel. Keep this Trigger press consumed until
+                // its own release as well, so releasing Grip cannot synthesize a brush/letter/casement press.
+                panelTrigger[i] |= VG_PanelInteraction.BlocksHand(hand, new Ray(hand.position, hand.forward));
+                usableTrigger[i] = !panelTrigger[i];
+            }
+        }
         public bool AimsFromHead => false;
         public bool TryGetHeadAim(out Ray aim) { aim = default; return false; }
 
         public bool TryGetPointer(out Ray aim, out Transform hand)
         {
+            ReadSceneTriggers();
             // the hand pressed this frame first, else one that is held
             for (int pass = 0; pass < 2; pass++)
                 for (int i = 1; i >= 0; i--)   // the right hand first when both are down
                 {
                     var t = hands[i];
-                    if (t == null || !t.gameObject.activeInHierarchy) continue;
+                    if (!usableTrigger[i] || t == null || !t.gameObject.activeInHierarchy) continue;
                     if (pass == 0 ? !triggers[i].WasPressedThisFrame() : !triggers[i].IsPressed()) continue;
                     aim = new Ray(t.position, t.forward);
                     hand = t;

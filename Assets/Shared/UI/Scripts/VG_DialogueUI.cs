@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 /// <summary>
@@ -12,9 +13,10 @@ using UnityEngine.UI;
 public class VG_DialogueUI : MonoBehaviour
 {
     static readonly HashSet<VG_DialogueUI> activeViews = new HashSet<VG_DialogueUI>();
+    static ulong utteranceSequence;
     public static IEnumerable<VG_DialogueUI> ActiveViews => activeViews;
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    static void ResetViews() => activeViews.Clear();
+    static void ResetViews() { activeViews.Clear(); utteranceSequence = 0; }
     void OnEnable() => activeViews.Add(this);
     void OnDisable() => activeViews.Remove(this);
     const float FadeSeconds = 0.2f;   // the box and the hint fade in and out
@@ -28,8 +30,9 @@ public class VG_DialogueUI : MonoBehaviour
     public AudioSource Voice { get; set; }
     /// <summary>The eye used for initial placement and pointer projection; null: the main camera.</summary>
     public Transform Head { get { Build(); return follow.head; } set { Build(); follow.head = value; } }
-    /// <summary>Words are on screen: from Say until a second after Clear.</summary>
-    public bool IsSpeaking => paging != null && paging.Showing;
+    /// <summary>The caller's utterance is active, from Say until EndSpeech or Clear. A retained caption is not ongoing speech:
+    /// animation and tutorial priority must not remain busy while the reader keeps the last words open.</summary>
+    public bool IsSpeaking => utteranceActive;
     /// <summary>A visible instruction, including its fade out. Other instruction presenters can yield to it.</summary>
     public bool HintVisible => hintGroup != null && hintGroup.gameObject.activeInHierarchy && hintGroup.alpha > 0f;
     /// <summary>False for contextual instructions placed beside an object in the world.</summary>
@@ -42,12 +45,23 @@ public class VG_DialogueUI : MonoBehaviour
     }
     /// <summary>True for a guide opened from the player menu itself.</summary>
     public bool ShowWhileMenuOpen { get; set; }
-    /// <summary>Opt-in for spoken dialogue captions. Tutorials using the same visual style stay readable.</summary>
+    /// <summary>Opt-in for spoken dialogue captions: respects the subtitle preference and retains the last words
+    /// after speech ends, until dismissed or replaced. Temporary hints and tutorials keep their existing lifetimes.</summary>
     public bool RespectSubtitlePreference { get; set; }
     /// <summary>Optional owner close (full guide or first-use prompt). Ordinary captions dismiss only their words.</summary>
     public System.Action CloseRequested { get; set; }
     public bool WordsDismissed { get; private set; }
     public bool HintDismissed { get; private set; }
+    /// <summary>A current spoken caption, including retained or deliberately dismissed words. Queries do not
+    /// build a panel or restore tutorials. Menu temporarily hiding the canvas does not expire its caption.</summary>
+    public bool HasRecallableSpokenWords => isActiveAndEnabled && RespectSubtitlePreference && !ShowWhileMenuOpen
+        && CloseRequested == null && PlayerMenuPreferences.Subtitles && paging != null && paging.Showing && paging.Pages.Count > 0;
+    /// <summary>Actual caption visibility, distinct from speech/audio activity and recall eligibility.</summary>
+    public bool SpokenWordsVisible => isActiveAndEnabled && RespectSubtitlePreference && !WordsDismissed
+        && words != null && words.gameObject.activeInHierarchy && words.alpha > .01f
+        && follow != null && follow.DisplayCanvas.enabled && follow.DisplayCanvas.gameObject.activeInHierarchy
+        && paging != null && paging.Current >= 0;
+    public static bool CanRecallCurrentScene => CurrentSceneCaption() != null;
     /// <summary>The existing dialogue layout, for placement and accessory buttons using the same assets.</summary>
     public Transform LayoutRoot { get { Build(); return follow.Layout; } }
     public Canvas DisplayCanvas { get { Build(); return follow.DisplayCanvas; } }
@@ -67,8 +81,10 @@ public class VG_DialogueUI : MonoBehaviour
     Material onTop;
     AudioClip clip;
     bool hintShown;
+    bool utteranceActive;
     bool lockToView;
     string hintIdentity;
+    ulong lastUtterance;
 
     /// <summary>`text` from `speaker`, a sentence a page in time with `clip` (without one, 0.06 s a character), until Clear.</summary>
     public void Say(string speaker, string text, AudioClip clip, bool continuePresentation = false)
@@ -78,13 +94,20 @@ public class VG_DialogueUI : MonoBehaviour
         if (!paging.Showing && !hintShown) follow.Snap();
         if (!continuePresentation) WordsDismissed = false;
         this.clip = clip;
+        utteranceActive = true;
+        lastUtterance = ++utteranceSequence;
         dialogue.Speaker(speaker ?? "");
         int size = VG_UI.FontSize(dialogue.Cap);
-        paging.Show(text, clip != null ? clip.length : 0f, size, size, VG_DialogueBox.MostLines, 0);
+        paging.Show(text, clip != null ? clip.length : 0f, size, size, VG_DialogueBox.MostLines, 0, RespectSubtitlePreference);
     }
 
-    /// <summary>The words stay a second more, then fade.</summary>
-    public void Clear() { Build(); paging.End(); }
+    /// <summary>Ends the utterance without cutting off reading. Spoken subtitles stay until the reader closes them
+    /// or the next line appears; non-caption presenters keep the usual one-second linger.</summary>
+    public void EndSpeech() { Build(); utteranceActive = false; paging.End(RespectSubtitlePreference); }
+
+    /// <summary>Explicitly clears the words, retaining the existing short fade for scene transitions and other
+    /// presentation changes. Use EndSpeech for normal narration completion, so the reader can keep the caption.</summary>
+    public void Clear() { Build(); utteranceActive = false; paging.End(); }
 
     public void DismissWords()
     {
@@ -103,6 +126,51 @@ public class VG_DialogueUI : MonoBehaviour
         if (!WordsDismissed && !HintDismissed) return;
         WordsDismissed = HintDismissed = false;
         if (follow != null) follow.Snap();
+    }
+
+    /// <summary>Moves only the current scene's latest spoken caption in front of the supplied eye, once.
+    /// A deliberate recall may restore its dismissed words, but never changes hints, paging, sound or progress.
+    /// Returns the number recalled (zero or one); Subtitles off is respected.</summary>
+    public static int RecallCurrentScene(Transform eyes)
+    {
+        if (eyes == null) return 0;
+        var view = CurrentSceneCaption();
+        if (view == null) return 0;
+        var canvas = view.follow.DisplayCanvas;
+        VG_PanelInteraction.CancelMovesFor(canvas.transform);
+        view.follow.head = eyes;
+        view.follow.ReleaseView();
+        view.follow.Snap(); // Marks placement complete so subsequent head movement cannot move it.
+        Vector3 up = Vector3.ProjectOnPlane(Vector3.up, eyes.forward);
+        if (up.sqrMagnitude < .001f) up = Vector3.ProjectOnPlane(eyes.up, eyes.forward);
+        var rotation = Quaternion.LookRotation(eyes.forward, up.normalized);
+        canvas.transform.rotation = rotation;
+        // The caption's top edge is the layout origin. Position its visible centre, not that edge.
+        var panel = (RectTransform)view.dialogue.transform.Find("Panel");
+        var centre = eyes.position + eyes.forward - rotation * Vector3.up * .15f;
+        canvas.transform.position += centre - panel.TransformPoint(panel.rect.center);
+        canvas.worldCamera = eyes.GetComponent<Camera>();
+        canvas.enabled = true;
+        canvas.gameObject.SetActive(true);
+        view.WordsDismissed = false;
+        view.words.gameObject.SetActive(true);
+        view.words.alpha = 1f;
+        VG_PanelInteraction.Consume();
+        return 1;
+    }
+
+    static VG_DialogueUI CurrentSceneCaption()
+    {
+        var scene = SceneManager.GetActiveScene();
+        if (!scene.IsValid() || !scene.isLoaded) return null;
+        VG_DialogueUI latest = null;
+        foreach (var view in activeViews)
+        {
+            if (view == null || view.gameObject.scene != scene || !view.HasRecallableSpokenWords) continue;
+            if (latest == null || (view.IsSpeaking && !latest.IsSpeaking)
+                || (view.IsSpeaking == latest.IsSpeaking && view.lastUtterance > latest.lastUtterance)) latest = view;
+        }
+        return latest;
     }
 
     /// <summary>The hint: `title` (null: the settings' hintTitle; empty: no title row) and one `line`, where {X} draws X
@@ -161,8 +229,7 @@ public class VG_DialogueUI : MonoBehaviour
         follow.CreateLayout(settings);
         follow.FitDialogueLayout = true;
         follow.LockToView = lockToView;
-        onTop = new Material(Canvas.GetDefaultCanvasMaterial());
-        onTop.SetInt("unity_GUIZTestMode", (int)UnityEngine.Rendering.CompareFunction.Always);   // nothing in the room cuts through it
+        onTop = VG_UI.NewOverlayMaterial("Vincent dialogue overlay");
         dialogue = VG_DialogueBox.Make(follow.Layout, settings, font, box, nameTab, starRing, star, onTop);
         follow.DialogueBox = dialogue;
         hint = VG_Hint.Make(follow.Layout, VG_DialogueBox.Above, settings, font, hintPlate, star, key, onTop);
@@ -170,8 +237,10 @@ public class VG_DialogueUI : MonoBehaviour
         paging.Resize = lines => { dialogue.More = paging.Current < paging.Pages.Count - 1; dialogue.Lines(lines); };
         words = Hidden(dialogue.gameObject);
         hintGroup = Hidden(hint.gameObject);
-        VG_PanelInteraction.Attach((RectTransform)dialogue.transform.Find("Panel"), follow.DisplayCanvas.transform, DisplayCanvas, DismissWords);
-        VG_PanelInteraction.Attach((RectTransform)hint.transform.Find("Plate"), follow.DisplayCanvas.transform, DisplayCanvas, DismissHint);
+        VG_PanelInteraction.Attach((RectTransform)dialogue.transform.Find("Panel"), follow.DisplayCanvas.transform, DisplayCanvas, DismissWords)
+            .WithWholeFaceGrip((RectTransform)dialogue.transform.Find("NameTab"));
+        VG_PanelInteraction.Attach((RectTransform)hint.transform.Find("Plate"), follow.DisplayCanvas.transform, DisplayCanvas, DismissHint)
+            .WithWholeFaceGrip();
     }
 
     static CanvasGroup Hidden(GameObject panel)

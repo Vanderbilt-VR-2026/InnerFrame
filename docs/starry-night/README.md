@@ -51,7 +51,7 @@ from its pedestal; the player menu brings you back. Since 2026-11-17 the night e
 with him, and a card to answer: follow him into Almond Blossom, or go back to the Gallery (see "The exit"). The scene is in
 the build list now, after the existing scenes; the Gallery still starts the game.
 
-## Physical instructions (2026-11-20, local review)
+## Physical instructions (2026-11-21, local review)
 
 Rowling's approved guidance design is integrated without rebuilding Cici's scene, layout or original models:
 
@@ -59,24 +59,44 @@ Rowling's approved guidance design is integrated without rebuilding Cici's scene
   pinned Piper/Norman voice; no second speaker competes with hold-B conversation.
 - His named star briefly brightens as its line starts. A completed target cannot be cued; opening Menu or talking
   hides the cue. The existing lantern pulse and next wind-dot highlight are reused.
-- A cream instruction leaf is clipped to the existing sketchbook's raised page. One action appears at a time. Its
-  controller illustration reuses the original Controls artwork. The original sketch and hidden-letter side event remain.
-- Grip brings the book closer and lets the player turn it. On release it stays at that world pose, independent of
-  the head. A small painted B/speech mark belongs to the existing rock, with no floating signboard.
+- A cream instruction leaf is clipped to the existing sketchbook's raised page. **Previous** and **Next** browse four
+  pages: **Dim the lantern**, **Wake the stars**, **Trace the wind**, **Take his page**. One action appears at a time;
+  its controller illustration reuses the original Controls artwork. A **Current task** marker identifies the active
+  instruction without turning the reader's chosen page. The first actual Grip pickup opens the current task only if
+  the player has not already browsed. Reading or turning pages grants no story progress. The original sketch and
+  hidden-letter side event remain.
+- Grip brings the book closer and lets the player turn it. The notebook alone uses solid, velocity-tracked
+  grabbing, so the covers can meet the rock while still held. An ordinary reading release **pins the exact world
+  position and rotation**; it never follows the head. Grip again to reposition it. A deliberate set-down close above
+  the actual rock (within 0.25 m, with the cover supported over its surface) instead resumes gravity and solid contact.
+  Continuous collision detection protects its thin covers; a bounded upward correction handles an already embedded
+  local release before gravity resumes. The lantern and final page retain their existing grab behavior. A small
+  painted B/speech mark belongs to the existing rock, with no floating signboard.
 - Activity hint boxes and the duplicate idle B reminder yield to these physical instructions. Optional Vincent
   subtitles, recording/thinking/error status, the subtitle preference and the existing exit choice card remain.
   If the instruction leaf is unavailable, the old activity hint returns.
 
 The book's colliders use the existing `BedroomLoose` physics layer, already excluded from the shared rig's ground
-spherecast. This prevents a book left at reading height from becoming a false floor. At runtime, this scene adds that
+spherecast. This prevents a held or falling book from becoming a false floor. At runtime, this scene adds that
 layer to its near/far grab casters and restores their previous masks on destruction. No layer, XR prefab, teleport,
 package or project setting is changed. The lantern still returns to its hook; the final page retains its own behavior.
 
 To update only the lines asset after regenerating narration, use **Tools > InnerFrame > Starry Night > Refresh
 instruction voice lines**. This avoids rebuilding the scene or replacing a teammate's layout.
 
-Verification and local screenshots are recorded in `physical-guidance-verification.md`. Headset readability,
-physical microphone/audio routing and multiplayer transport require separate device checks.
+Quiet grass footsteps now use actual grounded locomotion distance and move input, not head turns, room-scale movement,
+teleports or pushing against a wall. A fresh star woken by the local player's trigger plays one short chime; repeated
+clicks and shared-room progress do not replay it. Both effects become quieter during Vincent's speech and respect the
+existing Audio controls. The grass clips are Kenney CC0 assets; the chime is an original project asset. Credits and
+source details are in [`../ASSETS.md`](../ASSETS.md).
+
+Verification and earlier local screenshots are recorded in `physical-guidance-verification.md`. The 2026-11-21
+Unity 6000.3.23f1 run passed 52 native simulated-controller checks, including pinned reading, manual page input,
+solid held contact, rock landing/regrab, actual locomotion footsteps and first/repeated star chimes. These are
+Editor checks with simulated XR input, not headset perception tests. The notebook alone uses 16/8 Rigidbody solver
+iterations for stable thin-cover contact, without slowing its direct XRI tracking.
+Quest acceptance remains pending for perceived effect/voice balance, text and controller-art readability, page-button
+aiming, world-pinned reading, rock set-down/regrab, physical microphone/audio routing and multiplayer transport.
 
 ## Open and play
 
@@ -576,13 +596,24 @@ and the rules: `docs/convai/starry-night-objects.md` (notes: `Assets/VanGogh/Res
   `-executeMethod InnerFrame.StarryNight.EditorTools.SN_PlaythroughTest.RunBatch -snLog <file>`): the whole story from
   Arrive to Done through a scripted input, and the negative checks (a trigger 10° from every star wakes nothing; N3 before
   N1 wakes it but doesn't advance; tracing the wind backwards doesn't complete it; the lantern down before sitting skips
-  Sit), each with its positive control; and the letter found during Stars: after L10 the Stars hint is still shown and
+  Sit), each with its positive control; and the letter found during Stars: after L10 the task is still Stars, the chosen
+  manual page is unchanged (or the Stars fallback hint remains), and
   the 25 s repeat still fires. Since 2026-11-09 also the lantern turned down without holding it (F): the trigger aimed 20°
   off it and from 2.5 m does nothing (the controls), the ray on it brightens it with one buzz, the hand 0.1 m from it
   (touching) turns it down, and so does the ray from a chair-seated eye; `Progress.lanternDown` is set. Since 2026-11-10
-  the hint's title as drawn, sampled after every step: in each state it is that state's title and only it (Dawn: "Dawn",
-  then "Take his page"; control: a wrong title shown during Done fails); each state's line in the log shows its title
-  and its hint.
+  the instruction sampled after every step: the manual book's task marker follows actual progress without auto-turning
+  pages; if physical instructions are absent, the fallback title and text match that state (Dawn: waiting, then the page
+  offer). Injecting a Stars marker or fallback title during Done must fail the same rule.
+- `SN_PhysicalGuidanceCheck.RunBatch -snLog <file>`: real `BuildWorld` with isolated physics; world-pinned reading,
+  supported/unsupported rock release, bounded overlap recovery, regrab/remote-pose APIs, and physical guidance checks.
+- `SN_NotebookManualCheck.RunBatch`: four pages, bounds, current-task marker, physical ray occlusion and per-hand
+  Trigger capture through release; writes `Logs/SN_notebook-manual.txt`.
+- `SN_PhysicalGuidancePlayCheck.RunBatch -snOut <dir>` (without `-quit`): native simulated-controller Play checks,
+  including pinned reading, regrab, held contact/landing and the printed page controls. This is an Editor check, not
+  human acceptance on Quest.
+- `SN_SoundscapeCheck.RunBatch -snLog <file>`: locomotion-distance controls, star event deduplication and audio assets;
+  it does not measure what a person hears in the headset. All four entrypoints above use the namespace
+  `InnerFrame.StarryNight.EditorTools` with `-executeMethod`.
 - `SN_UICheck.RunBatch -snLog <file>` (batch): the dialogue box in this scene: every line's pages fit in three lines at
   full size; every hint (each state's title and line) fits: its plate no wider than the box (control: a line twice
   over); where the box and the hint sit from the seat; a 15° head turn leaves it, a 30° turn catches up in under

@@ -102,15 +102,14 @@ public class WayfindingHint : MonoBehaviour
 
         if (drawOnTop)
         {
-            onTop = new Material(Canvas.GetDefaultCanvasMaterial());
-            onTop.SetInt("unity_GUIZTestMode", (int)UnityEngine.Rendering.CompareFunction.Always);
+            onTop = VG_UI.NewOverlayMaterial("Wayfinding overlay");
         }
         hint = VG_Hint.Make(layout, Vector2.zero, Settings, MenuLook.Font, MenuLook.PlateSprite, MenuLook.StarSprite, MenuLook.KeySprite, onTop);
         hintRect = (RectTransform)hint.transform;
         plate = (RectTransform)hint.transform.Find("Plate");
         key = hint.transform.Find("Key");
         letter = key != null ? key.Find("Letter")?.GetComponent<Text>() : null;
-        VG_PanelInteraction.Attach(plate, DisplayCanvas.transform, DisplayCanvas, Dismiss);
+        VG_PanelInteraction.Attach(plate, DisplayCanvas.transform, DisplayCanvas, Dismiss).WithWholeFaceGrip();
     }
 
     /// <summary>`title` (empty: none) and one line: `line`, then `buttonKey` in a circle (MenuKey or GripKey: that

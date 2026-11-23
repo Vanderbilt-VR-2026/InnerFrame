@@ -85,10 +85,11 @@ public class VG_BedroomExit : MonoBehaviour
         lead.GroundHeight = exit.Height;
         var talker = vincent.GetComponent<SpeechToProxy>();
         var f = exit.flow = vincent.AddComponent<VG_ExitFlow>();
+        lead.Visitor = () => f.View != null ? f.View : (Camera.main != null ? Camera.main.transform : null);
         var order = VG_StoryOrder.Load();
         f.next = (order != null ? order.NextReady(Scene) : null) ?? PaintingNames.Gallery;
         f.askAfter = AskAfter;
-        f.goldAfter = 30f;   // the stairs start the gold; this only ends a walk that is stuck (the door never ours)
+        f.goldAfter = float.PositiveInfinity;   // actual stair progress, never a deadline for a slow visitor or pending door authority
         f.Over = () => exit.mirror.PortraitDone && !talker.IsBusy;
         f.Ask = () =>
         {
@@ -103,6 +104,7 @@ public class VG_BedroomExit : MonoBehaviour
         f.Saying = () => talker.IsBusy;
         f.SetOff = exit.SetOff;
         f.Walk = exit.Walk;
+        f.CanContinueWalk = lead.CanContinueWithVisitor;
         f.Stop = lead.Hold;
         f.ShowVincent = shown => { foreach (var r in lead.body.GetComponentsInChildren<Renderer>()) r.enabled = shown; };
         f.Focus = () => exit.Phase > 0 ? exit.InStairs(Back - 0.3f, Rise * Steps + 1f, 0f) : (Vector3?)null;   // the top of the stairs
@@ -173,7 +175,9 @@ public class VG_BedroomExit : MonoBehaviour
             return false;
         }
         lead.Step(dt);
-        return lead.Remaining <= lead.speed * flow.goldRise;   // the gold rises as he steps onto the first steps
+        // Use his paced travel, not the original clip's stride: otherwise a slower visitor starts the gold before
+        // he has crossed the doorway, and it is already full while he is still on the landing.
+        return lead.Remaining <= lead.CurrentSpeed * flow.goldRise;
     }
 
     void Next() { Phase++; t = 0f; }

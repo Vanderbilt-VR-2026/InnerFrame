@@ -20,6 +20,128 @@ using Object = UnityEngine.Object;
 [InitializeOnLoad]
 public static class WorldPanelChecks
 {
+    const string DepthMaterialPath = "Assets/Shared/UI/Resources/VG_WorldPanelOverlay.mat";
+
+    /// <summary>A real opaque depth buffer must not erase an intentionally readable, world-anchored panel.</summary>
+    public static void RunDepthBatch()
+    {
+        EditorSceneManager.OpenScene("Assets/StarryNight/Scenes/StarryNight.unity");
+        SessionState.SetBool("InnerFrame.WorldPanelDepth.Pending", true);
+        EditorApplication.isPlaying = true;
+    }
+
+    public sealed class DepthRunner : MonoBehaviour
+    {
+        System.Collections.IEnumerator Start()
+        {
+            var fixture = RunDepthFixture();
+            while (true)
+            {
+                bool more = false; object current = null; Exception failure = null;
+                try { more = fixture.MoveNext(); if (more) current = fixture.Current; }
+                catch (Exception error) { failure = error; }
+                if (failure != null) { Debug.LogException(failure); EditorApplication.Exit(1); yield break; }
+                if (!more) yield break;
+                yield return current;
+            }
+        }
+    }
+
+    static System.Collections.IEnumerator RunDepthFixture()
+    {
+        string output = Environment.GetEnvironmentVariable("INNERFRAME_DEPTH_OUTPUT") ?? "Logs/WorldPanelDepth";
+        Directory.CreateDirectory(output);
+        var notes = new List<string>();
+        void Check(bool ok, string label) => notes.Add((ok ? "PASS " : "FAIL ") + label);
+        Material legacy = null, blockerMaterial = null;
+        RenderTexture target = null;
+        Camera camera = null;
+        bool finished = false;
+        try
+        {
+            camera = new GameObject("World panel depth camera").AddComponent<Camera>();
+            var game = Object.FindAnyObjectByType<InnerFrame.StarryNight.SN_Game>();
+            game.enabled = false;
+            var origin = Object.FindAnyObjectByType<Unity.XR.CoreUtils.XROrigin>(FindObjectsInactive.Include);
+            camera.transform.SetPositionAndRotation(game.layout.OnGround(game.layout.playerSeat) + Vector3.up * (1.6f * origin.transform.lossyScale.y), origin.transform.rotation);
+            camera.nearClipPlane = .03f; camera.fieldOfView = 60f;
+            camera.clearFlags = CameraClearFlags.SolidColor; camera.backgroundColor = Color.black;
+            camera.cullingMask = 1 << 31;
+            target = new RenderTexture(1280, 800, 24); camera.targetTexture = target;
+            var ui = game.ui;
+            ui.autoStep = false; ui.ShowWhileMenuOpen = true; ui.Head = camera.transform;
+            ui.Say("Vincent", "Hold the lantern and pull the trigger to dim it.", null);
+            ui.Step(1f); ui.Snap();
+            var canvas = ui.DisplayCanvas;
+            var position = canvas.transform.position; var rotation = canvas.transform.rotation;
+            var graphics = canvas.GetComponentsInChildren<Graphic>(true);
+            var production = ui.OverlayMaterial;
+            var resource = Resources.Load<Material>("VG_WorldPanelOverlay");
+            Check(resource != null && production != resource && production.shader == resource.shader &&
+                production.shader.name == "UI/NoZTest" && production.renderQueue == 4000,
+                "actual scene caption owns a copy of the included fixed-ZTest resource material");
+            void SetMaterial(Material material) { foreach (var graphic in graphics) graphic.material = material; }
+            Color32[] Capture(string name)
+            {
+                Render(canvas, camera);
+                var before = RenderTexture.active; RenderTexture.active = target;
+                var image = new Texture2D(target.width, target.height, TextureFormat.RGB24, false);
+                image.ReadPixels(new Rect(0, 0, target.width, target.height), 0, 0); image.Apply();
+                var pixels = image.GetPixels32(); File.WriteAllBytes(Path.Combine(output, name + ".png"), image.EncodeToPNG());
+                Object.DestroyImmediate(image); RenderTexture.active = before; return pixels;
+            }
+            bool Ink(Color32 pixel) => pixel.r > 145 && pixel.g > 95 && pixel.b < pixel.r + 25;
+            // Explicit negative control: the depth-tested behaviour observed with the old
+            // already-built Starry material. The original 0%-versus-100% reproduction is
+            // recorded separately; this regression also works after the runtime fix.
+            legacy = new Material(Canvas.GetDefaultCanvasMaterial());
+            legacy.SetInt("unity_GUIZTestMode", (int)UnityEngine.Rendering.CompareFunction.LessEqual);
+            SetMaterial(legacy);
+            for (int i = 0; i < 5; i++) yield return null;
+            var clear = Capture("01-depth-tested-unoccluded");
+            var mask = Enumerable.Range(0, clear.Length).Where(i => Ink(clear[i])).ToArray();
+            Check(mask.Length > 1500, "actual shared dialogue renders readable text/gold pixels: " + mask.Length);
+
+            var blocker = GameObject.CreatePrimitive(PrimitiveType.Cube); blocker.name = "Opaque torso-depth fixture";
+            blocker.layer = 31; blocker.transform.SetPositionAndRotation(camera.transform.position + camera.transform.forward * .45f, camera.transform.rotation);
+            blocker.transform.localScale = new Vector3(4, 4, .1f);
+            blockerMaterial = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+            blockerMaterial.SetColor("_BaseColor", new Color(.01f, .05f, .7f, 1));
+            blocker.GetComponent<Renderer>().sharedMaterial = blockerMaterial;
+            for (int i = 0; i < 5; i++) yield return null;
+            var obstructed = Capture("02-depth-tested-occluded");
+            float oldFraction = mask.Count(i => Ink(obstructed[i])) / (float)mask.Length;
+            Check(oldFraction < .2f, "depth-tested negative control loses text behind opaque geometry: " + oldFraction.ToString("P1") + " readable pixels remain");
+
+            SetMaterial(production);
+            for (int i = 0; i < 5; i++) yield return null;
+            var visible = Capture("03-fixed-occluder");
+            float newFraction = mask.Count(i => Ink(visible[i])) / (float)mask.Length;
+            Check(newFraction > .98f, "fixed ZTest shader preserves text/gold over opaque geometry: " + newFraction.ToString("P1"));
+            Check(Vector3.Distance(position, canvas.transform.position) < .0001f && Quaternion.Angle(rotation, canvas.transform.rotation) < .001f &&
+                canvas.renderMode == RenderMode.WorldSpace && canvas.transform.parent == null,
+                "material change retains detached world position/rotation and world-space rendering");
+            blocker.SetActive(false); camera.cullingMask = ~0;
+            SetMaterial(legacy); for (int i = 0; i < 5; i++) yield return null;
+            Capture("04-starry-depth-tested");
+            SetMaterial(production); for (int i = 0; i < 5; i++) yield return null;
+            Capture("05-starry-fixed");
+            Check(AssetDatabase.GetDependencies(DepthMaterialPath).Any(path => path.EndsWith("/UI-NoZTest.shader")),
+                "resource has a serialized build dependency on the existing XRI shader");
+            finished = true;
+        }
+        finally
+        {
+            if (legacy != null) Object.DestroyImmediate(legacy);
+            if (blockerMaterial != null) Object.DestroyImmediate(blockerMaterial);
+            if (camera != null) camera.targetTexture = null;
+            if (target != null) { target.Release(); Object.DestroyImmediate(target); }
+            if (!finished) notes.Add("FAIL depth fixture did not complete");
+            File.WriteAllLines(Path.Combine(output, "checks.txt"), notes.Concat(new[] { $"RESULT: {notes.Count(n => n.StartsWith("PASS"))} passed, {notes.Count(n => n.StartsWith("FAIL"))} failed. Graphical Play Mode depth-buffer fixture; no Quest claim." }));
+        }
+        EditorApplication.Exit(notes.Any(note => note.StartsWith("FAIL")) ? 1 : 0);
+    }
+
     const string Output = "Logs/WorldPanels", Request = "Temp/WorldPanelChecks.request", Pending = "InnerFrame.WorldPanels.Pending";
     static double nextPoll, audioAt;
     static VG_DialogueUI audioUi;
@@ -35,6 +157,10 @@ public static class WorldPanelChecks
     static void AudioMenu() => File.WriteAllText(Request, "play-audio");
     static void Poll()
     {
+        if (SessionState.GetBool("InnerFrame.WorldPanelDepth.Pending", false) && EditorApplication.isPlaying && Time.timeSinceLevelLoad > 2f)
+        {
+            SessionState.EraseBool("InnerFrame.WorldPanelDepth.Pending"); new GameObject("World panel depth regression").AddComponent<DepthRunner>(); return;
+        }
         if (EditorApplication.timeSinceStartup < nextPoll || EditorApplication.isCompiling || EditorApplication.isUpdating) return;
         nextPoll = EditorApplication.timeSinceStartup + .3;
         if (File.Exists(Request)) { SessionState.SetString(Pending, File.ReadAllText(Request).Trim()); File.Delete(Request); }
@@ -130,6 +256,7 @@ public static class WorldPanelChecks
             fixture = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
             SceneManager.SetActiveScene(fixture);
             var camera = new GameObject("World panel test camera").AddComponent<Camera>();
+            camera.tag = "MainCamera"; // TutorialManager can create its view even when the user's original scene has no camera.
             camera.transform.position = new Vector3(0, 1.6f, 0); camera.fieldOfView = 60f; camera.nearClipPlane = .03f;
             camera.clearFlags = CameraClearFlags.SolidColor; camera.backgroundColor = new Color(.05f,.07f,.13f);
             target = new RenderTexture(1280, 800, 24); camera.targetTexture = target;
@@ -172,7 +299,7 @@ public static class WorldPanelChecks
                     "world corners and rotation survive camera and Vincent movement " + pose.eulerAngles);
             }
             camera.transform.SetPositionAndRotation(new Vector3(0,1.6f,0),Quaternion.identity);
-            var released = Drag(drag, ui.DisplayCanvas.transform, camera, events, Check, "dialogue");
+            var released = DragDesktop(drag, ui.DisplayCanvas.transform, camera, events, Check, "dialogue");
             follow.Step(1f); ui.Step(.2f);
             Check(Vector3.Distance(released,ui.DisplayCanvas.transform.position)<.0001f && Quaternion.Angle(rotation,ui.DisplayCanvas.transform.rotation)<.001f, "released dialogue stays at dragged world position and rotation");
             ExecuteEvents.Execute(drag.CloseButton.gameObject, new PointerEventData(events) { button = PointerEventData.InputButton.Left }, ExecuteEvents.pointerClickHandler); ui.Step(1f);
@@ -195,7 +322,7 @@ public static class WorldPanelChecks
             choice.Show();Render(choice.Follow.DisplayCanvas,camera);
             foreach(var button in choice.Buttons)CheckHit(button,choice.Follow.DisplayCanvas,camera,events,Check,"choice "+button.name);
             var choiceDrag=choice.Follow.DisplayCanvas.GetComponentInChildren<VG_PanelInteraction>();
-            var choicePosition=Drag(choiceDrag,choice.Follow.DisplayCanvas.transform,camera,events,Check,"choice");
+            var choicePosition=DragDesktop(choiceDrag,choice.Follow.DisplayCanvas.transform,camera,events,Check,"choice");
             choice.Hide();choice.Show();
             Check(Vector3.Distance(choicePosition,choice.Follow.DisplayCanvas.transform.position)<.0001f,"choice menu suspension preserves dragged anchor");
             var flow=owner.AddComponent<VG_ExitFlow>();flow.card=choice;flow.Over=()=>true;flow.Ask=()=>false;flow.Saying=()=>false;flow.askAfter=0;flow.MenuOpen=()=>false;
@@ -251,8 +378,8 @@ public static class WorldPanelChecks
         for(int i=0;i<enter.onClick.GetPersistentEventCount();i++)enter.onClick.SetPersistentListenerState(i,UnityEngine.Events.UnityEventCallState.Off);
         int enters=0;enter.onClick.AddListener(()=>enters++);
         ExecuteEvents.Execute(enter.gameObject,new PointerEventData(events){button=PointerEventData.InputButton.Left},ExecuteEvents.pointerClickHandler);
-        check(enters==1,"real detail Enter accepts native UI click exactly once (scene load intercepted)");
-        var pose=Drag(placement.GetComponent<VG_PanelInteraction>(),placement.transform,camera,events,check,"Gallery detail");
+        check(enters==1,"real detail Enter accepts a dispatched UI click exactly once (scene load intercepted)");
+        var pose=DragDesktop(placement.GetComponent<VG_PanelInteraction>(),placement.transform,camera,events,check,"Gallery detail");
         camera.transform.Rotate(0,95,0);
         check(Vector3.Distance(pose,placement.transform.position)<.0001f,"Gallery detail retains dragged position when player looks away");
         for(int i=0;i<close.onClick.GetPersistentEventCount();i++)close.onClick.SetPersistentListenerState(i,UnityEngine.Events.UnityEventCallState.EditorAndRuntime);
@@ -270,7 +397,7 @@ public static class WorldPanelChecks
         camera.transform.SetPositionAndRotation(new Vector3(.4f,1.6f,-.2f),Quaternion.Euler(12,110,30));
         check(menu.IsOpen&&Vector3.Distance(panelPose,menu.Panel.position)<.0001f&&Quaternion.Angle(panelRotation,menu.Panel.rotation)<.001f,"painting panel stays open and anchored when looking away");
         ExecuteEvents.Execute(menu.BackButton.gameObject,new PointerEventData(events){button=PointerEventData.InputButton.Left},ExecuteEvents.pointerClickHandler);
-        check(!menu.IsOpen,"painting menu Back accepts native UI click");
+        check(!menu.IsOpen,"painting menu Back accepts a dispatched UI click");
         Object.DestroyImmediate(menu.gameObject);Object.DestroyImmediate(paintingRoot);
         camera.transform.SetPositionAndRotation(new Vector3(0,1.6f,0),Quaternion.identity);
     }
@@ -278,8 +405,13 @@ public static class WorldPanelChecks
     {
         var go=new GameObject("Tutorial owner");var manager=new GameObject("Tutorial manager fixture").AddComponent<TutorialManager>();
         manager.Offer(TutorialStep.GalleryMove,go,Vector3.zero);manager.Present(1f);
-        // Shared speech can block the first attempt: remove only fixture dialogue eligibility.
-        foreach(var ui in VG_DialogueUI.ActiveViews.ToArray())if(ui!=manager.View && ui.gameObject.scene == go.scene)ui.gameObject.SetActive(false);
+        // Prior Editor checks can leave destroyed wrappers in static registries until Play resets them. Enumerate
+        // this additive fixture's actual scene objects, not the global registry or the user's original scene.
+        var previousViews = go.scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<VG_DialogueUI>(true))
+            .Where(ui => ui != null && ui != manager.View).ToArray();
+        foreach(var ui in previousViews)ui.gameObject.SetActive(false);
+        check(previousViews.Length > 0 && previousViews.All(ui => !ui.gameObject.activeInHierarchy),
+            "tutorial fixture suppresses its live prior dialogue without touching another scene or stale Editor objects");
         manager.Present(1f);var view=manager.View;
         check(view!=null,"first-use manager presents a real request");if(view==null)return;
         view.Head=camera.transform;view.Snap();var position=view.DisplayCanvas.transform.position;
@@ -314,13 +446,26 @@ public static class WorldPanelChecks
         canvas.GetComponent<PlayerMenuRaycaster>().Raycast(new TrackedDeviceEventData(events){rayPoints=new List<Vector3>{camera.transform.position, camera.transform.position+(centre-camera.transform.position).normalized*3f},layerMask=1<<31},hits);
         check(hits.Count>0&&hits.OrderByDescending(h=>h.depth).First().gameObject==rect.gameObject,label+": controller ray reaches actual foreground button");
     }
-    static Vector3 Drag(VG_PanelInteraction drag,Transform target,Camera camera,EventSystem events,Action<bool,string> check,string label)
+    static Vector3 DragDesktop(VG_PanelInteraction drag,Transform target,Camera camera,EventSystem events,Action<bool,string> check,string label)
     {
-        var rect=(RectTransform)drag.transform;var centre=rect.TransformPoint(rect.rect.center);var start=target.position;
-        var data=new TrackedDeviceEventData(events){pointerId=21,button=PointerEventData.InputButton.Left};
-        void Aim(Vector3 point)=>data.rayPoints=new List<Vector3>{camera.transform.position,camera.transform.position+(point-camera.transform.position).normalized*3f};
-        Aim(centre);drag.OnPointerDown(data);Aim(centre+Vector3.right*.12f);drag.OnDrag(data);drag.OnPointerUp(data);
-        check(Vector3.Distance(start,target.position)>.05f&&!drag.Dragging,label+": trigger drag changes position and release ends dragging");return target.position;
+        var rect=(RectTransform)drag.transform;var centre=rect.TransformPoint(rect.rect.center);
+        var start=target.position;var rotation=target.rotation;var travel=target.right*.12f;
+        var tracked=new TrackedDeviceEventData(events){pointerId=21,button=PointerEventData.InputButton.Left,
+            rayPoints=new List<Vector3>{camera.transform.position,camera.transform.position+(centre-camera.transform.position).normalized*3f}};
+        drag.OnPointerDown(tracked);
+        tracked.rayPoints=new List<Vector3>{camera.transform.position,camera.transform.position+(centre+travel-camera.transform.position).normalized*3f};
+        drag.OnDrag(tracked);drag.OnPointerUp(tracked);
+        check(Vector3.Distance(start,target.position)<.0001f&&Quaternion.Angle(rotation,target.rotation)<.001f&&!drag.Dragging,
+            label+": tracked Trigger events cannot start panel movement (native Grip has separate Play coverage)");
+
+        var data=new PointerEventData(events){pointerId=-1,button=PointerEventData.InputButton.Left,
+            position=camera.WorldToScreenPoint(centre),pressPosition=camera.WorldToScreenPoint(centre),
+            pointerPress=drag.gameObject,pointerDrag=drag.gameObject};
+        drag.OnInitializePotentialDrag(data);drag.OnPointerDown(data);
+        bool captured=drag.Dragging;
+        data.position=camera.WorldToScreenPoint(centre+travel);drag.OnDrag(data);drag.OnPointerUp(data);
+        check(captured&&Vector3.Distance(start+travel,target.position)<.001f&&Quaternion.Angle(rotation,target.rotation)<.001f&&!drag.Dragging,
+            label+": desktop mouse drag moves exactly12cm in its plane and release ends ownership");return target.position;
     }
     static bool WordsShown(VG_DialogueUI ui){var box=ui.DisplayCanvas.GetComponentInChildren<VG_DialogueBox>(true);return box.gameObject.activeInHierarchy&&box.GetComponent<CanvasGroup>().alpha>.01f;}
     static Vector3[] Corners(RectTransform rect){var c=new Vector3[4];rect.GetWorldCorners(c);return c;}

@@ -38,7 +38,9 @@ namespace InnerFrame.Tutorial
         }
         void Build(Camera camera)
         {
-            var rect = GalleryWelcomeSign.Rect(transform, "Controller overview", Vector2.zero, new Vector2(1200, 800));
+            // A complete reference needs enough angular size to read its original painted letters. Keep the 3:2
+            // artwork intact; this is about 61 degrees wide when first opened, still within the forward view.
+            var rect = GalleryWelcomeSign.Rect(transform, "Controller overview", Vector2.zero, new Vector2(1350, 900));
             rect.localScale = Vector3.one * .001f;
             DisplayCanvas = rect.gameObject.AddComponent<Canvas>();
             DisplayCanvas.renderMode = RenderMode.WorldSpace; DisplayCanvas.worldCamera = camera;
@@ -47,14 +49,13 @@ namespace InnerFrame.Tutorial
             VG_PanelInteraction.Attach(rect, transform, DisplayCanvas);
             // Match the shared menu: approaching the wooden sign must not make the
             // enlarged manual disappear behind its solid board or nearby scene geometry.
-            overlay = new Material(Canvas.GetDefaultCanvasMaterial()) { name = "Controller overview overlay" };
-            overlay.SetInt("unity_GUIZTestMode", (int)UnityEngine.Rendering.CompareFunction.Always);
+            overlay = VG_UI.NewOverlayMaterial("Controller overview overlay");
             foreach (var graphic in rect.GetComponentsInChildren<Graphic>(true)) graphic.material = overlay;
             // Anchor once. Subsequent head motion never changes the panel's world pose.
             Vector3 forward = camera.transform.forward;
             Vector3 up = Vector3.ProjectOnPlane(Vector3.up, forward);
             if (up.sqrMagnitude < .001f) up = camera.transform.up;
-            transform.SetPositionAndRotation(camera.transform.position + forward * 1.3f,
+            transform.SetPositionAndRotation(camera.transform.position + forward * 1.15f,
                 Quaternion.LookRotation(forward, up));
         }
         public void Close()
@@ -84,6 +85,7 @@ namespace InnerFrame.Tutorial
             image.texture = Texture; image.raycastTarget = false;
             var hit = GalleryWelcomeSign.Rect(parent, "Close", new Vector2(size.x * .459f, size.y * .408f), Vector2.one * (size.x * .065f));
             var graphic = hit.gameObject.AddComponent<Image>(); graphic.color = Color.clear;
+            graphic.canvasRenderer.cullTransparentMesh = false;
             var button = hit.gameObject.AddComponent<Button>(); button.targetGraphic = graphic;
             button.navigation = new Navigation { mode = Navigation.Mode.None };
             button.onClick.AddListener(() => { VG_PanelInteraction.Consume(); close(); });

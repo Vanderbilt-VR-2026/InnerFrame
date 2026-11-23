@@ -43,6 +43,7 @@ public static class ControlsTutorialChecks
         report.Clear(); passed = failed = 0;
         try
         {
+            ControllerDiagramClarity();
             ScenesAndGuide();
             Arbitration();
             GalleryIntegration();
@@ -59,6 +60,77 @@ public static class ControlsTutorialChecks
         File.WriteAllText("Logs/Controls/checks.txt", report.ToString());
         Debug.Log(report.ToString());
         return failed;
+    }
+
+    /// <summary>Only this approved diagram is reimported. No Gallery rebuild or scene/prefab changes.</summary>
+    public static void RunControllerClarityBatch()
+    {
+        report.Clear(); passed = failed = 0;
+        const string imagePath = "Assets/ControllerTutorial/Resources/ControllerOverview.png";
+        using var hash = System.Security.Cryptography.SHA256.Create();
+        string before = Convert.ToBase64String(hash.ComputeHash(File.ReadAllBytes(imagePath)));
+        try
+        {
+            GalleryWelcomeSetup.ConfigureControllerOverview();
+            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            ControllerDiagramClarity(true);
+            Check(before == Convert.ToBase64String(hash.ComputeHash(File.ReadAllBytes(imagePath))),
+                "The approved original painted image bytes are unchanged by the clarity fix");
+        }
+        catch (Exception error) { failed++; report.AppendLine("EXCEPTION " + error); }
+        Directory.CreateDirectory("Logs/Controls");
+        report.AppendLine($"RESULT: {passed} passed, {failed} failed. Editor importer and rendered guide; Quest legibility still requires headset acceptance.");
+        File.WriteAllText("Logs/Controls/clarity.txt", report.ToString());
+        Debug.Log(report.ToString());
+        EditorApplication.Exit(failed == 0 ? 0 : 1);
+    }
+
+    static void ControllerDiagramClarity(bool render = false)
+    {
+        const string path = "Assets/ControllerTutorial/Resources/ControllerOverview.png";
+        var importer = AssetImporter.GetAtPath(path) as TextureImporter;
+        var texture = ControllerDiagram.Texture;
+        Check(importer != null && texture != null, "The original controller overview and its importer are present");
+        if (importer == null || texture == null) return;
+        importer.GetSourceTextureWidthAndHeight(out int sourceWidth, out int sourceHeight);
+        var android = importer.GetPlatformTextureSettings("Android");
+        Check(importer.npotScale == TextureImporterNPOTScale.None && texture.width == sourceWidth && texture.height == sourceHeight,
+            $"Imported diagram preserves source pixels ({sourceWidth}x{sourceHeight}); loaded {texture.width}x{texture.height}");
+        Check(!importer.mipmapEnabled && texture.mipmapCount == 1,
+            "Close-up manual has no lower-resolution mip levels that can blur its painted lettering");
+        Check(android.overridden && android.format == TextureImporterFormat.RGBA32 &&
+            android.textureCompression == TextureImporterCompression.Uncompressed && !android.crunchedCompression,
+            "Quest import stores the original diagram without ASTC block compression");
+        Check(texture.format == TextureFormat.RGBA32 || texture.format == TextureFormat.RGB24,
+            "The currently loaded diagram is uncompressed: " + texture.format);
+        var eye = new GameObject("Controller clarity fixture").AddComponent<Camera>();
+        eye.transform.position = new Vector3(0, 1.6f, 0);
+        eye.clearFlags = CameraClearFlags.SolidColor; eye.backgroundColor = new Color(.12f, .12f, .12f);
+        eye.fieldOfView = 65f;
+        EntranceControllerGuide guide = null;
+        try
+        {
+            guide = EntranceControllerGuide.Open(eye);
+            if (guide == null) { Check(false, "Manual opens for clarity verification"); return; }
+            var rect = (RectTransform)guide.DisplayCanvas.transform;
+            float width = rect.rect.width * Mathf.Abs(rect.lossyScale.x);
+            float height = rect.rect.height * Mathf.Abs(rect.lossyScale.y);
+            float distance = Vector3.Distance(eye.transform.position, guide.transform.position);
+            float angle = 2f * Mathf.Atan(width / (2f * distance)) * Mathf.Rad2Deg;
+            Check(guide.Diagram.texture == texture && Mathf.Abs(width / height - sourceWidth / (float)sourceHeight) < .001f,
+                "Guide keeps the approved painted artwork and its original aspect ratio, without stretched letters");
+            Check(Mathf.Abs(distance - 1.15f) < .001f && angle >= 60f && angle <= 62f,
+                $"Manual opens at readable angular size: {width:F2}m wide, {distance:F2}m away, {angle:F1} degrees");
+            var close = guide.DisplayCanvas.GetComponentsInChildren<Button>().Single(b => b.name == "Close");
+            Check(!close.targetGraphic.canvasRenderer.cullTransparentMesh,
+                "Transparent close hit area retains its raycast geometry");
+            if (render) Shot(eye, "controller-overview-clarity");
+        }
+        finally
+        {
+            if (guide != null) guide.Close();
+            Object.DestroyImmediate(eye.gameObject);
+        }
     }
 
     static void ScenesAndGuide()
@@ -102,10 +174,17 @@ public static class ControlsTutorialChecks
             Check(Vector3.Distance(position, guide.transform.position) < .0001f && Quaternion.Angle(rotation, guide.transform.rotation) < .001f,
                 scene.name + ": head movement leaves the overview in place");
             eye.transform.SetPositionAndRotation(pose.position, pose.rotation);
-            menu.Toggle(); Check(!EntranceControllerGuide.IsOpen && panel.gameObject.activeSelf, scene.name + ": Menu suspends diagram");
-            menu.Toggle(); Check(EntranceControllerGuide.IsOpen && EntranceControllerGuide.Current == guide, scene.name + ": closing Menu restores diagram");
             guide.DisplayCanvas.GetComponentInChildren<Button>().onClick.Invoke();
-            Check(!EntranceControllerGuide.IsOpen && SceneManager.GetActiveScene() == scene, scene.name + ": close stays in original scene");
+            Check(!EntranceControllerGuide.IsOpen && panel.gameObject.activeSelf && panel.CurrentPage == PlayerMenuPage.Controls &&
+                SceneManager.GetActiveScene() == scene, scene.name + ": guide close returns to Controls menu in original scene");
+            menu.Toggle(); Check(!EntranceControllerGuide.IsOpen && !PlayerMenu.ModalOpen && !panel.gameObject.activeSelf,
+                scene.name + ": closing Menu resumes play without restoring a hidden guide");
+            menu.OpenPage(PlayerMenuPage.Controls);
+            panel.GetComponentsInChildren<Button>().Single(b => b.name == "Open controller guide").onClick.Invoke();
+            menu.Toggle(); Check(!EntranceControllerGuide.IsOpen && panel.gameObject.activeSelf && panel.CurrentPage == PlayerMenuPage.Controls,
+                scene.name + ": Menu button backs out of the diagram to Controls");
+            menu.Toggle(); Check(!PlayerMenu.ModalOpen && EntranceControllerGuide.Current == null,
+                scene.name + ": second Menu press clears all modal views");
             Call(menu, "OnDestroy"); Object.DestroyImmediate(menu.gameObject);
         }
     }

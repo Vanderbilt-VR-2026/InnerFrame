@@ -2,12 +2,17 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.SceneManagement;
+using UnityEngine.XR.Interaction.Toolkit;
+using UnityEngine.XR.Interaction.Toolkit.Interactables;
+using UnityEngine.XR.Interaction.Toolkit.Interactors;
+using UnityEngine.XR.Interaction.Toolkit.Interactors.Casters;
 
 namespace InnerFrame.StarryNight
 {
     /// <summary>
-    /// One short instruction printed on the existing sketchbook's raised right page. The original left drawing and
-    /// the book's grab/letter behaviour stay intact. Nothing here reads the camera or changes the book's pose.
+    /// Four manually browsed instructions printed on the existing sketchbook's raised right page. The original
+    /// left drawing and grab/letter behaviour stay intact. Navigation never advances a task or moves the book.
     /// </summary>
     public sealed class SN_NotebookGuide : MonoBehaviour
     {
@@ -19,16 +24,38 @@ namespace InnerFrame.StarryNight
         readonly List<Object> owned = new List<Object>();
         SN_Game game;
         TMP_FontAsset font;
-        Material ink, gold, paper, controllerArt;
-        TextMeshPro heading, words, buttonName;
+        Material ink, gold, paper, controllerArt, discoveryGold;
+        TextMeshPro heading, words, buttonName, pageNumber, currentTask, previousLabel, nextLabel;
+        MeshRenderer previousBorder, nextBorder;
+        Material previousGold, nextGold;
+        readonly HashSet<int> capturedTriggers = new HashSet<int>();
+        readonly HashSet<int> previousHover = new HashSet<int>(), nextHover = new HashSet<int>();
+        readonly Dictionary<Transform, NearFarInteractor> nativeHands = new Dictionary<Transform, NearFarInteractor>();
+        readonly RaycastHit[] blockers = new RaycastHit[32];
+        static readonly Rect PreviousArea = new Rect(-.066f, -.103f, .058f, .028f);
+        static readonly Rect NextArea = new Rect(.008f, -.103f, .058f, .028f);
+        bool manuallyBrowsed;
         Transform drawing;
+        MeshRenderer discoveryEdge;
+        XRGrabInteractable grab;
         Control shownControl = (Control)(-1);
         bool shownWind;
 
+        public const int PageCount = 4;
+        public int CurrentPage { get; private set; }
+        public int CurrentTaskPage => game == null ? -1 : game.State == SN_State.Lantern ? 0 :
+            game.State == SN_State.Stars ? 1 : game.State == SN_State.Wind ? 2 :
+            game.State == SN_State.Dawn && game.PageShown ? 3 : -1;
+        public bool IsCurrentTaskPage => CurrentTaskPage == CurrentPage;
+        public Vector3 PreviousTarget => PageRoot.TransformPoint(new Vector3(PreviousArea.center.x, PreviousArea.center.y, -.002f));
+        public Vector3 NextTarget => PageRoot.TransformPoint(new Vector3(NextArea.center.x, NextArea.center.y, -.002f));
         public string Title { get; private set; }
         public string Instruction { get; private set; }
         public Transform PageRoot { get; private set; }
         public bool IsPresent => PageRoot != null && PageRoot.gameObject.activeInHierarchy && heading != null;
+        public bool HasBeenPickedUp { get; private set; }
+        public bool PickupReminderVisible => !HasBeenPickedUp && IsPresent;
+        public bool DiscoveryCueVisible => discoveryEdge != null && discoveryEdge.enabled && discoveryEdge.gameObject.activeInHierarchy;
 
         public static SN_NotebookGuide Attach(SN_Game game)
         {
@@ -45,6 +72,8 @@ namespace InnerFrame.StarryNight
             var guide = game.sketchbook.gameObject.AddComponent<SN_NotebookGuide>();
             guide.game = game;
             guide.Build(lifted, material);
+            guide.grab = game.sketchbook.GetComponent<XRGrabInteractable>();
+            if (guide.grab != null) guide.grab.selectEntered.AddListener(guide.OnPickedUp);
             guide.Refresh();
             return guide;
         }
@@ -74,6 +103,8 @@ namespace InnerFrame.StarryNight
                 new Vector2(-.070f,.096f), new Vector2(-.068f,-.049f)
             };
             Polygon("Cream paper insert", PageRoot, sheet, 0, paper);
+            discoveryGold = Tint(source, Ochre, "SN notebook discovery edge");
+            discoveryEdge = PaperEdge(sheet, discoveryGold);
             Polygon("Painted brass clip", PageRoot, new[] {
                 new Vector2(-.012f,.098f), new Vector2(.012f,.098f),
                 new Vector2(.010f,.108f), new Vector2(-.010f,.108f)
@@ -83,72 +114,206 @@ namespace InnerFrame.StarryNight
                 UnityEngine.TextCore.LowLevel.GlyphRenderMode.SDFAA, 1024, 1024, AtlasPopulationMode.Dynamic, false);
             font.name = "SN notebook Libre Baskerville (runtime)";
             owned.Add(font);
-            font.TryAddCharacters("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,!?' ");
+            font.TryAddCharacters("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,!?' /|");
             // This runtime font owns its material/atlas. It is never an overlay: objects can occlude the page and ink.
             owned.Add(font.material);
             foreach (var atlas in font.atlasTextures) if (atlas != null) owned.Add(atlas);
             font.material.SetFloat("unity_GUIZTestMode", (float)CompareFunction.LessEqual);
-            heading = Label("Action title", .086f, .041f, .0097f);
-            words = Label("Action instruction", .035f, .057f, .0090f);
-            buttonName = Label("Controller button", -.077f, .018f, .0070f);
+            heading = Label("Action title", .080f, .038f, .0097f);
+            words = Label("Action instruction", .035f, .036f, .0080f);
+            buttonName = Label("Controller button", -.062f, .012f, .0055f);
+            pageNumber = Label("Guide page count", .099f, .012f, .0047f);
+            pageNumber.transform.localPosition += Vector3.left * .048f;
+            pageNumber.rectTransform.sizeDelta = new Vector2(.032f, .012f) / TextScale;
+            currentTask = Label("Current task marker", .099f, .012f, .0047f);
+            currentTask.transform.localPosition += Vector3.right * .036f;
+            currentTask.rectTransform.sizeDelta = new Vector2(.060f, .012f) / TextScale;
+            previousGold = Tint(source, Ochre, "SN notebook Previous border");
+            nextGold = Tint(source, Ochre, "SN notebook Next border");
+            previousBorder = Navigation("Previous", PreviousArea, previousGold, out previousLabel);
+            nextBorder = Navigation("Next", NextArea, nextGold, out nextLabel);
             drawing = new GameObject("Printed controller diagram").transform;
             drawing.SetParent(PageRoot, false);
         }
 
-        /// <summary>Only the printed words/diagram change. No action is completed by reading or lifting the book.</summary>
+        /// <summary>Refreshes the task marker and current printed page. Story progress never turns a page for the reader.</summary>
         public void Refresh()
         {
             if (!IsPresent || game == null) return;
+            RefreshDiscovery();
             string title, instruction, titleLines, instructionLines;
-            Control control;
-            switch (game.State)
+            switch (CurrentPage)
             {
-                case SN_State.Lantern:
-                    title = "Dim the lantern"; titleLines = "Dim the\nlantern";
-                    instruction = "Point. Pull the trigger."; instructionLines = "Point.\nPull the trigger.";
-                    control = Control.Trigger; break;
-                case SN_State.Stars:
+                case 1:
                     title = "Wake the stars"; titleLines = "Wake the\nstars";
-                    instruction = "Point. Pull the trigger."; instructionLines = "Point.\nPull the trigger.";
-                    control = Control.Trigger; break;
-                case SN_State.Wind:
+                    instruction = "Point at a star. Pull the trigger."; instructionLines = "Point at a star.\nPull the trigger.";
+                    break;
+                case 2:
                     title = "Trace the wind"; titleLines = "Trace the\nwind";
                     instruction = "Hold the trigger. Follow the dots."; instructionLines = "Hold the trigger.\nFollow the dots.";
-                    control = Control.Trigger; break;
-                case SN_State.Dawn:
-                    if (game.PageShown)
-                    {
-                        title = "Take his page"; titleLines = "Take his\npage";
-                        instruction = "Point. Pull the trigger."; instructionLines = "Point.\nPull the trigger.";
-                        control = Control.Trigger;
-                    }
-                    else
-                    {
-                        title = "Watch the dawn"; titleLines = "Watch the\ndawn";
-                        instruction = "Let the sky change."; instructionLines = "Let the sky\nchange.";
-                        control = Control.None;
-                    }
                     break;
-                case SN_State.Done:
-                    title = "The night is painted"; titleLines = "The night\nis painted";
-                    instruction = "Listen to Vincent."; instructionLines = "Listen to\nVincent.";
-                    control = Control.None; break;
+                case 3:
+                    title = "Take his page"; titleLines = "Take his\npage";
+                    instruction = "Point at his page. Pull the trigger."; instructionLines = "Point at his page.\nPull the trigger.";
+                    break;
                 default:
-                    title = "Read when needed"; titleLines = "Read when\nneeded";
-                    instruction = "Hold grip to lift."; instructionLines = "Hold grip\nto lift.";
-                    control = Control.Grip; break;
+                    title = "Dim the lantern"; titleLines = "Dim the\nlantern";
+                    instruction = "Point at the lantern. Pull the trigger."; instructionLines = "Point at the lantern.\nPull the trigger.";
+                    break;
             }
             if (Title != title || Instruction != instruction)
             {
                 Title = title; Instruction = instruction;
                 heading.text = titleLines; words.text = instructionLines;
             }
-            bool wind = game.State == SN_State.Wind;
-            if (shownControl == control && shownWind == wind) return;
-            shownControl = control;
-            shownWind = wind;
-            DrawController(control, wind);
-            buttonName.text = control == Control.Trigger ? "Trigger" : control == Control.Grip ? "Grip" : "";
+            pageNumber.text = (CurrentPage + 1) + " / " + PageCount;
+            currentTask.text = IsCurrentTaskPage ? "Current task" : "";
+            buttonName.text = PickupReminderVisible ? "Trigger | Hold Grip to lift" : "Trigger";
+            RefreshNavigation();
+            bool wind = CurrentPage == 2;
+            if (shownControl == Control.Trigger && shownWind == wind) return;
+            shownControl = Control.Trigger; shownWind = wind;
+            DrawController(Control.Trigger, wind);
+        }
+
+        void OnPickedUp(SelectEnterEventArgs args)
+        {
+            if (args.interactorObject == null || game == null || game.sketchbook.Following || game.sketchbook.HeldByFallback) return;
+            if (!HasBeenPickedUp && !manuallyBrowsed && CurrentTaskPage >= 0) CurrentPage = CurrentTaskPage;
+            HasBeenPickedUp = true;
+            Refresh();
+        }
+
+        /// <summary>Call once per hand before scene Trigger/held-Trigger actions, even while a menu blocks input.
+        /// True means only this hand belongs to the printed navigation. A press remains owned until release,
+        /// even if the ray leaves the paper, so page browsing cannot also dim a lantern, wake a star or draw wind.</summary>
+        public bool TryHandlePageInput(int hand, SN_IInput input, bool allowed = true)
+        {
+            if (input == null || hand < 0 || hand >= input.HandCount) return false;
+            bool held = input.TriggerHeld(hand), down = input.TriggerDown(hand);
+            bool captured = capturedTriggers.Contains(hand);
+            previousHover.Remove(hand); nextHover.Remove(hand);
+            if (captured && !held && !down) capturedTriggers.Remove(hand);
+            if (!allowed || !IsPresent || game.sketchbook.Following)
+            {
+                RefreshNavigation();
+                return captured;
+            }
+            int direction = PageControl(hand, input);
+            if (direction < 0) previousHover.Add(hand);
+            if (direction > 0) nextHover.Add(hand);
+            if (!captured && direction != 0 && down)
+            {
+                capturedTriggers.Add(hand); captured = true;
+                int page = Mathf.Clamp(CurrentPage + direction, 0, PageCount - 1);
+                if (page != CurrentPage)
+                {
+                    CurrentPage = page; manuallyBrowsed = true;
+                    input.Haptic(hand, .18f, .035f);
+                    Refresh();
+                }
+            }
+            RefreshNavigation();
+            return captured || direction != 0;
+        }
+
+        int PageControl(int hand, SN_IInput input)
+        {
+            if (!input.TryGetAim(hand, out var ray)) return 0;
+            float reach = 2f;
+            var controller = input.Hand(hand);
+            if (controller != null)
+            {
+                if (!nativeHands.TryGetValue(controller, out var native) || native == null)
+                {
+                    native = controller.GetComponentInChildren<NearFarInteractor>(true);
+                    if (native != null) nativeHands[controller] = native;
+                }
+                if (native != null)
+                {
+                    if (!native.isActiveAndEnabled || !native.enableFarCasting) return 0;
+                    var start = native.curveOrigin != null ? native.curveOrigin : native.transform;
+                    ray = new Ray(start.position, start.forward);
+                    if (native.farInteractionCaster is CurveInteractionCaster caster) reach = caster.castDistance;
+                }
+            }
+            // Ink is only on the front of this physical page. No reverse-side or through-wall controls.
+            if (Vector3.Dot(ray.direction, PageRoot.forward) <= .001f) return 0;
+            var plane = new Plane(PageRoot.forward, PageRoot.TransformPoint(new Vector3(0, 0, -.002f)));
+            if (!plane.Raycast(ray, out float distance) || distance > reach) return 0;
+            var local = PageRoot.InverseTransformPoint(ray.GetPoint(distance));
+            int direction = PreviousArea.Contains(new Vector2(local.x, local.y)) ? -1 :
+                NextArea.Contains(new Vector2(local.x, local.y)) ? 1 : 0;
+            if (direction == 0) return 0;
+            int count = gameObject.scene.GetPhysicsScene().Raycast(ray.origin, ray.direction, blockers, distance,
+                Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+            for (int i = 0; i < count; i++)
+                if (blockers[i].collider != null && !blockers[i].collider.transform.IsChildOf(transform) &&
+                    blockers[i].distance < distance - .002f) return 0;
+            return direction;
+        }
+
+        MeshRenderer Navigation(string title, Rect area, Material border, out TextMeshPro label)
+        {
+            var outside = new[] { new Vector2(area.xMin, area.yMin), new Vector2(area.xMax, area.yMin),
+                new Vector2(area.xMax, area.yMax), new Vector2(area.xMin, area.yMax) };
+            var frame = Polygon("Painted " + title + " border", PageRoot, outside, -.0016f, border);
+            const float inset = .0015f;
+            Polygon("Painted " + title + " paper", PageRoot, new[] {
+                new Vector2(area.xMin + inset, area.yMin + inset), new Vector2(area.xMax - inset, area.yMin + inset),
+                new Vector2(area.xMax - inset, area.yMax - inset), new Vector2(area.xMin + inset, area.yMax - inset)
+            }, -.0017f, paper);
+            label = Label(title, area.center.y + .005f, .018f, .0062f);
+            label.transform.localPosition = new Vector3(area.center.x, area.center.y + .005f, -.002f);
+            label.rectTransform.sizeDelta = new Vector2(area.width - .004f, .018f) / TextScale;
+            label.text = title;
+            return frame;
+        }
+
+        void RefreshNavigation()
+        {
+            if (previousBorder == null || nextBorder == null) return;
+            previousGold.SetColor("_BaseColor", CurrentPage == 0 ? Color.Lerp(Paper, Ochre, .3f) : previousHover.Count > 0 ? SN_PageOutline.Bright : Ochre);
+            nextGold.SetColor("_BaseColor", CurrentPage == PageCount - 1 ? Color.Lerp(Paper, Ochre, .3f) : nextHover.Count > 0 ? SN_PageOutline.Bright : Ochre);
+            previousLabel.color = CurrentPage == 0 ? Color.Lerp(Paper, Ink, .45f) : Ink;
+            nextLabel.color = CurrentPage == PageCount - 1 ? Color.Lerp(Paper, Ink, .45f) : Ink;
+        }
+
+        void OnDisable()
+        {
+            capturedTriggers.Clear(); previousHover.Clear(); nextHover.Clear();
+        }
+
+        // A slow change of warm ink on the physical paper edge. It never moves, changes the book's pose, emits
+        // light into the scene or advances a task. Menus and live conversation can temporarily suppress it.
+        void LateUpdate() => RefreshDiscovery();
+
+        void RefreshDiscovery()
+        {
+            if (discoveryEdge == null || game == null) return;
+            discoveryEdge.enabled = PickupReminderVisible && !SN_Game.MenuOpen && (game.voice == null || !game.voice.ConversationPaused);
+            if (!discoveryEdge.enabled) return;
+            float blend = .2f + .4f * (.5f + .5f * Mathf.Sin(game.Clock * Mathf.PI / 2f));
+            discoveryGold.SetColor("_BaseColor", Color.Lerp(Ochre, SN_PageOutline.Bright, blend));
+        }
+
+        MeshRenderer PaperEdge(IList<Vector2> sheet, Material material)
+        {
+            const float width = .006f;
+            var vertices = new List<Vector3>();
+            var triangles = new List<int>();
+            foreach (var point in sheet)
+            {
+                Vector2 outside = point + point.normalized * width;
+                vertices.Add(new Vector3(point.x, point.y, -.0003f));
+                vertices.Add(new Vector3(outside.x, outside.y, -.0003f));
+            }
+            for (int i = 0; i < sheet.Count; i++)
+            {
+                int a = i * 2, b = ((i + 1) % sheet.Count) * 2;
+                triangles.AddRange(new[] { a, b, a + 1, a + 1, b, b + 1 });
+            }
+            return MeshObject("Warm paper edge until first Grip", PageRoot, vertices, triangles, material);
         }
 
         Material Tint(Material source, Color colour, string name)
@@ -201,7 +366,7 @@ namespace InnerFrame.StarryNight
                 var vertices = new List<Vector3>(); var triangles = new List<int>();
                 for (int i = 0; i < 10; i++)
                 {
-                    float x = .031f + i * .003f, y = -.037f + Mathf.Sin(i * .65f) * .010f;
+                    float x = .031f + i * .003f, y = -.027f + Mathf.Sin(i * .65f) * .010f;
                     int n = vertices.Count;
                     vertices.Add(new Vector3(x, y, -.0015f));
                     for (int k = 0; k < 6; k++)
@@ -266,7 +431,7 @@ namespace InnerFrame.StarryNight
             for (int i = 0; i < points.Length; i++)
             {
                 var p = points[i]; var next = points[(i + 1) % points.Length];
-                vertices.Add(new Vector3((p.x - centreX) * scale, (820f - p.y) * scale - .040f, -.0015f));
+                vertices.Add(new Vector3((p.x - centreX) * scale, (820f - p.y) * scale - .030f, -.0015f));
                 uvs.Add(new Vector2(p.x / 1536f, 1f - p.y / 1024f));
                 remaining.Add(i); area += p.x * next.y - next.x * p.y;
             }
@@ -298,15 +463,15 @@ namespace InnerFrame.StarryNight
 
         static float Cross(Vector2 a, Vector2 b) => a.x * b.y - a.y * b.x;
 
-        void Polygon(string name, Transform parent, IList<Vector2> points, float z, Material material)
+        MeshRenderer Polygon(string name, Transform parent, IList<Vector2> points, float z, Material material)
         {
             var vertices = new List<Vector3>(); var triangles = new List<int>();
             foreach (var p in points) vertices.Add(new Vector3(p.x, p.y, z));
             for (int i = 1; i < points.Count - 1; i++) triangles.AddRange(new[] {0, i + 1, i});
-            MeshObject(name, parent, vertices, triangles, material);
+            return MeshObject(name, parent, vertices, triangles, material);
         }
 
-        void MeshObject(string name, Transform parent, List<Vector3> vertices, List<int> triangles, Material material, List<Vector2> uvs = null)
+        MeshRenderer MeshObject(string name, Transform parent, List<Vector3> vertices, List<int> triangles, Material material, List<Vector2> uvs = null)
         {
             var mesh = new Mesh { name = name };
             mesh.SetVertices(vertices); mesh.SetTriangles(triangles, 0);
@@ -319,6 +484,7 @@ namespace InnerFrame.StarryNight
             var renderer = go.GetComponent<MeshRenderer>();
             renderer.sharedMaterial = material;
             renderer.shadowCastingMode = ShadowCastingMode.Off; renderer.receiveShadows = false;
+            return renderer;
         }
 
         static void Release(Object value)
@@ -329,6 +495,7 @@ namespace InnerFrame.StarryNight
 
         void OnDestroy()
         {
+            if (grab != null) grab.selectEntered.RemoveListener(OnPickedUp);
             if (PageRoot != null) Release(PageRoot.gameObject);
             foreach (var item in owned) Release(item);
             owned.Clear();

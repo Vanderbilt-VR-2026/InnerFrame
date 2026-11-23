@@ -6,7 +6,7 @@ using UnityEngine;
 /// has been over (Over) without a break, he asks (Ask; false if the line can't be said); when his line has ended (Saying) the card offers
 /// Follow Vincent or Back to the Gallery, until the player picks (Pick: the scene's pointing, or the card's buttons).
 /// Back: the player menu's own way back, unchanged. Follow: the scene walks him (Walk, stepped here: true when the
-/// gold should begin), and the opening's gold (VG_GoldLight) rises then, or goldAfter seconds after he set off,
+/// gold should begin), and the opening's gold (VG_GoldLight) rises then, or after goldAfter seconds of unpaused walking,
 /// hides him once full and stays through the load of `next`. If it clears without a scene change, he and the card
 /// come back. Each headset runs its own (he isn't networked). The scene steps it, so its tests' clock drives it.
 /// </summary>
@@ -23,6 +23,8 @@ public class VG_ExitFlow : MonoBehaviour
     /// stops where he is (another scene change got there first).</summary>
     public Action SetOff, Stop;
     public Func<float, bool> Walk;
+    /// <summary>False while the visitor is behind or unavailable. Waiting also pauses the fallback clock.</summary>
+    public Func<bool> CanContinueWalk;
     public Action<bool> ShowVincent;
     public Func<Vector3?> Focus;
     public Transform View;
@@ -42,6 +44,7 @@ public class VG_ExitFlow : MonoBehaviour
     public float GoldAt { get; private set; } = -1f;
 
     bool lineStarted;
+    float walkingSeconds;
     SceneFader fader;
 
     public void Step(float dt)
@@ -71,7 +74,9 @@ public class VG_ExitFlow : MonoBehaviour
                 break;
             case Beat.Walking:
                 if (fader != null && fader.IsTransitioning) { Now = Beat.Leaving; Stop(); break; }   // the menu's Back got there first
-                if (Walk(dt) | Clock - WalkAt >= goldAfter) Rise();
+                if (MenuOpen() || (CanContinueWalk != null && !CanContinueWalk())) { Stop?.Invoke(); break; }
+                walkingSeconds += dt;
+                if (Walk(dt) | walkingSeconds >= goldAfter) Rise();
                 break;
             case Beat.Gold:
                 Walk(dt);   // he walks on under it
@@ -91,6 +96,7 @@ public class VG_ExitFlow : MonoBehaviour
         if (answer != 0) { Now = Beat.Leaving; GoBack(); return; }
         Now = Beat.Walking;
         WalkAt = Clock;
+        walkingSeconds = 0f;
         fader = FindAnyObjectByType<SceneFader>();   // none in the edit-mode checks
         SetOff();
     }

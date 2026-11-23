@@ -22,6 +22,11 @@ namespace InnerFrame.Gallery
         public Button ModeButton { get; private set; }
         public RectTransform Content { get; private set; }
         public const float FaceHeight = 1.20f;
+        public const float ModelScale = .71f; // Original 1.20 m board becomes 0.85 m wide.
+        // The original inset is slightly tilted: its front is z=-.0208 at y=1.20.
+        // Keep the painted controls less than 1 mm above that surface, inside the frame.
+        public const float FaceDepth = -.0216f;
+        public const float FaceTilt = .21f;
         public static readonly Color Ink = new Color32(73, 35, 15, 255);
         RectTransform home, modes, guided;
         Text status, next;
@@ -52,12 +57,15 @@ namespace InnerFrame.Gallery
             var forward = spawn != null ? Vector3.ProjectOnPlane(spawn.forward, Vector3.up).normalized : Vector3.back;
             var right = Vector3.Cross(Vector3.up, forward);
             var at = spawn != null ? spawn.position : new Vector3(0, 0, 4.8f);
-            var position = at + forward * 2.15f - right * 1.05f;
+            // Both buttons must be within the Gallery's existing 2 m controller ray
+            // from the arrival position. Keep the smaller stand out of the walking lane.
+            var position = at + forward * 1.45f - right * .85f;
             transform.SetPositionAndRotation(position, Quaternion.LookRotation(position - at, Vector3.up));
         }
         void Awake()
         {
             Current = this;
+            transform.localScale = Vector3.one * ModelScale;
             Build();
             GalleryExperience.Changed += Refresh;
             Show(Page.Home);
@@ -77,7 +85,8 @@ namespace InnerFrame.Gallery
         {
             if (DisplayCanvas != null) return;
             Content = Rect(transform, "Fixed sign face", Vector2.zero, new Vector2(1000, 600));
-            Content.localPosition = new Vector3(0, FaceHeight, -.14f);
+            Content.localPosition = new Vector3(0, FaceHeight, FaceDepth);
+            Content.localRotation = Quaternion.Euler(FaceTilt, 0, 0);
             Content.localScale = Vector3.one * .001f;
             DisplayCanvas = Content.gameObject.AddComponent<Canvas>();
             DisplayCanvas.renderMode = RenderMode.WorldSpace;

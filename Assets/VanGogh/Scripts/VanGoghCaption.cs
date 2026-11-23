@@ -73,11 +73,12 @@ public class VanGoghCaption : MonoBehaviour
         return caption;
     }
 
-    /// <summary>His words, a sentence per page in time with his voice, until `null`: then they stay a second and fade.</summary>
+    /// <summary>His words, a sentence per page in time with his voice. Null ends speech; the shared box retains its
+    /// last subtitle for the reader, while the legacy sign keeps its original short fade.</summary>
     public void Words(string text, bool continuePresentation = false)
     {
         var clip = voice != null ? voice.clip : null;
-        if (ui != null) { if (string.IsNullOrEmpty(text)) ui.Clear(); else ui.Say(Speaker, text, clip, continuePresentation); return; }
+        if (ui != null) { if (string.IsNullOrEmpty(text)) ui.EndSpeech(); else ui.Say(Speaker, text, clip, continuePresentation); return; }
         if (string.IsNullOrEmpty(text)) { paging.End(); return; }
         // the largest size, down to the minimum, that keeps it to two lines; then a third line at the size that fits the panel
         paging.Show(text, clip != null ? clip.length : 0f, Size(CapHeight), Size(MinCapHeight), MaxLines,

@@ -117,6 +117,10 @@ namespace InnerFrame.StarryNight.EditorTools
             string scene = SceneManager.GetActiveScene().name;
             if (scene != lastScene) { lastScene = scene; StopJoin(); }
             var game = Object.FindAnyObjectByType<SN_Game>();
+            // Simulated visitor follows the real route. Distance hold/resume is covered separately in SN_ExitCheck.
+            if (game != null && head != null && game.exit != null &&
+                (game.exit.flow.Now == VG_ExitFlow.Beat.Walking || game.exit.flow.Now == VG_ExitFlow.Beat.Gold))
+                head.position = game.exit.lead.body.position - game.exit.lead.body.forward * 1.2f + Vector3.up * game.layout.eyeHeight;
             var fader = SceneFader.Instance;
 
             // from the Follow pick until the gold is gone: every frame
@@ -229,7 +233,8 @@ namespace InnerFrame.StarryNight.EditorTools
                     else if (now - stepSince > 60.0) { Check(false, $"60 s after Follow the gold hasn't cleared (scene {scene}, gold {(VG_GoldLight.Active != null ? VG_GoldLight.Active.Alpha.ToString("F2") : "gone")})"); Finish(); }
                     break;
                 case 6:
-                    Check(fullAt > 0 && fullAt - pickedAt >= 4.0 + VG_GoldLight.RiseSeconds - 0.1 && fullAt - pickedAt <= 5.0 + VG_GoldLight.RiseSeconds + 0.3, $"from the pick to full gold: {fullAt - pickedAt:F2} s (Editor, real time; planned 4-5 s of walking, then {VG_GoldLight.RiseSeconds} s rising)");
+                    Check(fullAt > 0 && fullAt - pickedAt > 5.0 + VG_GoldLight.RiseSeconds && fullAt - pickedAt < 30.0,
+                        $"from the pick to full gold: {fullAt - pickedAt:F2} s with a following visitor and 0.75 m/s pace; no old fixed 5 s departure");
                     Check(almondFrame > 0 && alphaOnAlmondFirstFrame >= 1f, $"on Almond Blossom's first frame the gold's alpha was {alphaOnAlmondFirstFrame:F2}");
                     Check(goldInFront, "on that frame it fills the new scene's own camera (3 m in front of it)");
                     Check(clearFrame > 0 && arrivedFrame > 0 && clearFrame - arrivedFrame >= 3 && clearFrame - almondFrame >= 2,

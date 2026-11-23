@@ -154,22 +154,19 @@ public static class PlayerMenuSplitPreview
                 "Gallery does not spawn a wrist menu");
             if (Open()) Panel().Hide();
             var guide = InnerFrame.Tutorial.EntranceControllerGuide.Current;
-            var artwork = guide != null ? guide.Diagram.texture : null;
             Click(left.menu);
-            Check(Open() && Panel().CurrentPage == PlayerMenuPage.Audio && !Panel().IsQuickAudio,
-                "left OpenXR Menu button opens the full two-column Audio page");
+            Check(Open() && Panel().CurrentPage == (guide != null ? PlayerMenuPage.Controls : PlayerMenuPage.Audio) && !Panel().IsQuickAudio,
+                "left OpenXR Menu button opens the full menu, backing out to Controls when a guide was open");
             Check(PlayerMenu.ModalOpen && PlayerMenu.MenuOpen, "opened menu blocks scene interaction");
             if (guide != null)
-                Check(!guide.gameObject.activeInHierarchy && guide.Diagram.texture == artwork, "Menu preserves the complete controller diagram while suspended");
+                Check(!InnerFrame.Tutorial.EntranceControllerGuide.IsOpen, "Menu closes the controller diagram without keeping a suspended modal");
             NamedButton(Panel(), "Close").onClick.Invoke();
             Check(!Open(), "close cross closes the real menu");
-            if (guide != null)
-                Check(guide.gameObject.activeInHierarchy && guide.Diagram.texture == artwork, "close cross restores the same controller diagram");
+            Check(!InnerFrame.Tutorial.EntranceControllerGuide.IsOpen && !PlayerMenu.ModalOpen, "menu close leaves no hidden controller guide modal");
             Click(left.menu);
             Check(Open(), "Menu can reopen after the close cross");
             Click(left.menu);
             Check(!Open(), "a second Menu press closes the panel");
-            if (guide != null) guide.Close();
             Click(right.menu);
             Check(!Open(), "right system/menu control is not used as the game's Menu binding");
             Push(keyboard.mKey, 1f);
@@ -254,7 +251,10 @@ public static class PlayerMenuSplitPreview
                 "menu is a world-space object without a head-locked compositor");
             Check(panel.GalleryAvailable && panel.ShownBackLabel == PlayerMenuPanel.BackLabel, "painting context offers Back to Gallery");
             Check(Vector3.Distance(panel.transform.position, camera.transform.position) < 2f, "panel opens inside the 2 m controller ray");
-            Check(panel.GetComponentInChildren<PlayerMenuTitleDrag>().GetComponent<Image>().raycastTarget, "title bar accepts UI trigger drags");
+            var drag = panel.GetComponentsInChildren<VG_PanelInteraction>()
+                .FirstOrDefault(interaction => interaction.name == "Title Bar (grab to move)");
+            Check(drag != null && drag.GetComponent<Image>().raycastTarget,
+                "title bar exposes the shared panel interaction and raycast target");
             Check(panel.GetComponentInChildren<TrackedDeviceGraphicRaycaster>() != null, "menu accepts tracked controller UI rays");
             var canvas = panel.GetComponentInChildren<Canvas>();
             Check(canvas != null && canvas.renderMode == RenderMode.WorldSpace && canvas.worldCamera == camera, "world-space canvas uses supplied camera");
@@ -309,28 +309,50 @@ public static class PlayerMenuSplitPreview
             Check(compactSlider != null && compactSlider.interactable && compactSlider.fillRect != null && compactSlider.handleRect != null, "compact Audio retains a real interactive slider");
             Check(NamedButton(panel, "Mute") != null && NamedButton(panel, "Mute").gameObject.activeInHierarchy && panel.GetComponentsInChildren<Button>().Any(b => Label(b) == "×"), "compact Audio retains Mute and close cross");
             Check(VisibleUiFits(panel, camera), "compact Audio visible UI remains in viewport");
-            var drag = panel.GetComponentInChildren<PlayerMenuTitleDrag>();
             var eventObject = new GameObject("Title drag fixture", typeof(EventSystem));
-            var pointer = new TrackedDeviceEventData(eventObject.GetComponent<EventSystem>()) { pointerId = 17 };
+            var events = eventObject.GetComponent<EventSystem>();
             Vector3 initialPosition = camera.transform.position;
             Vector3 panelPosition = panel.transform.position;
             Quaternion panelRotation = panel.transform.rotation;
-            var target = camera.transform.InverseTransformPoint(drag.transform.position);
-            void Aim(Vector3 delta) => pointer.rayPoints = new List<Vector3> { camera.transform.position,
-                camera.transform.TransformPoint(2f * (target + delta)) };
+            var handle = (RectTransform)drag.transform;
+            var centre = handle.TransformPoint(handle.rect.center);
+            var travel = new Vector3(-.18f, .1f, 0f);
             Check(((Vector2)camera.transform.InverseTransformPoint(panel.transform.position)).sqrMagnitude < .00001f, "Audio opens at view centre");
-            Aim(Vector3.zero);
+            var tracked = new TrackedDeviceEventData(events)
+            {
+                pointerId = 17, button = PointerEventData.InputButton.Left,
+                rayPoints = new List<Vector3> { camera.transform.position,
+                    camera.transform.position + (centre - camera.transform.position).normalized * 3f }
+            };
+            drag.OnPointerDown(tracked);
+            tracked.rayPoints = new List<Vector3> { camera.transform.position,
+                camera.transform.position + (centre + travel - camera.transform.position).normalized * 3f };
+            drag.OnDrag(tracked);
+            drag.OnPointerUp(tracked);
+            Check(Vector3.Distance(panel.transform.position, panelPosition) < .0001f
+                && Quaternion.Angle(panel.transform.rotation, panelRotation) < .001f && !drag.Dragging,
+                "tracked Trigger events cannot move the menu; native Grip has separate Play coverage");
+
+            var pointer = new PointerEventData(events)
+            {
+                pointerId = -1, button = PointerEventData.InputButton.Left,
+                position = camera.WorldToScreenPoint(centre), pressPosition = camera.WorldToScreenPoint(centre),
+                pointerPress = drag.gameObject, pointerDrag = drag.gameObject
+            };
+            drag.OnInitializePotentialDrag(pointer);
             drag.OnPointerDown(pointer);
-            drag.OnBeginDrag(pointer);
-            Aim(new Vector3(-.18f, .1f, 0f));
+            bool captured = drag.Dragging;
+            pointer.position = camera.WorldToScreenPoint(centre + travel);
             drag.OnDrag(pointer);
             drag.OnPointerUp(pointer);
             var released = panel.transform.position;
-            Check(Vector3.Distance(released, panelPosition + new Vector3(-.18f, .1f, 0f)) < .001f, "real title drag moves the panel on its world plane");
+            Check(captured && !drag.Dragging && Vector3.Distance(released, panelPosition + travel) < .001f
+                && Quaternion.Angle(panel.transform.rotation, panelRotation) < .001f,
+                "desktop title drag moves the panel exactly on its world plane and release ends ownership");
             for (int i = 1; i <= 16; i++)
                 camera.transform.SetPositionAndRotation(initialPosition + Vector3.right * (.04f * i),
                     Quaternion.Euler(i * 1.5f, i * 3f, i));
-            Aim(Vector3.right * .3f);
+            pointer.position = camera.WorldToScreenPoint(centre + Vector3.right * .3f);
             drag.OnDrag(pointer);
             Check(Vector3.Distance(panel.transform.position, released) < .0001f && Quaternion.Angle(panel.transform.rotation, panelRotation) < .001f,
                 "released panel keeps its world position and orientation through head movement");
@@ -343,6 +365,15 @@ public static class PlayerMenuSplitPreview
             panel.SelectPage(PlayerMenuPage.Audio);
             Check(!panel.IsQuickAudio && compactNavigation.All(b => b.gameObject.activeInHierarchy), "normal Menu restores all six navigation choices");
             Check(moreSettings != null && moreSettings.gameObject.activeInHierarchy, "normal Audio page restores More settings");
+            float volumeBeforeSettings = PlayerMenuPreferences.MasterVolume;
+            moreSettings.onClick.Invoke();
+            var backToVolume = NamedButton(panel, "Back to volume");
+            Check(panel.CurrentPage == PlayerMenuPage.Settings && backToVolume != null && backToVolume.gameObject.activeInHierarchy,
+                "More settings offers a visible Back to volume button");
+            backToVolume?.onClick.Invoke();
+            Check(panel.CurrentPage == PlayerMenuPage.Audio && panel.GetComponentInChildren<Slider>() != null
+                && Mathf.Approximately(PlayerMenuPreferences.MasterVolume, volumeBeforeSettings),
+                "Back to volume restores the live slider without changing volume or closing Menu");
             panel.ShowInFrontOf(camera.transform, null);
             var gallery = NamedButton(panel, "Nav Gallery");
             Check(!panel.GalleryAvailable && panel.ShownBackLabel == null, "Gallery context has no actionable return destination");

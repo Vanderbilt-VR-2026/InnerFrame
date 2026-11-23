@@ -14,17 +14,17 @@ namespace InnerFrame.StarryNight.EditorTools
     /// 1. the walk: every trail waypoint (SN_Layout.exitTrailFrom on) within TrailTolerance of the dirt trail's centre line
     ///    (SN_MeshGen.PathLine, the line its mesh is built on); every 0.1 m on the hill's collider at GroundHeight; clear
     ///    of the rock, the lantern and the other colliders for a 0.25 x 1.7 m capsule (from his first step; control: the
-    ///    rock), of the lantern's post (no collider) and of the bushes (no colliders: their vertices); planned 2-3 s;
+    ///    rock), of the lantern's post (no collider) and of the bushes (no colliders: their vertices);
     /// 2. Walking plays in place: with root motion off the hips drift less than HipDrift over two loops; the planted foot
     ///    slides at most FootSlide against exitWalkSpeed; the feet stride;
     /// 3. Follow: L11 exitDelaySeconds after Done, said standing (the Standing state, BreathingIdle); the card only after
     ///    it ends, and nothing else in the meantime (no menu, the hint as at Done); a trigger off the card does nothing;
-    ///    the trigger on Follow Vincent: he turns, walks the path in the Walking state, on the ground, at his speed, and
-    ///    2-3 s after the trigger the gold is full (its own planned time), covering the view, and he is hidden; the
+    ///    the trigger on Follow Vincent: he turns, walks the path with a following visitor at at most 0.75 m/s, and
+    ///    the gold starts at the actual trail end, covering the view once full, and he is hidden; the
     ///    gold's scene change goes to Almond Blossom, once;
     /// 4. Back: the trigger on Back to the Gallery calls the player menu's way back once; he doesn't move; no gold; a gold
     ///    whose scene change doesn't begin clears, and he and the card come back;
-    /// 5. a conversation while he walks: the walk clip stops and he stays where he is, then walks on;
+    /// 5. a conversation, or a visitor who falls behind: he stops; the fallback cannot leave the visitor behind;
     /// 6. importing Walking logs no warning or error; Humanoid on BreathingIdle's avatar; a loop with its XZ travel not baked;
     /// 7. the budget: the card's graphics and the gold's quad; no light, no Volume added.
     /// With -snExitRenders &lt;dir&gt; (or the menu) it also writes the pictures and compares the opening's gold with ours.
@@ -39,6 +39,7 @@ namespace InnerFrame.StarryNight.EditorTools
         static StringBuilder log;
         static int passes, failures;
         static string renderDir;
+        static bool followVisitor;
 
         [MenuItem("Tools/InnerFrame/Starry Night/Run exit check (with pictures)")]
         public static void RunFromMenu()
@@ -69,6 +70,7 @@ namespace InnerFrame.StarryNight.EditorTools
             {
                 ThePath();
                 WalkingInPlace();
+                VisitorWait();
                 Follow();
                 Back();
                 NoSceneChange();
@@ -100,6 +102,7 @@ namespace InnerFrame.StarryNight.EditorTools
         static SN_TestWorld AtDone(Calls calls)
         {
             var w = SN_TestWorld.New();
+            followVisitor = true;
             w.game.vincentDriver.ManualAnimator = true;
             var anim = w.game.vincentDriver.GetComponent<Animator>();
             anim.Rebind(); anim.Update(0f);
@@ -120,6 +123,8 @@ namespace InnerFrame.StarryNight.EditorTools
         /// <summary>One step of the game's clock (and the gold's, which steps itself in Play mode).</summary>
         static void Tick(SN_TestWorld w)
         {
+            if (followVisitor && (w.game.exit.flow.Now == VG_ExitFlow.Beat.Walking || w.game.exit.flow.Now == VG_ExitFlow.Beat.Gold))
+                w.head.position = Body(w) - w.game.exit.lead.body.forward * 1.2f + Vector3.up * w.L.eyeHeight;
             w.game.Step(Dt);
             if (VG_GoldLight.Active != null) VG_GoldLight.Active.Step(Dt);
         }
@@ -318,6 +323,35 @@ namespace InnerFrame.StarryNight.EditorTools
 
         // ---------------------------------------------------------------------------------------------- 3. Follow
 
+        static void VisitorWait()
+        {
+            W("== Visitor distance: neither movement nor the fallback timer can leave someone behind");
+            var calls = new Calls();
+            var w = AtDone(calls);
+            var flow = w.game.exit.flow;
+            Run(w, 20f, () => flow.card.Shown);
+            Aim(w, 0); Pull(w);
+            followVisitor = false;
+            var lead = w.game.exit.lead;
+            Vector3 direction = lead.path[0] - lead.body.position; direction.y = 0f;
+            w.head.position = lead.body.position - direction.normalized * 4f + Vector3.up * w.L.eyeHeight;
+            flow.goldAfter = 0.5f; // positive stress case for the shared fallback, normally infinite in Starry
+            Vector3 held = lead.body.position;
+            Run(w, 35f, () => false);
+            Check(lead.WaitingForVisitor && Flat(lead.body.position - held) < 0.0001f && !Anim(w).GetBool("Walking"),
+                "visitor stays behind: Vincent waits in his idle pose for 35 s");
+            Check(flow.Now == VG_ExitFlow.Beat.Walking && flow.Gold == null && calls.loads.Count == 0,
+                "the fallback does not advance or load another scene while waiting for the visitor");
+            flow.goldAfter = float.PositiveInfinity;
+            followVisitor = true;
+            Run(w, 1f, () => false);
+            Check(!lead.WaitingForVisitor && Flat(lead.body.position - held) > 0.1f,
+                "visitor catches up: he resumes the same route");
+            Check(Anim(w).speed <= VG_Lead.VisitorSpeedLimit / lead.speed + 0.01f,
+                "walk animation is slowed with his capped travel speed");
+            Close(w);
+        }
+
         static void Follow()
         {
             W("");
@@ -357,7 +391,7 @@ namespace InnerFrame.StarryNight.EditorTools
             float walkAt = exit.WalkAt, maxSpeed = 0f, offGround = 0f, worstHeading = 0f, steepest = 0f; Vector3 last = Body(w); bool walkingAnim = true; int frames = 0;
             float fullAt = -1f, hiddenAt = -1f, rimAt = -1f, trailEndAt = -1f;
             var trailEnd = L.exitPath[L.exitTrailTo];
-            for (float t = 0f; t < 10f && fullAt < 0f; t += Dt)
+            for (float t = 0f; t < 20f && fullAt < 0f; t += Dt)
             {
                 Vector3 to = NextPoint(lead) - Body(w); to.y = 0f;
                 float off = to.sqrMagnitude > 1e-6f ? Vector3.Angle(lead.body.forward, to) : 0f;
@@ -370,17 +404,17 @@ namespace InnerFrame.StarryNight.EditorTools
                 if (new Vector2(b.x, b.z).magnitude <= L.hillEdgeRadius) offGround = Mathf.Max(offGround, Mathf.Abs(b.y - g));
                 else { offGround = Mathf.Max(offGround, g - b.y); if (rimAt < 0f) rimAt = w.game.Clock; }   // past the rim: never under the ground
                 if (trailEndAt < 0f && (new Vector2(b.x, b.z) - trailEnd).magnitude < 0.03f) trailEndAt = w.game.Clock;
-                if (frames > 20 && lead.Moving) walkingAnim &= anim.GetCurrentAnimatorStateInfo(0).IsName("Walking") || anim.IsInTransition(0);
+                if (frames > 20 && lead.CurrentSpeed > 0.1f) walkingAnim &= anim.GetCurrentAnimatorStateInfo(0).IsName("Walking") || anim.IsInTransition(0);
                 if (exit.VincentHidden && hiddenAt < 0f) hiddenAt = w.game.Clock;
                 if (exit.Gold != null && exit.Gold.FullAfter >= 0f) fullAt = exit.GoldAt + exit.Gold.FullAfter;
             }
             float before = exit.GoldAt - walkAt;
-            Check(exit.GoldAt > 0f && before >= WalkMin && before <= L.exitGoldAfterSeconds + Dt + 1e-4f,
-                $"he walks {before:F2} s before the gold begins (between {WalkMin} and {L.exitGoldAfterSeconds} s): the trail's end at {trailEndAt - walkAt:F2} s, the rim at {(rimAt > 0f ? (rimAt - walkAt).ToString("F2") + " s" : "not before the gold")}; begun by the {L.exitGoldAfterSeconds} s timer");
+            Check(exit.GoldAt > 0f && before > L.exitGoldAfterSeconds && lead.NextWaypoint > L.exitTrailTo && float.IsPositiveInfinity(exit.goldAfter),
+                $"he reaches the actual trail end after {before:F2} s before gold starts; the old fixed {L.exitGoldAfterSeconds} s deadline is disabled");
             Check(exit.Gold != null && Mathf.Abs(exit.Gold.FullAfter - VG_GoldLight.RiseSeconds) <= Dt + 1e-4f && exit.Gold.Alpha >= 1f, $"the gold is full {exit.Gold?.FullAfter:F3} s after it began (smooth, {VG_GoldLight.RiseSeconds} s)");
             Check(hiddenAt >= 0f && Mathf.Abs(hiddenAt - fullAt) <= Dt + 1e-4f && w.game.vincent.GetComponentsInChildren<Renderer>().All(r => !r.enabled), $"he is hidden as it goes full ({(hiddenAt - fullAt) * 1000f:F0} ms)");
             Check(lead.Moving && lead.Remaining > 0.3f, $"he is still walking when it is full ({lead.Walked:F2} m walked, {lead.Remaining:F2} m left; at r {new Vector2(Body(w).x, Body(w).z).magnitude:F2}, his feet {-(Body(w).y + L.hillDrop):F2} m under the rim, the ground {Body(w).y - L.GroundHeight(Body(w).x, Body(w).z):F2} m below his feet)");
-            Check(maxSpeed <= L.exitWalkSpeed * 1.01f && offGround < 0.002f && steepest <= L.exitMaxDescentDeg + 0.5f && walkingAnim,
+            Check(maxSpeed <= VG_Lead.VisitorSpeedLimit * 1.01f && offGround < 0.002f && steepest <= L.exitMaxDescentDeg + 0.5f && walkingAnim,
                 $"he walks at {maxSpeed:F2} m/s at most, on the ground up to the rim and never under it past it (off by {offGround:F4} m at most), down at {steepest:F1} deg at the steepest, in the Walking state");
             Check(worstHeading <= VG_Lead.MaxOffHeading + L.exitTurnDegPerSecond * Dt, $"he turns before he walks: his steps are at most {worstHeading:F1} deg off his way");
             Check(Covers(w, exit.Gold), "the gold covers a 110-degree view from the player's eye (geometry)");
@@ -462,7 +496,7 @@ namespace InnerFrame.StarryNight.EditorTools
             exit.Load = s => false;
             Run(w, 20f, () => exit.card.Shown);
             Aim(w, 0); Pull(w);
-            Run(w, 6f, () => exit.Gold != null && exit.Gold.FullAfter >= 0f);
+            Run(w, 20f, () => exit.Gold != null && exit.Gold.FullAfter >= 0f);
             Check(exit.VincentHidden, "the gold went full and he was hidden");
             Run(w, VG_GoldLight.ClearSeconds + 0.5f, () => false);
             Check(VG_GoldLight.Active == null && !exit.VincentHidden && exit.card.Shown && exit.CardOpen,
@@ -486,7 +520,7 @@ namespace InnerFrame.StarryNight.EditorTools
             Run(w, 2f, () => false);
             Check(Flat(Body(w) - held) < 1e-4f && !anim.GetBool("Walking") && VG_GoldLight.Active == null, $"paused for 2 s: he stays where he is ({Flat(Body(w) - held):F4} m), the walk clip off, no gold yet");
             w.game.voice.PauseForConversation(false);
-            Run(w, 6f, () => exit.Gold != null && exit.Gold.FullAfter >= 0f);
+            Run(w, 20f, () => exit.Gold != null && exit.Gold.FullAfter >= 0f);
             Check(exit.Gold != null && exit.VincentHidden, "after it: he walks on into the gold");
             Close(w);
         }
@@ -528,7 +562,7 @@ namespace InnerFrame.StarryNight.EditorTools
             int textures = graphics.Select(g => g.mainTexture).Where(t => t != null).Distinct().Count();
             W($"  the card: {graphics.Length} UI graphics ({graphics.Count(g => g is UnityEngine.UI.Text)} texts) on one material, {textures} textures ([I] about one draw call per texture after UI batching)");
             Run(w, 20f, () => exit.card.Shown); Aim(w, 0); Pull(w);
-            Run(w, 6f, () => exit.Gold != null);
+            Run(w, 20f, () => exit.Gold != null);
             var gold = exit.Gold;
             var mesh = gold.GetComponentInChildren<MeshFilter>().sharedMesh;
             Check(mesh.triangles.Length / 3 == 2 && gold.GetComponentsInChildren<Renderer>().Length == 1, $"the gold: {mesh.triangles.Length / 3} triangles, 1 renderer (1 draw call), on the canvas material ({gold.GetComponentInChildren<Renderer>().sharedMaterial.shader.name}); it covers the whole view only while it is full");
@@ -622,7 +656,7 @@ namespace InnerFrame.StarryNight.EditorTools
             float R() => new Vector2(Body(w).x, Body(w).z).magnitude;
             void Frame(Func<bool> until, string name, string what, bool goldOff = false)
             {
-                Run(w, 8f, until);
+                Run(w, 25f, until);
                 w.LookAt(Body(w) + Vector3.up * 0.9f);
                 w.game.ui.Snap();   // the box and hint follow the turned head at once, as SN_TestWorld.New does
                 var r = VG_GoldLight.Active != null ? VG_GoldLight.Active.GetComponentInChildren<Renderer>() : null;
@@ -636,7 +670,7 @@ namespace InnerFrame.StarryNight.EditorTools
             Frame(() => exit.Gold != null, "exit-4-gold-starts.png", "the frame the gold starts");
             Frame(() => R() >= L.hillEdgeRadius, "exit-5-at-rim.png", "at the rim");
             Frame(() => R() >= L.hillEdgeRadius + 0.6f, "exit-6-past-rim.png", "0.6 m past the rim, through the wall, going down at 17 deg (from the seat his head never goes under the rim)", goldOff: true);
-            Run(w, 6f, () => exit.Gold != null && exit.Gold.FullAfter >= 0f);
+            Run(w, 20f, () => exit.Gold != null && exit.Gold.FullAfter >= 0f);
             var ours = Take();
             Save(ours, "exit-7-gold-full.png");
             // the opening's gold | ours: the opening's own texture (EntranceMenu.GoldGradient), centred in the view as the

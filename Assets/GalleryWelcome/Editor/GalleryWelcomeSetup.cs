@@ -27,7 +27,7 @@ public static class GalleryWelcomeSetup
         ConfigureTexture(Folder + "/Art/WelcomeFrame_BaseColor.png", 2048);
         ConfigureTexture(Folder + "/Art/WelcomePaintedIcons.png", 2048);
         ConfigureWoodButton();
-        ConfigureTexture("Assets/ControllerTutorial/Resources/ControllerOverview.png", 2048);
+        ConfigureControllerOverview();
         var frame = Material("WelcomeFrame", AssetDatabase.LoadAssetAtPath<Texture2D>(Folder + "/Art/WelcomeFrame_BaseColor.png"));
         var walnut = AssetDatabase.LoadAssetAtPath<Material>("Assets/Art/Gallery/Materials/Mat_BenchWood.mat");
         var root = new GameObject("Gallery Welcome Sign");
@@ -90,6 +90,42 @@ public static class GalleryWelcomeSetup
         settings.spriteMeshType = SpriteMeshType.FullRect; importer.SetTextureSettings(settings);
         importer.mipmapEnabled = true; // Switching to Sprite resets this default; restore for the world-space sign.
         importer.SaveAndReimport();
+    }
+
+    [MenuItem("InnerFrame/Controls/Preserve controller diagram clarity")]
+    public static void ConfigureControllerOverview()
+    {
+        const string path = "Assets/ControllerTutorial/Resources/ControllerOverview.png";
+        var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+        if (importer == null) throw new InvalidOperationException("The original controller overview texture is missing.");
+        // The illustration contains small painted type as well as controller art. General scene-texture ASTC 6x6
+        // compression, power-of-two resizing and reduced mip levels blur those strokes in the enlarged VR manual.
+        // Preserve the original 1536x1024 pixels: one 6 MiB RGBA texture, with no replacement/upscaled artwork.
+        importer.textureType = TextureImporterType.Default;
+        importer.isReadable = false;
+        importer.maxTextureSize = 2048;
+        importer.npotScale = TextureImporterNPOTScale.None;
+        importer.mipmapEnabled = false;
+        importer.streamingMipmaps = false;
+        importer.textureCompression = TextureImporterCompression.Uncompressed;
+        importer.crunchedCompression = false;
+        importer.filterMode = FilterMode.Bilinear;
+        importer.wrapMode = TextureWrapMode.Clamp;
+        var android = importer.GetPlatformTextureSettings("Android");
+        android.overridden = true;
+        android.maxTextureSize = 2048;
+        android.format = TextureImporterFormat.RGBA32;
+        android.textureCompression = TextureImporterCompression.Uncompressed;
+        android.crunchedCompression = false;
+        importer.SetPlatformTextureSettings(android);
+        importer.SaveAndReimport();
+        Debug.Log("[Controls] Original controller diagram preserved at native resolution, with no mip downsampling or Android block compression.");
+    }
+
+    public static void ConfigureControllerOverviewBatch()
+    {
+        try { ConfigureControllerOverview(); EditorApplication.Exit(0); }
+        catch (Exception error) { Debug.LogException(error); EditorApplication.Exit(1); }
     }
     public static void BuildBatch() { try { Build(); EditorApplication.Exit(0); } catch (Exception e) { Debug.LogException(e); EditorApplication.Exit(1); } }
     [MenuItem("InnerFrame/Gallery Welcome/Open Gallery to try")]

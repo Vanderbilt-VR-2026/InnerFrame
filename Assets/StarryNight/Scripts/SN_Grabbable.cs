@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
 
 namespace InnerFrame.StarryNight
@@ -9,11 +10,12 @@ namespace InnerFrame.StarryNight
     /// it in front of the camera (see SN_Bootstrap). SN_Game only asks whether it is held.
     /// Shared with the room by StarryNightLink (Assets/Script/Network), the way MirrorLink shares the Painted Bedroom's
     /// mirror: while another player moves it, this copy follows their pose and can't be grabbed (FollowPose).
-    /// While it is held (here or by another player) its colliders are triggers: held under the head it would otherwise
+    /// Most held props (here or followed from another player) use trigger colliders: under the head they would otherwise
     /// stop XRI's ground check (GravityProvider casts down from the head and ignores triggers), so the player walked out
     /// level over a slope and dropped when the hand moved. It never collides with the colliders given to IgnoreAlways (the
     /// rig's CharacterControllers, which would otherwise step up onto it: it is 0.32 m tall and the rig climbs anything up to
-    /// about 0.55 m; the rock's keep-off rim).
+    /// about 0.55 m; the rock's keep-off rim). The physical notebook instead stays solid in a velocity-tracked hand:
+    /// its loose-prop layer is excluded from player grounding, so its covers can meet the real rock before release.
     /// With a home (SetHome: the lantern's hook, 2026-11-09) it rests there kinematic, and when let go it glides back
     /// (Returning): a moving, non-kinematic body with trigger colliders and no gravity, so StarryNightLink keeps sending its
     /// pose while it is Settling and every copy follows it home; there it turns kinematic again.
@@ -24,7 +26,7 @@ namespace InnerFrame.StarryNight
         [Tooltip("Where the Editor fallback holds it, in the camera's space (metres).")]
         public Vector3 fallbackHoldOffset = new Vector3(0.16f, -0.2f, 0.42f);
 
-        [Tooltip("Only the reading notebook: keep the released world pose, rather than falling or following the head.")]
+        [Tooltip("Optional pinned display prop. Physical objects, including the reading notebook, leave this off.")]
         public bool stayWhereReleased;
 
         XRGrabInteractable grab;
@@ -40,6 +42,28 @@ namespace InnerFrame.StarryNight
         Quaternion returnFromRotation;
         Transform homeParent;
         bool fallbackHeld;
+        Collider setDownSurface;
+        bool pinAwayFromSetDownSurface;
+        const float MaxSetDownLift = .2f, SetDownClearance = .003f, MaxSetDownHeight = .25f;
+
+        /// <summary>Only the physical notebook uses its real rock as a set-down support. Recovery is bounded to a
+        /// small upward correction on release. With pinAwayFromSurface, reading releases keep their exact world
+        /// pose; only a deliberate set-down close above this actual surface resumes gravity.</summary>
+        public void SetDownOn(Collider surface, bool pinAwayFromSurface = false)
+        {
+            setDownSurface = surface;
+            pinAwayFromSetDownSurface = pinAwayFromSurface;
+            if (surface != null)
+            {
+                // A tracked hand can keep moving below the rock. Give this body's two thin covers more contact
+                // solver iterations while retaining XRI's direct free-hand/far-grab velocity tracking.
+                Body.solverIterations = Mathf.Max(Body.solverIterations, 16);
+                Body.solverVelocityIterations = Mathf.Max(Body.solverVelocityIterations, 8);
+            }
+            RefreshCollisions();
+        }
+        public float LastSetDownLift { get; private set; }
+        public bool PinnedForReading { get; private set; }
 
         XRGrabInteractable Grab => grab != null ? grab : grab = GetComponent<XRGrabInteractable>();
         Rigidbody Body => body != null ? body : body = GetComponent<Rigidbody>();
@@ -75,7 +99,113 @@ namespace InnerFrame.StarryNight
         /// <summary>The colliders given to IgnoreAlways (for the checks).</summary>
         public IReadOnlyList<Collider> Ignored => ignoreAlways;
 
-        void OnEnable() { ignoredActive = -1; ApplyIgnores(); }
+        void OnEnable()
+        {
+            ignoredActive = -1;
+            if (Grab != null)
+            {
+                Grab.selectEntered.AddListener(OnSelected);
+                Grab.selectExited.AddListener(OnReleased);
+            }
+            ApplyIgnores();
+        }
+
+        void OnDisable()
+        {
+            if (Grab == null) return;
+            Grab.selectEntered.RemoveListener(OnSelected);
+            Grab.selectExited.RemoveListener(OnReleased);
+        }
+
+        void OnSelected(SelectEnterEventArgs args) { PinnedForReading = false; RefreshCollisions(); }
+
+        void OnReleased(SelectExitEventArgs args)
+        {
+            // XRI restores the Rigidbody before selectExited. Restore solid contact in that same release, before
+            // the next physics step can drop a thin book through the rock while its colliders are still triggers.
+            // Hook return and the dawn page keep their existing Update-driven release transitions.
+            if (IsHeld || hasHome || floating || following) return;
+            RefreshCollisions();
+            if (pinAwayFromSetDownSurface) ReleaseNotebook();
+            else RecoverSetDownOverlap();
+            if (setDownSurface != null && !Body.isKinematic)
+            {
+                // VelocityTracking can leave hand-following velocity even with XRI throwOnDetach disabled.
+                // This reading prop is set down, so stop that drive and let gravity take over from rest.
+                Body.linearVelocity = Vector3.zero;
+                Body.angularVelocity = Vector3.zero;
+            }
+            if (!Body.isKinematic) Body.WakeUp();
+        }
+
+        void ReleaseNotebook()
+        {
+            LastSetDownLift = 0f;
+            if (!CloseAboveSetDownSurface()) { PinnedForReading = true; PinAtRest(); return; }
+            SetNotebookRestPhysics(true);   // XRI may have restored the previously pinned kinematic state
+            RecoverSetDownOverlap();
+        }
+
+        bool CloseAboveSetDownSurface()
+        {
+            if (setDownSurface == null || !setDownSurface.enabled || !setDownSurface.gameObject.activeInHierarchy) return false;
+            var baseCover = GetComponent<BoxCollider>();   // the real notebook's flat cover, not its raised reading leaf
+            if (baseCover == null || !baseCover.enabled) return false;
+            Physics.SyncTransforms();
+            Bounds surface = setDownSurface.bounds;
+            float top = surface.max.y + .05f, distance = surface.size.y + .1f;
+            bool Supported(Vector3 point, out RaycastHit hit) =>
+                setDownSurface.Raycast(new Ray(new Vector3(point.x, top, point.z), Vector3.down), out hit, distance) && hit.normal.y >= .5f;
+            var center = baseCover.transform.TransformPoint(baseCover.center);
+            if (!Supported(center, out var centerHit)) return false;
+            float gap = baseCover.bounds.min.y - centerHit.point.y;
+            if (gap < -MaxSetDownLift || gap > MaxSetDownHeight) return false;
+            int support = 0;
+            for (int x = -1; x <= 1; x += 2)
+            for (int z = -1; z <= 1; z += 2)
+            {
+                var p = baseCover.transform.TransformPoint(baseCover.center + Vector3.Scale(baseCover.size, new Vector3(x * .35f, 0f, z * .35f)));
+                if (Supported(p, out _)) support++;
+            }
+            return support >= 3;   // the cover must actually be over the rock, not merely near its bounding box
+        }
+
+        void SetNotebookRestPhysics(bool gravity)
+        {
+            if (!Body.isKinematic) { Body.linearVelocity = Vector3.zero; Body.angularVelocity = Vector3.zero; }
+            PinnedForReading = !gravity;
+            Body.useGravity = gravity;
+            Body.isKinematic = !gravity;
+            if (gravity) Body.WakeUp();
+        }
+
+        void RecoverSetDownOverlap()
+        {
+            LastSetDownLift = 0f;
+            if (setDownSurface == null || !setDownSurface.enabled || (stayWhereReleased && !pinAwayFromSetDownSurface)) return;
+            Physics.SyncTransforms();
+            // A tracking jump or the Editor fallback can put a cover slightly inside the rock. Restoring gravity
+            // alone may send that thin cover through the back of its mesh. Sample the two actual cover boxes
+            // against this rock's upward-facing surface and lift only enough to clear it before physics resumes.
+            Bounds surface = setDownSurface.bounds;
+            float top = surface.max.y + .05f, castDistance = surface.size.y + .1f;
+            float lift = 0f;
+            foreach (var collider in Own)
+            {
+                if (!(collider is BoxCollider box) || !box.enabled || !box.bounds.Intersects(surface)) continue;
+                for (int x = -1; x <= 1; x++)
+                for (int y = -1; y <= 1; y++)
+                for (int z = -1; z <= 1; z++)
+                {
+                    Vector3 p = box.transform.TransformPoint(box.center + Vector3.Scale(box.size * .5f, new Vector3(x, y, z)));
+                    if (setDownSurface.Raycast(new Ray(new Vector3(p.x, top, p.z), Vector3.down), out var hit, castDistance))
+                        lift = Mathf.Max(lift, hit.point.y + SetDownClearance - p.y);
+                }
+            }
+            if (lift <= 0f || lift > MaxSetDownLift) return;   // never move a remote/under-rock object across the scene
+            LastSetDownLift = lift;
+            Place(transform.position + Vector3.up * lift, transform.rotation);
+        }
 
         // ---- its home (the lantern's hook) ----
 
@@ -140,14 +270,22 @@ namespace InnerFrame.StarryNight
             if (hasHome && wasHeld && !held && !following) StartReturn();
             if (floating && wasHeld && !held && !following) { floating = false; Body.isKinematic = false; Body.useGravity = true; Body.WakeUp(); }   // taken, then let go: it falls
             wasHeld = held;
-            bool trigger = held || following || returning;
+            RefreshCollisions();
+            if (stayWhereReleased && !pinAwayFromSetDownSurface && !held && !following && !returning && (!Body.isKinematic || Body.useGravity)) PinAtRest();
+            ApplyIgnores();
+        }
+
+        void RefreshCollisions()
+        {
+            // The notebook is already excluded from player grounding and ignores the rig/rim. Its actual covers
+            // can therefore stay solid in a velocity-tracked hand and meet the rock before release.
+            bool trigger = (IsHeld && setDownSurface == null) || following || returning;
             if (trigger != asTrigger)
             {
                 asTrigger = trigger;
                 foreach (var c in Own) if (c != null) c.isTrigger = trigger;
                 ignoredActive = -1;
             }
-            if (stayWhereReleased && !held && !following && !returning && (!Body.isKinematic || Body.useGravity)) PinAtRest();
             ApplyIgnores();
         }
 
@@ -185,10 +323,12 @@ namespace InnerFrame.StarryNight
             if (fallbackHeld || following) return;   // another player has it
             homeParent = transform.parent;
             floating = false;
+            PinnedForReading = false;
             Body.isKinematic = true;
-            transform.SetParent(holder, true);   // keeps its world size (the rig is scaled 0.8)
-            transform.SetPositionAndRotation(holder.position + holder.rotation * at, holder.rotation * turn);
             fallbackHeld = true;
+            transform.SetParent(holder, true);   // keeps its world size (the rig is scaled 0.8)
+            Place(holder.position + holder.rotation * at, holder.rotation * turn);
+            RefreshCollisions();
             if (lockGrab && Grab != null && Grab.enabled) { Grab.enabled = false; grabLocked = true; }
         }
         bool grabLocked;
@@ -199,8 +339,12 @@ namespace InnerFrame.StarryNight
             transform.SetParent(homeParent, true);
             Body.isKinematic = false;
             Body.useGravity = true;
+            Place(transform.position, transform.rotation);   // keep the hand's release pose on the interpolating body
             fallbackHeld = false;
-            if (stayWhereReleased) PinAtRest();
+            if (pinAwayFromSetDownSurface) ReleaseNotebook();
+            else if (stayWhereReleased) PinAtRest();
+            if (!hasHome) RefreshCollisions();
+            if (!pinAwayFromSetDownSurface) RecoverSetDownOverlap();
             if (grabLocked && Grab != null) Grab.enabled = true;
             grabLocked = false;
         }
@@ -222,11 +366,13 @@ namespace InnerFrame.StarryNight
             if (!following)
             {
                 following = true;
+                PinnedForReading = false;
                 kinematicBefore = Body.isKinematic;
                 Body.isKinematic = true;
                 if (Grab != null) Grab.enabled = false;
             }
             transform.SetPositionAndRotation(position, rotation);
+            RefreshCollisions();
         }
 
         /// <summary>They let go and it came to rest: put it exactly where it rests for them, and give it its own physics back.</summary>
@@ -237,8 +383,9 @@ namespace InnerFrame.StarryNight
             // the mover's copy glided home and stopped within a millimetre of it: put this one exactly there
             if (hasHome && (position - home.position).magnitude < 0.02f) { position = home.position; rotation = home.rotation; }
             Place(position, rotation);
-            Body.isKinematic = kinematicBefore;
-            if (stayWhereReleased) PinAtRest();
+            if (!pinAwayFromSetDownSurface) Body.isKinematic = kinematicBefore;
+            if (stayWhereReleased && !pinAwayFromSetDownSurface) PinAtRest();
+            RefreshCollisions();
             if (Grab != null) Grab.enabled = true;
         }
 
@@ -250,6 +397,9 @@ namespace InnerFrame.StarryNight
             transform.SetPositionAndRotation(position, rotation);
             Body.position = position;
             Body.rotation = rotation;
+            // StarryNightLink also uses Place for a late joiner's authoritative resting pose. Adopt its rest mode
+            // without translating it: remote reading poses pin; poses supported by the rock keep normal physics.
+            if (pinAwayFromSetDownSurface && !IsHeld && !following) SetNotebookRestPhysics(CloseAboveSetDownSurface());
             if (Body.isKinematic) return;
             Body.linearVelocity = Vector3.zero;
             Body.angularVelocity = Vector3.zero;

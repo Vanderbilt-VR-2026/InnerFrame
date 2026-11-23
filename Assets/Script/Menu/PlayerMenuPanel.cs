@@ -24,7 +24,7 @@ public class PlayerMenuPanel : MonoBehaviour
     Canvas canvas;
     Text moveHint, volumeLabel, muteLabel, subtitleLabel, scaleLabel, credit;
     Slider volume;
-    Button smaller, larger;
+    Button smaller, larger, recallDialogue;
     string backScene;
     PlayerMenuPage cancelPage;
     bool built;
@@ -40,6 +40,7 @@ public class PlayerMenuPanel : MonoBehaviour
     public bool IsConfirmationPage => CurrentPage == PlayerMenuPage.Gallery || CurrentPage == PlayerMenuPage.Restart || CurrentPage == PlayerMenuPage.Leave;
     public string ShownBackLabel => GalleryAvailable ? BackLabel : null;
     public event Action ControlsRequested;
+    public event Action DialogueRecallRequested;
     public event Action<PlayerMenuPage> ConfirmRequested;
     public event Action Closed;
 
@@ -159,13 +160,14 @@ public class PlayerMenuPanel : MonoBehaviour
     void LateUpdate()
     {
         foreach (var button in confirmations) button.interactable = !SceneFader.IsFading;
+        if (recallDialogue != null) recallDialogue.interactable = !SceneFader.IsFading && VG_DialogueUI.CanRecallCurrentScene;
     }
 
     void RefreshPreferences()
     {
         if (!built) return;
         canvasRect.localScale = Vector3.one * MetresPerPixel * PlayerMenuPreferences.MenuScale;
-        if (cam != null) Place(DragOffset);
+        // Preference changes resize content in place; only reopening the menu resets its world anchor.
         volume.SetValueWithoutNotify(PlayerMenuPreferences.MasterVolume);
         volumeLabel.text = Mathf.RoundToInt(PlayerMenuPreferences.MasterVolume * 100) + "%";
         muteLabel.text = PlayerMenuPreferences.Muted ? "Unmute" : "Mute";
@@ -173,6 +175,7 @@ public class PlayerMenuPanel : MonoBehaviour
         scaleLabel.text = Mathf.RoundToInt(PlayerMenuPreferences.MenuScale * 100) + "%";
         smaller.interactable = PlayerMenuPreferences.MenuScale > .851f;
         larger.interactable = PlayerMenuPreferences.MenuScale < 1.149f;
+        recallDialogue.interactable = !SceneFader.IsFading && VG_DialogueUI.CanRecallCurrentScene;
     }
 
     void Build(Camera camera)
@@ -191,7 +194,8 @@ public class PlayerMenuPanel : MonoBehaviour
         Picture(title, "Title Star Ring", MenuLook.StarRingSprite, new Vector2(-67, 0), new Vector2(34, 34));
         Label(title, "Menu", new Vector2(12, 0), new Vector2(125, 36), 24, TextAnchor.MiddleCenter);
         title.GetComponent<Image>().raycastTarget = true;
-        title.gameObject.AddComponent<PlayerMenuTitleDrag>().Panel = this;
+        VG_PanelInteraction.Attach(title, transform, canvas);
+        VG_PanelSurface.Attach((RectTransform)canvasRect.Find("Gallery Frame"), canvas);
         var close = ButtonAt(canvasRect, "Close", "×", new Vector2(375, 190), new Vector2(36, 36), Hide);
         close.image.sprite = MenuLook.FocusRing;
         close.image.type = Image.Type.Simple;
@@ -231,8 +235,7 @@ public class PlayerMenuPanel : MonoBehaviour
         credit = Label(canvasRect, "", new Vector2(-20, -213), new Vector2(730, 24), 10, TextAnchor.MiddleCenter);
         credit.color = MenuLook.Muted;
         Picture(canvasRect, "Corner Star", MenuLook.StarSprite, new Vector2(375, -194), new Vector2(24, 24));
-        overlayMaterial = new Material(Canvas.GetDefaultCanvasMaterial()) { name = "Player menu overlay" };
-        overlayMaterial.SetInt("unity_GUIZTestMode", (int)UnityEngine.Rendering.CompareFunction.Always);
+        overlayMaterial = VG_UI.NewOverlayMaterial("Player menu overlay");
         foreach (var graphic in canvasRect.GetComponentsInChildren<Graphic>(true)) graphic.material = overlayMaterial;
         built = true;
         SelectPage(PlayerMenuPage.Controls);
@@ -244,11 +247,13 @@ public class PlayerMenuPanel : MonoBehaviour
         string[] bindings = { "Left stick", "Right stick left / right", "Right stick forward", "pull the trigger" };
         for (int i = 0; i < names.Length; i++)
         {
-            Label(page, names[i], new Vector2(-149, 83 - i * 39), new Vector2(150, 32), 18, TextAnchor.MiddleLeft);
-            Label(page, bindings[i], new Vector2(70, 83 - i * 39), new Vector2(300, 32), 17, TextAnchor.MiddleRight);
+            Label(page, names[i], new Vector2(-149, 83 - i * 34), new Vector2(150, 28), 18, TextAnchor.MiddleLeft);
+            Label(page, bindings[i], new Vector2(70, 83 - i * 34), new Vector2(300, 28), 17, TextAnchor.MiddleRight);
         }
-        ButtonAt(page, "Open controller guide", "Open controller guide", new Vector2(0, -110), new Vector2(450, 46), () => ControlsRequested?.Invoke());
-        ButtonAt(page, "Show hidden panels", "Show hidden panels", new Vector2(0, -160), new Vector2(450, 38), () => { Hide(); VG_PanelInteraction.RestoreDismissed(); });
+        ButtonAt(page, "Open controller guide", "Open controller guide", new Vector2(0, -65), new Vector2(450, 42), () => ControlsRequested?.Invoke());
+        recallDialogue = ButtonAt(page, "Bring dialogue here", "Bring dialogue here", new Vector2(0, -112), new Vector2(450, 38),
+            () => DialogueRecallRequested?.Invoke());
+        ButtonAt(page, "Show hidden panels", "Show hidden panels", new Vector2(0, -157), new Vector2(450, 34), () => { Hide(); VG_PanelInteraction.RestoreDismissed(); });
     }
 
     void BuildAudio(RectTransform page)
@@ -287,6 +292,8 @@ public class PlayerMenuPanel : MonoBehaviour
         larger = ButtonAt(page, "Larger menu", "+", new Vector2(204, 9), new Vector2(42, 42), () => PlayerMenuPreferences.MenuScale += .05f);
         Label(page, "Language", new Vector2(-133, -56), new Vector2(184, 40), 19, TextAnchor.MiddleLeft);
         Label(page, "English", new Vector2(130, -56), new Vector2(190, 40), 19, TextAnchor.MiddleRight);
+        ButtonAt(page, "Back to volume", "Back to volume", new Vector2(0, -160), new Vector2(450, 38),
+            () => SelectPage(PlayerMenuPage.Audio));
     }
 
     void BuildConfirmation(PlayerMenuPage kind, string question, string explanation, string action)

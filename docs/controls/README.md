@@ -86,7 +86,8 @@ See `VERIFICATION.md` for the results actually obtained on this branch. Syntheti
 
 ## Controller diagram clarity — 2026-11-21
 
-The approved painted `ControllerOverview.png` remains unchanged. Its dedicated Unity
+The approved painted controller style is retained; the diagram wording was updated
+on 2026-11-22 to say “Hold Grip on the menu's title bar.” Its dedicated Unity
 import command, **InnerFrame > Controls > Preserve controller diagram clarity**, keeps
 the source’s 1536 × 1024 pixels, disables mip downsampling, and uses uncompressed RGBA32
 on Android (6 MiB for this texture). It does not rebuild Gallery or edit its scene.

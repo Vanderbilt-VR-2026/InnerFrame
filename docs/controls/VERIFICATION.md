@@ -1,4 +1,75 @@
-# Controls verification — updated 2026-11-13
+# Controls verification — updated 2026-11-23
+
+## Current world-fixed panels and Quest Grip acceptance
+
+This section supersedes the historical camera-relative placement experiments below.
+Current dialogue, hints and choices remain in the world. Grip on their visible body,
+words or name tab moves them in depth and rotation; release leaves the new pose fixed.
+Menu retains its title-bar handle. The original black/gold UI is retained.
+
+- [V] Published implementation commit `b36950e` has exactly the same Git tree as the
+  tested snapshot `321bcb9`; all 90 task files also matched the post-build source
+  manifest. Publication adds only documentation after that implementation commit.
+- [V] Unity 6000.3.23f1 final checks on 2026-11-22: simulated native controller Grip
+  **100 passed / 0 failed**, dialogue recall **22/0**, graphical surface **11/0**,
+  world panels **49/0**, and Menu **120/0**. Pre-build Controls checks **153/0**,
+  physical guidance **133/0**, and scripted Starry story **60/0** also passed.
+- [V] The controller suite exercises the actual Input System/XRI binding and pose
+  drivers, with story progression frozen for the fixture. It covers central text,
+  edges/corners, the name tab, both hands, rear pickup, depth/rotation, release,
+  the real close button and negative controls. These are simulated controllers,
+  not 100 physical-headset checks.
+- [V] Surface renders verify readable front faces, hidden rear text and preserved
+  TMP font material. Recall checks cover the current scene's spoken caption,
+  retained page/audio state and Subtitles Off. They do not establish headset
+  legibility or user comfort.
+- [V] The private Android ARM64 IL2CPP/GameActivity build completed in **4:30**,
+  with **0 errors and 11 warnings**. It repacked player data and all six enabled
+  scenes, with Starry Night first only for this private test build.
+- [V] On 2026-11-22, the installed APK hash matched the built APK; Quest 3 entered
+  focused immersive OpenXR. Device logs recorded three central-face Grip/release
+  interactions. The user confirmed: “可以移動，放手後固定” (can move it; it stays
+  fixed after release). This accepts central-caption movement and release only.
+- [V] On the earlier private Starry build, holding physical right B, speaking and
+  releasing produced a new streamed answer; the user confirmed both voice and
+  subtitles. Some speech was misrecognized. This was not repeated on the final
+  whole-face Grip APK. The earlier total-silence incident resolved after a Quest
+  reboot with the same APK; it is not evidence of a repository audio-code fix.
+- [V] Two Bedroom clearance failures remain in the follow/carry run (**46/2**):
+  right foot/easel contact and right toe/wall contact near the doorway. Both also
+  reproduce in original-speed control runs. Those controls isolate speed; they
+  are not a pristine-main baseline.
+- [I] These builds used an isolated existing clone with an explicit source overlay
+  and warm import/native/shader caches. Fresh-checkout Unity validation, complete
+  six-scene Quest acceptance, multiplayer, performance, and final-build perceived
+  audio/readability remain pending. Keep PR #198 in draft.
+
+Local evidence (outside Git): `deliverables/dialogue-grip-2026-11-22/whole-face-fix/`
+contains `verification.json`, `source-manifest.json`, `native/native-grip-checks.txt`,
+`recall-edit.txt`, `surface/surface-checks.txt`, `world-panels.txt`, `menu-checks.txt`,
+`build-report.txt` and `device-grip-trial.json`. The earlier voice acceptance is in
+`deliverables/starry-reading-audio-2026-11-21/acceptance-summary.txt`; Bedroom clearance
+reports are in `deliverables/quest-feedback-2026-11-21/follow-graphics/`. These paths
+are relative to the local project workspace, not the repository. Logs, private APKs
+and credentials are intentionally excluded from publication.
+
+### Publication and teammate overlap
+
+- [V] On 2026-11-23, fetched `origin/main` remained at `418dbc6`, already included in
+  this branch. No new teammate source commits were found since the previous check.
+- [V] Merge-tree checks against all other open PR heads found conflicts with #205
+  in `docs/ASSETS.md` and #226 in `GalleryPaintingMenu.cs`, `SceneFader.cs` and
+  `docs/gallery/README.md`. #189 and #191 had no textual conflicts. These PRs were
+  inspected, not merged; agree merge order with their owners before landing.
+- [V] Independent audits checked runtime integration, source/test correspondence,
+  new metadata/GUID references, asset licenses, LFS and secret exclusion. No public
+  upload blocker was found. Local generated-font, render-pipeline and project
+  settings edits remain outside this upload.
+- [I] The final pre-push and remote CI results are recorded in Draft PR #198 after
+  running them on the published commit; the earlier passing run is not substituted
+  for that final check.
+
+## Historical placement experiments — 2026-11-13
 
 ## Shared lower-view placement in every scene
 
